@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Cognite.Simulator.Extensions</PackageId>
+    <Author>Cognite AS</Author>
+    <Company>Cognite AS</Company>
+    <Copyright>Cognite AS</Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RootNamespace>Cognite.Simulator.Extensions</RootNamespace>
+    <Description>
+      A library containing extensions to the Cognite SDK with utility methods for simulator integrations
+    </Description>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Default</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cognite.Extractor.Common" Version="1.2.0" />
+    <PackageReference Include="CogniteSdk" Version="3.4.1" />
+  </ItemGroup>
+
+</Project>
