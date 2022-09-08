@@ -16,7 +16,9 @@
     <AnalysisMode>Default</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
-
+  <ItemGroup>
+    <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
+  </ItemGroup> 
   <ItemGroup>
     <PackageReference Include="Cognite.Extractor.Common" Version="1.2.0" />
     <PackageReference Include="CogniteSdk" Version="3.4.1" />
