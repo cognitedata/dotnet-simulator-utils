@@ -22,4 +22,10 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/
+      env:
+        COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
+        COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
+        AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
