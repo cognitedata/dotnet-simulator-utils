@@ -3,14 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32319.34
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cognite.Simulator.Utils", "Cognite.Simulator.Utils\Cognite.Simulator.Utils.csproj", "{29D05A16-FF2F-4EBC-ADC5-AE07E171CB41}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cognite.Simulator.Utils", "Cognite.Simulator.Utils\Cognite.Simulator.Utils.csproj", "{29D05A16-FF2F-4EBC-ADC5-AE07E171CB41}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cognite.Simulator.Extensions", "Cognite.Simulator.Extensions\Cognite.Simulator.Extensions.csproj", "{A24E7088-D6A1-462D-AE5F-567E49407335}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cognite.Simulator.Extensions", "Cognite.Simulator.Extensions\Cognite.Simulator.Extensions.csproj", "{A24E7088-D6A1-462D-AE5F-567E49407335}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C9DF6B34-EC63-4BD4-9DE7-638BE7C1F91A}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.runsettings = .runsettings
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cognite.Simulator.Tests", "Cognite.Simulator.Tests\Cognite.Simulator.Tests.csproj", "{A6584AFE-EB3B-4AEB-8532-B46594B51323}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +29,10 @@ Global
 		{A24E7088-D6A1-462D-AE5F-567E49407335}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A24E7088-D6A1-462D-AE5F-567E49407335}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A24E7088-D6A1-462D-AE5F-567E49407335}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6584AFE-EB3B-4AEB-8532-B46594B51323}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6584AFE-EB3B-4AEB-8532-B46594B51323}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6584AFE-EB3B-4AEB-8532-B46594B51323}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6584AFE-EB3B-4AEB-8532-B46594B51323}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

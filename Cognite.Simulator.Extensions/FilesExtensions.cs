@@ -37,6 +37,10 @@ namespace Cognite.Simulator.Extensions
             {
                 throw new ArgumentNullException(nameof(sources));
             }
+            if (sources.Count == 0)
+            {
+                throw new ArgumentException("As least one simulator should be specified", nameof(sources));
+            }
             var metadata = new Dictionary<string, string>
             {
                 { BaseMetadata.DataTypeKey, dataType.MetadataValue()}
