@@ -5,6 +5,7 @@
 Cognite Simulator Integration Utils
 =======================
 [![.NET build and test](https://github.com/cognitedata/dotnet-simulator-utils/actions/workflows/buildandtest.yml/badge.svg?branch=main)](https://github.com/cognitedata/dotnet-simulator-utils/actions/workflows/buildandtest.yml)
+[![Publish](https://github.com/cognitedata/dotnet-simulator-utils/actions/workflows/publish.yml/badge.svg)](https://github.com/cognitedata/dotnet-simulator-utils/actions/workflows/publish.yml)
 [![codecov](https://codecov.io/gh/cognitedata/dotnet-simulator-utils/branch/main/graph/badge.svg?token=sr1aNhkc1e)](https://codecov.io/gh/cognitedata/dotnet-simulator-utils)
 [![Nuget](https://img.shields.io/nuget/vpre/Cognite.Simulator.Extensions)](https://www.nuget.org/packages/Cognite.Simulator.Extensions/)
 
