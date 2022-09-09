@@ -9,3 +9,11 @@ Cognite Simulator Integration Utils
 [![Nuget](https://img.shields.io/nuget/vpre/Cognite.Simulator.Extensions)](https://www.nuget.org/packages/Cognite.Simulator.Extensions/)
 
 Utilities for developing simulator integrations within CDF 
+
+# Code of Conduct
+
+This project follows https://www.contributor-covenant.org
+
+## License
+
+Apache v2, see [LICENSE](https://github.com/cognitedata/dotnet-simulator-utils/blob/master/LICENSE).
