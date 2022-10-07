@@ -17,8 +17,15 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public const string SimulatorKey = "simulator";
 
+        /// <summary>
+        /// Data model version key
+        /// </summary>
         public const string DataModelVersionKey = "dataModelVersion";
 
+        /// <summary>
+        /// Data model version value. This hardcoded value should be bumped for every
+        /// new data model version
+        /// </summary>
         public const string DataModelVersion = "1.0.2";
     }
 
@@ -59,22 +66,58 @@ namespace Cognite.Simulator.Extensions
         public const SimulatorDataType DataType = SimulatorDataType.SimulationConfiguration;
     }
 
+    /// <summary>
+    /// Matadata keys present in the sequences mapping boundary conditions to
+    /// time series ids
+    /// </summary>
     public static class BoundaryConditionsMapMetadata
     {
+        /// <summary>
+        /// Data type of boundary conditions map
+        /// </summary>
         public const SimulatorDataType DataType = SimulatorDataType.BoundaryConditionsMap;
     }
 
+    /// <summary>
+    /// Metadata keys present in the sequences containing information about the
+    /// existing simulation integrations
+    /// </summary>
     public static class SimulatorIntegrationMetadata
     {
+        /// <summary>
+        /// Name of the connector handling the integration with a simulator
+        /// </summary>
         public const string ConnectorNameKey = "connector";
+        
+        /// <summary>
+        /// Data type of simulation integarations
+        /// </summary>
         public const SimulatorDataType DataType = SimulatorDataType.SimulatorIntegration;
     }
 
+    /// <summary>
+    /// Columns that should be part of the boundary conditions to time series id map
+    /// </summary>
     public static class BoundaryConditionsSequenceColumns
     {
+        /// <summary>
+        /// Boundary condition id
+        /// </summary>
         public const string Id = "boundary-condition";
+        
+        /// <summary>
+        /// Time series external id
+        /// </summary>
         public const string TimeSeries = "time-series";
+        
+        /// <summary>
+        /// Boundary condition name
+        /// </summary>
         public const string Name = "boundary-condition-name";
+        
+        /// <summary>
+        /// Address of the boundary condition in the source system (simulator)
+        /// </summary>
         public const string Address = "boundary-condition-address";
     }
 
@@ -91,7 +134,13 @@ namespace Cognite.Simulator.Extensions
         /// Simulation configuration data type
         /// </summary>
         SimulationConfiguration,
+        /// <summary>
+        /// Boundary conditions map data type
+        /// </summary>
         BoundaryConditionsMap,
+        /// <summary>
+        /// Simulator integration data type
+        /// </summary>
         SimulatorIntegration,
     }
 
