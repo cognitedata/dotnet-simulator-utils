@@ -20,8 +20,9 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup> 
   <ItemGroup>
-    <PackageReference Include="Cognite.Extractor.Common" Version="1.2.0" />
-    <PackageReference Include="CogniteSdk" Version="3.4.1" />
+    <PackageReference Include="Cognite.Extensions" Version="1.3.0" />
+    <PackageReference Include="Cognite.Extractor.Common" Version="1.3.0" />
+    <PackageReference Include="CogniteSdk" Version="3.6.0" />
   </ItemGroup>
 
 </Project>

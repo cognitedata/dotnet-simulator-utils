@@ -16,6 +16,10 @@ namespace Cognite.Simulator.Extensions
         /// Simulator metadata key
         /// </summary>
         public const string SimulatorKey = "simulator";
+
+        public const string DataModelVersionKey = "dataModelVersion";
+
+        public const string DataModelVersion = "1.0.2";
     }
 
     /// <summary>
@@ -55,6 +59,25 @@ namespace Cognite.Simulator.Extensions
         public const SimulatorDataType DataType = SimulatorDataType.SimulationConfiguration;
     }
 
+    public static class BoundaryConditionsMapMetadata
+    {
+        public const SimulatorDataType DataType = SimulatorDataType.BoundaryConditionsMap;
+    }
+
+    public static class SimulatorIntegrationMetadata
+    {
+        public const string ConnectorNameKey = "connector";
+        public const SimulatorDataType DataType = SimulatorDataType.SimulatorIntegration;
+    }
+
+    public static class BoundaryConditionsSequenceColumns
+    {
+        public const string Id = "boundary-condition";
+        public const string TimeSeries = "time-series";
+        public const string Name = "boundary-condition-name";
+        public const string Address = "boundary-condition-address";
+    }
+
     /// <summary>
     /// Types of simulator resources that can be stored in CDF
     /// </summary>
@@ -67,7 +90,9 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Simulation configuration data type
         /// </summary>
-        SimulationConfiguration
+        SimulationConfiguration,
+        BoundaryConditionsMap,
+        SimulatorIntegration,
     }
 
     /// <summary>
@@ -86,6 +111,8 @@ namespace Cognite.Simulator.Extensions
             {
                 case SimulatorDataType.ModelFile: return "Simulator File";
                 case SimulatorDataType.SimulationConfiguration: return "Simulation Configuration";
+                case SimulatorDataType.BoundaryConditionsMap: return "Boundary Condition Time Series Map";
+                case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
                 default: throw new ArgumentException("Invalid data type");
             }
         }
