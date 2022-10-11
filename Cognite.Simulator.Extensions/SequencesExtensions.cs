@@ -47,7 +47,7 @@ namespace Cognite.Simulator.Extensions
             }, token).ConfigureAwait(false);
         }
 
-        public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegration(
+        public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegrations(
             this SequencesResource sequences,
             string connectorName,
             Dictionary<string, long> simulators,
@@ -85,20 +85,20 @@ namespace Cognite.Simulator.Extensions
                     metadata.Add(BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersion);
                     var createObj = new SequenceCreate
                     {
-                        Name = $"{simulator.Key} Simulator Integrations",
+                        Name = $"{simulator.Key} Simulator Integration",
                         ExternalId = $"{simulator.Key}-INTEGRATION-{DateTime.UtcNow.ToUnixTimeMilliseconds()}",
                         Description = $"Details about {simulator.Key} integration",
                         DataSetId = simulator.Value,
                         Metadata = metadata,
                         Columns = new List<SequenceColumnWrite> {
                             new SequenceColumnWrite {
-                                Name = "Key",
-                                ExternalId = "key",
+                                Name = KeyValuePairSequenceColumns.KeyName,
+                                ExternalId = KeyValuePairSequenceColumns.Key,
                                 ValueType = MultiValueType.STRING,
                             },
                             new SequenceColumnWrite {
-                                Name = "Value",
-                                ExternalId = "value",
+                                Name = KeyValuePairSequenceColumns.ValueName,
+                                ExternalId = KeyValuePairSequenceColumns.Value,
                                 ValueType = MultiValueType.STRING
                             }
                         }
@@ -111,8 +111,8 @@ namespace Cognite.Simulator.Extensions
                 (ids) => toCreate
                     .Where(o => ids.Contains(o.Key))
                     .Select(o => o.Value).ToList(),
-                10,
-                1,
+                chunkSize: 10,
+                throttleSize: 1,
                 RetryMode.None,
                 SanitationMode.None,
                 token).ConfigureAwait(false);
@@ -124,13 +124,101 @@ namespace Cognite.Simulator.Extensions
             result.AddRange(createdSequences.Results);
             return result;
         }
+
+        public static async Task UpdateSimulatorIntegrationsHeartbeat(
+            this SequencesResource sequences,
+            bool init,
+            string connectorVersion,
+            Dictionary<string, long> simulators,
+            CancellationToken token)
+        {
+            if (simulators == null || !simulators.Any())
+            {
+                return;
+            }
+
+            var rowsToCreate = new List<SequenceDataCreate>();
+            foreach (var simulator in simulators)
+            {
+                var rows = new List<SequenceRow> {
+                    new SequenceRow {
+                        RowNumber = 0,
+                        Values = new List<MultiValue> {
+                            MultiValue.Create(SimulatorIntegrationSequenceRows.Heartbeat),
+                            MultiValue.Create($"{DateTime.UtcNow.ToUnixTimeMilliseconds()}"),
+                        }
+                    }
+                };
+                if (init)
+                {
+                    // Data set and version could only have changed on connector restart
+                    rows.Add(new SequenceRow
+                    {
+                        RowNumber = 1,
+                        Values = new List<MultiValue> {
+                            MultiValue.Create(SimulatorIntegrationSequenceRows.DataSetId),
+                            MultiValue.Create($"{simulator.Value}")
+                        }
+                    });
+                    rows.Add(new SequenceRow
+                    {
+                        RowNumber = 2,
+                        Values = new List<MultiValue> {
+                            MultiValue.Create(SimulatorIntegrationSequenceRows.ConnectorVersion),
+                            MultiValue.Create(connectorVersion),
+                        }
+                    });
+                }
+                var rowCreate = new SequenceDataCreate
+                {
+                    ExternalId = simulator.Key,
+                    Columns = new List<string> {
+                            KeyValuePairSequenceColumns.Key,
+                            KeyValuePairSequenceColumns.Value
+                        },
+                    Rows = rows
+                };
+                rowsToCreate.Add(rowCreate);
+            }
+            var result = await sequences.InsertAsync(
+                rowsToCreate,
+                keyChunkSize: 10,
+                valueChunkSize: 100,
+                sequencesChunk: 10,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+            if (!result.IsAllGood)
+            {
+                throw new SimulatorIntegrationSequenceException("Failed to update Simulator Integrations sequence", result.Errors);
+            }
+        }
+
+        public static string[] GetStringValues(this SequenceRow row)
+        {
+            var result = new List<string>();
+            foreach (var val in row.Values)
+            {
+                if (val != null && val.Type == MultiValueType.STRING)
+                {
+                    result.Add(((MultiValue.String)val).Value);
+                }
+                else
+                {
+                    result.Add(null);
+                }
+            }
+            return result.ToArray();
+        }
+
     }
 
     public class SimulatorIntegrationSequenceException : Exception
     {
-        public IEnumerable<CogniteError<SequenceCreate>> CogniteErrors { get; private set; }
+        public IEnumerable<CogniteError> CogniteErrors { get; private set; }
 
-        public SimulatorIntegrationSequenceException(string message, IEnumerable<CogniteError<SequenceCreate>> errors)
+        public SimulatorIntegrationSequenceException(string message, IEnumerable<CogniteError> errors)
             : base(message)
         {
             CogniteErrors = errors;

@@ -121,6 +121,21 @@ namespace Cognite.Simulator.Extensions
         public const string Address = "boundary-condition-address";
     }
 
+    public static class KeyValuePairSequenceColumns
+    {
+        public const string Key = "key";
+        public const string KeyName = "Key";
+        public const string Value = "value";
+        public const string ValueName = "Value";
+    }
+
+    public static class SimulatorIntegrationSequenceRows
+    {
+        public const string Heartbeat = "heartbeat";
+        public const string DataSetId = "dataSetId";
+        public const string ConnectorVersion = "connectorVersion";
+    }
+
     /// <summary>
     /// Types of simulator resources that can be stored in CDF
     /// </summary>
