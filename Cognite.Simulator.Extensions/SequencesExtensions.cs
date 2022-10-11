@@ -5,15 +5,29 @@ using CogniteSdk.Resources;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Extensions
 {
+    /// <summary>
+    /// Class containing extensions to the CDF Sequences resource with utility methods
+    /// for simulator integrations
+    /// </summary>
     public static class SequencesExtensions
     {
+        /// <summary>
+        /// For the specified <paramref name="modelName"/> and <paramref name="simulator"/>, 
+        /// find the sequence rows with the mapping of the model boundary conditions to
+        /// time series external ids.
+        /// </summary>
+        /// <param name="sequences">CDF sequences resource</param>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Sequence data (rows) containing the boundary conditions map</returns>
+        /// <exception cref="BoundaryConditionsMapNotFoundException">Thrown when a sequence containing
+        /// the boundary conditons map cannot be found</exception>
         public static async Task<SequenceData> FindModelBoundaryConditions(
             this SequencesResource sequences,
             string simulator,
@@ -47,6 +61,17 @@ namespace Cognite.Simulator.Extensions
             }, token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// For each simulator in <paramref name="simulators"/>, retrieve or create 
+        /// a simulator integration sequence in CDF
+        /// </summary>
+        /// <param name="sequences">CDF sequences resource</param>
+        /// <param name="connectorName">Name of the connector associated with the integration</param>
+        /// <param name="simulators">Dictionary with (simulator name, data set id) pairs</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Retrieved or created sequences</returns>
+        /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
+        /// could not be created. The exception contatins the list of errors</exception>
         public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegrations(
             this SequencesResource sequences,
             string connectorName,
@@ -125,6 +150,19 @@ namespace Cognite.Simulator.Extensions
             return result;
         }
 
+        /// <summary>
+        /// For each simulator in <paramref name="simulators"/>, update the simulator integration
+        /// sequence with the connector heartbeat (last time seen)
+        /// </summary>
+        /// <param name="sequences">CDF Sequences resource</param>
+        /// <param name="init">If true, the data set id and connector version rows are also 
+        /// updated. Else, only the heartbeat row is updated</param>
+        /// <param name="connectorVersion">Version of the deployed connector</param>
+        /// <param name="simulators">Dictionary with (simulator integration sequence external id, 
+        /// data set id) pairs</param>
+        /// <param name="token">Cancellation token</param>
+        /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
+        /// rows could not be updated. The exception contatins the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsHeartbeat(
             this SequencesResource sequences,
             bool init,
@@ -195,6 +233,12 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
+        /// <summary>
+        /// Read the values of a <see cref="SequenceRow"/> and returns
+        /// it as a string array
+        /// </summary>
+        /// <param name="row">CDF Sequence row</param>
+        /// <returns>Array containg the row values</returns>
         public static string[] GetStringValues(this SequenceRow row)
         {
             var result = new List<string>();
@@ -214,10 +258,19 @@ namespace Cognite.Simulator.Extensions
 
     }
 
+    /// <summary>
+    /// Represent errors related to read/write simulator integration sequences in CDF
+    /// </summary>
     public class SimulatorIntegrationSequenceException : Exception
     {
+        /// <summary>
+        /// Errors that triggered this exception
+        /// </summary>
         public IEnumerable<CogniteError> CogniteErrors { get; private set; }
 
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
         public SimulatorIntegrationSequenceException(string message, IEnumerable<CogniteError> errors)
             : base(message)
         {
@@ -225,8 +278,15 @@ namespace Cognite.Simulator.Extensions
         }
     }
 
+    /// <summary>
+    /// Represent errors related to reading boundary conditions sequences in CDF
+    /// </summary>
     public class BoundaryConditionsMapNotFoundException : Exception
     {
+        /// <summary>
+        /// Creates a new exception containing the provided <paramref name="message"/>
+        /// </summary>
+        /// <param name="message"></param>
         public BoundaryConditionsMapNotFoundException(string message) : base(message)
         {
         }

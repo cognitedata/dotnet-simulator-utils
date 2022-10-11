@@ -108,6 +108,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             string? externalIdToDelete = null;
             try
             {
+                // Create a test simulator integration sequence
                 var integrations = await sequences.GetOrCreateSimulatorIntegrations(
                     connectorName,
                     simulators,
@@ -120,12 +121,15 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     i => dataSetId);
                 
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
+                
+                // Update the sequence with connector heartbeat
                 await sequences.UpdateSimulatorIntegrationsHeartbeat(
                     true,
                     "1.0.0",
                     integrationsMap,
                     CancellationToken.None).ConfigureAwait(false);
 
+                // Verify that the sequence was updated correctly
                 var result = await sequences.ListRowsAsync(new SequenceRowQuery
                 {
                     ExternalId = externalIdToDelete
