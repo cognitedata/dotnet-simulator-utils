@@ -233,6 +233,17 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
+        /// <summary>
+        /// Store tabular simulation results as sequences
+        /// </summary>
+        /// <param name="sequences">CDF Sequence resource</param>
+        /// <param name="externalId">External id of the sequence. Set to <c>null</c> to generate a new external id</param>
+        /// <param name="rowStart">Write rows starting from this index</param>
+        /// <param name="dataSetId">Data set id</param>
+        /// <param name="results">Simulation results object</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>The sequence containing the simulation results</returns>
+        /// <exception cref="SimulationTabularResultsException">Thrown when it is not possible to store the results</exception>
         public static async Task<Sequence> StoreSimulationResults(
             this SequencesResource sequences,
             string externalId,
@@ -250,15 +261,15 @@ namespace Cognite.Simulator.Extensions
             var test = results.Columns
                 .Select(r =>
                 {
-                    if (r is SimulationNumericResultColumn numCol)
+                    if (r.Value is SimulationNumericResultColumn numCol)
                     {
-                        return numCol.Rows.Count;
+                        return numCol.Rows.Count();
                     }
-                    else if (r is SimulationStringResultColumn strCol)
+                    else if (r.Value is SimulationStringResultColumn strCol)
                     {
-                        return strCol.Rows.Count;
+                        return strCol.Rows.Count();
                     }
-                    throw new SimulationTabularResultsException($"Invalid type for result column {r.Header}");
+                    throw new SimulationTabularResultsException($"Invalid type for result column {r.Key}");
                 });
 
             var rowCount = test.First();
@@ -336,11 +347,11 @@ namespace Cognite.Simulator.Extensions
                 var rowValues = new List<MultiValue>();
                 foreach (var v in results.Columns)
                 {
-                    if (v is SimulationNumericResultColumn numCol)
+                    if (v.Value is SimulationNumericResultColumn numCol)
                     {
                         rowValues.Add(MultiValue.Create(numCol.Rows.ElementAt(i)));
                     }
-                    else if (v is SimulationStringResultColumn strCol)
+                    else if (v.Value is SimulationStringResultColumn strCol)
                     {
                         rowValues.Add(MultiValue.Create(strCol.Rows.ElementAt(i)));
                     }
@@ -401,13 +412,13 @@ namespace Cognite.Simulator.Extensions
             {
                 var col = new SequenceColumnWrite
                 {
-                    Name = oc.Header,
-                    ExternalId = oc.Header,
-                    ValueType = oc is SimulationNumericResultColumn ? MultiValueType.DOUBLE : MultiValueType.STRING
+                    Name = oc.Key,
+                    ExternalId = oc.Key,
+                    ValueType = oc.Value is SimulationNumericResultColumn ? MultiValueType.DOUBLE : MultiValueType.STRING
                 };
-                if (oc.Metadata != null && oc.Metadata.Any())
+                if (oc.Value.Metadata != null && oc.Value.Metadata.Any())
                 {
-                    col.Metadata = oc.Metadata;
+                    col.Metadata = oc.Value.Metadata;
                 }
                 return col;
             });
@@ -487,32 +498,84 @@ namespace Cognite.Simulator.Extensions
 
     }
 
+    /// <summary>
+    /// Represents simulation tabular results as columns and rows
+    /// </summary>
     public class SimulationTabularResults
     {
+        /// <summary>
+        /// Result type (e.g. SystemCurves)
+        /// </summary>
         public string ResultType { get; set; }
+        
+        /// <summary>
+        /// Result name (e.g. System Curves)
+        /// </summary>
         public string ResultName { get; set; }
+        
+        /// <summary>
+        /// Simulator name
+        /// </summary>
         public string Simulator { get; set; }
+        
+        /// <summary>
+        /// Model name
+        /// </summary>
         public string ModelName { get; set; }
+        
+        /// <summary>
+        /// Calculation type (e.g. IPR/VLP)
+        /// </summary>
         public string CalculationType { get; set; }
+        
+        /// <summary>
+        /// Calculation type - user defined (e.g. CustomIprVlp)
+        /// </summary>
         public string CalculationTypeUserDefined { get; set; }
+
+        /// <summary>
+        /// Calculation name (e.g. Rate by Nodal Analysis)
+        /// </summary>
         public string CalculationName { get; set; }
-        public List<SimulationResultColumn> Columns { get; set; }
+        
+        /// <summary>
+        /// Columns with simulation results. The dictionary key
+        /// represents the column header
+        /// </summary>
+        public IDictionary<string, SimulationResultColumn> Columns { get; set; }
     }
 
+    /// <summary>
+    /// Represents a simulation result column
+    /// </summary>
     public abstract class SimulationResultColumn
     {
-        public string Header { get; set; }
+        /// <summary>
+        /// Metadata to be atached to the column
+        /// </summary>
         public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
     }
 
+    /// <summary>
+    /// Represents a numeric simulation result column
+    /// </summary>
     public class SimulationNumericResultColumn : SimulationResultColumn
     {
-        public List<double> Rows { get; set; }
+        /// <summary>
+        /// Numeric row values
+        /// </summary>
+        public IEnumerable<double> Rows { get; set; }
     }
 
+    /// <summary>
+    /// Represents a string simulation result column
+    /// </summary>
     public class SimulationStringResultColumn : SimulationResultColumn
     {
-        public List<string> Rows { get; set; }
+        /// <summary>
+        /// String row values
+        /// </summary>
+        public IEnumerable<string> Rows { get; set; }
     }
 
     /// <summary>
@@ -535,6 +598,9 @@ namespace Cognite.Simulator.Extensions
         }
     }
 
+    /// <summary>
+    /// Represents errors related to read/write tabular simulation results
+    /// </summary>
     public class SimulationTabularResultsException : Exception
     {
         /// <summary>
@@ -551,6 +617,10 @@ namespace Cognite.Simulator.Extensions
             CogniteErrors = errors;
         }
 
+        /// <summary>
+        /// Creates a new exception containing the provided <paramref name="message"/>
+        /// </summary>
+        /// <param name="message"></param>
         public SimulationTabularResultsException(string message) : base(message)
         {
             CogniteErrors = new List<CogniteError>();

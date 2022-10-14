@@ -55,6 +55,9 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public const string TypeKey = "calcType";
 
+        /// <summary>
+        /// Calculation name metadata key
+        /// </summary>
         public const string NameKey = "calcName";
 
         /// <summary>
@@ -62,8 +65,14 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public const string UserDefinedTypeKey = "calcTypeUserDefined";
 
+        /// <summary>
+        /// Result type metadata key
+        /// </summary>
         public const string ResultTypeKey = "resultType";
 
+        /// <summary>
+        /// Result name metadata key
+        /// </summary>
         public const string ResultNameKey = "resultName";
 
         /// <summary>
@@ -195,6 +204,9 @@ namespace Cognite.Simulator.Extensions
         /// Simulator integration data type
         /// </summary>
         SimulatorIntegration,
+        /// <summary>
+        /// Simulation output data type
+        /// </summary>
         SimulationOutput,
     }
 

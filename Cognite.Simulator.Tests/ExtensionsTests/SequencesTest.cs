@@ -192,26 +192,30 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 ResultName = "System Results",
                 ResultType = "SystemResults",
                 Simulator = "TestSimulator",
-                Columns =  new List<SimulationResultColumn>()
+                Columns =  new Dictionary<string, SimulationResultColumn>()
                 {
-                     new SimulationNumericResultColumn
-                     {
-                         Header = "NumericColumn",
-                         Metadata = new Dictionary<string, string>()
+                    { 
+                        "NumericColumn",
+                        new SimulationNumericResultColumn
+                        {
+                            Metadata = new Dictionary<string, string>()
+                            {
+                                { "key", "value" }
+                            },
+                            Rows = doubleValues
+                        }
+                    },
+                    {
+                        "StringColumn",
+                         new SimulationStringResultColumn
                          {
-                             { "key", "value" }
-                         },
-                         Rows = doubleValues
-                     },
-                     new SimulationStringResultColumn
-                     {
-                         Header = "StringColumn",
-                         Metadata = new Dictionary<string, string>()
-                         {
-                             { "key", "value" }
-                         },
-                         Rows = stringValues
-                     },
+                             Metadata = new Dictionary<string, string>()
+                             {
+                                 { "key", "value" }
+                             },
+                             Rows = stringValues
+                         }
+                    }
                 }
             };
 
@@ -243,20 +247,21 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(results.ResultType, createdSeq.Metadata[CalculationMetadata.ResultTypeKey]);
 
                 Assert.Equal(2, createdSeq.Columns.Count());
-                Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns[0].Header);
-                Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns[1].Header);
+                Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns.ToArray()[0].Key);
+                Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns.ToArray()[1].Key);
                 // Verify that the sequence was updated correctly
                 var result = await sequences.ListRowsAsync(new SequenceRowQuery
                 {
                     ExternalId = createdSeq.ExternalId
                 }, CancellationToken.None).ConfigureAwait(false);
                 Assert.NotEmpty(result.Columns);
-                Assert.Contains(result.Columns, c => c.ExternalId == results.Columns[0].Header);
-                Assert.Contains(result.Columns, c => c.ExternalId == results.Columns[1].Header);
+                Assert.Contains(result.Columns, c => c.ExternalId == results.Columns.ToArray()[0].Key);
+                Assert.Contains(result.Columns, c => c.ExternalId == results.Columns.ToArray()[1].Key);
                 var rows = result.Rows.ToArray();
-                for (int i = 0; i < result.Rows.Count(); ++i)
+                for (int i = 0; i < rows.Length; ++i)
                 {
                     var values = rows[i].Values.ToArray();
+                    Assert.Equal(i, rows[i].RowNumber);
                     Assert.True(values[0] is MultiValue.Double);
                     Assert.Equal(doubleValues[i], ((MultiValue.Double)values[0]).Value);
                     Assert.True(values[1] is MultiValue.String);
