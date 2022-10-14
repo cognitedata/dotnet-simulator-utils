@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Extensions
         /// Data model version value. This hardcoded value should be bumped for every
         /// new data model version
         /// </summary>
-        public const string DataModelVersion = "1.0.2";
+        public const string DataModelVersionValue = "1.0.2";
     }
 
     /// <summary>
@@ -54,11 +54,17 @@ namespace Cognite.Simulator.Extensions
         /// Calculation type metadata key
         /// </summary>
         public const string TypeKey = "calcType";
-        
+
+        public const string NameKey = "calcName";
+
         /// <summary>
         /// Type of user defined calculation metadata key
         /// </summary>
         public const string UserDefinedTypeKey = "calcTypeUserDefined";
+
+        public const string ResultTypeKey = "resultType";
+
+        public const string ResultNameKey = "resultName";
 
         /// <summary>
         /// Data type of calculation files
@@ -189,6 +195,7 @@ namespace Cognite.Simulator.Extensions
         /// Simulator integration data type
         /// </summary>
         SimulatorIntegration,
+        SimulationOutput,
     }
 
     /// <summary>
@@ -209,6 +216,7 @@ namespace Cognite.Simulator.Extensions
                 case SimulatorDataType.SimulationConfiguration: return "Simulation Configuration";
                 case SimulatorDataType.BoundaryConditionsMap: return "Boundary Condition Time Series Map";
                 case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
+                case SimulatorDataType.SimulationOutput: return "Simulation Output";
                 default: throw new ArgumentException("Invalid data type");
             }
         }

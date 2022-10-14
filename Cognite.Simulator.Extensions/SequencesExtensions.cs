@@ -107,7 +107,7 @@ namespace Cognite.Simulator.Extensions
                 }
                 else
                 {
-                    metadata.Add(BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersion);
+                    metadata.Add(BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue);
                     var createObj = new SequenceCreate
                     {
                         Name = $"{simulator.Key} Simulator Integration",
@@ -144,7 +144,7 @@ namespace Cognite.Simulator.Extensions
 
             if (!createdSequences.IsAllGood)
             {
-                throw new SimulatorIntegrationSequenceException("Could not find or create Simulator Integrations sequence", createdSequences.Errors);
+                throw new SimulatorIntegrationSequenceException("Could not find or create simulator integration sequence", createdSequences.Errors);
             }
             result.AddRange(createdSequences.Results);
             return result;
@@ -229,9 +229,238 @@ namespace Cognite.Simulator.Extensions
                 token).ConfigureAwait(false);
             if (!result.IsAllGood)
             {
-                throw new SimulatorIntegrationSequenceException("Failed to update Simulator Integrations sequence", result.Errors);
+                throw new SimulatorIntegrationSequenceException("Could not update simulator integration sequence", result.Errors);
             }
         }
+
+        public static async Task<Sequence> StoreSimulationResults(
+            this SequencesResource sequences,
+            string externalId,
+            int rowStart,
+            long? dataSetId,
+            SimulationTabularResults results,
+            CancellationToken token)
+        {
+            if (results == null || results.Columns == null || !results.Columns.Any())
+            {
+                return null;
+            }
+
+            // Count the number of rows
+            var test = results.Columns
+                .Select(r =>
+                {
+                    if (r is SimulationNumericResultColumn numCol)
+                    {
+                        return numCol.Rows.Count;
+                    }
+                    else if (r is SimulationStringResultColumn strCol)
+                    {
+                        return strCol.Rows.Count;
+                    }
+                    throw new SimulationTabularResultsException($"Invalid type for result column {r.Header}");
+                });
+
+            var rowCount = test.First();
+            // Verify that all results have the same number of rows
+            if (test.Where(r => r != rowCount).Any())
+            {
+                throw new SimulationTabularResultsException(
+                    "All simulation result columns should contain the same number of rows");
+            }
+
+            if (string.IsNullOrEmpty(externalId))
+            {
+                rowStart = 0;
+                var calcTypeForId = GetCalcTypeForIds(results.CalculationType, results.CalculationTypeUserDefined);
+                var modelNameForId = results.ModelName.ReplaceSpecialCharacters("_");
+                externalId = $"{results.Simulator}-OUTPUT-{calcTypeForId}-{results.ResultType}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+            }
+
+            var sequenceCreate = BuildResultsSequence(
+                externalId,
+                dataSetId,
+                results);
+            var createdSequences = await sequences.GetOrCreateAsync(
+                new List<string> { sequenceCreate.ExternalId },
+                (ids) => new List<SequenceCreate> { sequenceCreate },
+                chunkSize: 1,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+
+            if (!createdSequences.IsAllGood)
+            {
+                throw new SimulationTabularResultsException(
+                    "Could not find or create simulation results sequence", createdSequences.Errors);
+            }
+
+            // Check for changes in column properties or metadata and force a new
+            // sequence creation if anything changed
+            var sequence = createdSequences.Results.First();
+            bool columnsMatch = sequence.Columns.Count() == sequenceCreate.Columns.Count() &&
+                sequenceCreate.Columns
+                .All(c1 => sequence.Columns
+                .Any(c2 =>
+                {
+                    bool match = c2.ExternalId == c1.ExternalId && c2.Name == c1.Name && c2.ValueType == c1.ValueType;
+                    if (match && c1.Metadata != null && c1.Metadata.Any())
+                    {
+                        if (c2.Metadata == null || c2.Metadata.Count != c1.Metadata.Count)
+                        {
+                            return false;
+                        }
+                        foreach (var pair in c1.Metadata)
+                        {
+                            bool mdMatch = c2.Metadata.TryGetValue(pair.Key, out var mdValue) && mdValue == pair.Value;
+                            if (!mdMatch)
+                            {
+                                match = false;
+                                break;
+                            }
+                        }
+                    }
+                    return match;
+                }));
+            if (!columnsMatch)
+            {
+                // If there are any updates to be done, force a new sequences creation
+                // (A null externalId will force the creation of a new sequence)
+                return await sequences.StoreSimulationResults(null, 0, dataSetId, results, token).ConfigureAwait(false);
+            }
+
+            var rows = new List<SequenceRow>();
+            for (int i = 0; i < rowCount; ++i)
+            {
+                var rowValues = new List<MultiValue>();
+                foreach (var v in results.Columns)
+                {
+                    if (v is SimulationNumericResultColumn numCol)
+                    {
+                        rowValues.Add(MultiValue.Create(numCol.Rows.ElementAt(i)));
+                    }
+                    else if (v is SimulationStringResultColumn strCol)
+                    {
+                        rowValues.Add(MultiValue.Create(strCol.Rows.ElementAt(i)));
+                    }
+                }
+                var seqRow = new SequenceRow
+                {
+                    RowNumber = rowStart + i,
+                    Values = rowValues
+                };
+                rows.Add(seqRow);
+            }
+            var seqData = new SequenceDataCreate
+            {
+                ExternalId = sequenceCreate.ExternalId,
+                Columns = sequenceCreate.Columns.Select(c => c.ExternalId).ToList(),
+                Rows = rows
+            };
+
+            var result = await sequences.InsertAsync(
+                new List<SequenceDataCreate> { seqData },
+                keyChunkSize: 10,
+                valueChunkSize: 100,
+                sequencesChunk: 10,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+            if (!result.IsAllGood)
+            {
+                throw new SimulationTabularResultsException($"Could not save simulation tabular results", result.Errors);
+            }
+            return sequence;
+        }
+
+        private static SequenceCreate BuildResultsSequence(
+            string externalId,
+            long? dataSet,
+            SimulationTabularResults results)
+        {
+            var sequenceCreate = GetSequenceCreatePrototype(
+                externalId,
+                results.Simulator,
+                results.ModelName,
+                results.CalculationType,
+                results.CalculationName,
+                dataSet);
+            if (results.CalculationType == "UserDefined" && !string.IsNullOrEmpty(results.CalculationTypeUserDefined))
+            {
+                sequenceCreate.Metadata.Add(CalculationMetadata.UserDefinedTypeKey, results.CalculationTypeUserDefined);
+            }
+
+            sequenceCreate.Name = $"{results.ResultName.ReplaceSlashAndBackslash("_")} " +
+                $"- {results.CalculationName.ReplaceSlashAndBackslash("_")} - {results.ModelName.ReplaceSlashAndBackslash("_")}";
+            sequenceCreate.Description = $"Calculation result for {results.CalculationName} - {results.ModelName}";
+            sequenceCreate.Metadata.Add(CalculationMetadata.ResultTypeKey, results.ResultType);
+            sequenceCreate.Metadata.Add(CalculationMetadata.ResultNameKey, results.ResultName);
+            sequenceCreate.Columns = results.Columns.Select(oc =>
+            {
+                var col = new SequenceColumnWrite
+                {
+                    Name = oc.Header,
+                    ExternalId = oc.Header,
+                    ValueType = oc is SimulationNumericResultColumn ? MultiValueType.DOUBLE : MultiValueType.STRING
+                };
+                if (oc.Metadata != null && oc.Metadata.Any())
+                {
+                    col.Metadata = oc.Metadata;
+                }
+                return col;
+            });
+
+            return sequenceCreate;
+        }
+
+        private static string GetCalcTypeForIds(string calcType, string calcTypeUserDefined)
+        {
+            if (calcType == "UserDefined" && !string.IsNullOrEmpty(calcTypeUserDefined))
+            {
+                return $"{calcType.ReplaceSpecialCharacters("_")}-{calcTypeUserDefined.ReplaceSpecialCharacters("_")}";
+            }
+            return calcType.ReplaceSpecialCharacters("_");
+        }
+
+        private static SequenceCreate GetSequenceCreatePrototype(
+            string externalId,
+            string simulator,
+            string modelName,
+            string calculationType,
+            string calculationName,
+            long? dataSet)
+        {
+            var seqCreate = new SequenceCreate
+            {
+                ExternalId = externalId,
+                Metadata = GetCommonMetadata(simulator, modelName, calculationType, calculationName)
+            };
+            if (dataSet.HasValue)
+            {
+                seqCreate.DataSetId = dataSet.Value;
+            }
+            return seqCreate;
+        }
+
+        private static Dictionary<string, string> GetCommonMetadata(
+            string simulator,
+            string modelName,
+            string calculationType,
+            string calculationName)
+        {
+            return new Dictionary<string, string>()
+            {
+                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
+                { BaseMetadata.SimulatorKey, simulator },
+                { ModelMetadata.NameKey, modelName },
+                { CalculationMetadata.TypeKey, calculationType },
+                { CalculationMetadata.NameKey, calculationName },
+                { BaseMetadata.DataTypeKey, SimulatorDataType.SimulationOutput.MetadataValue() }
+            };
+        }
+
 
         /// <summary>
         /// Read the values of a <see cref="SequenceRow"/> and returns
@@ -258,6 +487,34 @@ namespace Cognite.Simulator.Extensions
 
     }
 
+    public class SimulationTabularResults
+    {
+        public string ResultType { get; set; }
+        public string ResultName { get; set; }
+        public string Simulator { get; set; }
+        public string ModelName { get; set; }
+        public string CalculationType { get; set; }
+        public string CalculationTypeUserDefined { get; set; }
+        public string CalculationName { get; set; }
+        public List<SimulationResultColumn> Columns { get; set; }
+    }
+
+    public abstract class SimulationResultColumn
+    {
+        public string Header { get; set; }
+        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+    }
+
+    public class SimulationNumericResultColumn : SimulationResultColumn
+    {
+        public List<double> Rows { get; set; }
+    }
+
+    public class SimulationStringResultColumn : SimulationResultColumn
+    {
+        public List<string> Rows { get; set; }
+    }
+
     /// <summary>
     /// Represent errors related to read/write simulator integration sequences in CDF
     /// </summary>
@@ -278,6 +535,28 @@ namespace Cognite.Simulator.Extensions
         }
     }
 
+    public class SimulationTabularResultsException : Exception
+    {
+        /// <summary>
+        /// Errors that triggered this exception
+        /// </summary>
+        public IEnumerable<CogniteError> CogniteErrors { get; private set; }
+
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
+        public SimulationTabularResultsException(string message, IEnumerable<CogniteError> errors)
+            : base(message)
+        {
+            CogniteErrors = errors;
+        }
+
+        public SimulationTabularResultsException(string message) : base(message)
+        {
+            CogniteErrors = new List<CogniteError>();
+        }
+    }
+
     /// <summary>
     /// Represent errors related to reading boundary conditions sequences in CDF
     /// </summary>
@@ -286,7 +565,6 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Creates a new exception containing the provided <paramref name="message"/>
         /// </summary>
-        /// <param name="message"></param>
         public BoundaryConditionsMapNotFoundException(string message) : base(message)
         {
         }
