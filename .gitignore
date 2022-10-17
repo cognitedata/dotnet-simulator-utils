@@ -5,3 +5,5 @@
 /.vs/*
 **/buildoutput/
 *.runsettings
+.idea
+*.user
