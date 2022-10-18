@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cognite.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,4 +33,25 @@ namespace Cognite.Simulator.Extensions
             return Regex.Replace(s, "[/\\\\]", replaceWith, RegexOptions.Compiled);
         }
     }
+
+    /// <summary>
+    /// Represent errors related to read/write data in CDF
+    /// </summary>
+    public class CogniteException : Exception
+    {
+        /// <summary>
+        /// Errors that triggered this exception
+        /// </summary>
+        public IEnumerable<CogniteError> CogniteErrors { get; private set; }
+
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
+        public CogniteException(string message, IEnumerable<CogniteError> errors)
+            : base(message)
+        {
+            CogniteErrors = errors;
+        }
+    }
+
 }

@@ -115,18 +115,7 @@ namespace Cognite.Simulator.Extensions
                         Description = $"Details about {simulator.Key} integration",
                         DataSetId = simulator.Value,
                         Metadata = metadata,
-                        Columns = new List<SequenceColumnWrite> {
-                            new SequenceColumnWrite {
-                                Name = KeyValuePairSequenceColumns.KeyName,
-                                ExternalId = KeyValuePairSequenceColumns.Key,
-                                ValueType = MultiValueType.STRING,
-                            },
-                            new SequenceColumnWrite {
-                                Name = KeyValuePairSequenceColumns.ValueName,
-                                ExternalId = KeyValuePairSequenceColumns.Value,
-                                ValueType = MultiValueType.STRING
-                            }
-                        }
+                        Columns = GetKeyValueColumnWrite()
                     };
                     toCreate.Add(createObj.ExternalId, createObj);
                 }
@@ -178,44 +167,17 @@ namespace Cognite.Simulator.Extensions
             var rowsToCreate = new List<SequenceDataCreate>();
             foreach (var simulator in simulators)
             {
-                var rows = new List<SequenceRow> {
-                    new SequenceRow {
-                        RowNumber = 0,
-                        Values = new List<MultiValue> {
-                            MultiValue.Create(SimulatorIntegrationSequenceRows.Heartbeat),
-                            MultiValue.Create($"{DateTime.UtcNow.ToUnixTimeMilliseconds()}"),
-                        }
-                    }
+                var rowData = new Dictionary<string, string>
+                {
+                    { SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
                 };
                 if (init)
                 {
                     // Data set and version could only have changed on connector restart
-                    rows.Add(new SequenceRow
-                    {
-                        RowNumber = 1,
-                        Values = new List<MultiValue> {
-                            MultiValue.Create(SimulatorIntegrationSequenceRows.DataSetId),
-                            MultiValue.Create($"{simulator.Value}")
-                        }
-                    });
-                    rows.Add(new SequenceRow
-                    {
-                        RowNumber = 2,
-                        Values = new List<MultiValue> {
-                            MultiValue.Create(SimulatorIntegrationSequenceRows.ConnectorVersion),
-                            MultiValue.Create(connectorVersion),
-                        }
-                    });
+                    rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{simulator.Value}");
+                    rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{simulator.Value}");
                 }
-                var rowCreate = new SequenceDataCreate
-                {
-                    ExternalId = simulator.Key,
-                    Columns = new List<string> {
-                            KeyValuePairSequenceColumns.Key,
-                            KeyValuePairSequenceColumns.Value
-                        },
-                    Rows = rows
-                };
+                var rowCreate = ToSequenceData(rowData, simulator.Key, 0);
                 rowsToCreate.Add(rowCreate);
             }
             var result = await sequences.InsertAsync(
@@ -257,24 +219,9 @@ namespace Cognite.Simulator.Extensions
                 return null;
             }
 
-            // Count the number of rows
-            var test = results.Columns
-                .Select(r =>
-                {
-                    if (r.Value is SimulationNumericResultColumn numCol)
-                    {
-                        return numCol.Rows.Count();
-                    }
-                    else if (r.Value is SimulationStringResultColumn strCol)
-                    {
-                        return strCol.Rows.Count();
-                    }
-                    throw new SimulationTabularResultsException($"Invalid type for result column {r.Key}");
-                });
-
-            var rowCount = test.First();
+            var rowCount = results.MaxNumOfRows();
             // Verify that all results have the same number of rows
-            if (test.Where(r => r != rowCount).Any())
+            if (results.Columns.Where(c => c.Value.NumOfRows() != rowCount).Any())
             {
                 throw new SimulationTabularResultsException(
                     "All simulation result columns should contain the same number of rows");
@@ -283,9 +230,9 @@ namespace Cognite.Simulator.Extensions
             if (string.IsNullOrEmpty(externalId))
             {
                 rowStart = 0;
-                var calcTypeForId = GetCalcTypeForIds(results.CalculationType, results.CalculationTypeUserDefined);
-                var modelNameForId = results.ModelName.ReplaceSpecialCharacters("_");
-                externalId = $"{results.Simulator}-OUTPUT-{calcTypeForId}-{results.ResultType}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                var calcTypeForId = GetCalcTypeForIds(results.Calculation.Type, results.Calculation.UserDefinedType);
+                var modelNameForId = results.Calculation.Model.Name.ReplaceSpecialCharacters("_");
+                externalId = $"{results.Calculation.Model.Simulator}-OUTPUT-{calcTypeForId}-{results.Type}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
             }
 
             var sequenceCreate = BuildResultsSequence(
@@ -386,6 +333,128 @@ namespace Cognite.Simulator.Extensions
             return sequence;
         }
 
+        public static async Task<Sequence> StoreRunConfiguration(
+            this SequencesResource sequences,
+            string externalId,
+            int rowStart,
+            long? dataSetId,
+            SimulatorCalculation calculation,
+            Dictionary<string,string> runConfiguration,
+            CancellationToken token)
+        {
+            if (calculation == null || runConfiguration == null || !runConfiguration.Any())
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(externalId))
+            {
+                var calcTypeForId = GetCalcTypeForIds(calculation.Type, calculation.UserDefinedType);
+                var modelNameForId = calculation.Model.Name.ReplaceSpecialCharacters("_");
+                externalId = $"{calculation.Model.Simulator}-RC-{calcTypeForId}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                rowStart = 0;
+            }
+
+            var sequenceCreate = BuildRunConfigurationSequence(
+                externalId,
+                dataSetId,
+                calculation);
+            var createdSequences = await sequences.GetOrCreateAsync(
+                new List<string> { sequenceCreate.ExternalId },
+                (ids) => new List<SequenceCreate> { sequenceCreate },
+                chunkSize: 1,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+
+            if (!createdSequences.IsAllGood)
+            {
+                throw new SimulationRunConfigurationException(
+                    "Could not find or create simulation run configuration sequence", createdSequences.Errors);
+            }
+
+            var rows = new List<SequenceDataCreate>();
+            rows.Add(ToSequenceData(runConfiguration, externalId, rowStart));
+
+            var result = await sequences.InsertAsync(
+                rows,
+                keyChunkSize: 10,
+                valueChunkSize: 100,
+                sequencesChunk: 10,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+            if (!result.IsAllGood)
+            {
+                throw new SimulationRunConfigurationException($"Could not save simulation run configuration", result.Errors);
+            }
+            return createdSequences.Results.First();
+        }
+
+        private static SequenceCreate BuildRunConfigurationSequence(
+            string externalId,
+            long? dataSet,
+            SimulatorCalculation calculation)
+        {
+            var sequenceCreate = GetSequenceCreatePrototype(
+                externalId,
+                calculation,
+                dataSet);
+
+            sequenceCreate.Name = $"Run Configuration - {calculation.Name.ReplaceSlashAndBackslash("_")} - {calculation.Model.Name.ReplaceSlashAndBackslash("_")}";
+            sequenceCreate.Description = $"Simulation run configuration details for {calculation.Name} - {calculation.Model.Name}";
+            sequenceCreate.Columns = GetKeyValueColumnWrite();
+
+            return sequenceCreate;
+        }
+
+        private static IEnumerable<SequenceColumnWrite> GetKeyValueColumnWrite()
+        {
+            return new List<SequenceColumnWrite> {
+                new SequenceColumnWrite {
+                    Name = KeyValuePairSequenceColumns.KeyName,
+                    ExternalId = KeyValuePairSequenceColumns.Key,
+                    ValueType = MultiValueType.STRING,
+                },
+                new SequenceColumnWrite {
+                    Name = KeyValuePairSequenceColumns.ValueName,
+                    ExternalId = KeyValuePairSequenceColumns.Value,
+                    ValueType = MultiValueType.STRING
+                }
+            };
+        }
+
+        private static SequenceDataCreate ToSequenceData(this Dictionary<string, string> rows, string sequenceId, long startIndex)
+        {
+            var sequenceRows = new List<SequenceRow>();
+            var index = startIndex;
+            foreach (var kvp in rows)
+            {
+                var sequenceRow = new SequenceRow
+                {
+                    RowNumber = index,
+                    Values = new List<MultiValue> {
+                        MultiValue.Create(kvp.Key),
+                        MultiValue.Create(kvp.Value)
+                    }
+                };
+                sequenceRows.Add(sequenceRow);
+                index++;
+            }
+            SequenceDataCreate sequenceData = new SequenceDataCreate
+            {
+                ExternalId = sequenceId,
+                Columns = new List<string> {
+                            KeyValuePairSequenceColumns.Key,
+                            KeyValuePairSequenceColumns.Value
+                        },
+                Rows = sequenceRows
+            };
+            return sequenceData;
+        }
+
         private static SequenceCreate BuildResultsSequence(
             string externalId,
             long? dataSet,
@@ -393,21 +462,14 @@ namespace Cognite.Simulator.Extensions
         {
             var sequenceCreate = GetSequenceCreatePrototype(
                 externalId,
-                results.Simulator,
-                results.ModelName,
-                results.CalculationType,
-                results.CalculationName,
+                results.Calculation,
                 dataSet);
-            if (results.CalculationType == "UserDefined" && !string.IsNullOrEmpty(results.CalculationTypeUserDefined))
-            {
-                sequenceCreate.Metadata.Add(CalculationMetadata.UserDefinedTypeKey, results.CalculationTypeUserDefined);
-            }
 
-            sequenceCreate.Name = $"{results.ResultName.ReplaceSlashAndBackslash("_")} " +
-                $"- {results.CalculationName.ReplaceSlashAndBackslash("_")} - {results.ModelName.ReplaceSlashAndBackslash("_")}";
-            sequenceCreate.Description = $"Calculation result for {results.CalculationName} - {results.ModelName}";
-            sequenceCreate.Metadata.Add(CalculationMetadata.ResultTypeKey, results.ResultType);
-            sequenceCreate.Metadata.Add(CalculationMetadata.ResultNameKey, results.ResultName);
+            sequenceCreate.Name = $"{results.Name.ReplaceSlashAndBackslash("_")} " +
+                $"- {results.Calculation.Name.ReplaceSlashAndBackslash("_")} - {results.Calculation.Model.Name.ReplaceSlashAndBackslash("_")}";
+            sequenceCreate.Description = $"Calculation result for {results.Calculation.Name} - {results.Calculation.Model.Name}";
+            sequenceCreate.Metadata.Add(CalculationMetadata.ResultTypeKey, results.Type);
+            sequenceCreate.Metadata.Add(CalculationMetadata.ResultNameKey, results.Name);
             sequenceCreate.Columns = results.Columns.Select(oc =>
             {
                 var col = new SequenceColumnWrite
@@ -437,20 +499,21 @@ namespace Cognite.Simulator.Extensions
 
         private static SequenceCreate GetSequenceCreatePrototype(
             string externalId,
-            string simulator,
-            string modelName,
-            string calculationType,
-            string calculationName,
+            SimulatorCalculation calculation,
             long? dataSet)
         {
             var seqCreate = new SequenceCreate
             {
                 ExternalId = externalId,
-                Metadata = GetCommonMetadata(simulator, modelName, calculationType, calculationName)
+                Metadata = GetCommonMetadata(calculation.Model.Simulator, calculation.Model.Name, calculation.Type, calculation.Name)
             };
             if (dataSet.HasValue)
             {
                 seqCreate.DataSetId = dataSet.Value;
+            }
+            if (calculation.Type == "UserDefined" && !string.IsNullOrEmpty(calculation.UserDefinedType))
+            {
+                seqCreate.Metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
             }
             return seqCreate;
         }
@@ -499,131 +562,53 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents simulation tabular results as columns and rows
-    /// </summary>
-    public class SimulationTabularResults
-    {
-        /// <summary>
-        /// Result type (e.g. SystemCurves)
-        /// </summary>
-        public string ResultType { get; set; }
-        
-        /// <summary>
-        /// Result name (e.g. System Curves)
-        /// </summary>
-        public string ResultName { get; set; }
-        
-        /// <summary>
-        /// Simulator name
-        /// </summary>
-        public string Simulator { get; set; }
-        
-        /// <summary>
-        /// Model name
-        /// </summary>
-        public string ModelName { get; set; }
-        
-        /// <summary>
-        /// Calculation type (e.g. IPR/VLP)
-        /// </summary>
-        public string CalculationType { get; set; }
-        
-        /// <summary>
-        /// Calculation type - user defined (e.g. CustomIprVlp)
-        /// </summary>
-        public string CalculationTypeUserDefined { get; set; }
-
-        /// <summary>
-        /// Calculation name (e.g. Rate by Nodal Analysis)
-        /// </summary>
-        public string CalculationName { get; set; }
-        
-        /// <summary>
-        /// Columns with simulation results. The dictionary key
-        /// represents the column header
-        /// </summary>
-        public IDictionary<string, SimulationResultColumn> Columns { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a simulation result column
-    /// </summary>
-    public abstract class SimulationResultColumn
-    {
-        /// <summary>
-        /// Metadata to be atached to the column
-        /// </summary>
-        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
-    }
-
-    /// <summary>
-    /// Represents a numeric simulation result column
-    /// </summary>
-    public class SimulationNumericResultColumn : SimulationResultColumn
-    {
-        /// <summary>
-        /// Numeric row values
-        /// </summary>
-        public IEnumerable<double> Rows { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a string simulation result column
-    /// </summary>
-    public class SimulationStringResultColumn : SimulationResultColumn
-    {
-        /// <summary>
-        /// String row values
-        /// </summary>
-        public IEnumerable<string> Rows { get; set; }
-    }
-
-    /// <summary>
     /// Represent errors related to read/write simulator integration sequences in CDF
     /// </summary>
-    public class SimulatorIntegrationSequenceException : Exception
+    public class SimulatorIntegrationSequenceException : CogniteException
     {
-        /// <summary>
-        /// Errors that triggered this exception
-        /// </summary>
-        public IEnumerable<CogniteError> CogniteErrors { get; private set; }
-
         /// <summary>
         /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
         /// </summary>
         public SimulatorIntegrationSequenceException(string message, IEnumerable<CogniteError> errors)
-            : base(message)
+            : base(message, errors)
         {
-            CogniteErrors = errors;
+        }
+    }
+
+    /// <summary>
+    /// Represent errors related to read/write simulation run configuration sequences in CDF
+    /// </summary>
+    public class SimulationRunConfigurationException : CogniteException
+    {
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
+        public SimulationRunConfigurationException(string message, IEnumerable<CogniteError> errors)
+            : base(message, errors)
+        {
         }
     }
 
     /// <summary>
     /// Represents errors related to read/write tabular simulation results
     /// </summary>
-    public class SimulationTabularResultsException : Exception
+    public class SimulationTabularResultsException : CogniteException
     {
-        /// <summary>
-        /// Errors that triggered this exception
-        /// </summary>
-        public IEnumerable<CogniteError> CogniteErrors { get; private set; }
 
         /// <summary>
         /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
         /// </summary>
         public SimulationTabularResultsException(string message, IEnumerable<CogniteError> errors)
-            : base(message)
+            : base(message, errors)
         {
-            CogniteErrors = errors;
         }
 
         /// <summary>
         /// Creates a new exception containing the provided <paramref name="message"/>
         /// </summary>
         /// <param name="message"></param>
-        public SimulationTabularResultsException(string message) : base(message)
+        public SimulationTabularResultsException(string message) : base(message, new List<CogniteError>())
         {
-            CogniteErrors = new List<CogniteError>();
         }
     }
 

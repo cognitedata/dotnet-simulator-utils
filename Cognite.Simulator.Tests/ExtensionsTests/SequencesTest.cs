@@ -183,15 +183,24 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var doubleValues = new List<double>() { 1.0, 2.0, 3.0, 4.0 };
             var stringValues = new List<string>() { "A", "B", "C", "D" };
 
+            var model = new SimulatorModel
+            {
+                Simulator = "TestSimulator",
+                Name = "Connector Test Model"
+            };
+            var calculation = new SimulatorCalculation
+            {
+                Model = model,
+                Name = "Test Simulation Calculation",
+                Type = "UserDefined",
+                UserDefinedType = "Test/Calc"
+            };
+
             var results = new SimulationTabularResults
             {
-                CalculationName = "Test Simulation Calculation",
-                CalculationType = "UserDefined",
-                CalculationTypeUserDefined = "Test/Calc",
-                ModelName = "Connector Test Model",
-                ResultName = "System Results",
-                ResultType = "SystemResults",
-                Simulator = "TestSimulator",
+                Calculation = calculation,
+                Name = "System Results",
+                Type = "SystemResults",
                 Columns =  new Dictionary<string, SimulationResultColumn>()
                 {
                     { 
@@ -240,11 +249,11 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Contains(CalculationMetadata.ResultNameKey, createdSeq.Metadata.Keys);
                 Assert.Contains(CalculationMetadata.ResultTypeKey, createdSeq.Metadata.Keys);
 
-                Assert.Equal(results.CalculationType, createdSeq.Metadata[CalculationMetadata.TypeKey]);
-                Assert.Equal(results.CalculationName, createdSeq.Metadata[CalculationMetadata.NameKey]);
-                Assert.Equal(results.CalculationTypeUserDefined, createdSeq.Metadata[CalculationMetadata.UserDefinedTypeKey]);
-                Assert.Equal(results.ResultName, createdSeq.Metadata[CalculationMetadata.ResultNameKey]);
-                Assert.Equal(results.ResultType, createdSeq.Metadata[CalculationMetadata.ResultTypeKey]);
+                Assert.Equal(calculation.Type, createdSeq.Metadata[CalculationMetadata.TypeKey]);
+                Assert.Equal(calculation.Name, createdSeq.Metadata[CalculationMetadata.NameKey]);
+                Assert.Equal(calculation.UserDefinedType, createdSeq.Metadata[CalculationMetadata.UserDefinedTypeKey]);
+                Assert.Equal(results.Name, createdSeq.Metadata[CalculationMetadata.ResultNameKey]);
+                Assert.Equal(results.Type, createdSeq.Metadata[CalculationMetadata.ResultTypeKey]);
 
                 Assert.Equal(2, createdSeq.Columns.Count());
                 Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns.ToArray()[0].Key);
