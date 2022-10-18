@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cognite.DataProcessing\Cognite.DataProcessing.csproj" />
     <ProjectReference Include="..\Cognite.Simulator.Extensions\Cognite.Simulator.Extensions.csproj" />
-    <ProjectReference Include="..\Cognite.Simulator.Utils\Cognite.Simulator.Utils.csproj" />
   </ItemGroup>
 
 </Project>

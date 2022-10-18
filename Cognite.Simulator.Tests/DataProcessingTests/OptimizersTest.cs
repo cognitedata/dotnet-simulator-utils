@@ -1,8 +1,8 @@
 using System;
-using Cognite.Simulator.Utils;
+using Cognite.DataProcessing;
 using Xunit;
 
-namespace Cognite.Simulator.Tests.UtilsTests;
+namespace Cognite.DataProcessing.Tests;
 
 public class OptimizersTest
 {

@@ -1,8 +1,8 @@
 using System;
 using Xunit;
-using Cognite.Simulator.Utils;
+using Cognite.DataProcessing;
 
-namespace Cognite.Simulator.Tests.UtilsTests;
+namespace Cognite.DataProcessing.Tests;
 
 public class DataSamplingTest
 {
