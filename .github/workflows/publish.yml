@@ -19,8 +19,15 @@ jobs:
       with:
         dotnet-version: 6.0.x
 
+    - name: Dotnet Pack DataProcessing
+      run: dotnet pack Cognite.DataProcessing/Cognite.DataProcessing.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v}  
+
     - name: Dotnet Pack Extensions
       run: dotnet pack Cognite.Simulator.Extensions/Cognite.Simulator.Extensions.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v}  
+
+    - name: Dotnet Nuget Push DataProcessing
+      run: dotnet nuget push nuget-packages/Cognite.DataProcessing*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      continue-on-error: false
 
     - name: Dotnet Nuget Push Extensions
       run: dotnet nuget push nuget-packages/Cognite.Simulator.Extensions*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
