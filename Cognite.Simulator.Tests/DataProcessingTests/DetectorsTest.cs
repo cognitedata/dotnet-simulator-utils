@@ -1,7 +1,7 @@
-using Xunit;
 using Cognite.DataProcessing;
+using Xunit;
 
-namespace Cognite.DataProcessing.Tests;
+namespace Cognite.Simulator.Tests.DataProcessingTests;
 
 public class DetectorsTest
 {

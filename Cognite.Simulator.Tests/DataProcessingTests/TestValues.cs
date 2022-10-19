@@ -1,4 +1,4 @@
-namespace Cognite.DataProcessing.Tests;
+namespace Cognite.Simulator.Tests.DataProcessingTests;
 
 public class TestValues
 {
