@@ -415,6 +415,7 @@ namespace Cognite.Simulator.Extensions
             var sequenceCreate = GetSequenceCreatePrototype(
                 externalId,
                 calculation,
+                SimulatorDataType.SimulationRunConfiguration,
                 dataSet);
 
             sequenceCreate.Name = $"Run Configuration - {calculation.Name.ReplaceSlashAndBackslash("_")} - {calculation.Model.Name.ReplaceSlashAndBackslash("_")}";
@@ -477,6 +478,7 @@ namespace Cognite.Simulator.Extensions
             var sequenceCreate = GetSequenceCreatePrototype(
                 externalId,
                 results.Calculation,
+                SimulatorDataType.SimulationOutput,
                 dataSet);
 
             sequenceCreate.Name = $"{results.Name.ReplaceSlashAndBackslash("_")} " +
@@ -514,12 +516,13 @@ namespace Cognite.Simulator.Extensions
         private static SequenceCreate GetSequenceCreatePrototype(
             string externalId,
             SimulatorCalculation calculation,
+            SimulatorDataType dataType,
             long? dataSet)
         {
             var seqCreate = new SequenceCreate
             {
                 ExternalId = externalId,
-                Metadata = GetCommonMetadata(calculation.Model.Simulator, calculation.Model.Name, calculation.Type, calculation.Name)
+                Metadata = GetCommonMetadata(calculation.Model.Simulator, calculation.Model.Name, calculation.Type, calculation.Name, dataType)
             };
             if (dataSet.HasValue)
             {
@@ -536,7 +539,8 @@ namespace Cognite.Simulator.Extensions
             string simulator,
             string modelName,
             string calculationType,
-            string calculationName)
+            string calculationName,
+            SimulatorDataType dataType)
         {
             return new Dictionary<string, string>()
             {
@@ -545,7 +549,7 @@ namespace Cognite.Simulator.Extensions
                 { ModelMetadata.NameKey, modelName },
                 { CalculationMetadata.TypeKey, calculationType },
                 { CalculationMetadata.NameKey, calculationName },
-                { BaseMetadata.DataTypeKey, SimulatorDataType.SimulationOutput.MetadataValue() }
+                { BaseMetadata.DataTypeKey, dataType.MetadataValue() }
             };
         }
 
