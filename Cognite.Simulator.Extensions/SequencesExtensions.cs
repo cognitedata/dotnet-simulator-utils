@@ -175,7 +175,7 @@ namespace Cognite.Simulator.Extensions
                 {
                     // Data set and version could only have changed on connector restart
                     rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{simulator.Value}");
-                    rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{simulator.Value}");
+                    rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{connectorVersion}");
                 }
                 var rowCreate = ToSequenceData(rowData, simulator.Key, 0);
                 rowsToCreate.Add(rowCreate);
@@ -209,7 +209,7 @@ namespace Cognite.Simulator.Extensions
         public static async Task<Sequence> StoreSimulationResults(
             this SequencesResource sequences,
             string externalId,
-            int rowStart,
+            long rowStart,
             long? dataSetId,
             SimulationTabularResults results,
             CancellationToken token)
@@ -333,10 +333,24 @@ namespace Cognite.Simulator.Extensions
             return sequence;
         }
 
+        /// <summary>
+        /// Store the simulation run configuration.
+        /// The sequence rows contains be key/value pair. A pair can be a calculation configuration property that
+        /// may change from run to run
+        /// </summary>
+        /// <param name="sequences">CDF Sequence resource</param>
+        /// <param name="externalId">External id of the sequence. Set to <c>null</c> to generate a new external id</param>
+        /// <param name="rowStart">Write rows starting from this index</param>
+        /// <param name="dataSetId">Data set id</param>
+        /// <param name="calculation">Calculation object</param>
+        /// <param name="runConfiguration">Dictionary containing the key/value pairs to add</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>The sequence containing the run configuration</returns>
+        /// <exception cref="SimulationRunConfigurationException">Thrown when it is not possible to store the run  configuration</exception>
         public static async Task<Sequence> StoreRunConfiguration(
             this SequencesResource sequences,
             string externalId,
-            int rowStart,
+            long rowStart,
             long? dataSetId,
             SimulatorCalculation calculation,
             Dictionary<string,string> runConfiguration,

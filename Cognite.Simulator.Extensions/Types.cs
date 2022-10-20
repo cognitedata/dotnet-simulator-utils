@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Cognite.Simulator.Extensions
 {
+    /// <summary>
+    /// Represents a simulator model file
+    /// </summary>
     public class SimulatorModel
     {
         /// <summary>
@@ -19,6 +22,9 @@ namespace Cognite.Simulator.Extensions
 
     }
 
+    /// <summary>
+    /// Represents a simulator calculation file
+    /// </summary>
     public class SimulatorCalculation
     {
         /// <summary>
@@ -36,6 +42,9 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string UserDefinedType { get; set; }
 
+        /// <summary>
+        /// Simulator model associated with this calculation
+        /// </summary>
         public SimulatorModel Model { get; set; }
     }
 
@@ -54,6 +63,9 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Calculation that produced these tabular results
+        /// </summary>
         public SimulatorCalculation Calculation { get; set; }
 
         /// <summary>
@@ -62,6 +74,10 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public IDictionary<string, SimulationResultColumn> Columns { get; set; }
 
+        /// <summary>
+        /// Returns the maximum number of rows accross all columns
+        /// </summary>
+        /// <returns>Maximum number of rows</returns>
         public int MaxNumOfRows()
         {
             return Columns.Select(c => c.Value.NumOfRows()).Max();
@@ -78,6 +94,10 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>
+        /// Count the number of rows
+        /// </summary>
+        /// <returns>Number of rows</returns>
         public abstract int NumOfRows();
     }
 
@@ -93,11 +113,19 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public IEnumerable<double> Rows { get => _rows; set => _rows = value.ToList(); }
 
+        /// <summary>
+        /// Count the number of rows
+        /// </summary>
+        /// <returns>Number of rows</returns>
         public override int NumOfRows()
         {
             return Rows != null ? Rows.Count() : 0;
         }
 
+        /// <summary>
+        /// Add a numeric value to this column
+        /// </summary>
+        /// <param name="value">Numeric value</param>
         public void Add(double value)
         {
             if (_rows == null)
@@ -120,10 +148,19 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public IEnumerable<string> Rows { get => _rows; set => _rows = value.ToList(); }
 
+        /// <summary>
+        /// Count the number of rows
+        /// </summary>
+        /// <returns>Number of rows</returns>
         public override int NumOfRows()
         {
             return Rows != null ? Rows.Count() : 0;
         }
+        
+        /// <summary>
+        /// Add a string value to this column
+        /// </summary>
+        /// <param name="value">String value</param>
         public void Add(string value)
         {
             if (_rows == null)
