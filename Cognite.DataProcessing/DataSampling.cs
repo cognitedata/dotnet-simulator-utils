@@ -101,7 +101,7 @@ namespace Cognite.DataProcessing
         /// <returns>
         /// Time series with the logical check status (0: conditions not met, 1: conditions met) for all timestamps.
         /// </returns>
-        public static TimeSeriesData LogicalCheck(TimeSeriesData ts, double threshold, string check)
+        public static TimeSeriesData LogicalCheck(TimeSeriesData ts, double threshold, LogicOperator check)
         {
             if (ts == null)
                 throw new ArgumentNullException(nameof(ts), "The input data is empty");
@@ -117,35 +117,65 @@ namespace Cognite.DataProcessing
             double[] yRes = new double[y.Length];
 
             // run the logical check for each timestamp
-            // there might be a more elegant way to do this, but this works for now
             for (int i = 0; i < x.Length; i++)
             {
                 switch (check)
                 {
-                    case "eq":
+                    case LogicOperator.Eq:
                         yRes[i] = (y[i] == threshold) ? 1.0 : 0.0;
                         break;
-                    case "ne":
+                    case LogicOperator.Ne:
                         yRes[i] = (y[i] != threshold) ? 1.0 : 0.0;
                         break;
-                    case "gt":
+                    case LogicOperator.Gt:
                         yRes[i] = (y[i] > threshold) ? 1.0 : 0.0;
                         break;
-                    case "ge":
+                    case LogicOperator.Ge:
                         yRes[i] = (y[i] >= threshold) ? 1.0 : 0.0;
                         break;
-                    case "lt":
+                    case LogicOperator.Lt:
                         yRes[i] = (y[i] < threshold) ? 1.0 : 0.0;
                         break;
-                    case "le":
+                    case LogicOperator.Le:
                         yRes[i] = (y[i] <= threshold) ? 1.0 : 0.0;
                         break;
                     default:
-                        throw new ArgumentException("Unknown logical check");
+                        throw new ArgumentException($"Unknown operator {check}", nameof(check));
                 }
             }
 
             return new TimeSeriesData(time: x, data: yRes, granularity: ts.Granularity, isStep: ts.IsStep);
+        }
+        
+        /// <summary>
+        /// Supported logical operations
+        /// </summary>
+        public enum LogicOperator
+        {
+            /// <summary>
+            /// Equal
+            /// </summary>
+            Eq,
+            /// <summary>
+            /// Not equal
+            /// </summary>
+            Ne,
+            /// <summary>
+            /// Greater
+            /// </summary>
+            Gt,
+            /// <summary>
+            /// Greater or equal
+            /// </summary>
+            Ge,
+            /// <summary>
+            /// Less
+            /// </summary>
+            Lt,
+            /// <summary>
+            /// Less or equal
+            /// </summary>
+            Le
         }
     }
 }
