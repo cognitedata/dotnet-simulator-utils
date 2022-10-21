@@ -14,6 +14,10 @@ public class DataSamplingTest
     private readonly TimeSeriesData _oneDataPointStep;
     private readonly TimeSeriesData _twoDataPoints;
     private readonly TimeSeriesData _twoDataPointsStep;
+    private readonly TimeSeriesData _sensorData;
+    private readonly TimeSeriesData _logicalCheck1;
+    private readonly DataSampling.LogicOperator _check1;
+    private readonly double _threshold1;
 
     public DataSamplingTest()
     {
@@ -37,6 +41,12 @@ public class DataSamplingTest
             time: new long[] { 1, 10 }, data: new double[] { 1, 0 }, granularity: 1, isStep: false);
         _twoDataPointsStep = new TimeSeriesData(
             time: new long[] { 1, 10 }, data: new double[] { 1, 0 }, granularity: 1, isStep: true);
+        _sensorData = new TimeSeriesData(
+            time: testData.TimeSsd, data: testData.DataSsd, granularity: 60000, isStep: false);
+        _logicalCheck1 = new TimeSeriesData(
+            time: testData.LogicalCheckTime, data: testData.LogicalCheckData1, granularity: 60000, isStep: false);
+        _check1 = testData.Check1;
+        _threshold1 = testData.Threshold1;
     }
     
     [Fact]
@@ -139,5 +149,19 @@ public class DataSamplingTest
         long expectedSampleTime = 1631296740000;
 
         if (sampleTime != null) Assert.Equal(expectedSampleTime, sampleTime.Value);
+    }
+    
+    [Fact]
+    public void TestLogicalCheck()
+    {
+        // Call Method
+        TimeSeriesData logicResult = DataSampling.LogicalCheck(
+            ts: _sensorData, threshold: _threshold1, check: _check1);
+
+        for (int i = 0; i < logicResult.Time.Length; i++)
+        {
+            Assert.Equal(_logicalCheck1.Time[i], logicResult.Time[i]);
+            Assert.Equal(_logicalCheck1.Data[i], logicResult.Data[i]);
+        }
     }
 }
