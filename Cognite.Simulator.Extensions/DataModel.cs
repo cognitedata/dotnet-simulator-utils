@@ -208,6 +208,10 @@ namespace Cognite.Simulator.Extensions
         /// Simulation output data type
         /// </summary>
         SimulationOutput,
+        /// <summary>
+        /// Simulation run configuration data type
+        /// </summary>
+        SimulationRunConfiguration,
     }
 
     /// <summary>
@@ -229,6 +233,7 @@ namespace Cognite.Simulator.Extensions
                 case SimulatorDataType.BoundaryConditionsMap: return "Boundary Condition Time Series Map";
                 case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
+                case SimulatorDataType.SimulationRunConfiguration: return "Run Configuration";
                 default: throw new ArgumentException("Invalid data type");
             }
         }

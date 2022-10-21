@@ -183,15 +183,24 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var doubleValues = new List<double>() { 1.0, 2.0, 3.0, 4.0 };
             var stringValues = new List<string>() { "A", "B", "C", "D" };
 
+            var model = new SimulatorModel
+            {
+                Simulator = "TestSimulator",
+                Name = "Connector Test Model"
+            };
+            var calculation = new SimulatorCalculation
+            {
+                Model = model,
+                Name = "Test Simulation Calculation",
+                Type = "UserDefined",
+                UserDefinedType = "Test/Calc"
+            };
+
             var results = new SimulationTabularResults
             {
-                CalculationName = "Test Simulation Calculation",
-                CalculationType = "UserDefined",
-                CalculationTypeUserDefined = "Test/Calc",
-                ModelName = "Connector Test Model",
-                ResultName = "System Results",
-                ResultType = "SystemResults",
-                Simulator = "TestSimulator",
+                Calculation = calculation,
+                Name = "System Results",
+                Type = "SystemResults",
                 Columns =  new Dictionary<string, SimulationResultColumn>()
                 {
                     { 
@@ -240,11 +249,12 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Contains(CalculationMetadata.ResultNameKey, createdSeq.Metadata.Keys);
                 Assert.Contains(CalculationMetadata.ResultTypeKey, createdSeq.Metadata.Keys);
 
-                Assert.Equal(results.CalculationType, createdSeq.Metadata[CalculationMetadata.TypeKey]);
-                Assert.Equal(results.CalculationName, createdSeq.Metadata[CalculationMetadata.NameKey]);
-                Assert.Equal(results.CalculationTypeUserDefined, createdSeq.Metadata[CalculationMetadata.UserDefinedTypeKey]);
-                Assert.Equal(results.ResultName, createdSeq.Metadata[CalculationMetadata.ResultNameKey]);
-                Assert.Equal(results.ResultType, createdSeq.Metadata[CalculationMetadata.ResultTypeKey]);
+                Assert.Equal(SimulatorDataType.SimulationOutput.MetadataValue(), createdSeq.Metadata[BaseMetadata.DataTypeKey]);
+                Assert.Equal(calculation.Type, createdSeq.Metadata[CalculationMetadata.TypeKey]);
+                Assert.Equal(calculation.Name, createdSeq.Metadata[CalculationMetadata.NameKey]);
+                Assert.Equal(calculation.UserDefinedType, createdSeq.Metadata[CalculationMetadata.UserDefinedTypeKey]);
+                Assert.Equal(results.Name, createdSeq.Metadata[CalculationMetadata.ResultNameKey]);
+                Assert.Equal(results.Type, createdSeq.Metadata[CalculationMetadata.ResultTypeKey]);
 
                 Assert.Equal(2, createdSeq.Columns.Count());
                 Assert.Contains(createdSeq.Columns, c => c.ExternalId == results.Columns.ToArray()[0].Key);
@@ -275,6 +285,91 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     await sequences.DeleteAsync(new List<string> { externalIdToDelete }, CancellationToken.None).ConfigureAwait(false);
                 }
             }
+        }
+
+        [Fact]
+        public async Task TestStoreRunConfiguration()
+        {
+            const long dataSetId = 7900866844615420;
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+
+            using var provider = services.BuildServiceProvider();
+            var cdf = provider.GetRequiredService<Client>();
+            var sequences = cdf.Sequences;
+
+            var runConfiguration = new Dictionary<string, string>() {
+                { "runEventId", "SomeExternalId" },
+                { "calTime", "1224257770000" },
+                { "modelVersion", "3" },
+                { "logicalCheckEnabled", "False" }
+            };
+
+            var model = new SimulatorModel
+            {
+                Simulator = "TestSimulator",
+                Name = "Connector Test Model"
+            };
+            var calculation = new SimulatorCalculation
+            {
+                Model = model,
+                Name = "Test Simulation Calculation",
+                Type = "UserDefined",
+                UserDefinedType = "Test/Calc"
+            };
+
+            string? externalIdToDelete = null;
+            try
+            {
+                var createdSeq = await sequences.StoreRunConfiguration(
+                    null,
+                    0,
+                    dataSetId,
+                    calculation,
+                    runConfiguration,
+                    CancellationToken.None).ConfigureAwait(false);
+                Assert.NotNull(createdSeq);
+                externalIdToDelete = createdSeq.ExternalId;
+                Assert.Contains(BaseMetadata.SimulatorKey, createdSeq.Metadata.Keys);
+                Assert.Contains(BaseMetadata.DataModelVersionKey, createdSeq.Metadata.Keys);
+                Assert.Contains(BaseMetadata.DataTypeKey, createdSeq.Metadata.Keys);
+                Assert.Contains(ModelMetadata.NameKey, createdSeq.Metadata.Keys);
+                Assert.Contains(CalculationMetadata.TypeKey, createdSeq.Metadata.Keys);
+                Assert.Contains(CalculationMetadata.NameKey, createdSeq.Metadata.Keys);
+                Assert.Contains(CalculationMetadata.UserDefinedTypeKey, createdSeq.Metadata.Keys);
+                
+                Assert.Equal(SimulatorDataType.SimulationRunConfiguration.MetadataValue(), createdSeq.Metadata[BaseMetadata.DataTypeKey]);
+                Assert.Equal(calculation.Type, createdSeq.Metadata[CalculationMetadata.TypeKey]);
+                Assert.Equal(calculation.Name, createdSeq.Metadata[CalculationMetadata.NameKey]);
+                Assert.Equal(calculation.UserDefinedType, createdSeq.Metadata[CalculationMetadata.UserDefinedTypeKey]);
+                
+                Assert.Equal(2, createdSeq.Columns.Count());
+                
+                // Verify that the sequence was updated correctly
+                var result = await sequences.ListRowsAsync(new SequenceRowQuery
+                {
+                    ExternalId = createdSeq.ExternalId
+                }, CancellationToken.None).ConfigureAwait(false);
+                Assert.NotEmpty(result.Columns);
+                var rows = result.Rows.ToArray();
+                for (int i = 0; i < rows.Length; ++i)
+                {
+                    var values = rows[i].Values.ToArray();
+                    Assert.Equal(i, rows[i].RowNumber);
+                    Assert.True(values[0] is MultiValue.String);
+                    Assert.Equal(runConfiguration.Keys.ToArray()[i], ((MultiValue.String)values[0]).Value);
+                    Assert.True(values[1] is MultiValue.String);
+                    Assert.Equal(runConfiguration.Values.ToArray()[i], ((MultiValue.String)values[1]).Value);
+                }
+            }
+            finally
+            {
+                if (externalIdToDelete != null)
+                {
+                    await sequences.DeleteAsync(new List<string> { externalIdToDelete }, CancellationToken.None).ConfigureAwait(false);
+                }
+            }
+
         }
     }
 }

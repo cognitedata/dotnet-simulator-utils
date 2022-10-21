@@ -2,6 +2,7 @@
 using Cognite.Extractor.Logging;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +54,8 @@ namespace Cognite.Simulator.Tests
             services.AddHttpClient("AuthClient");
             services.AddSingleton<IAuthenticator>(p => {
                 var factory = p.GetRequiredService<IHttpClientFactory>();
-                return new MsalAuthenticator(authConfig, null, factory, "AuthClient");
+                var logger = p.GetRequiredService<ILogger<IAuthenticator>>();
+                return new MsalAuthenticator(authConfig, logger, factory, "AuthClient");
             });
 
             // Configure CDF Client
