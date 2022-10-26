@@ -1,5 +1,6 @@
 <a href="https://cognite.com/">
-    <img src="https://images.squarespace-cdn.com/content/5bd167cf65a707203855d3c0/1540463676940-6USHZRRF36KCAZLUPM2P/Logo-H.jpg?format=300w&content-type=image%2Fjpeg" alt="Cognite logo" title="Cognite" align="right" height="40" />
+    <img src="https://user-images.githubusercontent.com/6639002/198019337-eb5730fc-583a-4c21-9d1b-7e5cffa685c2.png#gh-light-mode-only" alt="Cognite logo" title="Cognite" align="right" height="50" />
+    <img src="https://user-images.githubusercontent.com/6639002/198020263-af95e1ec-6494-4f17-b359-339b65cf9b04.png#gh-dark-mode-only" alt="Cognite logo" title="Cognite" align="right" height="50" />
 </a>
 
 Cognite Simulator Integration Utils
