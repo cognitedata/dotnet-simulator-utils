@@ -1,5 +1,4 @@
 <a href="https://cognite.com/">
-    <img src="https://user-images.githubusercontent.com/6639002/198019337-eb5730fc-583a-4c21-9d1b-7e5cffa685c2.png#gh-light-mode-only" alt="Cognite logo" title="Cognite" align="right" height="50" />
     <img src="https://user-images.githubusercontent.com/6639002/198020263-af95e1ec-6494-4f17-b359-339b65cf9b04.png#gh-dark-mode-only" alt="Cognite logo" title="Cognite" align="right" height="50" />
 </a>
 
