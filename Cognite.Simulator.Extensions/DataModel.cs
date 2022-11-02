@@ -110,6 +110,33 @@ namespace Cognite.Simulator.Extensions
         public const SimulatorDataType DataType = SimulatorDataType.SimulatorIntegration;
     }
 
+
+    public static class SimulationEventMetadata
+    {
+        public const string StatusKey = "status";
+        public const string StatusMessageKey = "statusMessage";
+        public const string ModelVersionKey = "modelVersion";
+        public const string RunTypeKey = "runType";
+        public const string UserEmailKey = "userEmail";
+        public const string CalculationIdKey = "calcConfig";
+
+        public const SimulatorDataType DataType = SimulatorDataType.SimulationEvent;
+    }
+
+    public static class SimulationEventStatusValues
+    {
+        public const string Ready = "ready";
+        public const string Running = "running";
+        public const string Success = "success";
+        public const string Failure = "failure";
+    }
+
+    public static class SimulationEventRunTypeValues
+    {
+        public const string Manual = "manual";
+        public const string Scheduled = "scheduled";
+    }
+
     /// <summary>
     /// Columns that should be part of the boundary conditions to time series id map
     /// </summary>
@@ -212,6 +239,10 @@ namespace Cognite.Simulator.Extensions
         /// Simulation run configuration data type
         /// </summary>
         SimulationRunConfiguration,
+        /// <summary>
+        /// Simulation calculation data type
+        /// </summary>
+        SimulationEvent
     }
 
     /// <summary>
@@ -234,6 +265,7 @@ namespace Cognite.Simulator.Extensions
                 case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
                 case SimulatorDataType.SimulationRunConfiguration: return "Run Configuration";
+                case SimulatorDataType.SimulationEvent: return "Simulation Calculation";
                 default: throw new ArgumentException("Invalid data type");
             }
         }

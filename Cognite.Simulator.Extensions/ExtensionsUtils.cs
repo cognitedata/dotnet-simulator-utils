@@ -1,6 +1,7 @@
 ﻿using Cognite.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -32,6 +33,33 @@ namespace Cognite.Simulator.Extensions
         {
             return Regex.Replace(s, "[/\\\\]", replaceWith, RegexOptions.Compiled);
         }
+
+        internal static void AddRange(
+            this Dictionary<string, string> dict,
+            Dictionary<string, string> newEntries)
+        {
+            if (newEntries != null && newEntries.Any())
+            {
+                foreach (var pair in newEntries)
+                {
+                    if (dict.ContainsKey(pair.Key))
+                    {
+                        continue;
+                    }
+                    dict.Add(pair.Key, pair.Value);
+                }
+            }
+        }
+
+        internal static string GetCalcTypeForIds(this SimulatorCalculation calc)
+        {
+            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
+            {
+                return $"{calc.Type.ReplaceSpecialCharacters("_")}-{calc.UserDefinedType.ReplaceSpecialCharacters("_")}";
+            }
+            return calc.Type.ReplaceSpecialCharacters("_");
+        }
+
     }
 
     /// <summary>

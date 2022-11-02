@@ -170,4 +170,16 @@ namespace Cognite.Simulator.Extensions
             _rows.Add(value);
         }
     }
+
+    public class SimulationEvent
+    {
+        public SimulatorCalculation Calculation { get; set; }
+        //public string Status { get; set; }
+        //public string StatusMessage { get; set; }
+        public string UserEmail { get; set; }
+        public string RunType { get; set; }
+        public string Connector { get; set; }
+        public long? DataSetId { get; set; }
+        public string CalculationId { get; set; }
+    }
 }
