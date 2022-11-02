@@ -90,17 +90,28 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     { simEvent.Calculation.Model.Simulator, simEvent.DataSetId.Value }
                 };
 
-                var foundReadyEvents = await events.FindSimulationEventsReadyToRun(
-                    simulators, 
-                    fakeConnectorName, 
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotEmpty(foundReadyEvents);
-                var foundReadyEvent = foundReadyEvents
-                    .Where(e => e.ExternalId == readyEvent.ExternalId)
-                    .First();
-                Assert.Equal(readyEvent.ExternalId, foundReadyEvent.ExternalId);
-                Assert.Equal(SimulationEventStatusValues.Ready, foundReadyEvent.Metadata[SimulationEventMetadata.StatusKey]);
-                
+                int retryCount = 0;
+                while (retryCount < 20)
+                {
+                    var foundReadyEvents = await events.FindSimulationEventsReadyToRun(
+                        simulators,
+                        fakeConnectorName,
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (!foundReadyEvents.Any())
+                    {
+                        retryCount++;
+                        await Task.Delay(100).ConfigureAwait(false);
+                        continue;
+                    }
+                    Assert.NotEmpty(foundReadyEvents);
+                    var foundReadyEvent = foundReadyEvents
+                        .Where(e => e.ExternalId == readyEvent.ExternalId)
+                        .First();
+                    Assert.Equal(readyEvent.ExternalId, foundReadyEvent.ExternalId);
+                    Assert.Equal(SimulationEventStatusValues.Ready, foundReadyEvent.Metadata[SimulationEventMetadata.StatusKey]);
+                    break;
+                }
+
                 var simDate = DateTime.UtcNow;
                 var runningEvent = await events.UpdateSimulationEventToRunning(
                     readyEvent.ExternalId,
@@ -114,18 +125,30 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, runningEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Running, runningEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
-                var foundRunningEvents = await events.FindSimulationEventsRunning(
-                    simulators,
-                    fakeConnectorName,
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotEmpty(foundRunningEvents);
-                var foundRunningEvent = foundRunningEvents
-                    .Where(e => e.ExternalId == readyEvent.ExternalId)
-                    .First();
-                Assert.Equal(SimulationEventStatusValues.Running, foundRunningEvent.Metadata[SimulationEventMetadata.StatusKey]);
-                Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundRunningEvent.StartTime);
-                Assert.Equal("1", foundRunningEvent.Metadata[SimulationEventMetadata.ModelVersionKey]);
-                Assert.Equal("metadata 1", foundRunningEvent.Metadata["some"]);
+                retryCount = 0;
+                while (retryCount < 20)
+                {
+                    var foundRunningEvents = await events.FindSimulationEventsRunning(
+                        simulators,
+                        fakeConnectorName,
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (!foundRunningEvents.Any())
+                    {
+                        retryCount++;
+                        await Task.Delay(100).ConfigureAwait(false);
+                        continue;
+                    }
+                    Assert.NotEmpty(foundRunningEvents);
+                    var foundRunningEvent = foundRunningEvents
+                        .Where(e => e.ExternalId == readyEvent.ExternalId)
+                        .First();
+                    Assert.Equal(SimulationEventStatusValues.Running, foundRunningEvent.Metadata[SimulationEventMetadata.StatusKey]);
+                    Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundRunningEvent.StartTime);
+                    Assert.Equal("1", foundRunningEvent.Metadata[SimulationEventMetadata.ModelVersionKey]);
+                    Assert.Equal("metadata 1", foundRunningEvent.Metadata["some"]);
+                    break;
+                }
+
 
                 var successEvent = await events.UpdateSimulationEventToSuccess(
                     readyEvent.ExternalId,
@@ -139,25 +162,36 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, successEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Success, successEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
-                var foundSuccessEvents = await events.FindSimulationEvents(
-                    simulators,
-                    new Dictionary<string, string>
-                    {
+                retryCount = 0;
+                while (retryCount < 20)
+                {
+                    var foundSuccessEvents = await events.FindSimulationEvents(
+                        simulators,
+                        new Dictionary<string, string>
+                        {
                         { SimulationEventMetadata.StatusKey, SimulationEventStatusValues.Success },
                         { SimulatorIntegrationMetadata.ConnectorNameKey, fakeConnectorName }
-                    },
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotEmpty(foundSuccessEvents);
-                var foundSuccessEvent = foundSuccessEvents
-                    .Where(e => e.ExternalId == readyEvent.ExternalId)
-                    .First();
-                Assert.Equal(readyEvent.ExternalId, foundSuccessEvent.ExternalId);
-                Assert.Equal(SimulationEventStatusValues.Success, foundSuccessEvent.Metadata[SimulationEventMetadata.StatusKey]);
-                Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundSuccessEvent.StartTime);
-                Assert.Equal("Calculation finished", foundSuccessEvent.Metadata[SimulationEventMetadata.StatusMessageKey]);
-                Assert.Equal("metadata 1", foundSuccessEvent.Metadata["some"]);
-                Assert.Equal("metadata 2", foundSuccessEvent.Metadata["another"]);
-                Assert.True(foundSuccessEvent.EndTime > foundRunningEvent.StartTime);
+                        },
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (!foundSuccessEvents.Any())
+                    {
+                        retryCount++;
+                        await Task.Delay(100).ConfigureAwait(false);
+                        continue;
+                    }
+                    Assert.NotEmpty(foundSuccessEvents);
+                    var foundSuccessEvent = foundSuccessEvents
+                        .Where(e => e.ExternalId == readyEvent.ExternalId)
+                        .First();
+                    Assert.Equal(readyEvent.ExternalId, foundSuccessEvent.ExternalId);
+                    Assert.Equal(SimulationEventStatusValues.Success, foundSuccessEvent.Metadata[SimulationEventMetadata.StatusKey]);
+                    Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundSuccessEvent.StartTime);
+                    Assert.Equal("Calculation finished", foundSuccessEvent.Metadata[SimulationEventMetadata.StatusMessageKey]);
+                    Assert.Equal("metadata 1", foundSuccessEvent.Metadata["some"]);
+                    Assert.Equal("metadata 2", foundSuccessEvent.Metadata["another"]);
+                    Assert.True(foundSuccessEvent.EndTime > simDate.ToUnixTimeMilliseconds());
+                    break;
+                }
 
                 var failureEvent = await events.UpdateSimulationEventToFailure(
                     readyEvent.ExternalId,
@@ -171,25 +205,37 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, failureEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Failure, failureEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
-                var foundFailureEvents = await events.FindSimulationEvents(
-                    simulators,
-                    new Dictionary<string, string>
-                    {
+                retryCount = 0;
+                while (retryCount < 20)
+                {
+                    var foundFailureEvents = await events.FindSimulationEvents(
+                        simulators,
+                        new Dictionary<string, string>
+                        {
                         { SimulationEventMetadata.StatusKey, SimulationEventStatusValues.Failure },
                         { SimulatorIntegrationMetadata.ConnectorNameKey, fakeConnectorName }
-                    },
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotEmpty(foundFailureEvents);
-                var foundFailureEvent = foundFailureEvents
-                    .Where(e => e.ExternalId == readyEvent.ExternalId)
-                    .First();
-                Assert.Equal(SimulationEventStatusValues.Failure, foundFailureEvent.Metadata[SimulationEventMetadata.StatusKey]);
-                Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundFailureEvent.StartTime);
-                Assert.Equal("Calculation failed", foundFailureEvent.Metadata[SimulationEventMetadata.StatusMessageKey]);
-                Assert.Equal("metadata 1", foundFailureEvent.Metadata["some"]);
-                Assert.Equal("metadata 2", foundFailureEvent.Metadata["another"]);
-                Assert.Equal("metadata 3", foundFailureEvent.Metadata["yetAnother"]);
-                Assert.True(foundFailureEvent.EndTime > foundRunningEvent.StartTime);
+                        },
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (!foundFailureEvents.Any())
+                    {
+                        retryCount++;
+                        await Task.Delay(100).ConfigureAwait(false);
+                        continue;
+                    }
+                    Assert.NotEmpty(foundFailureEvents);
+                    var foundFailureEvent = foundFailureEvents
+                        .Where(e => e.ExternalId == readyEvent.ExternalId)
+                        .First();
+                    Assert.Equal(SimulationEventStatusValues.Failure, foundFailureEvent.Metadata[SimulationEventMetadata.StatusKey]);
+                    Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundFailureEvent.StartTime);
+                    Assert.Equal("Calculation failed", foundFailureEvent.Metadata[SimulationEventMetadata.StatusMessageKey]);
+                    Assert.Equal("metadata 1", foundFailureEvent.Metadata["some"]);
+                    Assert.Equal("metadata 2", foundFailureEvent.Metadata["another"]);
+                    Assert.Equal("metadata 3", foundFailureEvent.Metadata["yetAnother"]);
+                    Assert.True(foundFailureEvent.EndTime > simDate.ToUnixTimeMilliseconds());
+                    break;
+                }
+
             }
             finally
             {
