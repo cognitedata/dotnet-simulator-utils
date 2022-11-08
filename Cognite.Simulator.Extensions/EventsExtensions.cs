@@ -17,6 +17,15 @@ namespace Cognite.Simulator.Extensions
     /// </summary>
     public static class EventsExtensions
     {
+        /// <summary>
+        /// Find all simulation events ready to run by the given connector (<paramref name="connectorName"/>)
+        /// and simulators (<paramref name="simulators"/>)
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="simulators">Dictionary of (simulator name, data set id) pairs</param>
+        /// <param name="connectorName">Identifier of the connector</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Events found in CDF that are ready to run</returns>
         public static async Task<IEnumerable<Event>> FindSimulationEventsReadyToRun(
             this EventsResource cdfEvents,
             Dictionary<string, long> simulators,
@@ -33,6 +42,15 @@ namespace Cognite.Simulator.Extensions
                 token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Find all simulation events that are currently running, for the given connector (<paramref name="connectorName"/>)
+        /// and simulators (<paramref name="simulators"/>)
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="simulators">Dictionary of (simulator name, data set id) pairs</param>
+        /// <param name="connectorName">Identifier of the connector</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Events found in CDF that are currently running</returns>
         public static async Task<IEnumerable<Event>> FindSimulationEventsRunning(
             this EventsResource cdfEvents,
             Dictionary<string, long> simulators,
@@ -56,7 +74,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="simulators">Dictionary of (simulator name, data set id) pairs</param>
         /// <param name="metadata">Dictionary with metadata (key, value) pairs</param>
         /// <param name="token">Cancellation token</param>
-        /// <returns>All simualtor events for the given simulators, containing the given metadata</returns>
+        /// <returns>All simulator events for the given simulators, containing the given metadata</returns>
         public static async Task<IEnumerable<Event>> FindSimulationEvents(
             this EventsResource cdfEvents,
             Dictionary<string, long> simulators,
@@ -106,6 +124,19 @@ namespace Cognite.Simulator.Extensions
             }
             return result;
         }
+
+        /// <summary>
+        /// Update the simulation event with the given external ID (<paramref name="externalId"/>) to
+        /// the running state. Update the event start time (<paramref name="startTime"/>) and its
+        /// metadata.
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="externalId">Simulation event external ID</param>
+        /// <param name="startTime">Event start time</param>
+        /// <param name="metadata">Event metadata</param>
+        /// <param name="modelVersion">Version of the model file used in the simulation</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Updated simulation event</returns>
         public static async Task<Event> UpdateSimulationEventToRunning(
             this EventsResource cdfEvents,
             string externalId,
@@ -126,10 +157,22 @@ namespace Cognite.Simulator.Extensions
             var updatedEvent = await cdfEvents
                 .UpdateSimulationEvent(externalId, startTime, eventMetadata, token)
                 .ConfigureAwait(false);
-            return await CheckEventStatus(cdfEvents, updatedEvent, SimulationEventStatusValues.Running, token)
+            return await CheckEventStatus(cdfEvents, updatedEvent, token)
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Update the simulation event with the given external ID (<paramref name="externalId"/>) to
+        /// the success state. Update the event start time (<paramref name="startTime"/>) and its
+        /// metadata. Update the event end time to the current time
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="externalId">Simulation event external ID</param>
+        /// <param name="startTime">Event start time</param>
+        /// <param name="metadata">Event metadata</param>
+        /// <param name="statusMessage">Message indicating successful run</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Updated simulation event</returns>
         public static async Task<Event> UpdateSimulationEventToSuccess(
             this EventsResource cdfEvents,
             string externalId,
@@ -150,10 +193,22 @@ namespace Cognite.Simulator.Extensions
             var updatedEvent = await cdfEvents
                 .UpdateSimulationEvent(externalId, startTime, eventMetadata, token)
                 .ConfigureAwait(false);
-            return await CheckEventStatus(cdfEvents, updatedEvent, SimulationEventStatusValues.Success, token)
+            return await CheckEventStatus(cdfEvents, updatedEvent, token)
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Update the simulation event with the given external ID (<paramref name="externalId"/>) to
+        /// the failure state. Update the event start time (<paramref name="startTime"/>) and its
+        /// metadata. Update the event end time to the current time
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="externalId">Simulation event external ID</param>
+        /// <param name="startTime">Event start time</param>
+        /// <param name="metadata">Event metadata</param>
+        /// <param name="statusMessage">Message indicating failed run</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Updated simulation event</returns>
         public static async Task<Event> UpdateSimulationEventToFailure(
             this EventsResource cdfEvents,
             string externalId,
@@ -174,10 +229,21 @@ namespace Cognite.Simulator.Extensions
             var updatedEvent = await cdfEvents
                 .UpdateSimulationEvent(externalId, startTime, eventMetadata, token)
                 .ConfigureAwait(false);
-            return await CheckEventStatus(cdfEvents, updatedEvent, SimulationEventStatusValues.Failure, token)
+            return await CheckEventStatus(cdfEvents, updatedEvent, token)
                 .ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Update the simulation event with the given external ID (<paramref name="externalId"/>).
+        /// Update the event start time (<paramref name="startTime"/>) and its
+        /// metadata
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="externalId">Simulation event external ID</param>
+        /// <param name="startTime">Event start time</param>
+        /// <param name="metadata">Event metadata</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Updated simulation event</returns>
         public static async Task<Event> UpdateSimulationEvent(
             this EventsResource cdfEvents,
             string externalId,
@@ -214,7 +280,6 @@ namespace Cognite.Simulator.Extensions
         private static async Task<Event> CheckEventStatus(
             EventsResource cdfEvents,
             Event cdfEvent,
-            string status,
             CancellationToken token)
         {
             int retryCount = 0;
@@ -241,6 +306,16 @@ namespace Cognite.Simulator.Extensions
             return cdfEvent;
         }
 
+        /// <summary>
+        /// Create the simulation events in the <paramref name="simulationEvents"/> enumeration in CDF.
+        /// The events are created are in the ready state (i.e. the target connector can fetch these events
+        /// and start a simulation run)
+        /// </summary>
+        /// <param name="cdfEvents">CDF Events resource</param>
+        /// <param name="simulationEvents">List of simulation events</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Simulation events created</returns>
+        /// <exception cref="SimulationEventException">Thrown when it was not possible to create the events</exception>
         public static async Task<IEnumerable<Event>> CreateSimulationEventReadyToRun(
             this EventsResource cdfEvents,
             IEnumerable<SimulationEvent> simulationEvents,
@@ -260,12 +335,12 @@ namespace Cognite.Simulator.Extensions
                 token).ConfigureAwait(false);
             if (!createdEvents.IsAllGood)
             {
-                throw new SimulationEventException("Could not find or create simulator integration sequence", createdEvents.Errors);
+                throw new SimulationEventException("Could not find or create simulation events", createdEvents.Errors);
             }
             var events = createdEvents.Results;
             foreach (Event e in events)
             {
-                await CheckEventStatus(cdfEvents, e, SimulationEventStatusValues.Ready, token)
+                await CheckEventStatus(cdfEvents, e, token)
                     .ConfigureAwait(false);
             }
             return events;

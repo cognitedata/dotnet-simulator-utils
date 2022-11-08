@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">Cancellation token</param>
         /// <returns>Sequence data (rows) containing the boundary conditions map</returns>
         /// <exception cref="BoundaryConditionsMapNotFoundException">Thrown when a sequence containing
-        /// the boundary conditons map cannot be found</exception>
+        /// the boundary conditions map cannot be found</exception>
         public static async Task<SequenceData> FindModelBoundaryConditions(
             this SequencesResource sequences,
             string simulator,
@@ -71,7 +71,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">Cancellation token</param>
         /// <returns>Retrieved or created sequences</returns>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
-        /// could not be created. The exception contatins the list of errors</exception>
+        /// could not be created. The exception contains the list of errors</exception>
         public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegrations(
             this SequencesResource sequences,
             string connectorName,
@@ -157,7 +157,7 @@ namespace Cognite.Simulator.Extensions
         /// data set id) pairs</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
-        /// rows could not be updated. The exception contatins the list of errors</exception>
+        /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsHeartbeat(
             this SequencesResource sequences,
             bool init,
@@ -558,7 +558,7 @@ namespace Cognite.Simulator.Extensions
         /// it as a string array
         /// </summary>
         /// <param name="row">CDF Sequence row</param>
-        /// <returns>Array containg the row values</returns>
+        /// <returns>Array containing the row values</returns>
         public static string[] GetStringValues(this SequenceRow row)
         {
             var result = new List<string>();
