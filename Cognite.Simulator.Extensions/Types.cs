@@ -170,4 +170,40 @@ namespace Cognite.Simulator.Extensions
             _rows.Add(value);
         }
     }
+
+    /// <summary>
+    /// Represents a simulation run event
+    /// </summary>
+    public class SimulationEvent
+    {
+        /// <summary>
+        /// Reference to the simulation configuration file (calculation)
+        /// </summary>
+        public SimulatorCalculation Calculation { get; set; }
+        
+        /// <summary>
+        /// User who initiated the event (manually triggered or configured a scheduled run)
+        /// </summary>
+        public string UserEmail { get; set; }
+        
+        /// <summary>
+        /// Type of the simulation run
+        /// </summary>
+        public string RunType { get; set; }
+        
+        /// <summary>
+        /// Identifier of the connector that will handle this event
+        /// </summary>
+        public string Connector { get; set; }
+        
+        /// <summary>
+        /// ID of the CDF data set that contains this event
+        /// </summary>
+        public long? DataSetId { get; set; }
+        
+        /// <summary>
+        /// External ID of the CDF file containing the simulation configuration
+        /// </summary>
+        public string CalculationId { get; set; }
+    }
 }

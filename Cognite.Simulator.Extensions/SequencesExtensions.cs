@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">Cancellation token</param>
         /// <returns>Sequence data (rows) containing the boundary conditions map</returns>
         /// <exception cref="BoundaryConditionsMapNotFoundException">Thrown when a sequence containing
-        /// the boundary conditons map cannot be found</exception>
+        /// the boundary conditions map cannot be found</exception>
         public static async Task<SequenceData> FindModelBoundaryConditions(
             this SequencesResource sequences,
             string simulator,
@@ -71,7 +71,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">Cancellation token</param>
         /// <returns>Retrieved or created sequences</returns>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
-        /// could not be created. The exception contatins the list of errors</exception>
+        /// could not be created. The exception contains the list of errors</exception>
         public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegrations(
             this SequencesResource sequences,
             string connectorName,
@@ -120,22 +120,28 @@ namespace Cognite.Simulator.Extensions
                     toCreate.Add(createObj.ExternalId, createObj);
                 }
             }
-            var createdSequences = await sequences.GetOrCreateAsync(
-                toCreate.Keys,
-                (ids) => toCreate
-                    .Where(o => ids.Contains(o.Key))
-                    .Select(o => o.Value).ToList(),
-                chunkSize: 10,
-                throttleSize: 1,
-                RetryMode.None,
-                SanitationMode.None,
-                token).ConfigureAwait(false);
-
-            if (!createdSequences.IsAllGood)
+            if (toCreate.Any())
             {
-                throw new SimulatorIntegrationSequenceException("Could not find or create simulator integration sequence", createdSequences.Errors);
+                var createdSequences = await sequences.GetOrCreateAsync(
+                    toCreate.Keys,
+                    (ids) => toCreate
+                        .Where(o => ids.Contains(o.Key))
+                        .Select(o => o.Value).ToList(),
+                    chunkSize: 10,
+                    throttleSize: 1,
+                    RetryMode.None,
+                    SanitationMode.None,
+                    token).ConfigureAwait(false);
+
+                if (!createdSequences.IsAllGood)
+                {
+                    throw new SimulatorIntegrationSequenceException("Could not find or create simulator integration sequence", createdSequences.Errors);
+                }
+                if (createdSequences.Results != null)
+                {
+                    result.AddRange(createdSequences.Results);
+                }
             }
-            result.AddRange(createdSequences.Results);
             return result;
         }
 
@@ -151,7 +157,7 @@ namespace Cognite.Simulator.Extensions
         /// data set id) pairs</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
-        /// rows could not be updated. The exception contatins the list of errors</exception>
+        /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsHeartbeat(
             this SequencesResource sequences,
             bool init,
@@ -230,7 +236,7 @@ namespace Cognite.Simulator.Extensions
             if (string.IsNullOrEmpty(externalId))
             {
                 rowStart = 0;
-                var calcTypeForId = GetCalcTypeForIds(results.Calculation.Type, results.Calculation.UserDefinedType);
+                var calcTypeForId = results.Calculation.GetCalcTypeForIds();
                 var modelNameForId = results.Calculation.Model.Name.ReplaceSpecialCharacters("_");
                 externalId = $"{results.Calculation.Model.Simulator}-OUTPUT-{calcTypeForId}-{results.Type}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
             }
@@ -319,7 +325,7 @@ namespace Cognite.Simulator.Extensions
 
             var result = await sequences.InsertAsync(
                 new List<SequenceDataCreate> { seqData },
-                keyChunkSize: 10,
+                keyChunkSize: 100,
                 valueChunkSize: 100,
                 sequencesChunk: 10,
                 throttleSize: 1,
@@ -363,7 +369,7 @@ namespace Cognite.Simulator.Extensions
 
             if (string.IsNullOrEmpty(externalId))
             {
-                var calcTypeForId = GetCalcTypeForIds(calculation.Type, calculation.UserDefinedType);
+                var calcTypeForId = calculation.GetCalcTypeForIds();
                 var modelNameForId = calculation.Model.Name.ReplaceSpecialCharacters("_");
                 externalId = $"{calculation.Model.Simulator}-RC-{calcTypeForId}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
                 rowStart = 0;
@@ -388,12 +394,14 @@ namespace Cognite.Simulator.Extensions
                     "Could not find or create simulation run configuration sequence", createdSequences.Errors);
             }
 
-            var rows = new List<SequenceDataCreate>();
-            rows.Add(ToSequenceData(runConfiguration, externalId, rowStart));
+            var rows = new List<SequenceDataCreate>
+            {
+                ToSequenceData(runConfiguration, externalId, rowStart)
+            };
 
             var result = await sequences.InsertAsync(
                 rows,
-                keyChunkSize: 10,
+                keyChunkSize: 100,
                 valueChunkSize: 100,
                 sequencesChunk: 10,
                 throttleSize: 1,
@@ -504,15 +512,6 @@ namespace Cognite.Simulator.Extensions
             return sequenceCreate;
         }
 
-        private static string GetCalcTypeForIds(string calcType, string calcTypeUserDefined)
-        {
-            if (calcType == "UserDefined" && !string.IsNullOrEmpty(calcTypeUserDefined))
-            {
-                return $"{calcType.ReplaceSpecialCharacters("_")}-{calcTypeUserDefined.ReplaceSpecialCharacters("_")}";
-            }
-            return calcType.ReplaceSpecialCharacters("_");
-        }
-
         private static SequenceCreate GetSequenceCreatePrototype(
             string externalId,
             SimulatorCalculation calculation,
@@ -559,7 +558,7 @@ namespace Cognite.Simulator.Extensions
         /// it as a string array
         /// </summary>
         /// <param name="row">CDF Sequence row</param>
-        /// <returns>Array containg the row values</returns>
+        /// <returns>Array containing the row values</returns>
         public static string[] GetStringValues(this SequenceRow row)
         {
             var result = new List<string>();

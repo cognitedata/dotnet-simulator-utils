@@ -111,6 +111,89 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
+    /// Metadata keys present in simulation events (simulation calculations)
+    /// </summary>
+    public static class SimulationEventMetadata
+    {
+        /// <summary>
+        /// Event status metadata key 
+        /// </summary>
+        public const string StatusKey = "status";
+        
+        /// <summary>
+        /// Event status message metadata key
+        /// </summary>
+        public const string StatusMessageKey = "statusMessage";
+        
+        /// <summary>
+        /// Model version metadata key
+        /// </summary>
+        public const string ModelVersionKey = "modelVersion";
+        
+        /// <summary>
+        /// Run type metadata key
+        /// </summary>
+        public const string RunTypeKey = "runType";
+        
+        /// <summary>
+        /// User email metadata key
+        /// </summary>
+        public const string UserEmailKey = "userEmail";
+        
+        /// <summary>
+        /// External id of the simulation configuration metadata key
+        /// </summary>
+        public const string CalculationIdKey = "calcConfig";
+
+        /// <summary>
+        /// Data type of simulation events
+        /// </summary>
+        public const SimulatorDataType DataType = SimulatorDataType.SimulationEvent;
+    }
+
+    /// <summary>
+    /// Possible values for the simulation event status metadata
+    /// </summary>
+    public static class SimulationEventStatusValues
+    {
+        /// <summary>
+        /// Ready status
+        /// </summary>
+        public const string Ready = "ready";
+        
+        /// <summary>
+        /// Running status
+        /// </summary>
+        public const string Running = "running";
+        
+        /// <summary>
+        /// Success status
+        /// </summary>
+        public const string Success = "success";
+        
+        /// <summary>
+        /// Failure status
+        /// </summary>
+        public const string Failure = "failure";
+    }
+
+    /// <summary>
+    /// Possible values for the simulation events run type metadata
+    /// </summary>
+    public static class SimulationEventRunTypeValues
+    {
+        /// <summary>
+        /// Manual run
+        /// </summary>
+        public const string Manual = "manual";
+        
+        /// <summary>
+        /// Scheduled run
+        /// </summary>
+        public const string Scheduled = "scheduled";
+    }
+
+    /// <summary>
     /// Columns that should be part of the boundary conditions to time series id map
     /// </summary>
     public static class BoundaryConditionsSequenceColumns
@@ -212,6 +295,10 @@ namespace Cognite.Simulator.Extensions
         /// Simulation run configuration data type
         /// </summary>
         SimulationRunConfiguration,
+        /// <summary>
+        /// Simulation calculation data type
+        /// </summary>
+        SimulationEvent
     }
 
     /// <summary>
@@ -234,6 +321,7 @@ namespace Cognite.Simulator.Extensions
                 case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
                 case SimulatorDataType.SimulationRunConfiguration: return "Run Configuration";
+                case SimulatorDataType.SimulationEvent: return "Simulation Calculation";
                 default: throw new ArgumentException("Invalid data type");
             }
         }
