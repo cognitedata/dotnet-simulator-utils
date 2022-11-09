@@ -125,6 +125,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, runningEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Running, runningEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
+                // Needs to retry due to eventual consistency when updating CDF events.
                 retryCount = 0;
                 while (retryCount < 20)
                 {
@@ -162,6 +163,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, successEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Success, successEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
+                // Needs to retry due to eventual consistency when updating CDF events.
                 retryCount = 0;
                 while (retryCount < 20)
                 {
@@ -205,6 +207,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(readyEvent.ExternalId, failureEvent.ExternalId);
                 Assert.Equal(SimulationEventStatusValues.Failure, failureEvent.Metadata[SimulationEventMetadata.StatusKey]);
 
+                // Needs to retry due to eventual consistency when updating CDF events.
                 retryCount = 0;
                 while (retryCount < 20)
                 {
