@@ -98,16 +98,22 @@ namespace Cognite.DataProcessing
         /// <param name="ts">The time series to evaluate</param>
         /// <param name="threshold">The threshold to use for the logical check</param>
         /// <param name="check">The logical check to use</param>
+        /// <param name="endTime">End time in milliseconds since Epoch</param>
         /// <returns>
         /// Time series with the logical check status (0: conditions not met, 1: conditions met) for all timestamps.
         /// </returns>
-        public static TimeSeriesData LogicalCheck(TimeSeriesData ts, double threshold, LogicOperator check)
+        public static TimeSeriesData LogicalCheck(
+            TimeSeriesData ts, double threshold, LogicOperator check, long? endTime = null)
         {
             if (ts == null)
                 throw new ArgumentNullException(nameof(ts), "The input data is empty");
 
-            // resamples the given time series so that it contains equally spaced elements
-            TimeSeriesData resampledTs = ts.EquallySpacedResampling();
+            // We can only resample until the endTime if the time series is of type `step`. If the user specifies an
+            // endTime for a non `step` time series we override it.
+            // TODO: Add logging to notify the user that the endTime is being set to null
+            if (!ts.IsStep)
+                endTime = null;
+            TimeSeriesData resampledTs = ts.EquallySpacedResampling(endTime: endTime);
 
             // store locally the x and y arrays
             long[] x = resampledTs.Time;
