@@ -164,4 +164,46 @@ public class DataSamplingTest
             Assert.Equal(_logicalCheck1.Data[i], logicResult.Data[i]);
         }
     }
+    
+    [Fact]
+    public void TestLogicalCheckExtrapolate()
+    {
+        // input data
+        TimeSeriesData input = new TimeSeriesData(
+            time: new long[] {1, 2, 3}, data: new double[] {5, 0, 3}, granularity: 1, isStep: true);
+
+        TimeSeriesData output = new TimeSeriesData(
+            time: new long[] {1, 2, 3, 4, 5}, data: new double[] {1, 0, 1, 1, 1}, granularity: 1, isStep: true);
+        
+        // Call Method
+        TimeSeriesData logicResult = DataSampling.LogicalCheck(
+            ts: input, threshold: 2.5, check: DataSampling.LogicOperator.Ge, endTime: 5);
+
+        for (int i = 0; i < logicResult.Time.Length; i++)
+        {
+            Assert.Equal(output.Time[i], logicResult.Time[i]);
+            Assert.Equal(output.Data[i], logicResult.Data[i]);
+        }
+    }
+    
+    [Fact]
+    public void TestLogicalCheckTryExtrapolate()
+    {
+        // input data
+        TimeSeriesData input = new TimeSeriesData(
+            time: new long[] {1, 2, 3}, data: new double[] {5, 0, 3}, granularity: 1, isStep: false);
+
+        TimeSeriesData output = new TimeSeriesData(
+            time: new long[] {1, 2, 3}, data: new double[] {1, 0, 1}, granularity: 1, isStep: false);
+        
+        // Call Method
+        TimeSeriesData logicResult = DataSampling.LogicalCheck(
+            ts: input, threshold: 2.5, check: DataSampling.LogicOperator.Ge, endTime: 5);
+
+        for (int i = 0; i < logicResult.Time.Length; i++)
+        {
+            Assert.Equal(output.Time[i], logicResult.Time[i]);
+            Assert.Equal(output.Data[i], logicResult.Data[i]);
+        }
+    }
 }
