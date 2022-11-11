@@ -98,7 +98,7 @@ namespace Cognite.DataProcessing
         /// <param name="ts">The time series to evaluate</param>
         /// <param name="threshold">The threshold to use for the logical check</param>
         /// <param name="check">The logical check to use</param>
-        /// <param name="endTime">The logical check to use</param>
+        /// <param name="endTime">End time in milliseconds since Epoch</param>
         /// <returns>
         /// Time series with the logical check status (0: conditions not met, 1: conditions met) for all timestamps.
         /// </returns>
