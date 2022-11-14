@@ -61,6 +61,24 @@ namespace Cognite.Simulator.Extensions
         }
 
     }
+    public class SamplingRange
+    {
+        public CogniteSdk.TimeRange TimeRange { get; }
+        public long CalcTime { get; }
+        public long? Start => TimeRange.Min;
+        public long? End => TimeRange.Max;
+
+        public SamplingRange(CogniteSdk.TimeRange timeRange)
+        {
+            TimeRange = timeRange;
+            CalcTime = (long)(timeRange.Min + (timeRange.Max - timeRange.Min) / 2);
+        }
+
+        public static implicit operator SamplingRange(CogniteSdk.TimeRange timeRange)
+        {
+            return new SamplingRange(timeRange);
+        }
+    }
 
     /// <summary>
     /// Represent errors related to read/write data in CDF
