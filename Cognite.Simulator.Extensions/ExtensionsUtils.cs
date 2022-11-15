@@ -13,7 +13,7 @@ namespace Cognite.Simulator.Extensions
     public static class ExtensionsUtils
     {
         /// <summary>
-        /// Replace all occurences of special characters
+        /// Replace all occurrences of special characters
         /// </summary>
         /// <param name="s">Input string</param>
         /// <param name="replaceWith">String to use as replacement</param>
@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// Replace all occurences of slash and backslash
+        /// Replace all occurrences of slash and backslash
         /// </summary>
         /// <param name="s">Input string</param>
         /// <param name="replaceWith">String to use as replacement</param>
@@ -61,19 +61,48 @@ namespace Cognite.Simulator.Extensions
         }
 
     }
+    
+    /// <summary>
+    /// Represents a time range used for sampling data points in a time series
+    /// </summary>
     public class SamplingRange
     {
-        public CogniteSdk.TimeRange TimeRange { get; }
-        public long CalcTime { get; }
+        internal CogniteSdk.TimeRange TimeRange { get; }
+        
+        /// <summary>
+        /// Midpoint between the start and end timestamps, in milliseconds
+        /// </summary>
+        public long Midpoint { get; }
+        
+        /// <summary>
+        /// Start of the sampling range, in milliseconds
+        /// </summary>
         public long? Start => TimeRange.Min;
+        
+        /// <summary>
+        /// End of the sampling range, in milliseconds
+        /// </summary>
         public long? End => TimeRange.Max;
 
+        /// <summary>
+        /// Constructs a sampling range from a time range
+        /// </summary>
+        /// <param name="timeRange">Time range</param>
+        /// <exception cref="ArgumentNullException">Thrown when the time range is null</exception>
         public SamplingRange(CogniteSdk.TimeRange timeRange)
         {
+            if (timeRange == null)
+            {
+                throw new ArgumentNullException(nameof(timeRange));
+            }
             TimeRange = timeRange;
-            CalcTime = (long)(timeRange.Min + (timeRange.Max - timeRange.Min) / 2);
+            Midpoint = (long)(timeRange.Min + (timeRange.Max - timeRange.Min) / 2);
         }
 
+        /// <summary>
+        /// Implicitly constructs a sampling range from a time range
+        /// </summary>
+        /// <param name="timeRange">Time range</param>
         public static implicit operator SamplingRange(CogniteSdk.TimeRange timeRange)
         {
             return new SamplingRange(timeRange);

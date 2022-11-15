@@ -10,8 +10,24 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Extensions
 {
+    /// <summary>
+    /// Class containing extensions to the CDF Data points resource with utility methods
+    /// for simulator integrations
+    /// </summary>
     public static class DataPointsExtensions
     {
+        /// <summary>
+        /// Sample a time series data points with the given time range, granularity and aggregation method 
+        /// </summary>
+        /// <param name="dataPoints">CDF data points resource</param>
+        /// <param name="timeSeriesExternalId">Time series external id</param>
+        /// <param name="aggregate">Aggregation method</param>
+        /// <param name="granularity">Time granularity in minutes</param>
+        /// <param name="timeRange">Time range (start and end sampling time)</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>An array with the timestamps and one with the values</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the time range is null</exception>
+        /// <exception cref="DataPointSampleNotFoundException">Thrown when no data points where found within the time range</exception>
         public static async Task<(long[] Timestamps, double[] Values)> GetSample(
             this DataPointsResource dataPoints,
             string timeSeriesExternalId,
@@ -150,6 +166,12 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
+        /// <summary>
+        /// Attempts to convert and string to a data point aggregate method
+        /// </summary>
+        /// <param name="aggregate">Aggregate method</param>
+        /// <returns>Aggregate enum value</returns>
+        /// <exception cref="ArgumentException">Thrown when the string cannot be converted</exception>
         public static DataPointAggregate ToDataPointAggregate(this string aggregate)
         {
             switch (aggregate)
@@ -210,17 +232,60 @@ namespace Cognite.Simulator.Extensions
         }
     }
 
+    /// <summary>
+    /// Represents a data point aggregate method.
+    /// See <see href="https://docs.cognite.com/dev/concepts/aggregation/">Aggregation documentation</see>
+    /// </summary>
     public enum DataPointAggregate
     {
+        /// <summary>
+        /// Average
+        /// </summary>
         Average,
+        
+        /// <summary>
+        /// Maximum
+        /// </summary>
         Max,
+        
+        /// <summary>
+        /// Minimum
+        /// </summary>
         Min,
+        
+        /// <summary>
+        /// Count
+        /// </summary>
         Count,
+        
+        /// <summary>
+        /// Sum
+        /// </summary>
         Sum,
+        
+        /// <summary>
+        /// Continuous interpolation
+        /// </summary>
         Interpolation,
+        
+        /// <summary>
+        /// Stepwise interpolation
+        /// </summary>
         StepInterpolation,
+        
+        /// <summary>
+        /// Total variance
+        /// </summary>
         TotalVariation,
+        
+        /// <summary>
+        /// Continuous variance
+        /// </summary>
         ContinuousVariance,
+        
+        /// <summary>
+        /// Discrete variance
+        /// </summary>
         DiscreteVariance,
     }
 }

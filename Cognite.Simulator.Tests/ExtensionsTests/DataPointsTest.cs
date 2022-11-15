@@ -22,7 +22,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             SamplingRange range = new CogniteSdk.TimeRange { Min = start, Max = end };
             Assert.Equal(start, range.Start);
             Assert.Equal(end, range.End);
-            Assert.Equal(mid, range.CalcTime);
+            Assert.Equal(mid, range.Midpoint);
         }
 
         [Theory]
