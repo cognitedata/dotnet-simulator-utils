@@ -298,7 +298,8 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Simulation calculation data type
         /// </summary>
-        SimulationEvent
+        SimulationEvent,
+        BoundaryCondition
     }
 
     /// <summary>
@@ -322,6 +323,8 @@ namespace Cognite.Simulator.Extensions
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
                 case SimulatorDataType.SimulationRunConfiguration: return "Run Configuration";
                 case SimulatorDataType.SimulationEvent: return "Simulation Calculation";
+                case SimulatorDataType.BoundaryCondition: return "Boundary Condition";
+        
                 default: throw new ArgumentException("Invalid data type");
             }
         }

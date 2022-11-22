@@ -206,4 +206,17 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string CalculationId { get; set; }
     }
+
+    public class BoundaryCondition
+    {
+        public SimulatorModel Model { get; set; }
+
+        public string Key { get; set; }
+
+        public string Name { get; set; }
+
+        public string Unit { get; set; }
+
+        public long? DataSetId { get; set; }
+    }
 }
