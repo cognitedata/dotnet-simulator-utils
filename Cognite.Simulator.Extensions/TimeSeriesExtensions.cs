@@ -57,11 +57,11 @@ namespace Cognite.Simulator.Extensions
                             IsString = false,
                             Metadata = new Dictionary<string, string>()
                             {
-                                { "simulator", bc.Model.Simulator },
-                                { "dataType", SimulatorDataType.BoundaryCondition.MetadataValue() },
-                                { "variableType", bc.Key },
-                                { "variableName", bc.Name },
-                                { "modelName", bc.Model.Name }
+                                { BaseMetadata.SimulatorKey, bc.Model.Simulator },
+                                { BaseMetadata.DataTypeKey, BoundaryConditionMetadata.DataType.MetadataValue() },
+                                { ModelMetadata.NameKey, bc.Model.Name },
+                                { BoundaryConditionMetadata.VariableTypeKey, bc.Key },
+                                { BoundaryConditionMetadata.VariableNameKey, bc.Name },
                             }
                         };
                     });

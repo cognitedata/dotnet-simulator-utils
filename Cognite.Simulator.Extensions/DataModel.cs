@@ -94,6 +94,27 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
+    /// Metadata key present in boundary conditions
+    /// </summary>
+    public static class BoundaryConditionMetadata
+    {
+        /// <summary>
+        /// Boundary condition variable type metadata key
+        /// </summary>
+        public const string VariableTypeKey = "variableType";
+
+        /// <summary>
+        /// Boundary condition variable name metadata key
+        /// </summary>
+        public const string VariableNameKey = "variableName";
+
+        /// <summary>
+        /// Data type of boundary conditions
+        /// </summary>
+        public const SimulatorDataType DataType = SimulatorDataType.BoundaryCondition;
+    }
+
+    /// <summary>
     /// Metadata keys present in the sequences containing information about the
     /// existing simulation integrations
     /// </summary>
@@ -299,7 +320,6 @@ namespace Cognite.Simulator.Extensions
         /// Simulation calculation data type
         /// </summary>
         SimulationEvent,
-
         /// <summary>
         /// Model boundary condition data type
         /// </summary>
