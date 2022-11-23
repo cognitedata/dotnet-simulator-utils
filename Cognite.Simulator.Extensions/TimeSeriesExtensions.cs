@@ -10,9 +10,22 @@ using CogniteSdk;
 
 namespace Cognite.Simulator.Extensions
 {
+    /// <summary>
+    /// Class containing extensions to the CDF Time Series resource with utility methods
+    /// for simulator integrations
+    /// </summary>
     public static class TimeSeriesExtensions
     {
-
+        /// <summary>
+        /// Created time series in CDF that represent the boundary conditions of a simulator
+        /// model. If the time series already exists, it is returned instead
+        /// </summary>
+        /// <param name="timeSeries">CDF time series resource</param>
+        /// <param name="boundaryConditions">Dictionary of (time series external id, boundary condition) pairs</param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="BoundaryConditionsCreationException"></exception>
         public static async Task<IEnumerable<TimeSeries>> CreateBoundaryConditions(
             this TimeSeriesResource timeSeries,
             Dictionary<string, BoundaryCondition> boundaryConditions,

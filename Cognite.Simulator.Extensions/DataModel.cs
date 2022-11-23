@@ -299,6 +299,10 @@ namespace Cognite.Simulator.Extensions
         /// Simulation calculation data type
         /// </summary>
         SimulationEvent,
+
+        /// <summary>
+        /// Model boundary condition data type
+        /// </summary>
         BoundaryCondition
     }
 

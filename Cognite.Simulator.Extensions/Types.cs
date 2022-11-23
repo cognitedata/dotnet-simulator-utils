@@ -207,16 +207,36 @@ namespace Cognite.Simulator.Extensions
         public string CalculationId { get; set; }
     }
 
+    /// <summary>
+    /// Represents a boundary condition associated with a simulator model
+    /// </summary>
     public class BoundaryCondition
     {
+        
+        /// <summary>
+        /// Model associated with this boundary condition
+        /// </summary>
         public SimulatorModel Model { get; set; }
 
+        
+        /// <summary>
+        /// Boundary condition key (identifier)
+        /// </summary>
         public string Key { get; set; }
 
+        /// <summary>
+        /// Boundary condition name
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Boundary condition unit
+        /// </summary>
         public string Unit { get; set; }
 
+        /// <summary>
+        /// ID of the CDF data set that contains this boundary condition
+        /// </summary>
         public long? DataSetId { get; set; }
     }
 }
