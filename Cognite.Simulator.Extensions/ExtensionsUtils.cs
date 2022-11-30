@@ -51,6 +51,16 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
+        internal static string GetModelNameForIds(this SimulatorModel model)
+        {
+            return model.Name.ReplaceSpecialCharacters("_");
+        }
+
+        internal static string GetModelNameForNames(this SimulatorModel model)
+        {
+            return model.Name.ReplaceSlashAndBackslash("_");
+        }
+
         internal static string GetCalcTypeForIds(this SimulatorCalculation calc)
         {
             if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
@@ -59,9 +69,48 @@ namespace Cognite.Simulator.Extensions
             }
             return calc.Type.ReplaceSpecialCharacters("_");
         }
+        
+        internal static string GetCalcTypeForNames(this SimulatorCalculation calc)
+        {
+            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
+            {
+                return $"{calc.Type.ReplaceSlashAndBackslash("_")}-{calc.UserDefinedType.ReplaceSlashAndBackslash("_")}";
+            }
+            return calc.Type.ReplaceSlashAndBackslash("_");
+        }
 
+        internal static Dictionary<string, string> GetCommonMetadata(
+            this SimulatorCalculation calc,
+            SimulatorDataType dataType)
+        {
+            var metadata = calc.Model.GetCommonMetadata(dataType);
+            metadata.AddRange(
+                new Dictionary<string, string>()
+                {
+                    { CalculationMetadata.TypeKey, calc.Type },
+                    { CalculationMetadata.NameKey, calc.Name },
+                });
+            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
+            {
+                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calc.UserDefinedType);
+            }
+            return metadata;
+        }
+
+        internal static Dictionary<string, string> GetCommonMetadata(
+            this SimulatorModel model,
+            SimulatorDataType dataType)
+        {
+            return new Dictionary<string, string>()
+            {
+                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
+                { BaseMetadata.SimulatorKey, model.Simulator },
+                { ModelMetadata.NameKey, model.Name },
+                { BaseMetadata.DataTypeKey, dataType.MetadataValue() }
+            };
+        }
     }
-    
+
     /// <summary>
     /// Represents a time range used for sampling data points in a time series
     /// </summary>

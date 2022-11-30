@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Extensions
         {
             return Rows != null ? Rows.Count() : 0;
         }
-        
+
         /// <summary>
         /// Add a string value to this column
         /// </summary>
@@ -180,27 +180,27 @@ namespace Cognite.Simulator.Extensions
         /// Reference to the simulation configuration file (calculation)
         /// </summary>
         public SimulatorCalculation Calculation { get; set; }
-        
+
         /// <summary>
         /// User who initiated the event (manually triggered or configured a scheduled run)
         /// </summary>
         public string UserEmail { get; set; }
-        
+
         /// <summary>
         /// Type of the simulation run
         /// </summary>
         public string RunType { get; set; }
-        
+
         /// <summary>
         /// Identifier of the connector that will handle this event
         /// </summary>
         public string Connector { get; set; }
-        
+
         /// <summary>
         /// ID of the CDF data set that contains this event
         /// </summary>
         public long? DataSetId { get; set; }
-        
+
         /// <summary>
         /// External ID of the CDF file containing the simulation configuration
         /// </summary>
@@ -212,13 +212,13 @@ namespace Cognite.Simulator.Extensions
     /// </summary>
     public class BoundaryCondition
     {
-        
+
         /// <summary>
         /// Model associated with this boundary condition
         /// </summary>
         public SimulatorModel Model { get; set; }
 
-        
+
         /// <summary>
         /// Boundary condition key (identifier)
         /// </summary>
@@ -238,5 +238,72 @@ namespace Cognite.Simulator.Extensions
         /// ID of the CDF data set that contains this boundary condition
         /// </summary>
         public long? DataSetId { get; set; }
+    }
+
+    public class SimulationInput : SimulationTimeSeries
+    {
+        public override string TimeSeriesExternalId =>
+            $"{Calculation.Model.Simulator}-INPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
+
+        internal override string TimeSeriesName =>
+            $"{Name} input for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+
+        internal override string TimeSeriesDescription =>
+            $"Input sampled for {Calculation.Type} - {Calculation.Model.Name}";
+    }
+
+    public class SimulationOutput : SimulationTimeSeries
+    {
+        public override string TimeSeriesExternalId => 
+            $"{Calculation.Model.Simulator}-OUTPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
+
+        internal override string TimeSeriesName => 
+            $"{Name} output for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+
+        internal override string TimeSeriesDescription =>
+            $"Calculation result for {Calculation.Type} - {Calculation.Model.Name}";
+    }
+
+    public abstract class SimulationTimeSeries
+    {
+        public SimulatorCalculation Calculation { get; set; }
+
+        public string Type { get; set; }
+
+        public string Name { get; set; }
+
+        public string Unit { get; set; }
+
+        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+
+        public abstract string TimeSeriesExternalId {
+            get;
+        }
+        internal abstract string TimeSeriesName
+        {
+            get;
+        }
+        internal abstract string TimeSeriesDescription
+        {
+            get;
+        }
+
+        public void AddMetadata(string key, string value)
+        {
+            if (Metadata == null)
+            {
+                Metadata = new Dictionary<string, string>();
+            }
+            Metadata[key] = value;
+        }
+
+        public string GetMetadata(string key)
+        {
+            if (Metadata != null && Metadata.ContainsKey(key))
+            {
+                return Metadata[key];
+            }
+            return null;
+        }
     }
 }

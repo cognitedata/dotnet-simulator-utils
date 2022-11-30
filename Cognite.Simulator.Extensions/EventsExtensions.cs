@@ -353,25 +353,17 @@ namespace Cognite.Simulator.Extensions
             var calcTypeForId = calculation.GetCalcTypeForIds();
             var modelNameForId = calculation.Model.Name.ReplaceSpecialCharacters("_");
             var externalId = $"{calculation.Model.Simulator}-SR-{calcTypeForId}-{modelNameForId}-{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
-            var metadata = new Dictionary<string, string>()
+            var metadata = calculation.GetCommonMetadata(SimulatorDataType.SimulationEvent);
+            metadata.AddRange(new Dictionary<string, string>()
             {
-                { BaseMetadata.SimulatorKey, calculation.Model.Simulator },
-                { BaseMetadata.DataTypeKey, SimulatorDataType.SimulationEvent.MetadataValue() },
-                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
-                { ModelMetadata.NameKey, calculation.Model.Name },
                 { SimulatorIntegrationMetadata.ConnectorNameKey, simulationEvent.Connector },
-                { CalculationMetadata.TypeKey, calculation.Type },
-                { CalculationMetadata.NameKey, calculation.Name },
                 { SimulationEventMetadata.RunTypeKey, simulationEvent.RunType },
                 { SimulationEventMetadata.StatusKey, SimulationEventStatusValues.Ready },
                 { SimulationEventMetadata.StatusMessageKey, "Calculation ready to run" },
                 { SimulationEventMetadata.CalculationIdKey, simulationEvent.CalculationId },
                 { SimulationEventMetadata.UserEmailKey, simulationEvent.UserEmail }
-            };
-            if (!string.IsNullOrEmpty(calculation.UserDefinedType))
-            {
-                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
-            }
+            });
+
             var eventCreate = new EventCreate
             {
                 ExternalId = externalId,

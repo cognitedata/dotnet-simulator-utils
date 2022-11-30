@@ -521,37 +521,14 @@ namespace Cognite.Simulator.Extensions
             var seqCreate = new SequenceCreate
             {
                 ExternalId = externalId,
-                Metadata = GetCommonMetadata(calculation.Model.Simulator, calculation.Model.Name, calculation.Type, calculation.Name, dataType)
+                Metadata = calculation.GetCommonMetadata(dataType)
             };
             if (dataSet.HasValue)
             {
                 seqCreate.DataSetId = dataSet.Value;
             }
-            if (calculation.Type == "UserDefined" && !string.IsNullOrEmpty(calculation.UserDefinedType))
-            {
-                seqCreate.Metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
-            }
             return seqCreate;
         }
-
-        private static Dictionary<string, string> GetCommonMetadata(
-            string simulator,
-            string modelName,
-            string calculationType,
-            string calculationName,
-            SimulatorDataType dataType)
-        {
-            return new Dictionary<string, string>()
-            {
-                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
-                { BaseMetadata.SimulatorKey, simulator },
-                { ModelMetadata.NameKey, modelName },
-                { CalculationMetadata.TypeKey, calculationType },
-                { CalculationMetadata.NameKey, calculationName },
-                { BaseMetadata.DataTypeKey, dataType.MetadataValue() }
-            };
-        }
-
 
         /// <summary>
         /// Read the values of a <see cref="SequenceRow"/> and returns

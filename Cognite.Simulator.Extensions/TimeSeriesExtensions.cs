@@ -46,6 +46,13 @@ namespace Cognite.Simulator.Extensions
                     return ids.Select(id =>
                     {
                         var bc = boundaryConditions[id];
+                        var metadata = bc.Model.GetCommonMetadata(BoundaryConditionMetadata.DataType);
+                        metadata.AddRange(
+                            new Dictionary<string, string>()
+                            {
+                                { BoundaryConditionMetadata.VariableTypeKey, bc.Key },
+                                { BoundaryConditionMetadata.VariableNameKey, bc.Name },
+                            });
                         return new TimeSeriesCreate
                         {
                             ExternalId = id,
@@ -55,14 +62,7 @@ namespace Cognite.Simulator.Extensions
                             Unit = bc.Unit,
                             DataSetId = bc.DataSetId,
                             IsString = false,
-                            Metadata = new Dictionary<string, string>()
-                            {
-                                { BaseMetadata.SimulatorKey, bc.Model.Simulator },
-                                { BaseMetadata.DataTypeKey, BoundaryConditionMetadata.DataType.MetadataValue() },
-                                { ModelMetadata.NameKey, bc.Model.Name },
-                                { BoundaryConditionMetadata.VariableTypeKey, bc.Key },
-                                { BoundaryConditionMetadata.VariableNameKey, bc.Name },
-                            }
+                            Metadata = metadata
                         };
                     });
                 },
@@ -79,6 +79,132 @@ namespace Cognite.Simulator.Extensions
             }
             return result.Results;
         }
+
+        public static async Task<TimeSeries> GetOrCreateSimulationModelVersion(
+            this TimeSeriesResource timeSeries,
+            SimulatorCalculation calculation,
+            long? dataSetId,
+            CancellationToken token)
+        {
+            if (calculation == null)
+            {
+                throw new ArgumentNullException(nameof(calculation));
+            }
+
+            var externalId = $"{calculation.Model.Simulator}-MV-{calculation.GetCalcTypeForIds()}-{calculation.Model.GetModelNameForIds()}";
+            var create = GetTimeSeriesCreatePrototype(externalId, SimulatorDataType.SimulationModelVersion, calculation, dataSetId, true);
+            create.Name = $"{calculation.GetCalcTypeForNames()} - {calculation.Model.GetModelNameForNames()} model version";
+            create.Description = $"Version of model {calculation.Model.Name} used in {calculation.Type} calculations";
+
+            var ts = await timeSeries.GetOrCreateTimeSeriesAsync(
+                new List<string> { externalId },
+                (ids) => new List<TimeSeriesCreate> { create },
+                100,
+                5,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+            if (!ts.IsAllGood)
+            {
+                throw new SimulationModelVersionCreationException($"Could not create simulation model version time series in CDF", ts.Errors);
+            }
+            return ts.Results.First();
+        }
+
+        public static async Task<IEnumerable<TimeSeries>> GetOrCreateSimulationInputs(
+            this TimeSeriesResource timeSeries,
+            IEnumerable<SimulationInput> inputs,
+            long? dataSetId,
+            CancellationToken token)
+        {
+            return await timeSeries.GetOrCreateSimulationTimeSeries(
+                inputs,
+                dataSetId,
+                true,
+                token).ConfigureAwait(false);
+        }
+
+        public static async Task<IEnumerable<TimeSeries>> GetOrCreateSimulationOutputs(
+            this TimeSeriesResource timeSeries,
+            IEnumerable<SimulationOutput> outputs,
+            long? dataSetId,
+            CancellationToken token)
+        {
+            return await timeSeries.GetOrCreateSimulationTimeSeries(
+                outputs,
+                dataSetId,
+                false,
+                token).ConfigureAwait(false);
+        }
+
+        private static async Task<IEnumerable<TimeSeries>> GetOrCreateSimulationTimeSeries(
+            this TimeSeriesResource timeSeries,
+            IEnumerable<SimulationTimeSeries> simTimeSeries,
+            long? dataSetId,
+            bool isInput,
+            CancellationToken token)
+        {
+            var dataType = isInput ? SimulatorDataType.SimulationInput : SimulatorDataType.SimulationOutput;
+            if (simTimeSeries == null)
+            {
+                throw new ArgumentNullException(nameof(simTimeSeries));
+            }
+
+            var tsToCreate = new Dictionary<string, TimeSeriesCreate>();
+            foreach (var simTs in simTimeSeries)
+            {
+                var tsCreate = GetTimeSeriesCreatePrototype(simTs.TimeSeriesExternalId, dataType, simTs.Calculation, dataSetId);
+                tsCreate.Name = simTs.TimeSeriesName;
+                tsCreate.Description = simTs.TimeSeriesDescription;
+                tsCreate.Unit = simTs.Unit;
+                tsCreate.Metadata.Add(SimulationVariableMetadata.VariableTypeKey, simTs.Type);
+                tsCreate.Metadata.Add(SimulationVariableMetadata.VariableNameKey, simTs.Name);
+
+                if (simTs.Metadata != null)
+                {
+                    tsCreate.Metadata.AddRange(simTs.Metadata);
+                }
+                tsToCreate.Add(simTs.TimeSeriesExternalId, tsCreate);
+            }
+            if (!tsToCreate.Any())
+            {
+                return Enumerable.Empty<TimeSeries>();
+            }
+            var ts = await timeSeries.GetOrCreateTimeSeriesAsync(
+                tsToCreate.Keys,
+                (ids) => ids.Select(id => tsToCreate[id]),
+                100,
+                5,
+                RetryMode.None,
+                SanitationMode.None,
+                token).ConfigureAwait(false);
+            if (!ts.IsAllGood)
+            {
+                throw new SimulationTimeSeriesCreationException($"Could not create {dataType.MetadataValue()} time series in CDF", ts.Errors);
+            }
+            return ts.Results;
+        }
+
+        private static TimeSeriesCreate GetTimeSeriesCreatePrototype(
+            string externalId,
+            SimulatorDataType dataType,
+            SimulatorCalculation calc,
+            long? dataSet,
+            bool isStep = false)
+        {
+            var tsCreate = new TimeSeriesCreate
+            {
+                ExternalId = externalId,
+                IsStep = isStep,
+                Metadata = calc.GetCommonMetadata(dataType)
+            };
+            if (dataSet.HasValue)
+            {
+                tsCreate.DataSetId = dataSet.Value;
+            }
+            return tsCreate;
+        }
+
     }
 
     /// <summary>
@@ -95,4 +221,31 @@ namespace Cognite.Simulator.Extensions
         }
     }
 
+    /// <summary>
+    /// Represent errors related to read/write simulation inputs in CDF
+    /// </summary>
+    public class SimulationTimeSeriesCreationException : CogniteException
+    {
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
+        public SimulationTimeSeriesCreationException(string message, IEnumerable<CogniteError> errors)
+            : base(message, errors)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Represent errors related to read/write simulation model version time series in CDF
+    /// </summary>
+    public class SimulationModelVersionCreationException : CogniteException
+    {
+        /// <summary>
+        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
+        /// </summary>
+        public SimulationModelVersionCreationException(string message, IEnumerable<CogniteError> errors)
+            : base(message, errors)
+        {
+        }
+    }
 }
