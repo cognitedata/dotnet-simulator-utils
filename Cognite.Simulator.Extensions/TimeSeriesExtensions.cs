@@ -17,16 +17,16 @@ namespace Cognite.Simulator.Extensions
     public static class TimeSeriesExtensions
     {
         /// <summary>
-        /// Created time series in CDF that represent the boundary conditions of a simulator
+        /// Create time series in CDF that represent the boundary conditions of a simulator
         /// model. If the time series already exists, it is returned instead
         /// </summary>
         /// <param name="timeSeries">CDF time series resource</param>
         /// <param name="boundaryConditions">Dictionary of (time series external id, boundary condition) pairs</param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="BoundaryConditionsCreationException"></exception>
-        public static async Task<IEnumerable<TimeSeries>> CreateBoundaryConditions(
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Created boundary condition time series</returns>
+        /// <exception cref="ArgumentNullException">Thrown in the list of boundary conditions is null</exception>
+        /// <exception cref="BoundaryConditionsCreationException">Thrown when it was not possible to create the boundary conditions</exception>
+        public static async Task<IEnumerable<TimeSeries>> GetOrCreateBoundaryConditions(
             this TimeSeriesResource timeSeries,
             Dictionary<string, BoundaryCondition> boundaryConditions,
             CancellationToken token)
@@ -80,6 +80,18 @@ namespace Cognite.Simulator.Extensions
             return result.Results;
         }
 
+        /// <summary>
+        /// Creates time series in CDF that represent the model version used when running simulations.
+        /// Creates the ones not found in CDF, and returns the ones that already exist.
+        /// Data points in this time series should contain the model version as value and the calculation time as timestamp.
+        /// </summary>
+        /// <param name="timeSeries">CDF time series resource</param>
+        /// <param name="calculation">Calculation</param>
+        /// <param name="dataSetId">Data set id</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Created or existing time series</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="SimulationModelVersionCreationException"></exception>
         public static async Task<TimeSeries> GetOrCreateSimulationModelVersion(
             this TimeSeriesResource timeSeries,
             SimulatorCalculation calculation,
@@ -111,6 +123,18 @@ namespace Cognite.Simulator.Extensions
             return ts.Results.First();
         }
 
+        /// <summary>
+        /// Creates time series in CDF that represent sampled simulation inputs.
+        /// Creates the ones not found in CDF, and returns the ones that already exist.
+        /// Data points in this time series should contain the sampled input as value, and the calculation time as timestamp.
+        /// </summary>
+        /// <param name="timeSeries">CDF time series resource</param>
+        /// <param name="inputs">List of simulation inputs</param>
+        /// <param name="dataSetId">Data set id</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Created or existing time series</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the list of inputs is null</exception>
+        /// <exception cref="SimulationTimeSeriesCreationException">Thrown when it was not possible to create the time series</exception>
         public static async Task<IEnumerable<TimeSeries>> GetOrCreateSimulationInputs(
             this TimeSeriesResource timeSeries,
             IEnumerable<SimulationInput> inputs,
@@ -124,6 +148,18 @@ namespace Cognite.Simulator.Extensions
                 token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Creates time series in CDF that represent simulation results.
+        /// Creates the ones not found in CDF, and returns the ones that already exist.
+        /// Data points in this time series should contain the simulation result as value, and the calculation time as timestamp.
+        /// </summary>
+        /// <param name="timeSeries"></param>
+        /// <param name="outputs"></param>
+        /// <param name="dataSetId">Data set id</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Created or existing time series</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the list of outputs is null</exception>
+        /// <exception cref="SimulationTimeSeriesCreationException">Thrown when it was not possible to create the time series</exception>
         public static async Task<IEnumerable<TimeSeries>> GetOrCreateSimulationOutputs(
             this TimeSeriesResource timeSeries,
             IEnumerable<SimulationOutput> outputs,
@@ -222,7 +258,7 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represent errors related to read/write simulation inputs in CDF
+    /// Represent errors related to read/write simulation time series in CDF
     /// </summary>
     public class SimulationTimeSeriesCreationException : CogniteException
     {

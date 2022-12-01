@@ -56,7 +56,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             };
             try
             {
-                var result = await timeSeries.CreateBoundaryConditions(
+                var result = await timeSeries.GetOrCreateBoundaryConditions(
                     new Dictionary<string, BoundaryCondition>
                     {
                         { bc1Id, bc1 },
@@ -79,6 +79,145 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(bc2.Key, bc2Ts.Metadata["variableType"]);
                 Assert.True(bc2Ts.IsStep);
                 Assert.False(bc2Ts.IsString);
+            }
+            finally
+            {
+                // Cleanup created resources
+                if (tsToDelete.Any())
+                {
+                    await timeSeries.DeleteAsync(new TimeSeriesDelete
+                    {
+                        IgnoreUnknownIds = true,
+                        Items = tsToDelete,
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+
+            }
+        }
+
+        [Fact]
+        public async Task TestCreateSimulationTimeSeries()
+        {
+            const long dataSetId = 7900866844615420;
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+
+            using var provider = services.BuildServiceProvider();
+            var cdf = provider.GetRequiredService<Client>();
+            var timeSeries = cdf.TimeSeries;
+
+            var model = new SimulatorModel
+            {
+                Name = "Connector Test Model",
+                Simulator = "TestSimulator"
+            };
+            var calculation = new SimulatorCalculation
+            {
+                Model = model,
+                Name = "Test Calculation",
+                Type = "UserDefined",
+                UserDefinedType = "TestCalc"
+            };
+
+            var inA = new SimulationInput
+            {
+                Calculation = calculation,
+                Name = "Input A",
+                Type = "THP",
+                Unit = "BARg",
+                Metadata = new Dictionary<string, string>
+                    {
+                        { "sourceAddress", "TEST.IN.A" }
+                    }
+            };
+            var inB = new SimulationInput
+            {
+                Calculation = calculation,
+                Name = "Input B",
+                Type = "THT",
+                Unit = "DegC",
+                Metadata = new Dictionary<string, string>
+                    {
+                        { "sourceAddress", "TEST.IN.B" }
+                    }
+            };
+
+            var inputs = new List<SimulationInput>
+            {
+                inA,
+                inB
+            };
+
+            var outA = new SimulationOutput
+            {
+                Calculation = calculation,
+                Name = "Output A",
+                Type = "GasRate",
+                Unit = "MMscf/day",
+                Metadata = new Dictionary<string, string>
+                    {
+                        { "sourceAddress", "TEST.OUT.A" }
+                    }
+            };
+            var outputs = new List<SimulationOutput> { 
+                outA
+            };
+
+            var tsToDelete = new List<Identity>
+            {
+                new Identity(inA.TimeSeriesExternalId),
+                new Identity(inB.TimeSeriesExternalId),
+                new Identity(outA.TimeSeriesExternalId)
+            };
+            try
+            {
+                //Test model version time series
+                var mvTs = await timeSeries.GetOrCreateSimulationModelVersion(
+                    calculation,
+                    dataSetId,
+                    CancellationToken.None).ConfigureAwait(false);
+                Assert.NotNull(mvTs);
+                tsToDelete.Add(new Identity(mvTs.ExternalId));
+                Assert.True(mvTs.IsStep);
+                Assert.False(mvTs.IsString);
+                Assert.Equal(SimulatorDataType.SimulationModelVersion.MetadataValue(), mvTs.Metadata[BaseMetadata.DataTypeKey]);
+
+                // Test input time series
+                var inputTs = await timeSeries.GetOrCreateSimulationInputs(
+                    inputs,
+                    dataSetId,
+                    CancellationToken.None).ConfigureAwait(false);
+                Assert.True(inputTs.Any());
+                Assert.Equal(2, inputTs.Count());
+                var inTsA = inputTs.First(ts => ts.ExternalId == inA.TimeSeriesExternalId);
+                Assert.Equal(inA.Unit, inTsA.Unit);
+                Assert.Equal(inA.Name, inTsA.Metadata["variableName"]);
+                Assert.Equal(inA.Type, inTsA.Metadata["variableType"]);
+                Assert.Equal(inA.Metadata["sourceAddress"], inTsA.Metadata["sourceAddress"]);
+                Assert.False(inTsA.IsStep);
+                Assert.False(inTsA.IsString);
+                var inTsB = inputTs.First(ts => ts.ExternalId == inB.TimeSeriesExternalId);
+                Assert.Equal(inB.Unit, inTsB.Unit);
+                Assert.Equal(inB.Name, inTsB.Metadata["variableName"]);
+                Assert.Equal(inB.Type, inTsB.Metadata["variableType"]);
+                Assert.Equal(inB.Metadata["sourceAddress"], inTsB.Metadata["sourceAddress"]);
+                Assert.False(inTsB.IsStep);
+                Assert.False(inTsB.IsString);
+
+                // Test output time series
+                var outputTs = await timeSeries.GetOrCreateSimulationOutputs(
+                    outputs,
+                    dataSetId,
+                    CancellationToken.None).ConfigureAwait(false);
+                Assert.Single(outputTs);
+                var outTsA = outputTs.First(ts => ts.ExternalId == outA.TimeSeriesExternalId);
+                Assert.Equal(outA.Unit, outTsA.Unit);
+                Assert.Equal(outA.Name, outTsA.Metadata["variableName"]);
+                Assert.Equal(outA.Type, outTsA.Metadata["variableType"]);
+                Assert.Equal(outA.Metadata["sourceAddress"], outTsA.Metadata["sourceAddress"]);
+                Assert.False(outTsA.IsStep);
+                Assert.False(outTsA.IsString);
+
             }
             finally
             {
