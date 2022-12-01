@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Extensions
         {
             return Rows != null ? Rows.Count() : 0;
         }
-        
+
         /// <summary>
         /// Add a string value to this column
         /// </summary>
@@ -180,30 +180,174 @@ namespace Cognite.Simulator.Extensions
         /// Reference to the simulation configuration file (calculation)
         /// </summary>
         public SimulatorCalculation Calculation { get; set; }
-        
+
         /// <summary>
         /// User who initiated the event (manually triggered or configured a scheduled run)
         /// </summary>
         public string UserEmail { get; set; }
-        
+
         /// <summary>
         /// Type of the simulation run
         /// </summary>
         public string RunType { get; set; }
-        
+
         /// <summary>
         /// Identifier of the connector that will handle this event
         /// </summary>
         public string Connector { get; set; }
-        
+
         /// <summary>
         /// ID of the CDF data set that contains this event
         /// </summary>
         public long? DataSetId { get; set; }
-        
+
         /// <summary>
         /// External ID of the CDF file containing the simulation configuration
         /// </summary>
         public string CalculationId { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a boundary condition associated with a simulator model
+    /// </summary>
+    public class BoundaryCondition
+    {
+
+        /// <summary>
+        /// Model associated with this boundary condition
+        /// </summary>
+        public SimulatorModel Model { get; set; }
+
+
+        /// <summary>
+        /// Boundary condition key (identifier)
+        /// </summary>
+        public string Key { get; set; }
+
+        /// <summary>
+        /// Boundary condition name
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Boundary condition unit
+        /// </summary>
+        public string Unit { get; set; }
+
+        /// <summary>
+        /// ID of the CDF data set that contains this boundary condition
+        /// </summary>
+        public long? DataSetId { get; set; }
+    }
+
+    /// <summary>
+    /// Represents the sampled inputs used in a calculation
+    /// </summary>
+    public class SimulationInput : SimulationTimeSeries
+    {
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
+        public override string TimeSeriesExternalId =>
+            $"{Calculation.Model.Simulator}-INPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
+
+        internal override string TimeSeriesName =>
+            $"{Name} input for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+
+        internal override string TimeSeriesDescription =>
+            $"Input sampled for {Calculation.Type} - {Calculation.Model.Name}";
+    }
+
+    /// <summary>
+    /// Represents the results of a calculation
+    /// </summary>
+    public class SimulationOutput : SimulationTimeSeries
+    {
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
+        public override string TimeSeriesExternalId => 
+            $"{Calculation.Model.Simulator}-OUTPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
+
+        internal override string TimeSeriesName => 
+            $"{Name} output for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+
+        internal override string TimeSeriesDescription =>
+            $"Calculation result for {Calculation.Type} - {Calculation.Model.Name}";
+    }
+
+    /// <summary>
+    /// Represents a simulation variable associated with a calculation. For instance,
+    /// simulation sampled inputs and result outputs
+    /// </summary>
+    public abstract class SimulationTimeSeries
+    {
+        /// <summary>
+        /// Calculation associated with this variable
+        /// </summary>
+        public SimulatorCalculation Calculation { get; set; }
+
+        /// <summary>
+        /// Variable type
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
+        /// Variable name
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Variable unit
+        /// </summary>
+        public string Unit { get; set; }
+
+        /// <summary>
+        /// Any other metadata related to this variable
+        /// </summary>
+        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
+        public abstract string TimeSeriesExternalId {
+            get;
+        }
+        internal abstract string TimeSeriesName
+        {
+            get;
+        }
+        internal abstract string TimeSeriesDescription
+        {
+            get;
+        }
+
+        /// <summary>
+        /// Add a (key, value) pair as metadata
+        /// </summary>
+        /// <param name="key">Key</param>
+        /// <param name="value">Value</param>
+        public void AddMetadata(string key, string value)
+        {
+            if (Metadata == null)
+            {
+                Metadata = new Dictionary<string, string>();
+            }
+            Metadata[key] = value;
+        }
+
+        /// <summary>
+        /// Get the metadata value associated with the given key, if any
+        /// </summary>
+        /// <param name="key">Key</param>
+        /// <returns>Metadata value, if key exists. Else, <c>null</c></returns>
+        public string GetMetadata(string key)
+        {
+            if (Metadata != null && Metadata.ContainsKey(key))
+            {
+                return Metadata[key];
+            }
+            return null;
+        }
     }
 }
