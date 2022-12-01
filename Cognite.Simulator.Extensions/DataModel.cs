@@ -358,7 +358,13 @@ namespace Cognite.Simulator.Extensions
         /// Model boundary condition data type
         /// </summary>
         BoundaryCondition,
+        /// <summary>
+        /// Simulation sampled input data type
+        /// </summary>
         SimulationInput,
+        /// <summary>
+        /// Simulation model version data type
+        /// </summary>
         SimulationModelVersion
     }
 

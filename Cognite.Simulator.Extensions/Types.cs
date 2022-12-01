@@ -240,8 +240,14 @@ namespace Cognite.Simulator.Extensions
         public long? DataSetId { get; set; }
     }
 
+    /// <summary>
+    /// Represents the sampled inputs used in a calculation
+    /// </summary>
     public class SimulationInput : SimulationTimeSeries
     {
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
         public override string TimeSeriesExternalId =>
             $"{Calculation.Model.Simulator}-INPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
 
@@ -252,8 +258,14 @@ namespace Cognite.Simulator.Extensions
             $"Input sampled for {Calculation.Type} - {Calculation.Model.Name}";
     }
 
+    /// <summary>
+    /// Represents the results of a calculation
+    /// </summary>
     public class SimulationOutput : SimulationTimeSeries
     {
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
         public override string TimeSeriesExternalId => 
             $"{Calculation.Model.Simulator}-OUTPUT-{Calculation.GetCalcTypeForIds()}-{Type}-{Calculation.Model.GetModelNameForIds()}";
 
@@ -264,18 +276,40 @@ namespace Cognite.Simulator.Extensions
             $"Calculation result for {Calculation.Type} - {Calculation.Model.Name}";
     }
 
+    /// <summary>
+    /// Represents a simulation variable associated with a calculation. For instance,
+    /// simulation sampled inputs and result outputs
+    /// </summary>
     public abstract class SimulationTimeSeries
     {
+        /// <summary>
+        /// Calculation associated with this variable
+        /// </summary>
         public SimulatorCalculation Calculation { get; set; }
 
+        /// <summary>
+        /// Variable type
+        /// </summary>
         public string Type { get; set; }
 
+        /// <summary>
+        /// Variable name
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Variable unit
+        /// </summary>
         public string Unit { get; set; }
 
+        /// <summary>
+        /// Any other metadata related to this variable
+        /// </summary>
         public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>
+        /// Time series external id. Auto-generated
+        /// </summary>
         public abstract string TimeSeriesExternalId {
             get;
         }
@@ -288,6 +322,11 @@ namespace Cognite.Simulator.Extensions
             get;
         }
 
+        /// <summary>
+        /// Add a (key, value) pair as metadata
+        /// </summary>
+        /// <param name="key">Key</param>
+        /// <param name="value">Value</param>
         public void AddMetadata(string key, string value)
         {
             if (Metadata == null)
@@ -297,6 +336,11 @@ namespace Cognite.Simulator.Extensions
             Metadata[key] = value;
         }
 
+        /// <summary>
+        /// Get the metadata value associated with the given key, if any
+        /// </summary>
+        /// <param name="key">Key</param>
+        /// <returns>Metadata value, if key exists. Else, <c>null</c></returns>
         public string GetMetadata(string key)
         {
             if (Metadata != null && Metadata.ContainsKey(key))
