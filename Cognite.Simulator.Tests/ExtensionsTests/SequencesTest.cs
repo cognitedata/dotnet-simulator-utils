@@ -26,8 +26,11 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             // Assumes this resource exists in the CDF test project
             var rows = await sequences.FindModelBoundaryConditions(
-                "PROSPER",
-                "Connector Test Model",
+                new SimulatorModel
+                {
+                    Simulator = "PROSPER",
+                    Name = "Connector Test Model",
+                },
                 CancellationToken.None).ConfigureAwait(false);
             Assert.NotEmpty(rows.Columns);
             Assert.Contains(rows.Columns, c => c.ExternalId == BoundaryConditionsSequenceColumns.Id);
