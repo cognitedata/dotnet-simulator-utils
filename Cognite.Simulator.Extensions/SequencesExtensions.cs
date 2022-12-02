@@ -17,31 +17,33 @@ namespace Cognite.Simulator.Extensions
     public static class SequencesExtensions
     {
         /// <summary>
-        /// For the specified <paramref name="modelName"/> and <paramref name="simulator"/>, 
+        /// For the specified <paramref name="model"/>, 
         /// find the sequence rows with the mapping of the model boundary conditions to
         /// time series external ids.
         /// </summary>
         /// <param name="sequences">CDF sequences resource</param>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
+        /// <param name="model">Simulator model</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>Sequence data (rows) containing the boundary conditions map</returns>
         /// <exception cref="BoundaryConditionsMapNotFoundException">Thrown when a sequence containing
         /// the boundary conditions map cannot be found</exception>
         public static async Task<SequenceData> FindModelBoundaryConditions(
             this SequencesResource sequences,
-            string simulator,
-            string modelName,
+            SimulatorModel model,
             CancellationToken token)
         {
+            if (model == null || string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Simulator))
+            {
+                throw new ArgumentException("Simulator model should have valid name and simulator properties", nameof(model));
+            }
             var bcSeqs = await sequences.ListAsync(new SequenceQuery
             {
                 Filter = new SequenceFilter
                 {
-                    ExternalIdPrefix = $"{simulator}-BC-",
+                    ExternalIdPrefix = $"{model.Simulator}-BC-",
                     Metadata = new Dictionary<string, string>
                     {
-                        { ModelMetadata.NameKey, modelName },
+                        { ModelMetadata.NameKey, model.Name },
                         { BaseMetadata.DataTypeKey, BoundaryConditionsMapMetadata.DataType.MetadataValue()}
                     }
                 },

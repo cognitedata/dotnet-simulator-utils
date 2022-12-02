@@ -55,70 +55,82 @@ namespace Cognite.Simulator.Extensions
 
         /// <summary>
         /// Find all simulator model file versions stored in CDF that match the given
-        /// <paramref name="simulator"/> and <paramref name="modelName"/> parameters.
+        /// <paramref name="model"/> parameter.
         /// All versions of the model are returned
         /// </summary>
         /// <param name="cdfFiles">CDF Files resource</param>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
+        /// <param name="model">Simulator model</param>
         /// <param name="dataset">Optional dataset containing the files</param>
         /// <param name="token">Cancellation token</param>
         public static async Task<IEnumerable<File>> FindModelVersions(
             this FilesResource cdfFiles,
-            string simulator,
-            string modelName,
+            SimulatorModel model,
             long? dataset,
             CancellationToken token
             )
         {
+            if (model == null || string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Simulator))
+            {
+                throw new ArgumentException("Simulator model should have valid name and simulator properties", nameof(model));
+            }
             var metadata = new Dictionary<string, string>
             {
                 { BaseMetadata.DataTypeKey, ModelMetadata.DataType.MetadataValue()},
-                { ModelMetadata.NameKey, modelName}
+                { ModelMetadata.NameKey, model.Name}
             };
             return await FetchFilesFromCdf(
                 cdfFiles,
                 metadata,
-                new Dictionary<string, long?> { { simulator, dataset } },
+                new Dictionary<string, long?> { { model.Simulator, dataset } },
                 null,
                 token).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Find all simulation configuration files stored in CDF that match the given
-        /// <paramref name="simulator"/>, <paramref name="modelName"/> and <paramref name="calcType"/> parameters.
+        /// <paramref name="calculation"/> parameter.
         /// </summary>
         /// <param name="cdfFiles">CDF Files resource</param>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <param name="calcType">Calculation type</param>
-        /// <param name="calcTypeUserDefined">User defined type, if any</param>
+        /// <param name="calculation">Simulator calculation</param>
         /// <param name="dataset">Optional dataset containing the files</param>
         /// <param name="token">Cancellation token</param>
         public static async Task<IEnumerable<File>> FindConfigurationFiles(
             this FilesResource cdfFiles,
-            string simulator,
-            string modelName,
-            string calcType,
-            string calcTypeUserDefined,
+            SimulatorCalculation calculation,
             long? dataset,
             CancellationToken token
             )
         {
+            if (calculation == null)
+            {
+                throw new ArgumentNullException(nameof(calculation));
+            }
+            if (string.IsNullOrEmpty(calculation.Type))
+            {
+                throw new ArgumentException("Calculation should have a defined type", nameof(calculation));
+            }
+            if (calculation.Model == null || string.IsNullOrEmpty(calculation.Model.Name) || string.IsNullOrEmpty(calculation.Model.Simulator))
+            {
+                throw new ArgumentException("Calculation should have a model with valid name and simulator properties", nameof(calculation));
+            }
             var metadata = new Dictionary<string, string>
             {
                 { BaseMetadata.DataTypeKey, CalculationMetadata.DataType.MetadataValue() },
-                { ModelMetadata.NameKey, modelName },
-                { CalculationMetadata.TypeKey, calcType }
+                { ModelMetadata.NameKey, calculation.Model.Name },
+                { CalculationMetadata.TypeKey, calculation.Type }
             };
-            if (!string.IsNullOrEmpty(calcTypeUserDefined))
+            if (!string.IsNullOrEmpty(calculation.Name))
             {
-                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calcTypeUserDefined);
+                metadata.Add(CalculationMetadata.NameKey, calculation.Name);
+            }
+            if (!string.IsNullOrEmpty(calculation.UserDefinedType))
+            {
+                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
             }
             return await FetchFilesFromCdf(
                 cdfFiles,
                 metadata,
-                new Dictionary<string, long?> { { simulator, dataset } },
+                new Dictionary<string, long?> { { calculation.Model.Simulator, dataset } },
                 null,
                 token).ConfigureAwait(false);
         }
@@ -134,13 +146,17 @@ namespace Cognite.Simulator.Extensions
             var result = new List<File>();
             foreach (var source in sources)
             {
-                metadata[BaseMetadata.SimulatorKey] = source.Key;
+                var filterMetadata = new Dictionary<string, string>
+                {
+                    { BaseMetadata.SimulatorKey, source.Key }
+                };
+                filterMetadata.AddRange(metadata);
                 string cursor = null;
                 var filter = new FileFilter
                 {
                     Source = source.Key,
                     Uploaded = true,
-                    Metadata = metadata,
+                    Metadata = filterMetadata,
                 };
                 if (source.Value.HasValue)
                 {
