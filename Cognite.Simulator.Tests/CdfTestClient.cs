@@ -1,5 +1,7 @@
 ﻿using Cognite.Extensions;
 using Cognite.Extractor.Logging;
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,12 +10,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Tests
 {
     internal static class CdfTestClient
     {
+        private static int _configIdx;
+        internal static string? _statePath;
 
         public static void AddCogniteTestClient(this IServiceCollection services)
         {
@@ -27,6 +32,9 @@ namespace Cognite.Simulator.Tests
                 throw new NullReferenceException("Environment variables needed by tests cannot be read");
             }
 
+            var index = Interlocked.Increment(ref _configIdx);
+            _statePath = $"test-state-{index}";
+
             var authConfig = new AuthenticatorConfig
             {
                 Tenant = tenant,
@@ -38,12 +46,25 @@ namespace Cognite.Simulator.Tests
                 }
             };
 
+            var cogConfig = new CogniteConfig
+            {
+                Host = host,
+                Project = project,
+                IdpAuthentication = authConfig,
+            };
+
             var loggerConfig = new LoggerConfig
             {
                 Console = new ConsoleConfig
                 {
                     Level = "debug"
                 }
+            };
+
+            var stateStoreConfig = new StateStoreConfig
+            {
+                Database = StateStoreConfig.StorageType.LiteDb,
+                Location = _statePath
             };
 
             // Configure logging
@@ -72,6 +93,22 @@ namespace Cognite.Simulator.Tests
                     .Build();
                 return client;
             });
+
+            //Configure state
+            services.AddSingleton(stateStoreConfig);
+            services.AddStateStore();
+
+            // Configure CDF destination
+            services.AddSingleton(cogConfig);
+            services.AddSingleton(p =>
+            {
+                var client = p.GetRequiredService<Client>();
+                var logger = p.GetRequiredService<ILogger<CogniteDestination>>();
+                var config = p.GetRequiredService<CogniteConfig>();
+                return new CogniteDestination(client, logger, config);
+            });
+
+            // Configure state store
         }
     }
 }
