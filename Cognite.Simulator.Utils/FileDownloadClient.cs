@@ -6,17 +6,33 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// HTTP client that can be used to download files from a 
+    /// provided address and save it locally
+    /// </summary>
     public class FileDownloadClient
     {
         private readonly HttpClient _client;
         private readonly ILogger _logger;
 
+        /// <summary>
+        /// Initializes this object with the given HTTP client and logger
+        /// </summary>
+        /// <param name="client">HTTP client</param>
+        /// <param name="logger">logger</param>
         public FileDownloadClient(HttpClient client, ILogger<FileDownloadClient> logger)
         {
             _client = client;
             _logger = logger;
         }
 
+        /// <summary>
+        /// Downloads the file from the provided <paramref name="uri"/> and saves
+        /// it in the provided <paramref name="filePath"/>
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="filePath"></param>
+        /// <returns><c>true</c> if success, else <c>false</c></returns>
         public async Task<bool> DownloadFileAsync(Uri uri, string filePath)
         {
             try

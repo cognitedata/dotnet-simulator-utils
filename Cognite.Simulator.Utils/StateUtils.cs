@@ -9,7 +9,10 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
-    internal static class StateUtils
+    /// <summary>
+    /// Utility methods for managing state
+    /// </summary>
+    public static class StateUtils
     {
         internal static void RemoveUnusedState(
             this LiteDBStateStore store,
@@ -48,7 +51,11 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        internal static void DeleteLocalFile(string path)
+        /// <summary>
+        /// Delete a file stored locally
+        /// </summary>
+        /// <param name="path">Path to the file</param>
+        public static void DeleteLocalFile(string path)
         {
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {

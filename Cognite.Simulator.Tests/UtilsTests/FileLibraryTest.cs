@@ -73,10 +73,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     Directory.Delete("./files", true);
                 }
-                if (File.Exists(CdfTestClient._statePath))
-                {
-                    File.Delete(CdfTestClient._statePath);
-                }
+                StateUtils.DeleteLocalFile(CdfTestClient._statePath);
             }
         }
     }
@@ -140,7 +137,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override void ProcessDownloadedFiles(CancellationToken token)
         {
-            var toProcess = _state.Values
+            var toProcess = State.Values
                 .Where(s => !string.IsNullOrEmpty(s.FilePath))
                 .ToList();
             foreach(var state in toProcess)

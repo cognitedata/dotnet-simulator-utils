@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Common utility methods. May be useful when developing simulator connectors
+    /// </summary>
     public static class CommonUtils
     {
         /// <summary>
