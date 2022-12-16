@@ -19,4 +19,12 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Cognite.ExtractorUtils" Version="1.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cognite.Simulator.Extensions\Cognite.Simulator.Extensions.csproj" />
+  </ItemGroup>
+
 </Project>
