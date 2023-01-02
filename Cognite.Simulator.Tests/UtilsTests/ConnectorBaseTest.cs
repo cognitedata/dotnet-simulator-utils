@@ -37,31 +37,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .Init(source.Token)
                     .ConfigureAwait(false);
 
-                var metadata = new Dictionary<string, string>()
-                {
-                    { BaseMetadata.DataTypeKey, SimulatorDataType.SimulatorIntegration.MetadataValue() },
-                    { BaseMetadata.SimulatorKey, "TestSim" },
-                    { SimulatorIntegrationMetadata.ConnectorNameKey, connector.GetConnectorName() }
-                };
-                var query = new SequenceQuery
-                {
-                    Filter = new SequenceFilter
-                    {
-                        Metadata = metadata
-                    }
-                };
-                var seqResult = await cdf.Sequences
-                    .ListAsync(query, source.Token)
-                    .ConfigureAwait(false);
-                Assert.NotNull(seqResult);
-                Assert.NotEmpty(seqResult.Items);
-
-                var integrationsSeq = seqResult.Items.First();
-                externalIdToDelete = integrationsSeq.ExternalId;
+                externalIdToDelete = connector.GetSimulatorIntegartionExternalId("TestSim");
+                Assert.NotNull(externalIdToDelete);
 
                 var rowQuery = new SequenceRowQuery
                 {
-                    ExternalId = integrationsSeq.ExternalId,
+                    ExternalId = externalIdToDelete,
                 };
 
                 var rowsResult = await cdf.Sequences.ListRowsAsync(

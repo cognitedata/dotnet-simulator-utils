@@ -48,6 +48,21 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Returns the external ID of the sequence in CDF that contains information 
+        /// about the simulator integration, if any
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <returns>External ID, or null if not found</returns>
+        public string GetSimulatorIntegartionExternalId(string simulator)
+        {
+            if (!_simulatorSequenceIds.ContainsKey(simulator))
+            {
+                return null;
+            }
+            return _simulatorSequenceIds[simulator];
+        }
+
+        /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
         /// This should include a call to
         /// <see cref="EnsureSimulatorIntegrationsSequencesExists(CancellationToken)"/>
