@@ -160,7 +160,7 @@ namespace Cognite.Simulator.Extensions
         public const string ConnectorNameKey = "connector";
         
         /// <summary>
-        /// Data type of simulation integarations
+        /// Data type of simulation integrations
         /// </summary>
         public const SimulatorDataType DataType = SimulatorDataType.SimulatorIntegration;
     }

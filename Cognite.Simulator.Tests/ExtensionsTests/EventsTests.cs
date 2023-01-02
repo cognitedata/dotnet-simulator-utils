@@ -17,7 +17,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestSimulationEvent()
         {
-            const long dataSetId = 7900866844615420;
+            const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 

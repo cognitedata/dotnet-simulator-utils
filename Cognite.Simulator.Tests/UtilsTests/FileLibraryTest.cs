@@ -125,7 +125,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorConfig
                     {
                         Name = "PROSPER",
-                        DataSetId = 7900866844615420
+                        DataSetId = CdfTestClient.TestDataset
                     }
                 },
                 cdf,
