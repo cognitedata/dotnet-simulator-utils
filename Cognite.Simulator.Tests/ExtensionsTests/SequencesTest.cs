@@ -45,7 +45,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         public async Task TestGetOrCreateSimulatorIntegration()
         {
             const string connectorName = "integration-tests-connector";
-            const long dataSetId = 7900866844615420;
+            const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         public async Task TestUpdateSimulatorIntegrationsHeartbeat()
         {
             const string connectorName = "integration-tests-connector";
-            const long dataSetId = 7900866844615420;
+            const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
@@ -175,7 +175,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestStoreSimulationResults()
         {
-            const long dataSetId = 7900866844615420;
+            const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
@@ -293,7 +293,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestStoreRunConfiguration()
         {
-            const long dataSetId = 7900866844615420;
+            const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
