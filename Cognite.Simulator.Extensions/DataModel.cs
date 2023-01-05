@@ -40,6 +40,17 @@ namespace Cognite.Simulator.Extensions
         public const string NameKey = "modelName";
 
         /// <summary>
+        /// Model version metadata key
+        /// </summary>
+        public const string VersionKey = "version";
+
+        /// <summary>
+        /// Error message metadata key. This metadata key is present only in files with errors
+        /// that prevent the file from being opened by the simulator
+        /// </summary>
+        public const string ErrorMessageKey = "errorMessage";
+
+        /// <summary>
         /// Data type of model files
         /// </summary>
         public const SimulatorDataType DataType = SimulatorDataType.ModelFile;
