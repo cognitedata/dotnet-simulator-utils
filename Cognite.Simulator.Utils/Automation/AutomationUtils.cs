@@ -118,25 +118,59 @@ namespace Cognite.Simulator.Utils.Automation
             return server;
         }
     }
+    
+    /// <summary>
+    /// Represents errors related to the connection to simulator instance
+    /// </summary>
     public class SimulatorConnectionException : Exception
     {
+        /// <summary>
+        /// Creates a new simulator connection exception
+        /// </summary>
         public SimulatorConnectionException()
         {
         }
 
+        /// <summary>
+        /// Creates a new simulator connection exception, with the given message
+        /// </summary>
+        /// <param name="message">Error message</param>
         public SimulatorConnectionException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// Creates a new simulator connection exception, with the given message and inner exception
+        /// </summary>
+        /// <param name="message">Error message</param>
+        /// <param name="innerException">Inner exception</param>
         public SimulatorConnectionException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }
 
+    /// <summary>
+    /// Represents the automation client configuration. COM automation clients
+    /// connect to servers dynamically, using the <see cref="ProgramId"/> to identify
+    /// the application to connect to
+    /// </summary>
     public class AutomationConfig
     {
+        /// <summary>
+        /// Identifier of the application/program to connect to
+        /// </summary>
         public string ProgramId { get; set; }
+        
+        /// <summary>
+        /// Identifier of the process that should be terminated on shutdown, if any
+        /// </summary>
         public string ProcessId { get; set; }
+        
+        /// <summary>
+        /// Whether or not to terminate (kill) the application process after shutdown.
+        /// This is not ideal and should be avoided, unless there is risk of a process
+        /// locking simulator resources
+        /// </summary>
         public bool TerminateProcess { get; set; }
 
         internal bool CanTerminateProcess()
