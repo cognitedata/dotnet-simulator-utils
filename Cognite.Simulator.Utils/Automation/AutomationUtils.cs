@@ -65,18 +65,24 @@ namespace Cognite.Simulator.Utils.Automation
         /// </summary>
         public virtual void Shutdown()
         {
-            PreShutdown();
-            Server = null;
-            if (_processes != null && _processes.Any())
+            try
             {
-                // This is not ideal but in some cases, activating a simulator instance creates
-                // a background process that is not terminated when the instance is removed.
-                // To avoid locking simulator licenses, we have to kill the process
-                foreach (var prc in _processes)
+                PreShutdown();
+            }
+            finally
+            {
+                Server = null;
+                if (_processes != null && _processes.Any())
                 {
-                    prc.Kill();
+                    // This is not ideal but in some cases, activating a simulator instance creates
+                    // a background process that is not terminated when the instance is removed.
+                    // To avoid locking simulator licenses, we have to kill the process
+                    foreach (var prc in _processes)
+                    {
+                        prc.Kill();
+                    }
+                    _processes = null;
                 }
-                _processes = null;
             }
             _logger.LogDebug("Automation server instance removed");
         }
