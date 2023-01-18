@@ -12,10 +12,26 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Represents a local model file library. This is a <see cref="FileLibrary{T, U}"/> that
+    /// fetches simulator model files from CDF, save a local copy and process the model (extract information).
+    /// This library only keeps the latest version of a given model file
+    /// </summary>
+    /// <typeparam name="T">Type of the state object used in this library</typeparam>
+    /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>
         where T : ModelStateBase
         where U : ModelStateBasePoco
     {
+        /// <summary>
+        /// Creates a new instance of the library using the provided parameters
+        /// </summary>
+        /// <param name="config">Library configuration</param>
+        /// <param name="simulators">Dictionary of simulators</param>
+        /// <param name="cdf">CDF destination object</param>
+        /// <param name="logger">Logger</param>
+        /// <param name="downloadClient">HTTP client to download files</param>
+        /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             FileLibraryConfig config, 
             IList<SimulatorConfig> simulators, 
@@ -27,6 +43,12 @@ namespace Cognite.Simulator.Utils
         {
         }
 
+        /// <summary>
+        /// Returns the state object of the latest version of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <returns></returns>
         public T GetLatestModelVersion(string simulator, string modelName)
         {
             var modelVersions = GetAllModelVersions(simulator, modelName);
@@ -37,6 +59,12 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
+        /// <summary>
+        /// Returns the state objects of all the versions of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <returns></returns>
         protected IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
         {
             var modelVersions = State.Values
@@ -48,6 +76,12 @@ namespace Cognite.Simulator.Utils
             return modelVersions;
         }
 
+        /// <summary>
+        /// Utility function to remove the local copies (files) of all model versions
+        /// except the latest one
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
         protected void RemoveLocalFiles(string simulator, string modelName)
         {
             var modelVersions = State.Values
@@ -64,6 +98,13 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Verify that the model files stored locally have an equivalent
+        /// in CDF. This ensures that model files deleted from CDF will also
+        /// be removed from the local library
+        /// </summary>
+        /// <param name="state">Model file state to verify</param>
+        /// <param name="token">Cancellation token</param>
         protected async Task VerifyLocalModelState(
             T state,
             CancellationToken token)
@@ -97,12 +138,23 @@ namespace Cognite.Simulator.Utils
                 }
             }
         }
+        
+        /// <summary>
+        /// Process model files that have been downloaded
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
         protected override void ProcessDownloadedFiles(CancellationToken token)
         {
             Task.Run(async () => await ExtractModelInformationAndUpdateState(token).ConfigureAwait(false), token)
                 .Wait(token);
         }
 
+        /// <summary>
+        /// This method find all model versions that have not been processed and calls
+        /// the <see cref="ExtractModelInformation(IEnumerable{T}, CancellationToken)"/> method 
+        /// to process the models.  
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
         protected virtual async Task ExtractModelInformationAndUpdateState(CancellationToken token)
         {
             // Find all model files for which we need to extract data
@@ -126,14 +178,27 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// This method should open the model versions in the simulator, extract the required information and
+        /// ingest it to CDF. 
+        /// </summary>
+        /// <param name="modelStates">Model file states</param>
+        /// <param name="token">Cancellation token</param>
         protected abstract Task ExtractModelInformation(
             IEnumerable<T> modelStates,
             CancellationToken token);
     }
 
+    /// <summary>
+    /// This base class represents the state of a model file
+    /// </summary>
     public abstract class ModelStateBase : FileState
     {
-        private int _version = 0;
+        private int _version;
+        
+        /// <summary>
+        /// Model version
+        /// </summary>
         public int Version
         {
             get => _version;
@@ -145,24 +210,47 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Indicates if information has been extracted from the model file
+        /// </summary>
         public abstract bool IsExtracted { get; }
+        
+        /// <summary>
+        /// Indicates if the simulator can read the model file and
+        /// its data
+        /// </summary>
         public bool CanRead { get; set; } = true;
 
+        /// <summary>
+        /// Creates a new model file state with the provided id
+        /// </summary>
+        /// <param name="id"></param>
         public ModelStateBase(string id) : base(id)
         {
         }
 
+        /// <summary>
+        /// Data type of the file. For model files, this is <see cref="SimulatorDataType.ModelFile"/> 
+        /// </summary>
+        /// <returns>String representation of <see cref="SimulatorDataType.ModelFile"/></returns>
         public override string GetDataType()
         {
             return SimulatorDataType.ModelFile.MetadataValue();
         }
 
+        /// <summary>
+        /// Model data associated with this state
+        /// </summary>
         public SimulatorModel Model => new SimulatorModel()
         {
             Name = ModelName,
             Simulator = Source
         };
 
+        /// <summary>
+        /// Initialize this model state using a data object from the state store
+        /// </summary>
+        /// <param name="poco">Data object</param>
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
@@ -171,6 +259,11 @@ namespace Cognite.Simulator.Utils
                 _version = mPoco.Version;
             }
         }
+        /// <summary>
+        /// Get the data object with the model state properties to be persisted by
+        /// the state store
+        /// </summary>
+        /// <returns>File data object</returns>
         public override FileStatePoco GetPoco()
         {
             return new ModelStateBasePoco
@@ -186,8 +279,16 @@ namespace Cognite.Simulator.Utils
             };
         }
     }
+
+    /// <summary>
+    /// Data object that contains the model state properties to be persisted
+    /// by the state store. These properties are restored to the state on initialization
+    /// </summary>
     public class ModelStateBasePoco : FileStatePoco
     {
+        /// <summary>
+        /// Model version
+        /// </summary>
         [StateStoreProperty("version")]
         public int Version { get; set; }
     }
