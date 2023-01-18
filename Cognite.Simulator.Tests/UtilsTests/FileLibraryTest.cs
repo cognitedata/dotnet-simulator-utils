@@ -41,6 +41,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     (IReadOnlyDictionary<string, TestFileState>)lib.State);
                 Assert.Equal("PROSPER", v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
+                Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
@@ -48,6 +49,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     (IReadOnlyDictionary<string, TestFileState>)lib.State);
                 Assert.Equal("PROSPER", v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
+                Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -62,10 +64,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Verify that the files were downloaded and processed
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
-                Assert.True(File.Exists(v1.FilePath));
+                Assert.False(File.Exists(v1.FilePath)); // Should only have the latest version
                 Assert.True(v2.Processed);
                 Assert.False(string.IsNullOrEmpty(v2.FilePath));
                 Assert.True(File.Exists(v2.FilePath));
+
+                var latest = lib.GetLatestModelVersion(v1.Source, v1.ModelName);
+                Assert.NotNull(latest);
+                Assert.Equal(v2, latest);
             }
             finally
             {
@@ -81,9 +87,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// <summary>
     /// Simple test state to keep track of files that have been processed
     /// </summary>
-    public class TestFileState : FileState
+    public class TestFileState : ModelStateBase
     {
         public bool Processed { get; set; }
+
+        public override bool IsExtracted => Processed;
+
         public TestFileState(string id) : base(id)
         {
         }
@@ -92,17 +101,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return "out";
         }
 
-        public override string GetDataType()
-        {
-            return SimulatorDataType.ModelFile.MetadataValue();
-        }
     }
 
     /// <summary>
     /// File library is abstract. Implement a simple mock library
     /// to test the base functionality
     /// </summary>
-    public class TestLibrary : FileLibrary<TestFileState, FileStatePoco>
+    public class TestLibrary : ModelLibraryBase<TestFileState, ModelStateBasePoco>
     {
         public TestLibrary(
             CogniteDestination cdf,
@@ -110,7 +115,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             FileDownloadClient downloadClient,
             IExtractionStateStore store = null) :
             base(
-                SimulatorDataType.ModelFile,
                 new FileLibraryConfig
                 {
                     FilesDirectory = "./files",
@@ -135,15 +139,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
-        protected override void ProcessDownloadedFiles(CancellationToken token)
+        protected override Task ExtractModelInformation(IEnumerable<TestFileState> modelStates, CancellationToken token)
         {
-            var toProcess = State.Values
-                .Where(s => !string.IsNullOrEmpty(s.FilePath))
-                .ToList();
-            foreach(var state in toProcess)
+            return Task.Run(() =>
             {
-                state.Processed = true;
-            }
+                foreach (var state in modelStates)
+                {
+                    state.Processed = true;
+                }
+            }, token);
         }
 
         protected override TestFileState StateFromFile(CogniteSdk.File file)
@@ -157,6 +161,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelName = file.Metadata[ModelMetadata.NameKey],
                 Source = file.Source,
                 Processed = false,
+                Version = int.Parse(file.Metadata[ModelMetadata.VersionKey])
             };
         }
     }
