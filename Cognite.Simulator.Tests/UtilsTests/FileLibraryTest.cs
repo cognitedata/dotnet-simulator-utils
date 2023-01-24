@@ -129,7 +129,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Verify that the files were downloaded and processed
                 Assert.True(state.Deserialized);
                 Assert.False(string.IsNullOrEmpty(state.FilePath));
-                Assert.False(File.Exists(state.FilePath));
+                Assert.True(File.Exists(state.FilePath));
 
                 var simConf = lib.GetSimulationConfiguration(
                     "PROSPER", "Connector Test Model", "IPR/VLP", null);
