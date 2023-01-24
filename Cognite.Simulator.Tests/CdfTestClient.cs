@@ -19,7 +19,7 @@ namespace Cognite.Simulator.Tests
     {
         internal const long TestDataset = 7900866844615420;
         private static int _configIdx;
-        internal static string? _statePath;
+        private static string? _statePath;
 
         public static void AddCogniteTestClient(this IServiceCollection services)
         {
