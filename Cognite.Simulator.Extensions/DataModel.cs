@@ -211,6 +211,8 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public const string CalculationIdKey = "calcConfig";
 
+        public const string ValidationEndOverwriteKey = "validationEndOverwrite";
+
         /// <summary>
         /// Data type of simulation events
         /// </summary>

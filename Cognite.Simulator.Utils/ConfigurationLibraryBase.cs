@@ -22,7 +22,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Configuration object type. The contents of the JSON file are deserialized
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
-    public abstract class ConfigurationLibraryBase<T, U, V> : FileLibrary<T, U>
+    public abstract class ConfigurationLibraryBase<T, U, V> : FileLibrary<T, U>, IConfigurationProvider<T, V>
         where T : ConfigurationStateBase
         where U : FileStatePoco
         where V : SimulationConfigurationBase
@@ -157,6 +157,127 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    public interface IConfigurationProvider<T,V>
+    {
+        T GetSimulationConfigurationState(
+            string simulator,
+            string modelName,
+            string calcType,
+            string calcTypeUserDefined);
+        V GetSimulationConfiguration(
+            string simulator,
+            string modelName,
+            string calcType,
+            string calcTypeUserDefined);
+        Task StoreLibraryState(CancellationToken token);
+    }
+    public class SimulationConfigurationWithDataSampling : SimulationConfigurationBase
+    {
+        public DataSamplingConfiguration DataSampling { get; set; }
+        public LogicalCheckConfiguration LogicalCheck { get; set; }
+        public SteadyStateDetectionConfiguration SteadyStateDetection { get; set; }
+        public IEnumerable<InputTimeSeriesConfiguration> InputTimeSeries { get; set; }
+    }
+
+    public class DataSamplingConfiguration
+    {
+        /// <summary>
+        /// Validation window in minutes
+        /// </summary>
+        public int ValidationWindow { get; set; }
+
+        /// <summary>
+        /// Sampling window in minutes
+        /// </summary>
+        public int SamplingWindow { get; set; }
+
+        /// <summary>
+        /// Sampling granularity in minutes
+        /// </summary>
+        public int Granularity { get; set; }
+
+        /// <summary>
+        /// The validation window can be moved to the past by setting
+        /// this offset. The format it <c>number(w|d|h|m|s)</c>
+        /// </summary>
+        public string ValidationEndOffset { get; set; } = "0s";
+    }
+
+    public class LogicalCheckConfiguration
+    {
+        /// <summary>
+        /// Whether or not to run logical check (well status) for this configuration 
+        /// </summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>
+        /// External ID of the time series to run the logical check against
+        /// </summary>
+        public string ExternalId { get; set; }
+
+        /// <summary>
+        /// Data points aggregate type conforming to CDF. One of <c>average</c>, <c>max</c>, <c>min</c>, <c>count</c>, 
+        /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
+        /// </summary>
+        public string AggregateType { get; set; }
+
+        /// <summary>
+        /// Equality operator. One of <c>eq</c>, <c>ne</c>, <c>gt</c>, <c>ge</c>, <c>lt</c>, <c>le</c>
+        /// </summary>
+        public string Check { get; set; }
+
+        /// <summary>
+        /// The value to compare against using the <see cref="Check"/> operator
+        /// </summary>
+        public double Value { get; set; }
+
+    }
+
+    public class SteadyStateDetectionConfiguration
+    {
+        /// <summary>
+        /// Whether or not to run steady state detection for this configuration 
+        /// </summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>
+        /// External ID of the time series to be evaluated
+        /// </summary>
+        public string ExternalId { get; set; }
+
+        /// <summary>
+        /// Data points aggregate type conforming to CDF. One of <c>average</c>, <c>max</c>, <c>min</c>, <c>count</c>, 
+        /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
+        /// </summary>
+        public string AggregateType { get; set; }
+
+        /// <summary>
+        /// Minimum size of section (segment distance)
+        /// </summary>
+        public int MinSectionSize { get; set; }
+
+        /// <summary>
+        /// Variance threshold
+        /// </summary>
+        public double VarThreshold { get; set; }
+
+        /// <summary>
+        /// Slope threshold
+        /// </summary>
+        public double SlopeThreshold { get; set; }
+    }
+
+    public class InputTimeSeriesConfiguration
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public string Unit { get; set; }
+        public string UnitType { get; set; }
+        public string SensorExternalId { get; set; }
+        public string AggregateType { get; set; }
+    }
+
+
     /// <summary>
     /// Base class for simulation configuration objects. This object should be
     /// used to deserialize the contents of a configuration file in CDF
@@ -222,6 +343,37 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ConfigurationStateBase : FileState
     {
+        private string _runDataSequence;
+        private long _runSequenceLastRow;
+
+        /// <summary>
+        /// External ID of the run configuration sequence in CDF
+        /// </summary>
+        public string RunDataSequence
+        {
+            get => _runDataSequence;
+            set
+            {
+                if (value == _runDataSequence) return;
+                LastTimeModified = DateTime.UtcNow;
+                _runDataSequence = value;
+            }
+        }
+
+        /// <summary>
+        /// Index of the last row in the run configuration sequence
+        /// </summary>
+        public long RunSequenceLastRow
+        {
+            get => _runSequenceLastRow;
+            set
+            {
+                if (value == _runSequenceLastRow) return;
+                LastTimeModified = DateTime.UtcNow;
+                _runSequenceLastRow = value;
+            }
+        }
+
         /// <summary>
         /// Indicates if the JSON content of the file has been deserialized
         /// </summary>
@@ -261,6 +413,12 @@ namespace Cognite.Simulator.Utils
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
+            if (poco is ConfigurationStateBasePoco statePoco)
+            {
+                _runDataSequence = statePoco.RunDataSequence;
+                _runSequenceLastRow = statePoco.RunSequenceLastRow;
+
+            }
         }
         
         /// <summary>
@@ -270,7 +428,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>File data object</returns>
         public override FileStatePoco GetPoco()
         {
-            return new ModelStateBasePoco
+            return new ConfigurationStateBasePoco
             {
                 Id = Id,
                 ModelName = ModelName,
@@ -279,7 +437,16 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
+                RunDataSequence = RunDataSequence,
+                RunSequenceLastRow = RunSequenceLastRow,
             };
         }
+    }
+    public class ConfigurationStateBasePoco : FileStatePoco
+    {
+        [StateStoreProperty("run-data-sequence")]
+        public string RunDataSequence { get; set; }
+        [StateStoreProperty("run-sequence-last-row")]
+        public long RunSequenceLastRow { get; set; }
     }
 }

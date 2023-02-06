@@ -19,7 +19,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
-    public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>
+    public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>, IModelProvider<T>
         where T : ModelStateBase
         where U : ModelStateBasePoco
     {
@@ -65,7 +65,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulator">Simulator name</param>
         /// <param name="modelName">Model name</param>
         /// <returns></returns>
-        protected IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
+        public IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
         {
             var modelVersions = State.Values
                 .Where(s => s.ModelName == modelName
@@ -187,6 +187,12 @@ namespace Cognite.Simulator.Utils
         protected abstract Task ExtractModelInformation(
             IEnumerable<T> modelStates,
             CancellationToken token);
+    }
+
+    public interface IModelProvider<T>
+    {
+        T GetLatestModelVersion(string simulator, string modelName);
+        IEnumerable<T> GetAllModelVersions(string simulator, string modelName);
     }
 
     /// <summary>
