@@ -208,6 +208,10 @@ namespace Cognite.Simulator.Utils
             var validationEnd = startTime;
             try
             {
+                if (configObj.DataSampling == null)
+                {
+                    throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
+                }
                 // Determine the validation end time
                 if (e.Metadata.TryGetValue(SimulationEventMetadata.ValidationEndOverwriteKey, out string validationEndOverwrite)
                     && long.TryParse(validationEndOverwrite, out long overwriteValue))
@@ -310,6 +314,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(configState));
             }
+
+            _logger.LogDebug("Storing run configuration in CDF");
+
             // Create a dictionary with the run details
             var runDetails = new Dictionary<string, string>
             {
@@ -337,8 +344,9 @@ namespace Cognite.Simulator.Utils
             runDetails.Add("samplingGranularity", configObj.DataSampling.Granularity.ToString());
 
             // Logical check details
-            runDetails.Add("logicalCheckEnabled", configObj.LogicalCheck.Enabled.ToString());
-            if (configObj.LogicalCheck.Enabled)
+            bool logicalCheckEnabled = configObj.LogicalCheck != null && configObj.LogicalCheck.Enabled;
+            runDetails.Add("logicalCheckEnabled", logicalCheckEnabled.ToString());
+            if (logicalCheckEnabled)
             {
                 runDetails.Add("logicalCheckTimeSeries", configObj.LogicalCheck.ExternalId);
                 runDetails.Add("logicalCheckSamplingMethod", configObj.LogicalCheck.AggregateType);
@@ -347,8 +355,9 @@ namespace Cognite.Simulator.Utils
             }
 
             // Steady state details
-            runDetails.Add("ssdEnabled", configObj.SteadyStateDetection.Enabled.ToString());
-            if (configObj.SteadyStateDetection.Enabled)
+            bool ssdEnabled = configObj.SteadyStateDetection != null && configObj.SteadyStateDetection.Enabled;
+            runDetails.Add("ssdEnabled", ssdEnabled.ToString());
+            if (ssdEnabled)
             {
                 runDetails.Add("ssdTimeSeries", configObj.SteadyStateDetection.ExternalId);
                 runDetails.Add("ssdSamplingMethod", configObj.SteadyStateDetection.AggregateType);
