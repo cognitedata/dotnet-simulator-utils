@@ -377,6 +377,10 @@ namespace Cognite.Simulator.Extensions
             {
                 eventCreate.DataSetId = simulationEvent.DataSetId.Value;
             }
+            if (simulationEvent.ValidationEndOverwrite.HasValue)
+            {
+                eventCreate.Metadata.Add(SimulationEventMetadata.ValidationEndOverwriteKey, simulationEvent.ValidationEndOverwrite.ToString());
+            }
             return eventCreate;
         }
     }

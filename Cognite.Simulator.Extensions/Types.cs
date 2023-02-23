@@ -205,6 +205,12 @@ namespace Cognite.Simulator.Extensions
         /// External ID of the CDF file containing the simulation configuration
         /// </summary>
         public string CalculationId { get; set; }
+
+        /// <summary>
+        /// Typically, the connector samples data using the current time: time the event was picked for execution.
+        /// In case the data should be sampled from a time in the past, than this overwrite should be used.
+        /// </summary>
+        public long? ValidationEndOverwrite { get; set; }
     }
 
     /// <summary>

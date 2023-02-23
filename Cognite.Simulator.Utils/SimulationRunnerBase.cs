@@ -260,7 +260,7 @@ namespace Cognite.Simulator.Utils
                     token).ConfigureAwait(false);
             }
 
-            // Run the calculation
+            // Run the simulation
             await RunSimulation(
                 e,
                 startTime,
@@ -386,18 +386,7 @@ namespace Cognite.Simulator.Utils
                     rowStart = 0;
                 }
             }
-            var calculation = new SimulatorCalculation
-            {
-                Model = new SimulatorModel
-                {
-                    Name = modelState.ModelName,
-                    Simulator = configObj.Simulator
-                },
-                Name = configObj.CalculationName,
-                Type = configObj.CalculationType,
-                UserDefinedType = configObj.CalcTypeUserDefined
-            };
-
+            
             // Update the local state with the sequence ID and the last row number
             configState.RunDataSequence = sequenceId;
             configState.RunSequenceLastRow = runDetails.Count + rowStart - 1;
@@ -410,7 +399,7 @@ namespace Cognite.Simulator.Utils
                     sequenceId,
                     rowStart,
                     runEvent.DataSetId,
-                    calculation,
+                    configObj.Calculation,
                     runDetails,
                     token).ConfigureAwait(false);
 

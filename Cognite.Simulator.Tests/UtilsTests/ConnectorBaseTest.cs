@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    [Collection(nameof(SequentialTestCollection))]
     public class ConnectorBaseTest
     {
         [Fact]
