@@ -60,8 +60,17 @@ namespace Cognite.Simulator.Utils
         public string FilesDirectory { get; set; }
     }
 
+    /// <summary>
+    /// Represents the configuration for connectors. This defines basic
+    /// connector properties such as name and intervals for status report and
+    /// for fetching events
+    /// </summary>
     public class ConnectorConfig
     {
+        /// <summary>
+        /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
+        /// then this is the connector name
+        /// </summary>
         public string NamePrefix { get; set; }
 
         /// <summary>
@@ -92,6 +101,10 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public long MaximumNumberOfSequenceRows { get; set; } = 100_000;
 
+        /// <summary>
+        /// Returns the connector name, composed of the configured prefix and suffix
+        /// </summary>
+        /// <returns>Connector name</returns>
         public string GetConnectorName()
         {
             if (!AddMachineNameSuffix)
