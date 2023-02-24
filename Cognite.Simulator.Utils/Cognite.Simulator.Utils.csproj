@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cognite.DataProcessing\Cognite.DataProcessing.csproj" />
     <ProjectReference Include="..\Cognite.Simulator.Extensions\Cognite.Simulator.Extensions.csproj" />
   </ItemGroup>
 

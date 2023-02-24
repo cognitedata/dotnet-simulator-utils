@@ -59,4 +59,60 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public string FilesDirectory { get; set; }
     }
+
+    /// <summary>
+    /// Represents the configuration for connectors. This defines basic
+    /// connector properties such as name and intervals for status report and
+    /// for fetching events
+    /// </summary>
+    public class ConnectorConfig
+    {
+        /// <summary>
+        /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
+        /// then this is the connector name
+        /// </summary>
+        public string NamePrefix { get; set; }
+
+        /// <summary>
+        /// If true, the connector name is composed of the prefix <see cref="NamePrefix"/> and
+        /// the name of the machine running the connector
+        /// </summary>
+        public bool AddMachineNameSuffix { get; set; } = true;
+
+        /// <summary>
+        /// The connector will update its heartbeat in CDF with this interval (in seconds)
+        /// </summary>
+        public int StatusInterval { get; set; } = 10;
+
+        /// <summary>
+        /// The connector will fetch simulation calculation events from CDF with this interval (in seconds)
+        /// </summary>
+        public int FetchEventsInterval { get; set; } = 5;
+
+        /// <summary>
+        /// The connector will run simulation events found on CDF that are not older than
+        /// this value (in seconds). In case it finds events older than this, the events will
+        /// fail due to timeout
+        /// </summary>
+        public int SimulationEventTolerance { get; set; } = 1800; // 30 min
+
+        /// <summary>
+        /// The maximum number of rows to insert into a single sequence in CDF
+        /// </summary>
+        public long MaximumNumberOfSequenceRows { get; set; } = 100_000;
+
+        /// <summary>
+        /// Returns the connector name, composed of the configured prefix and suffix
+        /// </summary>
+        /// <returns>Connector name</returns>
+        public string GetConnectorName()
+        {
+            if (!AddMachineNameSuffix)
+            {
+                return NamePrefix;
+            }
+            return $"{NamePrefix}{Environment.MachineName}";
+        }
+    }
+
 }

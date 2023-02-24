@@ -12,9 +12,16 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace Cognite.Simulator.Tests
 {
+    [CollectionDefinition(nameof(SequentialTestCollection), DisableParallelization = true)]
+    public class SequentialTestCollection
+    {
+
+    }
+
     internal static class CdfTestClient
     {
         internal const long TestDataset = 7900866844615420;

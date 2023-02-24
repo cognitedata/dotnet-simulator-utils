@@ -19,7 +19,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
-    public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>
+    public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>, IModelProvider<T>
         where T : ModelStateBase
         where U : ModelStateBasePoco
     {
@@ -43,12 +43,7 @@ namespace Cognite.Simulator.Utils
         {
         }
 
-        /// <summary>
-        /// Returns the state object of the latest version of the given model
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public T GetLatestModelVersion(string simulator, string modelName)
         {
             var modelVersions = GetAllModelVersions(simulator, modelName);
@@ -59,13 +54,8 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        /// <summary>
-        /// Returns the state objects of all the versions of the given model
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <returns></returns>
-        protected IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
+        /// <inheritdoc/>
+        public IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
         {
             var modelVersions = State.Values
                 .Where(s => s.ModelName == modelName
@@ -187,6 +177,29 @@ namespace Cognite.Simulator.Utils
         protected abstract Task ExtractModelInformation(
             IEnumerable<T> modelStates,
             CancellationToken token);
+    }
+
+    /// <summary>
+    /// Interface for libraries that can provide model information
+    /// </summary>
+    /// <typeparam name="T">Model state type</typeparam>
+    public interface IModelProvider<T>
+    {
+        /// <summary>
+        /// Returns the state object of the latest version of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator</param>
+        /// <param name="modelName">Model Name</param>
+        /// <returns>State object</returns>
+        T GetLatestModelVersion(string simulator, string modelName);
+
+        /// <summary>
+        /// Returns the state objects of all the versions of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <returns>List of state objects</returns>
+        IEnumerable<T> GetAllModelVersions(string simulator, string modelName);
     }
 
     /// <summary>

@@ -14,6 +14,7 @@ using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    [Collection(nameof(SequentialTestCollection))]
     public class FileLibraryTest
     {
         [Fact]
@@ -22,7 +23,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileDownloadClient>();
-            services.AddTransient<ModeLibraryTest>();
+            services.AddSingleton<ModeLibraryTest>();
             StateStoreConfig stateConfig = null;
 
             try
@@ -94,7 +95,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileDownloadClient>();
-            services.AddTransient<ConfigurationLibraryTest>();
+            services.AddSingleton<ConfigurationLibraryTest>();
 
             StateStoreConfig stateConfig = null;
 
@@ -245,7 +246,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationBase>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithDataSampling>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 

@@ -212,6 +212,11 @@ namespace Cognite.Simulator.Extensions
         public const string CalculationIdKey = "calcConfig";
 
         /// <summary>
+        /// Indicates that the start of the validation time should be overwritten with the metadata value
+        /// </summary>
+        public const string ValidationEndOverwriteKey = "validationEndOverwrite";
+
+        /// <summary>
         /// Data type of simulation events
         /// </summary>
         public const SimulatorDataType DataType = SimulatorDataType.SimulationEvent;
