@@ -43,12 +43,7 @@ namespace Cognite.Simulator.Utils
         {
         }
 
-        /// <summary>
-        /// Returns the state object of the latest version of the given model
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public T GetLatestModelVersion(string simulator, string modelName)
         {
             var modelVersions = GetAllModelVersions(simulator, modelName);
@@ -59,12 +54,7 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        /// <summary>
-        /// Returns the state objects of all the versions of the given model
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
         {
             var modelVersions = State.Values
@@ -189,9 +179,26 @@ namespace Cognite.Simulator.Utils
             CancellationToken token);
     }
 
+    /// <summary>
+    /// Interface for libraries that can provide model information
+    /// </summary>
+    /// <typeparam name="T">Model state type</typeparam>
     public interface IModelProvider<T>
     {
+        /// <summary>
+        /// Returns the state object of the latest version of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator</param>
+        /// <param name="modelName">Model Name</param>
+        /// <returns>State object</returns>
         T GetLatestModelVersion(string simulator, string modelName);
+
+        /// <summary>
+        /// Returns the state objects of all the versions of the given model
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <returns>List of state objects</returns>
         IEnumerable<T> GetAllModelVersions(string simulator, string modelName);
     }
 

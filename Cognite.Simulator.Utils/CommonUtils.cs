@@ -54,6 +54,9 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Collects utility methods used by the connector
+    /// </summary>
     public static class SimulationUtils
     {
         /// <summary>
@@ -91,8 +94,9 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Run logical check (well status) and steady state detection based on a simulation configuration. 
+        /// Run logical check and steady state detection based on a simulation configuration. 
         /// </summary>
+        /// <param name="dataPoints">CDF data points resource</param>
         /// <param name="config">Simulation configuration</param>
         /// <param name="validationEnd">Time of the end of the validation check</param>
         /// <param name="token">Cancellation token</param>
@@ -103,6 +107,10 @@ namespace Cognite.Simulator.Utils
             DateTime validationEnd,
             CancellationToken token)
         {
+            if (config == null || config.DataSampling == null)
+            {
+                throw new SimulationException("Data sampling configuration is missing");
+            }
             var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow);
             var validationRange = new TimeRange
             {
@@ -191,6 +199,14 @@ namespace Cognite.Simulator.Utils
             return DataSampling.LogicalCheck(ts, lcConfig.Value, op, validationRange.Max);
         }
 
+        /// <summary>
+        /// Convert data points sampled from CDF to time series data used by
+        /// the <see cref="DataProcessing"/> library
+        /// </summary>
+        /// <param name="dataPoints">Input data points</param>
+        /// <param name="granularity">Granularity in minutes</param>
+        /// <param name="aggreagate">CDF aggregate type</param>
+        /// <returns>Time series data</returns>
         public static TimeSeriesData ToTimeSeriesData(
             this (long[] Timestamps, double[] Values) dataPoints,
             int granularity,

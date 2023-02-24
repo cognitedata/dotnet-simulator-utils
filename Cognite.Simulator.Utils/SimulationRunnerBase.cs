@@ -8,12 +8,19 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Represents the connector's simulation runner process. This base class can
+    /// fetch simulation events from CDF that are ready to run, validate them and find
+    /// the time range to sample data where the process is in steady state.
+    /// </summary>
+    /// <typeparam name="T">Type of model state objects</typeparam>
+    /// <typeparam name="U">Type of simulation configuration state objects</typeparam>
+    /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
         where U : ConfigurationStateBase
@@ -28,6 +35,15 @@ namespace Cognite.Simulator.Utils
         private readonly IModelProvider<T> _modelLib;
         private readonly IConfigurationProvider<U, V> _configLib;
 
+        /// <summary>
+        /// Create a new instance of the runner with the provided parameters
+        /// </summary>
+        /// <param name="connectorConfig">Connector configuration</param>
+        /// <param name="simulators">List of simulators</param>
+        /// <param name="cdf">CDF client</param>
+        /// <param name="modelLibrary">Model library</param>
+        /// <param name="configLibrary">Configuration library</param>
+        /// <param name="logger">Logger</param>
         public SimulationRunnerBase(
             ConnectorConfig connectorConfig,
             IList<SimulatorConfig> simulators,
@@ -36,6 +52,10 @@ namespace Cognite.Simulator.Utils
             IConfigurationProvider<U, V> configLibrary,
             ILogger logger)
         {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
             _connectorConfig = connectorConfig;
             _simulators = simulators;
             _cdfEvents = cdf.CogniteClient.Events;
@@ -46,6 +66,10 @@ namespace Cognite.Simulator.Utils
             _configLib = configLibrary;
         }
 
+        /// <summary>
+        /// Start the loop for fetching and processing simulation events from CDF
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
             var interval = TimeSpan.FromSeconds(_connectorConfig.FetchEventsInterval);
@@ -188,6 +212,16 @@ namespace Cognite.Simulator.Utils
             V configObj,
             Dictionary<string, string> metadata);
 
+        /// <summary>
+        /// Initialize the simulation event execution
+        /// </summary>
+        /// <param name="e">Simulation event</param>
+        /// <param name="startTime">Simulation start time</param>
+        /// <param name="modelState">Model state object</param>
+        /// <param name="configState">Configuration state object</param>
+        /// <param name="configObj">Configuration object</param>
+        /// <param name="metadata">Metadata to add to the event</param>
+        /// <param name="token">Cancellation token</param>
         protected virtual async Task InitSimulationRun(
             Event e,
             DateTime startTime,
@@ -197,6 +231,18 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
+            if (modelState == null)
+            {
+                throw new ArgumentNullException(nameof(modelState));
+            }
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+            if (configObj == null)
+            {
+                throw new ArgumentNullException(nameof(configObj));
+            }
             await _cdfEvents.UpdateSimulationEventToRunning(
                 e.ExternalId,
                 startTime,
@@ -279,6 +325,17 @@ namespace Cognite.Simulator.Utils
                 token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Run a simulation and saves the results back to CDF. Different simulators
+        /// will implement different patterns of interaction when running simulations
+        /// </summary>
+        /// <param name="e">Simulation event</param>
+        /// <param name="startTime">Simulation start time</param>
+        /// <param name="modelState">Model state object</param>
+        /// <param name="configState">Configuration state object</param>
+        /// <param name="configObj">Configuration object</param>
+        /// <param name="samplingRange">Selected simulation sampling range</param>
+        /// <param name="token">Cancellation token</param>
         protected abstract Task RunSimulation(
             Event e, 
             DateTime startTime,
@@ -288,6 +345,20 @@ namespace Cognite.Simulator.Utils
             SamplingRange samplingRange,
             CancellationToken token);
 
+        /// <summary>
+        /// Store the run configuration information as a CDF sequence
+        /// </summary>
+        /// <param name="samplingRange">Selected simulation sampling range</param>
+        /// <param name="modelState">Model state object</param>
+        /// <param name="configState">Configuration state object</param>
+        /// <param name="configObj">Configuration object</param>
+        /// <param name="runEvent">Simulation event</param>
+        /// <param name="eventStartTime">Event start time</param>
+        /// <param name="validationEnd">End of the validation period</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Thrown when required parameters are missing</exception>
+        /// <exception cref="ConnectorException">Thrown when it is not possible to save the sequence</exception>
         protected virtual async Task StoreRunConfigurationInCdf(
             SamplingRange samplingRange,
             T modelState,
@@ -427,16 +498,31 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Represents errors related to running simulations
+    /// </summary>
     public class SimulationException : Exception
     {
+        /// <summary>
+        /// Creates a new simulation exception
+        /// </summary>
         public SimulationException()
         {
         }
 
+        /// <summary>
+        /// Creates a new simulation exception with the given message
+        /// </summary>
+        /// <param name="message">Error message</param>
         public SimulationException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// Creates a new simulation exception with the given message and inner exception
+        /// </summary>
+        /// <param name="message">Error message</param>
+        /// <param name="innerException">Inner exception</param>
         public SimulationException(string message, Exception innerException) : base(message, innerException)
         {
         }

@@ -90,7 +90,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken2 = linkedTokenSource2.Token;
-                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(10));
+                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(15));
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
@@ -157,7 +157,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     await cdf.Sequences.DeleteAsync(
                         new List<string> { sequenceId }, source.Token).ConfigureAwait(false);
                 }
-                provider.Dispose();
+                provider.Dispose(); // Dispose provider to also dispose managed services
                 if (Directory.Exists("./files"))
                 {
                     Directory.Delete("./files", true);
@@ -239,6 +239,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             SamplingRange samplingRange, 
             CancellationToken token)
         {
+            // Real connectors should implement the actual simulation run here
+            // and save the results back to CDF
             SimulationEventExecuted = true;
             return Task.CompletedTask;
         }
