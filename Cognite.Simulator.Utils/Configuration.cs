@@ -102,6 +102,18 @@ namespace Cognite.Simulator.Utils
         public long MaximumNumberOfSequenceRows { get; set; } = 100_000;
 
         /// <summary>
+        /// The connector will check if scheduled simulations should be triggered with
+        /// this interval (in seconds)
+        /// </summary>
+        public int SchedulerUpdateInterval { get; set; } = 10;
+
+        /// <summary>
+        /// The scheduler will trigger simulations that passed the scheduled time, but will tolerate
+        /// missing the scheduled time by this much time (in seconds)
+        /// </summary>
+        public int SchedulerTolerance { get; set; } = 300;
+
+        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
