@@ -466,11 +466,6 @@ namespace Cognite.Simulator.Utils
                 }
             }
             
-            // Update the local state with the sequence ID and the last row number
-            configState.RunDataSequence = sequenceId;
-            configState.RunSequenceLastRow = runDetails.Count + rowStart - 1;
-            await ConfigurationLibrary.StoreLibraryState(token).ConfigureAwait(false);
-
             // Make sure the sequence exists in CDF
             try
             {
@@ -481,6 +476,16 @@ namespace Cognite.Simulator.Utils
                     configObj.Calculation,
                     runDetails,
                     token).ConfigureAwait(false);
+
+                if (string.IsNullOrEmpty(sequenceId))
+                {
+                    sequenceId = seq.ExternalId;
+                }
+
+                // Update the local state with the sequence ID and the last row number
+                configState.RunDataSequence = sequenceId;
+                configState.RunSequenceLastRow = runDetails.Count + rowStart - 1;
+                await ConfigurationLibrary.StoreLibraryState(token).ConfigureAwait(false);
 
                 // Update the event with calculation time and run details sequence
                 Dictionary<string, string> eventMetaData = new Dictionary<string, string>()
