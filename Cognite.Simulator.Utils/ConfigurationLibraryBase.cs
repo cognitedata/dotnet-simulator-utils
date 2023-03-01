@@ -28,9 +28,7 @@ namespace Cognite.Simulator.Utils
         where U : FileStatePoco
         where V : SimulationConfigurationBase
     {
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public Dictionary<string, V> SimulationConfigurations { get; }
 
         /// <summary>
