@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Microsoft.Extensions.Logging;
@@ -27,9 +28,7 @@ namespace Cognite.Simulator.Utils
         where U : FileStatePoco
         where V : SimulationConfigurationBase
     {
-        /// <summary>
-        /// Dictionary of simulation configurations. The key is the file external ID
-        /// </summary>
+        /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
 
         /// <summary>
@@ -96,6 +95,62 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Determines if the given configuration exists or not by trying to fetch it
+        /// from CDF. This method can be overridden to add extra verification steps
+        /// </summary>
+        /// <param name="state">Configuration state</param>
+        /// <param name="config">Configuration object</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns><c>true</c> if the configuration can be fetched from CDF, <c>false</c> otherwise</returns>
+        protected virtual async Task<bool> ConfigurationFileExistsInCdf(
+            T state,
+            V config,
+            CancellationToken token)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+            var configsInCdf = await CdfFiles.FindConfigurationFiles(
+                config.Calculation,
+                state.DataSetId,
+                token).ConfigureAwait(false);
+            return configsInCdf.Any(v => v.ExternalId == state.Id);
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> VerifyLocalConfigurationState(
+            T state,
+            V config,
+            CancellationToken token)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+            var exists = await ConfigurationFileExistsInCdf(state, config, token).ConfigureAwait(false);
+            if (exists)
+            {
+                return true;
+            }
+            Logger.LogWarning("Removing {Model} - {Calc} calculation configuration, not found in CDF",
+                state.ModelName,
+                config.CalculationName);
+            State.Remove(state.Id);
+            SimulationConfigurations.Remove(state.Id);
+            await RemoveStates(new List<T> { state }, token).ConfigureAwait(false);
+            return false;
+        }
+
+        /// <summary>
         /// Process model files that have been downloaded
         /// </summary>
         /// <param name="token">Cancellation token</param>
@@ -151,6 +206,11 @@ namespace Cognite.Simulator.Utils
     public interface IConfigurationProvider<T,V>
     {
         /// <summary>
+        /// Dictionary of simulation configurations. The key is the file external ID
+        /// </summary>
+        Dictionary<string, V> SimulationConfigurations { get; }
+
+        /// <summary>
         /// Get the simulator configuration state object with the given parameters
         /// </summary>
         /// <param name="simulator">Simulator name</param>
@@ -183,6 +243,17 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="token">Cancellation token</param>
         Task StoreLibraryState(CancellationToken token);
+
+        /// <summary>
+        /// Verify that the configuration with the given state and object exists in
+        /// CDF. In case it does not, should remove from the local state store and
+        /// stop tracking it
+        /// </summary>
+        /// <param name="state">Configuration state</param>
+        /// <param name="config">Configuration object</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
+        Task<bool> VerifyLocalConfigurationState(T state, V config, CancellationToken token);
     }
     
     /// <summary>
@@ -345,6 +416,37 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public string AggregateType { get; set; }
     }
+    
+    /// <summary>
+    /// Simulation schedule configuration
+    /// </summary>
+    public class ScheduleConfiguration
+    {
+        /// <summary>
+        /// Whether or not to run on schedule
+        /// </summary>
+        public bool Enabled { get; set; }
+        
+        /// <summary>
+        /// Start time in milliseconds since Unix epoch
+        /// </summary>
+        public long Start { get; set; }
+
+        /// <summary>
+        /// Simulation frequency. The format it <c>number(w|d|h|m|s)</c>
+        /// </summary>
+        public string Repeat { get; set; }
+
+        /// <summary>
+        /// Start time as a <see cref="DateTime"/> object
+        /// </summary>
+        public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
+        
+        /// <summary>
+        /// Simulation frequency as a <see cref="TimeSpan"/> object
+        /// </summary>
+        public TimeSpan RepeatTimeSpan => SimulationUtils.ConfigurationTimeStringToTimeSpan(Repeat);
+    }
 
 
     /// <summary>
@@ -392,6 +494,11 @@ namespace Cognite.Simulator.Utils
         public string UserEmail { get; set; } = "";
 
         /// <summary>
+        /// Simulation schedule configuration
+        /// </summary>
+        public ScheduleConfiguration Schedule { get; set; }
+
+        /// <summary>
         /// Calculation object crated from this configuration
         /// </summary>
         public SimulatorCalculation Calculation => new SimulatorCalculation
@@ -414,6 +521,21 @@ namespace Cognite.Simulator.Utils
     {
         private string _runDataSequence;
         private long _runSequenceLastRow;
+        private long? _lastRun;
+
+        /// <summary>
+        /// Timestamp of the last time a simulation was ran using this configuration
+        /// </summary>
+        public long? LastRun
+        {
+            get => _lastRun;
+            set
+            {
+                if (value == _lastRun) return;
+                LastTimeModified = DateTime.UtcNow;
+                _lastRun = value;
+            }
+        }
 
         /// <summary>
         /// External ID of the run configuration sequence in CDF
@@ -486,7 +608,7 @@ namespace Cognite.Simulator.Utils
             {
                 _runDataSequence = statePoco.RunDataSequence;
                 _runSequenceLastRow = statePoco.RunSequenceLastRow;
-
+                _lastRun = statePoco.LastRun;
             }
         }
         
@@ -508,6 +630,7 @@ namespace Cognite.Simulator.Utils
                 CdfId = CdfId,
                 RunDataSequence = RunDataSequence,
                 RunSequenceLastRow = RunSequenceLastRow,
+                LastRun = LastRun,
             };
         }
     }
@@ -518,6 +641,12 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ConfigurationStateBasePoco : FileStatePoco
     {
+        /// <summary>
+        /// Timestamp of the last simulation run
+        /// </summary>
+        [StateStoreProperty("last-run")]
+        public long? LastRun { get; set; }
+
         /// <summary>
         /// External ID of the sequence in CDF containing the run configuration
         /// </summary>

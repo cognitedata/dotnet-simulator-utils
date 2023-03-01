@@ -32,8 +32,16 @@ namespace Cognite.Simulator.Utils
         private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
-        private readonly IModelProvider<T> _modelLib;
-        private readonly IConfigurationProvider<U, V> _configLib;
+        
+        /// <summary>
+        /// Library containing the simulator model files
+        /// </summary>
+        protected IModelProvider<T> ModelLibrary { get; }
+        
+        /// <summary>
+        /// Library containing the simulation configuration files
+        /// </summary>
+        protected IConfigurationProvider<U, V> ConfigurationLibrary { get; }
 
         /// <summary>
         /// Create a new instance of the runner with the provided parameters
@@ -62,8 +70,8 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
-            _modelLib = modelLibrary;
-            _configLib = configLibrary;
+            ModelLibrary = modelLibrary;
+            ConfigurationLibrary = configLibrary;
         }
 
         /// <summary>
@@ -181,14 +189,14 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Event {Id} does not indicate the simulator to use", e.ExternalId);
                 throw new SimulationException("Simulator missing");
             }
-            var model = _modelLib.GetLatestModelVersion(simulator, modelName);
+            var model = ModelLibrary.GetLatestModelVersion(simulator, modelName);
             if (model == null)
             {
                 _logger.LogError("Could not find a local model file to run Event {Id}", e.ExternalId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
-            var calcConfig = _configLib.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
-            var calcState = _configLib.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
+            var calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
+            var calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
             if (calcConfig == null || calcState == null)
             {
                 _logger.LogError("Could not find a local configuration to run Event {Id}", e.ExternalId);
@@ -458,11 +466,6 @@ namespace Cognite.Simulator.Utils
                 }
             }
             
-            // Update the local state with the sequence ID and the last row number
-            configState.RunDataSequence = sequenceId;
-            configState.RunSequenceLastRow = runDetails.Count + rowStart - 1;
-            await _configLib.StoreLibraryState(token).ConfigureAwait(false);
-
             // Make sure the sequence exists in CDF
             try
             {
@@ -473,6 +476,16 @@ namespace Cognite.Simulator.Utils
                     configObj.Calculation,
                     runDetails,
                     token).ConfigureAwait(false);
+
+                if (string.IsNullOrEmpty(sequenceId))
+                {
+                    sequenceId = seq.ExternalId;
+                }
+
+                // Update the local state with the sequence ID and the last row number
+                configState.RunDataSequence = sequenceId;
+                configState.RunSequenceLastRow = runDetails.Count + rowStart - 1;
+                await ConfigurationLibrary.StoreLibraryState(token).ConfigureAwait(false);
 
                 // Update the event with calculation time and run details sequence
                 Dictionary<string, string> eventMetaData = new Dictionary<string, string>()
