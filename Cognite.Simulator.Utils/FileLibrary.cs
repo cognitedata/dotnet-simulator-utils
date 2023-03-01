@@ -226,7 +226,7 @@ namespace Cognite.Simulator.Utils
             while (!token.IsCancellationRequested)
             {
                 string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
-                Logger.LogDebug("Updating file file library. There are currently {Num} files. Extracted range: {TimeRange}",
+                Logger.LogDebug("Updating file library. There are currently {Num} files. Extracted range: {TimeRange}",
                     State.Count,
                     timeRange
                     );
