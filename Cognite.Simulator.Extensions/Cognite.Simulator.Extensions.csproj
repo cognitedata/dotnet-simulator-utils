@@ -20,7 +20,7 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup> 
   <ItemGroup>
-    <PackageReference Include="Cognite.Extensions" Version="1.6.1" />
+    <PackageReference Include="Cognite.Extensions" Version="1.6.2" />
   </ItemGroup> 
 
 </Project>
