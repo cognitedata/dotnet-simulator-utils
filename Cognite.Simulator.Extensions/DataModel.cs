@@ -335,6 +335,12 @@ namespace Cognite.Simulator.Extensions
         /// Connector version key. Version of the connector associated with this simulator integration
         /// </summary>
         public const string ConnectorVersion = "connectorVersion";
+
+        /// <summary>
+        /// Simulator version key. Installed version of the simulator
+        /// </summary>
+        public const string SimulatorVersion = "simulatorVersion";
+
     }
 
     /// <summary>

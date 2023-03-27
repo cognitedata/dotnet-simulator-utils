@@ -57,7 +57,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var heartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
                 var connVersion = Assert.Contains(SimulatorIntegrationSequenceRows.ConnectorVersion, resultDict);
                 var simDataset = Assert.Contains(SimulatorIntegrationSequenceRows.DataSetId, resultDict);
-                var simVersion = Assert.Contains("simulatorVersion", resultDict);
+                var simVersion = Assert.Contains(SimulatorIntegrationSequenceRows.SimulatorVersion, resultDict);
                 Assert.True(long.Parse(heartbeat) > timestamp);
                 Assert.Equal(connector.GetConnectorVersion(), connVersion);
                 Assert.Equal(CdfTestClient.TestDataset, long.Parse(simDataset));
@@ -136,7 +136,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 true,
                 new Dictionary<string, string>
                 {
-                    { "simulatorVersion", "1.2.3" }
+                    { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }
                 },
                 token).ConfigureAwait(false);
         }

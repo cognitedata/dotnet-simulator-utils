@@ -133,7 +133,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     dataSetId,
                     new Dictionary<string, string>
                     {
-                        { "simulatorVersion", "1.2.3" }
+                        { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }
                     },
                     CancellationToken.None).ConfigureAwait(false);
 
@@ -152,7 +152,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     bool isHeartbeat = values[0] == SimulatorIntegrationSequenceRows.Heartbeat;
                     bool isDataSetId = values[0] == SimulatorIntegrationSequenceRows.DataSetId;
                     bool isConnectorVersion = values[0] == SimulatorIntegrationSequenceRows.ConnectorVersion;
-                    bool isSimulatorVersion = values[0] == "simulatorVersion";
+                    bool isSimulatorVersion = values[0] == SimulatorIntegrationSequenceRows.SimulatorVersion;
                     Assert.True(isHeartbeat || isDataSetId || isConnectorVersion || isSimulatorVersion);
                     if (isHeartbeat)
                     {
