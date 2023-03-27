@@ -57,9 +57,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var heartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
                 var connVersion = Assert.Contains(SimulatorIntegrationSequenceRows.ConnectorVersion, resultDict);
                 var simDataset = Assert.Contains(SimulatorIntegrationSequenceRows.DataSetId, resultDict);
+                var simVersion = Assert.Contains("simulatorVersion", resultDict);
                 Assert.True(long.Parse(heartbeat) > timestamp);
                 Assert.Equal(connector.GetConnectorVersion(), connVersion);
                 Assert.Equal(CdfTestClient.TestDataset, long.Parse(simDataset));
+                Assert.Equal("1.2.3", simVersion);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
                 // to report a heartbeat back to CDF at least once.
@@ -130,7 +132,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public override async Task Init(CancellationToken token)
         {
             await EnsureSimulatorIntegrationsSequencesExists(token).ConfigureAwait(false);
-            await UpdateIntegrationRows(true, token).ConfigureAwait(false);
+            await UpdateIntegrationRows(
+                true,
+                new Dictionary<string, string>
+                {
+                    { "simulatorVersion", "1.2.3" }
+                },
+                token).ConfigureAwait(false);
         }
 
         public override async Task Run(CancellationToken token)

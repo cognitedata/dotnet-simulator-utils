@@ -129,7 +129,12 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 await sequences.UpdateSimulatorIntegrationsHeartbeat(
                     true,
                     "1.0.0",
-                    integrationsMap,
+                    externalIdToDelete,
+                    dataSetId,
+                    new Dictionary<string, string>
+                    {
+                        { "simulatorVersion", "1.2.3" }
+                    },
                     CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the sequence was updated correctly
@@ -147,7 +152,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     bool isHeartbeat = values[0] == SimulatorIntegrationSequenceRows.Heartbeat;
                     bool isDataSetId = values[0] == SimulatorIntegrationSequenceRows.DataSetId;
                     bool isConnectorVersion = values[0] == SimulatorIntegrationSequenceRows.ConnectorVersion;
-                    Assert.True(isHeartbeat || isDataSetId || isConnectorVersion);
+                    bool isSimulatorVersion = values[0] == "simulatorVersion";
+                    Assert.True(isHeartbeat || isDataSetId || isConnectorVersion || isSimulatorVersion);
                     if (isHeartbeat)
                     {
                         Assert.True(long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
@@ -159,6 +165,10 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     if (isDataSetId)
                     {
                         Assert.Equal(dataSetId.ToString(), values[1]);
+                    }
+                    if (isSimulatorVersion)
+                    {
+                        Assert.Equal("1.2.3", values[1]);
                     }
                 }
             }
