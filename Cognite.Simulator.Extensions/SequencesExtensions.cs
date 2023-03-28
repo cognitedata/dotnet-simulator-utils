@@ -152,11 +152,13 @@ namespace Cognite.Simulator.Extensions
         /// sequence with the connector heartbeat (last time seen)
         /// </summary>
         /// <param name="sequences">CDF Sequences resource</param>
-        /// <param name="init">If true, the data set id and connector version rows are also 
+        /// <param name="init">If true, the data set id, connector version and extra information rows are also 
         /// updated. Else, only the heartbeat row is updated</param>
         /// <param name="connectorVersion">Version of the deployed connector</param>
-        /// <param name="simulators">Dictionary with (simulator integration sequence external id, 
-        /// data set id) pairs</param>
+        /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
+        /// <param name="dataSetId">ID of the data set holding simulator data</param>
+        /// <param name="extraInformation">Dictionary of any extra information to be added to the
+        /// sequence during initialization</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
@@ -164,30 +166,33 @@ namespace Cognite.Simulator.Extensions
             this SequencesResource sequences,
             bool init,
             string connectorVersion,
-            Dictionary<string, long> simulators,
+            string sequenceExternalId,
+            long? dataSetId,
+            Dictionary<string, string> extraInformation,
             CancellationToken token)
         {
-            if (simulators == null || !simulators.Any())
+            if (sequenceExternalId == null || !dataSetId.HasValue)
             {
                 return;
             }
 
             var rowsToCreate = new List<SequenceDataCreate>();
-            foreach (var simulator in simulators)
-            {
-                var rowData = new Dictionary<string, string>
+            var rowData = new Dictionary<string, string>
                 {
                     { SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
                 };
-                if (init)
+            if (init)
+            {
+                // Data set and version could only have changed on connector restart
+                rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{dataSetId.Value}");
+                rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{connectorVersion}");
+                if (extraInformation != null && extraInformation.Any())
                 {
-                    // Data set and version could only have changed on connector restart
-                    rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{simulator.Value}");
-                    rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{connectorVersion}");
+                    extraInformation.ToList().ForEach(i => rowData.Add(i.Key, i.Value));
                 }
-                var rowCreate = ToSequenceData(rowData, simulator.Key, 0);
-                rowsToCreate.Add(rowCreate);
             }
+            var rowCreate = ToSequenceData(rowData, sequenceExternalId, 0);
+            rowsToCreate.Add(rowCreate);
             var result = await sequences.InsertAsync(
                 rowsToCreate,
                 keyChunkSize: 10,

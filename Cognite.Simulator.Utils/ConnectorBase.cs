@@ -132,19 +132,24 @@ namespace Cognite.Simulator.Utils
         /// version are not expected to change while the connector is running, and are only set during
         /// initialization
         /// </summary>
-        protected async Task UpdateIntegrationRows(bool init, CancellationToken token)
+        protected async Task UpdateIntegrationRows(
+            bool init,
+            Dictionary<string, string> extraInformation,
+            CancellationToken token)
         {
             var sequences = Cdf.CogniteClient.Sequences;
-            var simulators = Simulators.ToDictionary(
-                s => _simulatorSequenceIds[s.Name],
-                s => s.DataSetId);
             try
             {
-                await sequences.UpdateSimulatorIntegrationsHeartbeat(
-                    init,
-                    GetConnectorVersion(),
-                    simulators,
-                    token).ConfigureAwait(false);
+                foreach (var simulator in Simulators)
+                {
+                    await sequences.UpdateSimulatorIntegrationsHeartbeat(
+                        init,
+                        GetConnectorVersion(),
+                        _simulatorSequenceIds[simulator.Name],
+                        simulator.DataSetId,
+                        extraInformation,
+                        token).ConfigureAwait(false);
+                }
             }
             catch (SimulatorIntegrationSequenceException e)
             {
@@ -166,7 +171,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetHeartbeatInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
-                await UpdateIntegrationRows(false, token)
+                await UpdateIntegrationRows(false, null, token)
                     .ConfigureAwait(false);
             }
         }
