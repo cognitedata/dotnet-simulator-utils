@@ -136,7 +136,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     "PROSPER", "Connector Test Model", "IPR/VLP", null);
                 Assert.NotNull(simConf);
                 Assert.Equal("IPR/VLP", simConf.CalculationType);
-
+                foreach (var input in simConf.InputTimeSeries)
+                {
+                    Assert.NotNull(input.Name);
+                    Assert.NotNull(input.SensorExternalId);
+                    Assert.Null(input.SampleExternalId);
+                }
                 var simConfState = lib.GetSimulationConfigurationState(
                     "PROSPER", "Connector Test Model", "IPR/VLP", null);
                 Assert.NotNull(simConfState);
