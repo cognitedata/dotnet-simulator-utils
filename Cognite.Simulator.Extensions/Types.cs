@@ -294,7 +294,7 @@ namespace Cognite.Simulator.Extensions
         /// Allows overwriting the default time series external id
         /// with the one provided by the user
         /// </summary>
-        protected string ExternalIdOverwrite = "";
+        protected string ExternalIdOverwrite { get; set; } = "";
 
         /// <summary>
         /// Calculation associated with this variable
