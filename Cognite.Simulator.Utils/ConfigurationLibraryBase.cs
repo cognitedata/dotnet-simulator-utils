@@ -381,9 +381,9 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Inout time series configuration
+    /// Time series configuration
     /// </summary>
-    public class InputTimeSeriesConfiguration
+    public class TimeSeriesConfiguration
     {
         /// <summary>
         /// Input name
@@ -404,7 +404,13 @@ namespace Cognite.Simulator.Utils
         /// Input unit type (e.g. Temperature, Pressure)
         /// </summary>
         public string UnitType { get; set; }
-        
+    }
+
+    /// <summary>
+    /// Input time series configuration
+    /// </summary>
+    public class InputTimeSeriesConfiguration : TimeSeriesConfiguration
+    {        
         /// <summary>
         /// External ID of the time series in CDF containing the input data points
         /// </summary>
@@ -415,6 +421,11 @@ namespace Cognite.Simulator.Utils
         /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
         /// </summary>
         public string AggregateType { get; set; }
+
+        /// <summary>
+        /// External ID to use when saving the input sample in CDF
+        /// </summary>
+        public string SampleExternalId { get; set; }
     }
     
     /// <summary>

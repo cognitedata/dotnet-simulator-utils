@@ -141,6 +141,9 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                         { "sourceAddress", "TEST.IN.B" }
                     }
             };
+            string overwriteId = "TestSimulator-Input_B-TestCalc-CTM";
+            inB.OverwriteTimeSeriesId(overwriteId);
+            Assert.Equal(overwriteId, inB.TimeSeriesExternalId);
 
             var inputs = new List<SimulationInput>
             {
