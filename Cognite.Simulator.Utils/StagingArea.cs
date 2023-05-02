@@ -19,11 +19,14 @@ namespace Cognite.Simulator.Utils
     public class StagingArea
     {
         private readonly CogniteDestination _cdf;
+        private readonly StagingConfig _config;
 
         public StagingArea(
-            CogniteDestination cdf)
+            CogniteDestination cdf,
+            StagingConfig config)
         {
             _cdf = cdf;
+            _config = config;
         }
 
         private async Task UpdateModelParsingInfo(
@@ -33,8 +36,8 @@ namespace Cognite.Simulator.Utils
         {
             info.LastUpdatedTime = DateTime.UtcNow.ToUnixTimeMilliseconds();
             await _cdf.CogniteClient.Raw.CreateRowsAsync(
-                CdfUtils.RawDatabase,
-                CdfUtils.ModelParsingRawTable,
+                _config.Database,
+                _config.ModelParsingLogTable,
                 new List<RawRowCreate<ModelParsingInfo>>()
                 {
                         new RawRowCreate<ModelParsingInfo>

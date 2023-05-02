@@ -127,4 +127,11 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    public class StagingConfig
+    {
+        public bool Enabled { get; set; } = true;
+        public string Database { get; set; } = "SIMCONFIG";
+        public string ModelParsingLogTable { get; set; } = "simconfig_model_parsing_log";
+    }
+
 }
