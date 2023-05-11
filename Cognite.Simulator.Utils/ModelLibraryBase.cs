@@ -19,11 +19,15 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
+    /// <typeparam name="V">Type of the model parsing information object</typeparam>
     public abstract class ModelLibraryBase<T, U, V> : FileLibrary<T, U>, IModelProvider<T>
         where T : ModelStateBase
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
     {
+        /// <summary>
+        /// Staging area, used to store the model parsing info in CDF
+        /// </summary>
         protected StagingArea<V> Staging { get; }
         
         /// <summary>
@@ -170,7 +174,7 @@ namespace Cognite.Simulator.Utils
                 }
                 finally
                 {
-                    await UpdateModelParsingInfo(group, token);
+                    await UpdateModelParsingInfo(group, token).ConfigureAwait(false);
                 }
 
                 // Verify that the local version history matches the one in CDF. Else,
@@ -189,7 +193,7 @@ namespace Cognite.Simulator.Utils
             {
                 if (file.ParsingInfo != null && file.ParsingInfo.Status != ParsingStatus.ready)
                 {
-                    await Staging.UpdateEntry(file.Id, (V) file.ParsingInfo, token);
+                    await Staging.UpdateEntry(file.Id, (V) file.ParsingInfo, token).ConfigureAwait(false);
                 }
             }
         }
@@ -263,6 +267,9 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Information about model parsing
+        /// </summary>
         public ModelParsingInfo ParsingInfo { get; set; }
 
         /// <summary>

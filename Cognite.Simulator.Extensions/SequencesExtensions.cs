@@ -148,8 +148,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// For each simulator in <paramref name="simulators"/>, update the simulator integration
-        /// sequence with the connector heartbeat (last time seen)
+        /// Update the simulator integration sequence with the connector heartbeat (last time seen)
         /// </summary>
         /// <param name="sequences">CDF Sequences resource</param>
         /// <param name="init">If true, the data set id, connector version and extra information rows are also 
