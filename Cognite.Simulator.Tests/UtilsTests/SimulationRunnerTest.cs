@@ -28,6 +28,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileDownloadClient>();
             services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<StagingArea<ModelParsingInfo>>();
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
 
