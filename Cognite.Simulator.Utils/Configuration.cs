@@ -127,10 +127,24 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Staging area configuration
+    /// </summary>
     public class StagingConfig
     {
+        /// <summary>
+        /// Whether or not to enable the staging area
+        /// </summary>
         public bool Enabled { get; set; } = true;
+        
+        /// <summary>
+        /// Name of the database to be used
+        /// </summary>
         public string Database { get; set; } = "SIMCONFIG";
+        
+        /// <summary>
+        /// Name of the table to be used
+        /// </summary>
         public string Table { get; set; }
     }
 
