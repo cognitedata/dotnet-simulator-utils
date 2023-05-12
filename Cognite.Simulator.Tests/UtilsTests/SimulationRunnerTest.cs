@@ -109,8 +109,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(eventCalcTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
-                
 
+                // ID of events already processed should be cached in the runner
+                Assert.Contains(runner.AlreadyProcessed, e => e.Key == eventId);
+               
                 // A sequence should have been created in CDF with the run configuration data
                 // and one with the simulation results (system curves).
                 Assert.True(eventMetadata.TryGetValue("runConfigurationSequence", out var runSequenceId));
@@ -195,6 +197,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
         public bool SimulationEventExecuted { get; private set; }
+
+        public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
 
         public SampleSimulationRunner(
             CogniteDestination cdf,
