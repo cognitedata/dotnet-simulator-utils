@@ -32,6 +32,12 @@ namespace Cognite.Simulator.Utils
         private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
+        
+        /// <summary>
+        /// Keeps a list of events already processed by the connector. Since updates to CDF
+        /// Events are eventually consistent, there is a risk fetching and processing events
+        /// already processed. Caching the processed events locally prevents that
+        /// </summary>
         protected Dictionary<string, long> EventsAlreadyProcessed;
         
         /// <summary>
@@ -165,6 +171,7 @@ namespace Cognite.Simulator.Utils
                     }
                 }
 
+                // Remove old entries from the list of already processed events
                 var nowMs = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 var expiredEvents = EventsAlreadyProcessed
                     .Where(e => (nowMs - e.Value) > _connectorConfig.SimulationEventTolerance * 1000)
@@ -174,6 +181,7 @@ namespace Cognite.Simulator.Utils
                 {
                     EventsAlreadyProcessed.Remove(ev);
                 }
+                
                 await Task.Delay(interval, token).ConfigureAwait(false);
             }
         }
