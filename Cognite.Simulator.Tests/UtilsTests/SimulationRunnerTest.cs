@@ -70,8 +70,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // Create a simulation event ready to run for the test configuration
                 var events = await cdf.Events.CreateSimulationEventReadyToRun(
-                    new List<SimulationEvent> 
-                    { 
+                    new List<SimulationEvent>
+                    {
                         new SimulationEvent
                         {
                             Calculation = configObj.Calculation,
@@ -82,7 +82,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             UserEmail = configObj.UserEmail,
                             ValidationEndOverwrite = validationEndOverwrite
                         }
-                    
+
                     },
                     source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(events);
@@ -109,7 +109,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(eventCalcTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
-                
+
+                // ID of events already processed should be cached in the runner
+                Assert.Contains(runner.AlreadyProcessed, e => e.Key == eventId);
 
                 // A sequence should have been created in CDF with the run configuration data
                 // and one with the simulation results (system curves).
@@ -196,11 +198,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public bool MetadataInitialized { get; private set; }
         public bool SimulationEventExecuted { get; private set; }
 
+        public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
+
         public SampleSimulationRunner(
             CogniteDestination cdf,
-            ModeLibraryTest modelLibrary, 
-            ConfigurationLibraryTest configLibrary, 
-            ILogger<SampleSimulationRunner> logger) : 
+            ModeLibraryTest modelLibrary,
+            ConfigurationLibraryTest configLibrary,
+            ILogger<SampleSimulationRunner> logger) :
             base(
                 new ConnectorConfig
                 {
@@ -215,29 +219,29 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
-                cdf, 
-                modelLibrary, 
-                configLibrary, 
+                cdf,
+                modelLibrary,
+                configLibrary,
                 logger)
         {
         }
 
         protected override void InitSimulationEventMetadata(
-            TestFileState modelState, 
-            TestConfigurationState configState, 
-            SimulationConfigurationWithDataSampling configObj, 
+            TestFileState modelState,
+            TestConfigurationState configState,
+            SimulationConfigurationWithDataSampling configObj,
             Dictionary<string, string> metadata)
         {
             MetadataInitialized = true;
         }
 
         protected override Task RunSimulation(
-            Event e, 
-            DateTime startTime, 
-            TestFileState modelState, 
-            TestConfigurationState configState, 
-            SimulationConfigurationWithDataSampling configObj, 
-            SamplingRange samplingRange, 
+            Event e,
+            DateTime startTime,
+            TestFileState modelState,
+            TestConfigurationState configState,
+            SimulationConfigurationWithDataSampling configObj,
+            SamplingRange samplingRange,
             CancellationToken token)
         {
             // Real connectors should implement the actual simulation run here
