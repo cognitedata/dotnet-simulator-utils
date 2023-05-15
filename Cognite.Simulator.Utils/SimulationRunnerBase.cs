@@ -35,10 +35,10 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Keeps a list of events already processed by the connector. Since updates to CDF
-        /// Events are eventually consistent, there is a risk fetching and processing events
+        /// Events are eventually consistent, there is a risk of fetching and processing events
         /// already processed. Caching the processed events locally prevents that
         /// </summary>
-        protected Dictionary<string, long> EventsAlreadyProcessed;
+        protected Dictionary<string, long> EventsAlreadyProcessed { get; }
 
         /// <summary>
         /// Library containing the simulator model files
