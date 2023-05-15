@@ -32,12 +32,19 @@ namespace Cognite.Simulator.Utils
         private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
-        
+
+        /// <summary>
+        /// Keeps a list of events already processed by the connector. Since updates to CDF
+        /// Events are eventually consistent, there is a risk fetching and processing events
+        /// already processed. Caching the processed events locally prevents that
+        /// </summary>
+        protected Dictionary<string, long> EventsAlreadyProcessed;
+
         /// <summary>
         /// Library containing the simulator model files
         /// </summary>
         protected IModelProvider<T> ModelLibrary { get; }
-        
+
         /// <summary>
         /// Library containing the simulation configuration files
         /// </summary>
@@ -70,6 +77,7 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
+            EventsAlreadyProcessed = new Dictionary<string, long>();
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
         }
@@ -110,6 +118,7 @@ namespace Cognite.Simulator.Utils
                 }
                 var allEvents = new List<Event>(simulationEvents);
                 allEvents.AddRange(simulationRunningEvents);
+                allEvents = allEvents.Where(e => !EventsAlreadyProcessed.Keys.Contains(e.ExternalId)).ToList();
 
                 foreach (Event e in allEvents)
                 {
@@ -133,10 +142,10 @@ namespace Cognite.Simulator.Utils
                             calcObj,
                             metadata);
                         await InitSimulationRun(
-                            e, 
-                            startTime, 
-                            modelState, 
-                            calcState, 
+                            e,
+                            startTime,
+                            modelState,
+                            calcState,
                             calcObj,
                             metadata,
                             token)
@@ -152,13 +161,25 @@ namespace Cognite.Simulator.Utils
                             }
                         }
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
-                        await _cdfEvents.UpdateSimulationEventToFailure(
+                        var ev = await _cdfEvents.UpdateSimulationEventToFailure(
                             e.ExternalId,
                             startTime,
                             null,
                             ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
                             token).ConfigureAwait(false);
+                        EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
                     }
+                }
+
+                // Remove old entries from the list of already processed events
+                var nowMs = DateTime.UtcNow.ToUnixTimeMilliseconds();
+                var expiredEvents = EventsAlreadyProcessed
+                    .Where(e => (nowMs - e.Value) > _connectorConfig.SimulationEventTolerance * 1000)
+                    .Select(e => e.Key)
+                    .ToList();
+                foreach (var ev in expiredEvents)
+                {
+                    EventsAlreadyProcessed.Remove(ev);
                 }
 
                 await Task.Delay(interval, token).ConfigureAwait(false);
@@ -320,17 +341,18 @@ namespace Cognite.Simulator.Utils
                 startTime,
                 modelState,
                 configState,
-                configObj, 
-                samplingRange, 
+                configObj,
+                samplingRange,
                 token).ConfigureAwait(false);
 
             // Update event with success status
-            await _cdfEvents.UpdateSimulationEventToSuccess(
+            var ev = await _cdfEvents.UpdateSimulationEventToSuccess(
                 e.ExternalId,
                 startTime,
                 null,
                 "Calculation ran to completion",
                 token).ConfigureAwait(false);
+            EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
         }
 
         /// <summary>
@@ -345,7 +367,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="token">Cancellation token</param>
         protected abstract Task RunSimulation(
-            Event e, 
+            Event e,
             DateTime startTime,
             T modelState,
             U configState,
@@ -465,7 +487,7 @@ namespace Cognite.Simulator.Utils
                     rowStart = 0;
                 }
             }
-            
+
             // Make sure the sequence exists in CDF
             try
             {
