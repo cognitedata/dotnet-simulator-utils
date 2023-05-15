@@ -19,10 +19,17 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
-    public abstract class ModelLibraryBase<T, U> : FileLibrary<T, U>, IModelProvider<T>
+    /// <typeparam name="V">Type of the model parsing information object</typeparam>
+    public abstract class ModelLibraryBase<T, U, V> : FileLibrary<T, U>, IModelProvider<T>
         where T : ModelStateBase
         where U : ModelStateBasePoco
+        where V : ModelParsingInfo, new()
     {
+        /// <summary>
+        /// Staging area, used to store the model parsing info in CDF
+        /// </summary>
+        protected StagingArea<V> Staging { get; }
+        
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
@@ -31,16 +38,19 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
+        /// <param name="staging">Staging area</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             FileLibraryConfig config, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf, 
             ILogger logger, 
-            FileDownloadClient downloadClient, 
+            FileDownloadClient downloadClient,
+            StagingArea<V> staging,
             IExtractionStateStore store = null) : 
             base(SimulatorDataType.ModelFile, config, simulators, cdf, logger, downloadClient, store)
         {
+            Staging = staging;
         }
 
         /// <inheritdoc/>
@@ -155,8 +165,17 @@ namespace Cognite.Simulator.Utils
 
             foreach (var group in modelGroups)
             {
+                InitModelParsingInfo(group);
+
                 // Extract the data for each model file (version) in this group
-                await ExtractModelInformation(group, token).ConfigureAwait(false);
+                try
+                {
+                    await ExtractModelInformation(group, token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await UpdateModelParsingInfo(group, token).ConfigureAwait(false);
+                }
 
                 // Verify that the local version history matches the one in CDF. Else,
                 // delete the local state and files for the missing versions.
@@ -165,6 +184,31 @@ namespace Cognite.Simulator.Utils
                 // Keep only a local copy of the latest model version. After the data is extracted,
                 // not need to keep a local copy of versions that are not used in calculations
                 RemoveLocalFiles(group.Key.Source, group.Key.ModelName);
+            }
+        }
+
+        private async Task UpdateModelParsingInfo(IEnumerable<T> modelStates, CancellationToken token)
+        {
+            foreach(var file in modelStates)
+            {
+                if (file.ParsingInfo != null && file.ParsingInfo.Status != ParsingStatus.ready)
+                {
+                    await Staging.UpdateEntry(file.Id, (V) file.ParsingInfo, token).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private void InitModelParsingInfo(IEnumerable<T> modelStates)
+        {
+            foreach(var file in modelStates)
+            {
+                V info = new V();
+                info.Parsed = false;
+                info.ModelName = file.Model.Name;
+                info.Simulator = file.Model.Simulator;
+                info.ModelVersion = file.Version;
+                info.Status = ParsingStatus.ready;    
+                file.ParsingInfo = info;
             }
         }
 
@@ -222,6 +266,11 @@ namespace Cognite.Simulator.Utils
                 _version = value;
             }
         }
+
+        /// <summary>
+        /// Information about model parsing
+        /// </summary>
+        public ModelParsingInfo ParsingInfo { get; set; }
 
         /// <summary>
         /// Indicates if information has been extracted from the model file

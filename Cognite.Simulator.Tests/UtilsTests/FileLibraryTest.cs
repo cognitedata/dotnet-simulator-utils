@@ -24,6 +24,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileDownloadClient>();
             services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<StagingArea<ModelParsingInfo>>();
             StateStoreConfig stateConfig = null;
 
             try
@@ -75,6 +76,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latest = lib.GetLatestModelVersion(v1.Source, v1.ModelName);
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
+
+                var log1 = await lib.StagingArea.GetEntry(v1.Id, source.Token);
+                Assert.NotNull(log1);
+                Assert.True(log1.Parsed);
+                Assert.False(log1.Error);
+                Assert.Equal(ParsingStatus.success, log1.Status);
+
+                var log2 = await lib.StagingArea.GetEntry(v2.Id, source.Token);
+                Assert.NotNull(log2);
+                Assert.True(log2.Parsed);
+                Assert.False(log2.Error);
+                Assert.Equal(ParsingStatus.success, log2.Status);
             }
             finally
             {
@@ -184,12 +197,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// File library is abstract. Implement a simple mock library
     /// to test the base functionality
     /// </summary>
-    public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco>
+    public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
         public ModeLibraryTest(
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileDownloadClient downloadClient,
+            StagingArea<ModelParsingInfo> staging,
             IExtractionStateStore store = null) :
             base(
                 new FileLibraryConfig
@@ -212,9 +226,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 logger,
                 downloadClient,
+                staging,
                 store)
         {
         }
+
+        public StagingArea<ModelParsingInfo> StagingArea => Staging;
 
         protected override Task ExtractModelInformation(IEnumerable<TestFileState> modelStates, CancellationToken token)
         {
@@ -222,6 +239,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 foreach (var state in modelStates)
                 {
+                    state.ParsingInfo.SetSuccess("Model parsed successfully");
                     state.Processed = true;
                 }
             }, token);

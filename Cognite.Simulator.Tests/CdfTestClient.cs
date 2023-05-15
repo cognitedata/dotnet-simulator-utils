@@ -2,6 +2,7 @@
 using Cognite.Extractor.Logging;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -68,12 +69,21 @@ namespace Cognite.Simulator.Tests
                     Level = "debug"
                 }
             };
+            
+            var stagingConfig = new StagingConfig
+            {
+                Database = "SIMULATOR-UTILS-TEST",
+                Table = "model-parsing-info"
+            };
 
             var stateStoreConfig = new StateStoreConfig
             {
                 Database = StateStoreConfig.StorageType.LiteDb,
                 Location = _statePath
             };
+
+            // Configure staging
+            services.AddSingleton(stagingConfig);
 
             // Configure logging
             services.AddSingleton(loggerConfig);
