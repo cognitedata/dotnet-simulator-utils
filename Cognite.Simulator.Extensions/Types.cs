@@ -259,10 +259,10 @@ namespace Cognite.Simulator.Extensions
             : ExternalIdOverwrite;
 
         internal override string TimeSeriesName =>
-            $"{Name} input for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+            $"{Name} - INPUT - {Calculation.GetCalcNameForNames()} - {Calculation.Model.GetModelNameForNames()}";
 
         internal override string TimeSeriesDescription =>
-            $"Input sampled for {Calculation.Type} - {Calculation.Model.Name}";
+            $"Input sampled for {Calculation.Name} - {Calculation.Model.Name}";
     }
 
     /// <summary>
@@ -278,10 +278,10 @@ namespace Cognite.Simulator.Extensions
             : ExternalIdOverwrite;
 
         internal override string TimeSeriesName => 
-            $"{Name} output for {Calculation.GetCalcTypeForNames()} - {Calculation.Model.GetModelNameForNames()}";
+            $"{Name} - OUTPUT - {Calculation.GetCalcNameForNames()} - {Calculation.Model.GetModelNameForNames()}";
 
         internal override string TimeSeriesDescription =>
-            $"Calculation result for {Calculation.Type} - {Calculation.Model.Name}";
+            $"Calculation result for {Calculation.Name} - {Calculation.Model.Name}";
     }
 
     /// <summary>
