@@ -79,6 +79,11 @@ namespace Cognite.Simulator.Extensions
             return calc.Type.ReplaceSlashAndBackslash("_");
         }
 
+        internal static string GetCalcNameForNames(this SimulatorCalculation calc)
+        {
+            return calc.Name.ReplaceSlashAndBackslash("_");
+        }
+
         internal static Dictionary<string, string> GetCommonMetadata(
             this SimulatorCalculation calc,
             SimulatorDataType dataType)
