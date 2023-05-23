@@ -255,6 +255,25 @@ namespace Cognite.Simulator.Utils
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         Task<bool> VerifyLocalConfigurationState(T state, V config, CancellationToken token);
     }
+
+    public class SimulationConfigurationWithRoutine : SimulationConfigurationWithDataSampling
+    {
+        public IEnumerable<OutputTimeSeriesConfiguration> OutputTimeSeries { get; set; }
+        public IEnumerable<CalculationProcedure> Routine { get; set; }
+    }
+
+    public class CalculationProcedure
+    {
+        public int Order { get; set; }
+        public IEnumerable<CalculationProcedureStep> Steps { get; set; }
+    }
+
+    public class CalculationProcedureStep
+    {
+        public int Step { get; set; }
+        public string Type { get; set; }
+        public Dictionary<string, string> Arguments { get; set; }
+    }
     
     /// <summary>
     /// Represents a configuration object for steady state simulations
@@ -406,6 +425,12 @@ namespace Cognite.Simulator.Utils
         public string UnitType { get; set; }
     }
 
+    public class OutputTimeSeriesConfiguration :TimeSeriesConfiguration
+    {
+        public string ExternalId { get; set; }
+    }
+    
+    
     /// <summary>
     /// Input time series configuration
     /// </summary>
