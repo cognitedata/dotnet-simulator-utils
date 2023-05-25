@@ -44,6 +44,18 @@ namespace Cognite.Simulator.Utils
             SamplingRange samplingRange, 
             CancellationToken token)
         {
+            if (modelState == null)
+            {
+                throw new ArgumentNullException(nameof(modelState));
+            }
+            if (configObj == null)
+            {
+                throw new ArgumentNullException(nameof(configObj));
+            }
+            if (samplingRange == null)
+            {
+                throw new ArgumentNullException(nameof(samplingRange));
+            }
             _logger.LogInformation("Started running simulation event {ID}", e.ExternalId);
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
@@ -61,7 +73,7 @@ namespace Cognite.Simulator.Utils
                     inputTs.AggregateType.ToDataPointAggregate(),
                     configObj.DataSampling.Granularity,
                     samplingRange,
-                    token);
+                    token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
                     configObj.DataSampling.Granularity,
                     inputTs.AggregateType.ToDataPointAggregate());
@@ -97,7 +109,9 @@ namespace Cognite.Simulator.Utils
                         new Datapoint(samplingRange.Midpoint, averageValue) 
                     });
             }
-            var results = await SimulatorClient.RunSimulation(modelState, configObj, inputData);
+            var results = await SimulatorClient
+                .RunSimulation(modelState, configObj, inputData)
+                .ConfigureAwait(false);
 
             _logger.LogDebug("Saving simulation results as time series");
             foreach (var output in configObj.OutputTimeSeries)
@@ -128,16 +142,22 @@ namespace Cognite.Simulator.Utils
             try
             {
                 //Store model version time series
-                var mvts = await timeSeries.GetOrCreateSimulationModelVersion(configObj.Calculation, e.DataSetId, token);
+                var mvts = await timeSeries
+                    .GetOrCreateSimulationModelVersion(configObj.Calculation, e.DataSetId, token)
+                    .ConfigureAwait(false);
                 dpsToCreate.Add(
                     new Identity(mvts.ExternalId),
                     new List<Datapoint> { new Datapoint(samplingRange.Midpoint, modelState.Version) });
                 
                 // Store input time series
-                await timeSeries.GetOrCreateSimulationInputs(inputTsToCreate, e.DataSetId, token);
+                await timeSeries
+                    .GetOrCreateSimulationInputs(inputTsToCreate, e.DataSetId, token)
+                    .ConfigureAwait(false);
 
                 // Store output time series
-                await timeSeries.GetOrCreateSimulationOutputs(outputTsToCreate, e.DataSetId, token);
+                await timeSeries
+                    .GetOrCreateSimulationOutputs(outputTsToCreate, e.DataSetId, token)
+                    .ConfigureAwait(false);
 
             }
             catch (SimulationModelVersionCreationException ex)
@@ -152,7 +172,7 @@ namespace Cognite.Simulator.Utils
                 dpsToCreate,
                 SanitationMode.None,
                 RetryMode.OnError,
-                token);
+                token).ConfigureAwait(false);
 
             _logger.LogInformation("Simulation results saved successfully");
 

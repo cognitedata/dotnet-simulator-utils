@@ -31,11 +31,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
+            services.AddSingleton<SampleSimulatorClient>();
 
             StateStoreConfig stateConfig = null;
 
             string eventId = "";
             string sequenceId = "";
+            var tsToDelete = new List<string>();
 
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
@@ -68,6 +70,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     "PROSPER", "Connector Test Model", "UserDefined", "SRT");
                 Assert.NotNull(configObj);
 
+                var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
+                tsToDelete.AddRange(outTsIds);
+                var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
+                tsToDelete.AddRange(inTsIds);
+
                 // Create a simulation event ready to run for the test configuration
                 var events = await cdf.Events.CreateSimulationEventReadyToRun(
                     new List<SimulationEvent>
@@ -96,7 +103,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
                 Assert.True(runner.MetadataInitialized);
-                Assert.True(runner.SimulationEventExecuted);
+                
+                // Check that output time series were created
+                var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
+                Assert.True(outTs.Any());
+                Assert.Equal(outTsIds.Count, outTs.Count());
+
+                // Check that input time series were created
+                var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
+                Assert.True(inTs.Any());
+                Assert.Equal(inTsIds.Count, inTs.Count());
 
                 var eventUpdated = await cdf.Events.RetrieveAsync(
                     new List<string> { eventId },
@@ -109,6 +125,36 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(eventCalcTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
+
+                // Check that the correct output was added as a data point
+                var outDps = await cdf.DataPoints.ListAsync(
+                    new DataPointsQuery
+                    {
+                        Start = eventCalcTime.ToString(),
+                        End = (eventCalcTime + 1).ToString(),
+                        Items = outTs.Select(o => new DataPointsQueryItem
+                        {
+                            ExternalId = o.ExternalId
+                        })
+                    }, source.Token).ConfigureAwait(false);
+                Assert.True(outDps.Items.Any());
+                Assert.NotNull(SampleRoutine._output);
+                Assert.Equal(SampleRoutine._output, outDps.Items.First().NumericDatapoints.Datapoints.First().Value);
+
+                // Check that the correct input sample was added as a data point
+                var inDps = await cdf.DataPoints.ListAsync(
+                    new DataPointsQuery
+                    {
+                        Start = eventCalcTime.ToString(),
+                        End = (eventCalcTime + 1).ToString(),
+                        Items = inTs.Select(i => new DataPointsQueryItem
+                        {
+                            ExternalId = i.ExternalId
+                        })
+                    }, source.Token).ConfigureAwait(false);
+                Assert.True(inDps.Items.Any());
+                Assert.NotEmpty(SampleRoutine._inputs);
+                Assert.Contains(inDps.Items.First().NumericDatapoints.Datapoints.First().Value, SampleRoutine._inputs);
 
                 // ID of events already processed should be cached in the runner
                 Assert.Contains(runner.AlreadyProcessed, e => e.Key == eventId);
@@ -160,6 +206,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     await cdf.Sequences.DeleteAsync(
                         new List<string> { sequenceId }, source.Token).ConfigureAwait(false);
                 }
+                if (tsToDelete.Any())
+                {
+                    await cdf.TimeSeries.DeleteAsync(new TimeSeriesDelete
+                    {
+                        IgnoreUnknownIds = true,
+                        Items = tsToDelete.Select(i => new Identity(i)).ToList()
+                    }, source.Token).ConfigureAwait(false);
+                }
                 provider.Dispose(); // Dispose provider to also dispose managed services
                 if (Directory.Exists("./files"))
                 {
@@ -191,12 +245,58 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+    public class SampleRoutine : RoutineImplementationBase
+    {
+        public static List<double> _inputs;
+        public static double? _output;
+        public SampleRoutine(SimulationConfigurationWithRoutine config, Dictionary<string, double> inputData)
+            :base(config, inputData)
+        {
+            _inputs = new List<double>();
+            _output = null;
+        }
+        
+        public override double GetTimeSeriesOutput(OutputTimeSeriesConfiguration outputConfig, Dictionary<string, string> arguments)
+        {
+            return _output.Value;
+        }
+
+        public override void RunCommand(string command, Dictionary<string, string> arguments)
+        {
+            if (command == "Simulate")
+            {
+                _output = _inputs.Sum();
+            }
+        }
+
+        public override void SetManualInput(string value, Dictionary<string, string> arguments)
+        {
+            _inputs.Add(double.Parse(value));
+        }
+
+        public override void SetTimeSeriesInput(InputTimeSeriesConfiguration inputConfig, double value, Dictionary<string, string> arguments)
+        {
+            _inputs.Add(value);
+        }
+    }
+
+    public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulationConfigurationWithRoutine>
+    {
+        public Task<Dictionary<string, double>> RunSimulation(
+            TestFileState modelState, 
+            SimulationConfigurationWithRoutine simulationConfiguration, 
+            Dictionary<string, double> inputData)
+        {
+            var routine = new SampleRoutine(simulationConfiguration, inputData);
+            return Task.FromResult(routine.PerformSimulation());
+        }
+    }
+
     public class SampleSimulationRunner :
-        SimulationRunnerBase<TestFileState, TestConfigurationState, SimulationConfigurationWithDataSampling>
+        RoutineRunnerBase<TestFileState, TestConfigurationState, SimulationConfigurationWithRoutine>
     {
         private const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
-        public bool SimulationEventExecuted { get; private set; }
 
         public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
 
@@ -204,6 +304,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ModeLibraryTest modelLibrary,
             ConfigurationLibraryTest configLibrary,
+            SampleSimulatorClient client,
             ILogger<SampleSimulationRunner> logger) :
             base(
                 new ConnectorConfig
@@ -222,6 +323,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 modelLibrary,
                 configLibrary,
+                client,
                 logger)
         {
         }
@@ -229,25 +331,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
             TestConfigurationState configState,
-            SimulationConfigurationWithDataSampling configObj,
+            SimulationConfigurationWithRoutine configObj,
             Dictionary<string, string> metadata)
         {
             MetadataInitialized = true;
-        }
-
-        protected override Task RunSimulation(
-            Event e,
-            DateTime startTime,
-            TestFileState modelState,
-            TestConfigurationState configState,
-            SimulationConfigurationWithDataSampling configObj,
-            SamplingRange samplingRange,
-            CancellationToken token)
-        {
-            // Real connectors should implement the actual simulation run here
-            // and save the results back to CDF
-            SimulationEventExecuted = true;
-            return Task.CompletedTask;
         }
     }
 }
