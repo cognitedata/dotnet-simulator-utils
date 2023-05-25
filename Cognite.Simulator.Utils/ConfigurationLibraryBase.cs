@@ -255,6 +255,61 @@ namespace Cognite.Simulator.Utils
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         Task<bool> VerifyLocalConfigurationState(T state, V config, CancellationToken token);
     }
+
+    /// <summary>
+    /// Represent a configuration object for simulation routines
+    /// </summary>
+    public class SimulationConfigurationWithRoutine : SimulationConfigurationWithDataSampling
+    {
+        /// <summary>
+        /// Times series that will hold simulation output data points
+        /// </summary>
+        public IEnumerable<OutputTimeSeriesConfiguration> OutputTimeSeries { get; set; }
+        
+        /// <summary>
+        /// Simulation routine
+        /// </summary>
+        public IEnumerable<CalculationProcedure> Routine { get; set; }
+    }
+
+    /// <summary>
+    /// Represents the groups (procedures) that contain simulation steps in a routine
+    /// </summary>
+    public class CalculationProcedure
+    {
+        /// <summary>
+        /// The order in witch to execute this procedure, in relation to other
+        /// procedures
+        /// </summary>
+        public int Order { get; set; }
+        
+        /// <summary>
+        /// Steps contained in this procedure
+        /// </summary>
+        public IEnumerable<CalculationProcedureStep> Steps { get; set; }
+    }
+
+    /// <summary>
+    /// Represent a simulation step
+    /// </summary>
+    public class CalculationProcedureStep
+    {
+        /// <summary>
+        /// Order in which to execute this step
+        /// </summary>
+        public int Step { get; set; }
+        
+        /// <summary>
+        /// Step type. When using <see cref="RoutineImplementationBase"/> as a base class for a routine,
+        /// the valid types are <c>Get</c>, <c>Set</c> and <c>Command</c>
+        /// </summary>
+        public string Type { get; set; }
+        
+        /// <summary>
+        /// Dictionary containing any argument needed by specific simulator client to execute the step
+        /// </summary>
+        public Dictionary<string, string> Arguments { get; set; }
+    }
     
     /// <summary>
     /// Represents a configuration object for steady state simulations
@@ -406,6 +461,18 @@ namespace Cognite.Simulator.Utils
         public string UnitType { get; set; }
     }
 
+    /// <summary>
+    /// Output time series configuration
+    /// </summary>
+    public class OutputTimeSeriesConfiguration :TimeSeriesConfiguration
+    {
+        /// <summary>
+        /// External id of the time series that will contain simulation output data points
+        /// </summary>
+        public string ExternalId { get; set; }
+    }
+    
+    
     /// <summary>
     /// Input time series configuration
     /// </summary>
