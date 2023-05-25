@@ -3,6 +3,7 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -95,7 +96,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
-                Assert.True(runner.MetadataInitialized);
                 Assert.True(runner.SimulationEventExecuted);
 
                 var eventUpdated = await cdf.Events.RetrieveAsync(
@@ -195,7 +195,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         SimulationRunnerBase<TestFileState, TestConfigurationState, SimulationConfigurationWithDataSampling>
     {
         private const string connectorName = "integration-tests-connector";
-        public bool MetadataInitialized { get; private set; }
         public bool SimulationEventExecuted { get; private set; }
 
         public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
@@ -226,17 +225,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
-        protected override void InitSimulationEventMetadata(
-            TestFileState modelState,
-            TestConfigurationState configState,
-            SimulationConfigurationWithDataSampling configObj,
-            Dictionary<string, string> metadata)
-        {
-            MetadataInitialized = true;
-        }
-
         protected override Task RunSimulation(
-            Event e,
+            SimulationRun e,
             DateTime startTime,
             TestFileState modelState,
             TestConfigurationState configState,
