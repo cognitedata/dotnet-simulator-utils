@@ -10,6 +10,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Simulation runner for simulation configurations of type <see cref="SimulationConfigurationWithRoutine"/>
+    /// </summary>
+    /// <typeparam name="T">Type of model state objects</typeparam>
+    /// <typeparam name="U">Type of simulation configuration state objects</typeparam>
+    /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class RoutineRunnerBase<T, U, V> : SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
         where U : ConfigurationStateBase
@@ -18,12 +24,25 @@ namespace Cognite.Simulator.Utils
         private readonly CogniteDestination _cdf;
         private readonly ILogger _logger;
 
+        /// <summary>
+        /// Client that implements the connector with a simulator
+        /// </summary>
         protected ISimulatorClient<T, V> SimulatorClient { get; }
 
+        /// <summary>
+        /// Creates an instance of the runner with the provided parameters
+        /// </summary>
+        /// <param name="connectorConfig">Connector configuration</param>
+        /// <param name="simulators">List of simulators</param>
+        /// <param name="cdf">CDF client</param>
+        /// <param name="modelLibrary">Model library</param>
+        /// <param name="configLibrary">Configuration library</param>
+        /// <param name="simulatorClient">Simulator client</param>
+        /// <param name="logger">Logger</param>
         protected RoutineRunnerBase(
             ConnectorConfig connectorConfig, 
             IList<SimulatorConfig> simulators, 
-            CogniteDestination cdf, 
+            CogniteDestination cdf,
             IModelProvider<T> modelLibrary, 
             IConfigurationProvider<U, V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
@@ -35,6 +54,19 @@ namespace Cognite.Simulator.Utils
             SimulatorClient = simulatorClient;
         }
 
+        /// <summary>
+        /// Run the given simulation event by parsing and executing the simulation routine associated with it
+        /// </summary>
+        /// <param name="e">Simulation event</param>
+        /// <param name="startTime">Simulation start time</param>
+        /// <param name="modelState">Model state</param>
+        /// <param name="configState">Configuration state</param>
+        /// <param name="configObj">Configuration object</param>
+        /// <param name="samplingRange">Input sampling range</param>
+        /// <param name="token">Cancellation token</param>
+        /// <exception cref="ArgumentNullException">When one of the arguments is missing</exception>
+        /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
+        /// <exception cref="ConnectorException">When it was not possible to save the results in CDF</exception>
         protected override async Task RunSimulation(
             Event e, 
             DateTime startTime, 
@@ -55,6 +87,10 @@ namespace Cognite.Simulator.Utils
             if (samplingRange == null)
             {
                 throw new ArgumentNullException(nameof(samplingRange));
+            }
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
             }
             _logger.LogInformation("Started running simulation event {ID}", e.ExternalId);
 
@@ -183,10 +219,24 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Interface to be implemented by simulator integration clients that can
+    /// execute simulation configuration of the type <typeparamref name="V"/>
+    /// </summary>
+    /// <typeparam name="T">Type of the model state object</typeparam>
+    /// <typeparam name="V">Type of the simulation configuration object</typeparam>
     public interface ISimulatorClient<T, V> 
         where T : ModelStateBase
         where V : SimulationConfigurationWithRoutine
     {
+        /// <summary>
+        /// Run a simulation by executing the routine passed as parameter with
+        /// the given input data
+        /// </summary>
+        /// <param name="modelState">Model state object</param>
+        /// <param name="simulationConfiguration">Simulation configuration object</param>
+        /// <param name="inputData">Input data</param>
+        /// <returns></returns>
         Task<Dictionary<string, double>> RunSimulation(
             T modelState, 
             V simulationConfiguration, 

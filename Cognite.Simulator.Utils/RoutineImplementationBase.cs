@@ -8,6 +8,11 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Base implementation for simulation routines.
+    /// This class parses routines of type <see cref="SimulationConfigurationWithRoutine"/>
+    /// and calls the abstract methods that executes each step type.
+    /// </summary>
     public abstract class RoutineImplementationBase
     {
         private readonly IEnumerable<CalculationProcedure> _routine;
@@ -15,25 +20,73 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, double> _inputData;
         private readonly Dictionary<string, double> _simulationResults;
 
+        /// <summary>
+        /// Creates a new simulation routine with the given configuration
+        /// </summary>
+        /// <param name="config">Simulation configuration object</param>
+        /// <param name="inputData">Data to use as input</param>
         public RoutineImplementationBase(
             SimulationConfigurationWithRoutine config,
             Dictionary<string, double> inputData)
         {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
             _routine = config.Routine;
             _config = config;
             _simulationResults = new Dictionary<string, double>();
             _inputData = inputData;
         }
 
-        public abstract void SetTimeSeriesInput(InputTimeSeriesConfiguration inputConfig, double value, Dictionary<string, string> arguments);
+        /// <summary>
+        /// Implements a step that sets the value sampled from a time series
+        /// as input to a simulation
+        /// </summary>
+        /// <param name="inputConfig">Time series input configuration</param>
+        /// <param name="value">Value to set</param>
+        /// <param name="arguments">Extra arguments</param>
+        public abstract void SetTimeSeriesInput(
+            InputTimeSeriesConfiguration inputConfig, 
+            double value, 
+            Dictionary<string, string> arguments);
 
-        public abstract void SetManualInput(string value, Dictionary<string, string> arguments);
+        /// <summary>
+        /// Implements a step that sets a manual value as input to a simulation
+        /// </summary>
+        /// <param name="value">Value to set</param>
+        /// <param name="arguments">Extra arguments</param>
+        public abstract void SetManualInput(
+            string value, 
+            Dictionary<string, string> arguments);
 
-        public abstract double GetTimeSeriesOutput(OutputTimeSeriesConfiguration outputConfig, Dictionary<string, string> arguments);
+        /// <summary>
+        /// Gets a numeric simulation result that should be saved
+        /// as a time series
+        /// </summary>
+        /// <param name="outputConfig">Output time series configuration</param>
+        /// <param name="arguments">Extra arguments</param>
+        /// <returns></returns>
+        public abstract double GetTimeSeriesOutput(
+            OutputTimeSeriesConfiguration outputConfig, 
+            Dictionary<string, string> arguments);
 
-        public abstract void RunCommand(string command, Dictionary<string, string> arguments);
+        /// <summary>
+        /// Invoke the given command on the simulator using the provided arguments
+        /// </summary>
+        /// <param name="command">Command to invoke</param>
+        /// <param name="arguments">Extra arguments</param>
+        public abstract void RunCommand(
+            string command, 
+            Dictionary<string, string> arguments);
 
-        public Dictionary<string, double> PerformSimulation()
+        /// <summary>
+        /// Perform the simulation routine and collect the results
+        /// </summary>
+        /// <returns>Simulation results</returns>
+        /// <exception cref="SimulationException">When the simulation configuration is invalid</exception>
+        /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
+        public virtual Dictionary<string, double> PerformSimulation()
         {
             _simulationResults.Clear();
             if (_config.CalculationType != "UserDefined")
@@ -175,12 +228,32 @@ namespace Cognite.Simulator.Utils
         }    
     }
 
+    /// <summary>
+    /// Represents a simulation routine error
+    /// </summary>
     public class SimulationRoutineException : SimulationException
     {
-        public int Procedure { get; } = 0;
-        public int Step { get; } = 0;
+        /// <summary>
+        /// Which procedure failed
+        /// </summary>
+        public int Procedure { get; }
+        
+        /// <summary>
+        /// Which step failed
+        /// </summary>
+        public int Step { get; }
+        
+        /// <summary>
+        /// Original message coming from the simulator
+        /// </summary>
         public string OriginalMessage { get; }
 
+        /// <summary>
+        /// Creates a new exception with the provided parameters
+        /// </summary>
+        /// <param name="message">Simulator error message</param>
+        /// <param name="procedure">Procedure number</param>
+        /// <param name="step">Step number</param>
         public SimulationRoutineException(string message, int procedure = 0, int step = 0)
             : base($"{procedure}.{step}: {message}")
         {
