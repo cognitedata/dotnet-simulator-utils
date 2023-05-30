@@ -135,6 +135,36 @@ namespace Cognite.Simulator.Utils
             return result;
         }
 
+        public async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(
+            Dictionary<string, long> simulatorDataSetMap,
+            SimulationRunStatus status,
+            CancellationToken token)
+        {
+            if (_connectorConfig.UseSimulatorsApi)
+            {
+                var simulationRuns = await FindSimulationRunsWithStatus(
+                    simulatorDataSetMap, 
+                    status, token).ConfigureAwait(false);
+                return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();
+            }
+            IEnumerable<Event> simulationEvents = new List<Event>();
+            if (status == SimulationRunStatus.ready)
+            {
+                simulationEvents = await _cdfEvents.FindSimulationEventsReadyToRun(
+                    simulatorDataSetMap,
+                    _connectorConfig.GetConnectorName(),
+                    token).ConfigureAwait(false);
+            }
+            else if (status == SimulationRunStatus.running)
+            {
+                simulationEvents = await _cdfEvents.FindSimulationEventsRunning(
+                    simulatorDataSetMap,
+                    _connectorConfig.GetConnectorName(),
+                    token).ConfigureAwait(false);
+            }
+            return simulationEvents.Select(e => new SimulationRunEvent(e)).ToList();
+        }
+
         /// <summary>
         /// Start the loop for fetching and processing simulation events from CDF
         /// </summary>
@@ -146,9 +176,9 @@ namespace Cognite.Simulator.Utils
             {
                 var simulators = _simulators.ToDictionary(s => s.Name, s => s.DataSetId);
                 // Find events that are ready to run
-                var simulationEvents = await _cdfEvents.FindSimulationEventsReadyToRun(
+                var simulationEvents = await FindSimulationEvents(
                     simulators,
-                    _connectorConfig.GetConnectorName(),
+                    SimulationRunStatus.ready,
                     token).ConfigureAwait(false);
                 if (simulationEvents.Any())
                 {
@@ -159,9 +189,9 @@ namespace Cognite.Simulator.Utils
 
                 // Find events that are running. Should not have any, as the connector runs events in sequence.
                 // Any running events indicates that the connector went down during the run, and the event should fail
-                var simulationRunningEvents = await _cdfEvents.FindSimulationEventsRunning(
+                var simulationRunningEvents = await FindSimulationEvents(
                     simulators,
-                    _connectorConfig.GetConnectorName(),
+                    SimulationRunStatus.running,
                     token).ConfigureAwait(false);
                 if (simulationRunningEvents.Any())
                 {
@@ -169,25 +199,28 @@ namespace Cognite.Simulator.Utils
                         "{Number} simulation event(s) that are running (but should have finished) found in CDF",
                         simulationRunningEvents.Count());
                 }
-                var allEvents = new List<Event>(simulationEvents);
+                var allEvents = new List<SimulationRunEvent>(simulationEvents);
                 allEvents.AddRange(simulationRunningEvents);
-                allEvents = allEvents.Where(e => !EventsAlreadyProcessed.Keys.Contains(e.ExternalId)).ToList();
+                allEvents = allEvents
+                    .Where(e => e.HasSimulationRun || (!EventsAlreadyProcessed.Keys.Contains(e.Event.ExternalId)))
+                    .ToList();
 
-                foreach (Event e in allEvents)
+                foreach (SimulationRunEvent e in allEvents)
                 {
+                    var eventId = e.HasSimulationRun ? e.Run.Id.ToString() : e.Event.ExternalId;
                     var startTime = DateTime.UtcNow;
                     try
                     {
-                        if (e.Metadata[SimulationEventMetadata.StatusKey] == SimulationEventStatusValues.Running)
-                        {
-                            throw new ConnectorException("Calculation failed due to connector error");
-                        }
-                        var eventAge = startTime - CogniteTime.FromUnixTimeMilliseconds(e.LastUpdatedTime);
-                        if (eventAge >= TimeSpan.FromSeconds(_connectorConfig.SimulationEventTolerance))
-                        {
-                            throw new TimeoutException("Timeout: The connector could not run the calculation on time");
-                        }
                         var (modelState, calcState, calcObj) = ValidateEventMetadata(e);
+
+                        if (calcState == null || calcObj == null)
+                        {
+                            _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
+                                eventId, 
+                                calcObj.Connector);
+                            continue;
+                        }
+
                         var metadata = new Dictionary<string, string>();
                         InitSimulationEventMetadata(
                             modelState,
@@ -214,13 +247,26 @@ namespace Cognite.Simulator.Utils
                             }
                         }
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
-                        var ev = await _cdfEvents.UpdateSimulationEventToFailure(
-                            e.ExternalId,
-                            startTime,
-                            null,
-                            ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
-                            token).ConfigureAwait(false);
-                        EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
+                        if (e.HasSimulationRun)
+                        {
+                            await _cdfSimulators.SimulationRunCallback(
+                                new SimulationRunCallbackItem()
+                                {
+                                    Id = e.Run.Id,
+                                    Status = SimulationRunStatus.failure,
+                                    StatusMessage = ex.Message.Substring(0, 100)
+                                }, token).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            var ev = await _cdfEvents.UpdateSimulationEventToFailure(
+                                e.Event.ExternalId,
+                                startTime,
+                                null,
+                                ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
+                                token).ConfigureAwait(false);
+                            EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
+                        }
                     }
                 }
 
@@ -239,42 +285,81 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, U, V) ValidateEventMetadata(Event e)
+        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv)
         {
-            // Check for the needed files before start, fail the run if anything missing
-            if (!e.Metadata.TryGetValue(ModelMetadata.NameKey, out string modelName))
-            {
-                _logger.LogError("Event {Id} does not indicate the model name to use", e.ExternalId);
-                throw new SimulationException("Model name missing");
-            }
-            if (!e.Metadata.TryGetValue(CalculationMetadata.TypeKey, out string calcType))
-            {
-                _logger.LogError("Event {Id} does not indicate the calculation type to use", e.ExternalId);
-                throw new SimulationException("Calculation type missing");
-            }
+            string modelName;
+            string calcType;
+            string simulator;
             string calcTypeUserDefined = null;
-            if (calcType == "UserDefined" && !e.Metadata.TryGetValue(CalculationMetadata.UserDefinedTypeKey, out calcTypeUserDefined))
+            string eventId = "";
+            if (simEv.HasSimulationRun)
             {
-                _logger.LogError("Event {Id} is user-defined, but is missing the calculation type property", e.ExternalId);
-                throw new SimulationException("Type of user-defined calculation missing");
+                eventId = simEv.Run.Id.ToString();
+                simulator = simEv.Run.SimulatorName;
+                modelName = simEv.Run.ModelName;
+                calcType = "UserDefined";
+                calcTypeUserDefined = simEv.Run.RoutineName;
             }
-            if (!e.Metadata.TryGetValue(BaseMetadata.SimulatorKey, out string simulator))
+            else
             {
-                _logger.LogError("Event {Id} does not indicate the simulator to use", e.ExternalId);
-                throw new SimulationException("Simulator missing");
+                var e = simEv.Event;
+                eventId = e.ExternalId;
+                if (e.Metadata[SimulationEventMetadata.StatusKey] == SimulationEventStatusValues.Running)
+                {
+                    throw new ConnectorException("Calculation failed due to connector error");
+                }
+                var eventAge = DateTime.UtcNow - CogniteTime.FromUnixTimeMilliseconds(e.LastUpdatedTime);
+                if (eventAge >= TimeSpan.FromSeconds(_connectorConfig.SimulationEventTolerance))
+                {
+                    throw new TimeoutException("Timeout: The connector could not run the calculation on time");
+                }
+
+                // Check for the needed files before start, fail the run if anything missing
+                if (!e.Metadata.TryGetValue(ModelMetadata.NameKey, out modelName))
+                {
+                    _logger.LogError("Event {Id} does not indicate the model name to use", e.ExternalId);
+                    throw new SimulationException("Model name missing");
+                }
+                if (!e.Metadata.TryGetValue(CalculationMetadata.TypeKey, out calcType))
+                {
+                    _logger.LogError("Event {Id} does not indicate the calculation type to use", e.ExternalId);
+                    throw new SimulationException("Calculation type missing");
+                }
+                if (calcType == "UserDefined" && !e.Metadata.TryGetValue(CalculationMetadata.UserDefinedTypeKey, out calcTypeUserDefined))
+                {
+                    _logger.LogError("Event {Id} is user-defined, but is missing the calculation type property", e.ExternalId);
+                    throw new SimulationException("Type of user-defined calculation missing");
+                }
+                if (!e.Metadata.TryGetValue(BaseMetadata.SimulatorKey, out simulator))
+                {
+                    _logger.LogError("Event {Id} does not indicate the simulator to use", e.ExternalId);
+                    throw new SimulationException("Simulator missing");
+                }
             }
             var model = ModelLibrary.GetLatestModelVersion(simulator, modelName);
             if (model == null)
             {
-                _logger.LogError("Could not find a local model file to run Event {Id}", e.ExternalId);
+                _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
             var calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
             var calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
             if (calcConfig == null || calcState == null)
             {
-                _logger.LogError("Could not find a local configuration to run Event {Id}", e.ExternalId);
+                _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a simulation configuration for {modelName}");
+            }
+
+            if (calcConfig.Connector != _connectorConfig.GetConnectorName())
+            {
+                return (model, null, null);
+            }
+            if (simEv.HasSimulationRun)
+            {
+                if (simEv.Run.Status == SimulationRunStatus.running)
+                {
+                    throw new ConnectorException("Calculation failed due to connector error");
+                }
             }
             return (model, calcState, calcConfig);
         }
@@ -297,7 +382,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Initialize the simulation event execution
         /// </summary>
-        /// <param name="e">Simulation event</param>
+        /// <param name="simEv">Simulation event</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
         /// <param name="configState">Configuration state object</param>
@@ -305,7 +390,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="metadata">Metadata to add to the event</param>
         /// <param name="token">Cancellation token</param>
         protected virtual async Task InitSimulationRun(
-            Event e,
+            SimulationRunEvent simEv,
             DateTime startTime,
             T modelState,
             U configState,
@@ -317,20 +402,32 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-            if (e == null)
+            if (simEv == null)
             {
-                throw new ArgumentNullException(nameof(e));
+                throw new ArgumentNullException(nameof(simEv));
             }
             if (configObj == null)
             {
                 throw new ArgumentNullException(nameof(configObj));
             }
-            await _cdfEvents.UpdateSimulationEventToRunning(
-                e.ExternalId,
-                startTime,
-                metadata,
-                modelState.Version,
-                token).ConfigureAwait(false);
+
+            if (simEv.HasSimulationRun)
+            {
+                await UpdateSimulationRunStatus(
+                    simEv.Run.Id, 
+                    SimulationRunStatus.running, 
+                    null, 
+                    token).ConfigureAwait(false);
+            }
+            else
+            {
+                await _cdfEvents.UpdateSimulationEventToRunning(
+                    simEv.Event.ExternalId,
+                    startTime,
+                    metadata,
+                    modelState.Version,
+                    token).ConfigureAwait(false);
+            }
 
             SamplingRange samplingRange = null;
             var validationEnd = startTime;
@@ -341,7 +438,8 @@ namespace Cognite.Simulator.Utils
                     throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
                 }
                 // Determine the validation end time
-                if (e.Metadata.TryGetValue(SimulationEventMetadata.ValidationEndOverwriteKey, out string validationEndOverwrite)
+                if (!simEv.HasSimulationRun 
+                    && simEv.Event.Metadata.TryGetValue(SimulationEventMetadata.ValidationEndOverwriteKey, out string validationEndOverwrite)
                     && long.TryParse(validationEndOverwrite, out long overwriteValue))
                 {
                     // If the event contains a validation end overwrite, use that instead of
@@ -376,13 +474,14 @@ namespace Cognite.Simulator.Utils
             }
             finally
             {
+                // TODO: Move to after RunSimulation()
                 // Save run configuration
                 await StoreRunConfigurationInCdf(
                     samplingRange,
                     modelState,
                     configState,
                     configObj,
-                    e,
+                    simEv,
                     startTime,
                     validationEnd,
                     token).ConfigureAwait(false);
@@ -390,7 +489,7 @@ namespace Cognite.Simulator.Utils
 
             // Run the simulation
             await RunSimulation(
-                e,
+                simEv,
                 startTime,
                 modelState,
                 configState,
@@ -399,13 +498,24 @@ namespace Cognite.Simulator.Utils
                 token).ConfigureAwait(false);
 
             // Update event with success status
-            var ev = await _cdfEvents.UpdateSimulationEventToSuccess(
-                e.ExternalId,
-                startTime,
-                null,
-                "Calculation ran to completion",
-                token).ConfigureAwait(false);
-            EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
+            if (simEv.HasSimulationRun)
+            {
+                await UpdateSimulationRunStatus(
+                    simEv.Run.Id,
+                    SimulationRunStatus.success,
+                    "Calculation ran to completion",
+                    token).ConfigureAwait(false);
+            }
+            else
+            {
+                var ev = await _cdfEvents.UpdateSimulationEventToSuccess(
+                    simEv.Event.ExternalId,
+                    startTime,
+                    null,
+                    "Calculation ran to completion",
+                    token).ConfigureAwait(false);
+                EventsAlreadyProcessed[ev.ExternalId] = ev.LastUpdatedTime;
+            }
         }
 
         /// <summary>
@@ -420,7 +530,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="token">Cancellation token</param>
         protected abstract Task RunSimulation(
-            Event e,
+            SimulationRunEvent e,
             DateTime startTime,
             T modelState,
             U configState,
@@ -435,7 +545,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelState">Model state object</param>
         /// <param name="configState">Configuration state object</param>
         /// <param name="configObj">Configuration object</param>
-        /// <param name="runEvent">Simulation event</param>
+        /// <param name="simEv">Simulation event</param>
         /// <param name="eventStartTime">Event start time</param>
         /// <param name="validationEnd">End of the validation period</param>
         /// <param name="token">Cancellation token</param>
@@ -447,14 +557,19 @@ namespace Cognite.Simulator.Utils
             T modelState,
             U configState,
             V configObj,
-            Event runEvent,
+            SimulationRunEvent simEv,
             DateTime eventStartTime,
             DateTime validationEnd,
             CancellationToken token)
         {
-            if (runEvent == null)
+            if (simEv == null)
             {
-                throw new ArgumentNullException(nameof(runEvent));
+                throw new ArgumentNullException(nameof(simEv));
+            }
+            if (simEv.HasSimulationRun)
+            {
+                // TODO: store run configuration for simulation runs.
+                return;
             }
             if (modelState == null)
             {
@@ -474,7 +589,7 @@ namespace Cognite.Simulator.Utils
             // Create a dictionary with the run details
             var runDetails = new Dictionary<string, string>
             {
-                { "runEventId", runEvent.ExternalId }
+                { "runEventId", simEv.Event.ExternalId }
             };
             if (samplingRange != null)
             {
@@ -547,7 +662,7 @@ namespace Cognite.Simulator.Utils
                 var seq = await _cdfSequences.StoreRunConfiguration(
                     sequenceId,
                     rowStart,
-                    runEvent.DataSetId,
+                    simEv.Event.DataSetId,
                     configObj.Calculation,
                     runDetails,
                     token).ConfigureAwait(false);
@@ -574,7 +689,7 @@ namespace Cognite.Simulator.Utils
                     eventMetaData.Add("calcTime", samplingRange.Midpoint.ToString());
                 }
                 await _cdfEvents.UpdateSimulationEvent(
-                    runEvent.ExternalId,
+                    simEv.Event.ExternalId,
                     eventStartTime,
                     eventMetaData,
                     token).ConfigureAwait(false);
@@ -583,6 +698,29 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ConnectorException(e.Message, e.CogniteErrors);
             }
+        }
+    }
+
+    /// <summary>
+    /// Wrapper class for simulation run entities. There are two entities in CDF as of now
+    /// that can represent a simulation run: <see cref="CogniteSdk.Event"/> and <see cref="SimulationRun"/>.
+    /// Eventually support for representing run as CDF Events will be discontinued.
+    /// </summary>
+    public class SimulationRunEvent
+    {
+        public Event Event { get; }
+        public SimulationRun Run { get; }
+
+        public bool HasSimulationRun => Run != null;
+
+        public SimulationRunEvent(Event e)
+        {
+            Event = e;
+        }
+
+        public SimulationRunEvent(SimulationRun r)
+        {
+            Run = r;
         }
     }
 

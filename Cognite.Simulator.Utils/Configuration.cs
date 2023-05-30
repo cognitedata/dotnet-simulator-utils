@@ -113,6 +113,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public int SchedulerTolerance { get; set; } = 300;
 
+        public bool UseSimulatorsApi { get; set; }
+
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
