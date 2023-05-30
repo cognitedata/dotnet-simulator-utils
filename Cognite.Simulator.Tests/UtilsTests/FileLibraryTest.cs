@@ -269,7 +269,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithDataSampling>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithRoutine>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 
