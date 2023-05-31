@@ -113,6 +113,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public int SchedulerTolerance { get; set; } = 300;
 
+        public PipelineNotificationConfig PipelineNotification { get; set; }
+
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
@@ -148,4 +150,16 @@ namespace Cognite.Simulator.Utils
         public string Table { get; set; }
     }
 
+    public class PipelineNotificationConfig
+    {
+        /// <summary>
+        /// Maximum number of error allowed withing the time frame
+        /// </summary>
+        public int MaxErrors { get; set; } = 10;
+
+        /// <summary>
+        /// Size of the time frame in minutes
+        /// </summary>
+        public int MaxTime { get; set; } = 10;
+    }
 }
