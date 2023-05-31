@@ -113,6 +113,9 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public int SchedulerTolerance { get; set; } = 300;
 
+        /// <summary>
+        /// Configuration related to error tolerance before reporting a failed run to the pipeline in CDF 
+        /// </summary>
         public PipelineNotificationConfig PipelineNotification { get; set; }
 
         /// <summary>
@@ -150,6 +153,12 @@ namespace Cognite.Simulator.Utils
         public string Table { get; set; }
     }
 
+    /// <summary>
+    /// Pipeline notification configuration. This states how many errors
+    /// can happen in a time frame before notifying the extraction pipeline.
+    /// Usually connectors can recover from intermittent errors, and this policy can
+    /// reduce the number of times alerts are generated due to pipeline errors
+    /// </summary>
     public class PipelineNotificationConfig
     {
         /// <summary>

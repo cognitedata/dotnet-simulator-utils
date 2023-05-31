@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// This class can be used to link the connector to a extraction pipeline in CDF
+    /// </summary>
     public class ExtractionPipeline
     {
         private readonly ILogger<ExtractionPipeline> _logger;
@@ -21,6 +24,15 @@ namespace Cognite.Simulator.Utils
         
         internal static string LastErrorMessage;
 
+        /// <summary>
+        /// Creates a new extraction pipeline object. It is not yet active, it needs to
+        /// be initialized with <see cref="Init(SimulatorConfig, CancellationToken)"/> and
+        /// then activated by running the <see cref="PipelineUpdate(CancellationToken)"/> task
+        /// </summary>
+        /// <param name="cdfConfig">CDF configuration</param>
+        /// <param name="pipeConfig">Pipeline notification configuration</param>
+        /// <param name="destination">CDF client</param>
+        /// <param name="logger">Logger</param>
         public ExtractionPipeline(
             CogniteConfig cdfConfig,
             PipelineNotificationConfig pipeConfig,
@@ -32,10 +44,22 @@ namespace Cognite.Simulator.Utils
             _cdfConfig = cdfConfig;
             _pipeConfig = pipeConfig;
         }
+        
+        /// <summary>
+        /// Initialized the extraction pipeline, if configured. This method creates a new
+        /// pipeline in CDF in case one does not exists. It uses the simulator name and 
+        /// dataset information specified in <paramref name="simConfig"/> to create a new pipeline
+        /// </summary>
+        /// <param name="simConfig">Simulator configuration</param>
+        /// <param name="token">Cancellation token</param>
         public async Task Init(
             SimulatorConfig simConfig,
             CancellationToken token)
         {
+            if (simConfig == null)
+            {
+                throw new ArgumentNullException(nameof(simConfig));
+            }
             if (_cdfConfig.ExtractionPipeline == null ||
                 string.IsNullOrEmpty(_cdfConfig.ExtractionPipeline.PipelineId))
             {
@@ -77,6 +101,12 @@ namespace Cognite.Simulator.Utils
             _available = true;
         }
 
+        /// <summary>
+        /// Notify the pipeline with the given status change and message
+        /// </summary>
+        /// <param name="status">Pipeline run status</param>
+        /// <param name="message">Message</param>
+        /// <param name="token">Cancellation token</param>
         public async Task NotifyPipeline(
             CogniteSdk.ExtPipeRunStatus status,
             string message,
@@ -104,6 +134,11 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Starts a notification loop that reports the connector status to the 
+        /// pipeline with the configured frequency
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
         public async Task PipelineUpdate(CancellationToken token)
         {
             if (!_available)
@@ -125,7 +160,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Notifying extraction pipeline");
                 await NotifyPipeline(
                    CogniteSdk.ExtPipeRunStatus.seen, 
-                   "SimConnect available", 
+                   "Connector available", 
                    token).ConfigureAwait(false);
                 await Task.Delay(
                     TimeSpan.FromSeconds(delay), 
@@ -145,6 +180,10 @@ namespace Cognite.Simulator.Utils
             Exception e,
             CancellationToken token)
         {
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
             errorCount++;
             if (!firstErrorOccured.HasValue)
             {
