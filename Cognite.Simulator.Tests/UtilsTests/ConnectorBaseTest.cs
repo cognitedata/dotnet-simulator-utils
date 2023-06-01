@@ -24,11 +24,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
+            services.AddSingleton<ExtractionPipeline>();
+            var simConfig = new SimulatorConfig
+            {
+                Name = "TestSim",
+                DataSetId = CdfTestClient.TestDataset
+            };
+            services.AddSingleton(simConfig);
+            var pipeConfig = new PipelineNotificationConfig();
+            services.AddSingleton(pipeConfig);
             using var provider = services.BuildServiceProvider();
             using var source = new CancellationTokenSource();
 
             var connector = provider.GetRequiredService<TestConnector>();
             var cdf = provider.GetRequiredService<Client>();
+            var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
             string? externalIdToDelete = null;
             try
@@ -78,6 +88,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
                 var lastHeartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
                 Assert.True(long.Parse(lastHeartbeat) > long.Parse(heartbeat));
+
+                var pipelines = await cdf.ExtPipes.RetrieveAsync(
+                    new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
+                    true,
+                    source.Token).ConfigureAwait(false);
+                Assert.Contains(pipelines, p => p.ExternalId == cdfConfig.ExtractionPipeline.PipelineId);
+                Assert.Contains(pipelines, p => p.LastSeen >= timestamp);
             }
             finally
             {
@@ -87,6 +104,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         .DeleteAsync(new List<string> { externalIdToDelete }, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
+                await cdf.ExtPipes
+                    .DeleteAsync(new []{ cdfConfig.ExtractionPipeline.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
             }
         }
     }
@@ -97,21 +116,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     internal class TestConnector : ConnectorBase
     {
+        private readonly ExtractionPipeline _pipeline;
+        private readonly SimulatorConfig _config;
+   
         public TestConnector(
-            CogniteDestination cdf, 
+            CogniteDestination cdf,
+            ExtractionPipeline pipeline,
+            SimulatorConfig config,
             ILogger<ConnectorBase> logger) : 
             base(
                 cdf,
                 new List<SimulatorConfig>
                 {
-                    new SimulatorConfig
-                    {
-                        Name = "TestSim",
-                        DataSetId = CdfTestClient.TestDataset
-                    }
+                    config
                 },
                 logger)
         {
+            _pipeline = pipeline;
+            _config = config;
         }
 
         public override string GetConnectorName()
@@ -139,13 +161,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }
                 },
                 token).ConfigureAwait(false);
+            await _pipeline.Init(_config, token).ConfigureAwait(false);
         }
 
         public override async Task Run(CancellationToken token)
         {
             try
             {
-                await Heartbeat(token).ConfigureAwait(false);
+                var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+                var linkedToken = linkedTokenSource.Token;
+                var taskList = new List<Task> { Heartbeat(linkedToken), _pipeline.PipelineUpdate(linkedToken) };
+                await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+                linkedTokenSource.Dispose();
             }
             catch (OperationCanceledException)
             {
