@@ -1,5 +1,6 @@
 ﻿using Cognite.Extensions;
 using Cognite.Extractor.Utils;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -212,5 +213,26 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+    }
+
+    /// <summary>
+    /// Extension methods for extraction pipelines
+    /// </summary>
+    public static class ExtractionPipelineExtensions
+    {
+        /// <summary>
+        /// Adds a extraction pipeline to the service collection
+        /// </summary>
+        /// <param name="services">Service collection</param>
+        /// <param name="config">Connector configuration</param>
+        public static void AddExtractionPipeline(this IServiceCollection services, ConnectorConfig config)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+            services.AddSingleton(config.PipelineNotification);
+            services.AddScoped<ExtractionPipeline>();
+        }
     }
 }
