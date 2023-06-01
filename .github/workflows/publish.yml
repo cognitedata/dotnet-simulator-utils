@@ -62,7 +62,7 @@ jobs:
     - name: Pack project
       run: dotnet pack Cognite.Simulator.Utils/Cognite.Simulator.Utils.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} --no-build    
 
-    # Sign and push to Nuget 
+    # Sign and push to Nuget
     - name: Sign nuget packages
       run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com
 
