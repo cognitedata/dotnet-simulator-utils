@@ -77,7 +77,9 @@ namespace Cognite.Simulator.Utils
                     token).ConfigureAwait(false);
                 if (!pipelines.Any())
                 {
-                    _logger.LogWarning("Could not find an extraction pipeline with id {Id}", pipelineId);
+                    _logger.LogWarning(
+                        "Could not find an extraction pipeline with id {Id}, attempting to create one", 
+                        pipelineId);
                     pipelines = await _cdf.CogniteClient.ExtPipes.CreateAsync(
                         new List<CogniteSdk.ExtPipeCreate>
                         {
@@ -90,6 +92,7 @@ namespace Cognite.Simulator.Utils
                                Source = simConfig.Name,
                            }
                         }, token).ConfigureAwait(false);
+                    _logger.LogDebug("Pipeline {Id} created successfully", pipelineId);
                 }
                 _pipeline = pipelines.First();
             }
