@@ -17,27 +17,57 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 7
 
-    - name: Dotnet Pack DataProcessing
-      run: dotnet pack Cognite.DataProcessing/Cognite.DataProcessing.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v}  
+    # Download certificate and extract the key
+    - name: Download code signing certificate
+      run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE }}" | base64 -w 0 --decode > ./cognite_code_signing.pfx
+    
+    - name: Extract public key
+      run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -p cognite_code_signing.pfx pub_key.snk
 
-    - name: Dotnet Pack Extensions
-      run: dotnet pack Cognite.Simulator.Extensions/Cognite.Simulator.Extensions.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v}  
+    # Build and sign the data processing library
+    - name: Build DataProcessing
+      run: dotnet build Cognite.DataProcessing/Cognite.DataProcessing.csproj --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True
+    
+    - name: Sign project
+      env:
+        CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}
+      run: ./sign.sh ./Cognite.DataProcessing Cognite.DataProcessing
+   
+    - name: Pack project
+      run: dotnet pack Cognite.DataProcessing/Cognite.DataProcessing.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} --no-build    
 
-    - name: Dotnet Pack Utils
-      run: dotnet pack Cognite.Simulator.Utils/Cognite.Simulator.Utils.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v}  
+    # Build and sign the extensions library
+    - name: Build Extensions
+      run: dotnet build Cognite.Simulator.Extensions/Cognite.Simulator.Extensions.csproj --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True
+    
+    - name: Sign project
+      env:
+        CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}
+      run: ./sign.sh ./Cognite.Simulator.Extensions Cognite.Simulator.Extensions
+   
+    - name: Pack project
+      run: dotnet pack Cognite.Simulator.Extensions/Cognite.Simulator.Extensions.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} --no-build    
+    
+    # Build and sign the utils library
+    - name: Build Utils
+      run: dotnet build Cognite.Simulator.Utils/Cognite.Simulator.Utils.csproj --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True
+    
+    - name: Sign project
+      env:
+        CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}
+      run: ./sign.sh ./Cognite.Simulator.Utils Cognite.Simulator.Utils
+   
+    - name: Pack project
+      run: dotnet pack Cognite.Simulator.Utils/Cognite.Simulator.Utils.csproj --output nuget-packages --configuration Release -p:PackageVersion=${GITHUB_REF##*/v} --no-build    
 
-    - name: Dotnet Nuget Push DataProcessing
-      run: dotnet nuget push nuget-packages/Cognite.DataProcessing*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-      continue-on-error: false
+    # Sign and push to Nuget
+    - name: Sign nuget packages
+      run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com
 
-    - name: Dotnet Nuget Push Extensions
-      run: dotnet nuget push nuget-packages/Cognite.Simulator.Extensions*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-      continue-on-error: false
-
-    - name: Dotnet Nuget Push Utils
-      run: dotnet nuget push nuget-packages/Cognite.Simulator.Utils*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+    - name: Push nuget packages
+      run: dotnet nuget push nuget-packages/*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
       continue-on-error: false
 
     - name: Create Release

@@ -116,6 +116,11 @@ namespace Cognite.Simulator.Utils
         public bool UseSimulatorsApi { get; set; }
 
         /// <summary>
+        /// Configuration related to error tolerance before reporting a failed run to the pipeline in CDF 
+        /// </summary>
+        public PipelineNotificationConfig PipelineNotification { get; set; }
+
+        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
@@ -150,4 +155,22 @@ namespace Cognite.Simulator.Utils
         public string Table { get; set; }
     }
 
+    /// <summary>
+    /// Pipeline notification configuration. This states how many errors
+    /// can happen in a time frame before notifying the extraction pipeline.
+    /// Usually connectors can recover from intermittent errors, and this policy can
+    /// reduce the number of times alerts are generated due to pipeline errors
+    /// </summary>
+    public class PipelineNotificationConfig
+    {
+        /// <summary>
+        /// Maximum number of error allowed withing the time frame
+        /// </summary>
+        public int MaxErrors { get; set; } = 10;
+
+        /// <summary>
+        /// Size of the time frame in minutes
+        /// </summary>
+        public int MaxTime { get; set; } = 10;
+    }
 }
