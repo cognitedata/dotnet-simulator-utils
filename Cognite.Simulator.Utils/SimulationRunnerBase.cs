@@ -88,7 +88,7 @@ namespace Cognite.Simulator.Utils
 
         // TODO: this used to save model version and 
         private async Task<SimulationRun> UpdateSimulationRunStatus(
-            long SimulatuonRunId, 
+            long runId, 
             SimulationRunStatus status, 
             string statusMessage, 
             CancellationToken token)
@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
-                    Id = SimulatuonRunId,
+                    Id = runId,
                     Status = status,
                     StatusMessage = statusMessage
                 }, token).ConfigureAwait(false);
@@ -249,13 +249,11 @@ namespace Cognite.Simulator.Utils
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
                         if (e.HasSimulationRun)
                         {
-                            await _cdfSimulators.SimulationRunCallbackAsync(
-                                new SimulationRunCallbackItem()
-                                {
-                                    Id = e.Run.Id,
-                                    Status = SimulationRunStatus.failure,
-                                    StatusMessage = ex.Message.Substring(0, 100)
-                                }, token).ConfigureAwait(false);
+                            await UpdateSimulationRunStatus(
+                                e.Run.Id,
+                                SimulationRunStatus.failure,
+                                ex.Message.Substring(0, 100),
+                                token).ConfigureAwait(false);
                         }
                         else
                         {
