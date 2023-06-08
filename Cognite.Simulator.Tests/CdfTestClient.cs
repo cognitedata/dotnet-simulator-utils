@@ -60,6 +60,11 @@ namespace Cognite.Simulator.Tests
                 Host = host,
                 Project = project,
                 IdpAuthentication = authConfig,
+                ExtractionPipeline = new ExtractionRunConfig
+                {
+                    PipelineId = "utils-tests-pipeline",
+                    Frequency = 1
+                }
             };
 
             var loggerConfig = new LoggerConfig
