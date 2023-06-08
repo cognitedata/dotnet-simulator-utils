@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
             string statusMessage, 
             CancellationToken token)
         {
-            var res = await _cdfSimulators.SimulationRunCallback(
+            var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
                     Id = SimulatuonRunId,
@@ -127,7 +127,7 @@ namespace Cognite.Simulator.Utils
                 };
 
                 var runsResult = await _cdfSimulators
-                    .ListSimulationRuns(query, token)
+                    .ListSimulationRunsAsync(query, token)
                     .ConfigureAwait(false);
 
                 result.AddRange(runsResult.Items);
@@ -249,7 +249,7 @@ namespace Cognite.Simulator.Utils
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
                         if (e.HasSimulationRun)
                         {
-                            await _cdfSimulators.SimulationRunCallback(
+                            await _cdfSimulators.SimulationRunCallbackAsync(
                                 new SimulationRunCallbackItem()
                                 {
                                     Id = e.Run.Id,
