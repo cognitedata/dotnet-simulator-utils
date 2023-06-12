@@ -147,6 +147,7 @@ namespace Cognite.Simulator.Utils
                         GetConnectorVersion(),
                         _simulatorSequenceIds[simulator.Name],
                         simulator.DataSetId,
+                        true,
                         extraInformation,
                         token).ConfigureAwait(false);
                 }

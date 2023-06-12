@@ -131,6 +131,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     "1.0.0",
                     externalIdToDelete,
                     dataSetId,
+                    false,
                     new Dictionary<string, string>
                     {
                         { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }

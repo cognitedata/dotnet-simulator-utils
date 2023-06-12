@@ -252,7 +252,7 @@ namespace Cognite.Simulator.Utils
                             await UpdateSimulationRunStatus(
                                 e.Run.Id,
                                 SimulationRunStatus.failure,
-                                ex.Message.Substring(0, 100),
+                                ex.Message == null || ex.Message.Length < 100 ? ex.Message : ex.Message.Substring(0, 99),
                                 token).ConfigureAwait(false);
                         }
                         else

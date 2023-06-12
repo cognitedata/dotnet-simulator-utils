@@ -155,6 +155,7 @@ namespace Cognite.Simulator.Extensions
         /// updated. Else, only the heartbeat row is updated</param>
         /// <param name="connectorVersion">Version of the deployed connector</param>
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
+        /// <param name="simulatorsApiEnabled"></param>
         /// <param name="dataSetId">ID of the data set holding simulator data</param>
         /// <param name="extraInformation">Dictionary of any extra information to be added to the
         /// sequence during initialization</param>
@@ -167,6 +168,7 @@ namespace Cognite.Simulator.Extensions
             string connectorVersion,
             string sequenceExternalId,
             long? dataSetId,
+            bool? simulatorsApiEnabled,
             Dictionary<string, string> extraInformation,
             CancellationToken token)
         {
@@ -185,6 +187,7 @@ namespace Cognite.Simulator.Extensions
                 // Data set and version could only have changed on connector restart
                 rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{dataSetId.Value}");
                 rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{connectorVersion}");
+                rowData.Add(SimulatorIntegrationSequenceRows.SimulatorsApiEnabled, $"{simulatorsApiEnabled}");
                 if (extraInformation != null && extraInformation.Any())
                 {
                     extraInformation.ToList().ForEach(i => rowData.Add(i.Key, i.Value));
