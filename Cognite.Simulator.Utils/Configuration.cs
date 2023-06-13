@@ -118,6 +118,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public PipelineNotificationConfig PipelineNotification { get; set; }
 
+        public bool UseSimulatorsApi { get; set; }
+
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>

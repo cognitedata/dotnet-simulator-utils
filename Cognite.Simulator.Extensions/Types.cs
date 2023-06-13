@@ -374,4 +374,19 @@ namespace Cognite.Simulator.Extensions
             ExternalIdOverwrite = externalId;
         }
     }
+
+    public class SimulatorIntegration
+    {
+        public string Simulator { get; set; }
+        public string ConnectorName { get; set; }
+        public long? DataSetId { get; set; }
+    }
+
+    public class SimulatorIntegrationUpdate : SimulatorIntegration
+    {
+        public string ConnectorVersion { get; set; }
+        public string SimulatorVersion { get; set; }
+        public bool SimulatorApiEnabled { get; set; }
+        public Dictionary<string, string> ExtraInformation { get; set; } = new Dictionary<string, string>();
+    }
 }

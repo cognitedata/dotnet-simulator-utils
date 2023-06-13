@@ -68,32 +68,30 @@ namespace Cognite.Simulator.Extensions
         /// a simulator integration sequence in CDF
         /// </summary>
         /// <param name="sequences">CDF sequences resource</param>
-        /// <param name="connectorName">Name of the connector associated with the integration</param>
-        /// <param name="simulators">Dictionary with (simulator name, data set id) pairs</param>
+        /// <param name="integrations">List of simulation integration details</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>Retrieved or created sequences</returns>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// could not be created. The exception contains the list of errors</exception>
         public static async Task<IEnumerable<Sequence>> GetOrCreateSimulatorIntegrations(
             this SequencesResource sequences,
-            string connectorName,
-            Dictionary<string, long> simulators,
+            IEnumerable<SimulatorIntegration> integrations,
             CancellationToken token)
         {
             var result = new List<Sequence>();
-            if (simulators == null || !simulators.Any())
+            if (integrations == null || !integrations.Any())
             {
                 return result;
             }
 
             var toCreate = new Dictionary<string, SequenceCreate>();
-            foreach (var simulator in simulators)
+            foreach (var integration in integrations)
             {
                 var metadata = new Dictionary<string, string>()
                 {
                     { BaseMetadata.DataTypeKey, SimulatorIntegrationMetadata.DataType.MetadataValue() },
-                    { BaseMetadata.SimulatorKey, simulator.Key },
-                    { SimulatorIntegrationMetadata.ConnectorNameKey, connectorName }
+                    { BaseMetadata.SimulatorKey, integration.Simulator },
+                    { SimulatorIntegrationMetadata.ConnectorNameKey, integration.ConnectorName }
                 };
                 var query = new SequenceQuery
                 {
@@ -112,13 +110,16 @@ namespace Cognite.Simulator.Extensions
                     metadata.Add(BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue);
                     var createObj = new SequenceCreate
                     {
-                        Name = $"{simulator.Key} Simulator Integration",
-                        ExternalId = $"{simulator.Key}-INTEGRATION-{DateTime.UtcNow.ToUnixTimeMilliseconds()}",
-                        Description = $"Details about {simulator.Key} integration",
-                        DataSetId = simulator.Value,
+                        Name = $"{integration.Simulator} Simulator Integration",
+                        ExternalId = $"{integration.Simulator}-INTEGRATION-{DateTime.UtcNow.ToUnixTimeMilliseconds()}",
+                        Description = $"Details about {integration.Simulator} integration",
                         Metadata = metadata,
                         Columns = GetKeyValueColumnWrite()
                     };
+                    if (integration.DataSetId.HasValue)
+                    {
+                        createObj.DataSetId = integration.DataSetId.Value;
+                    }
                     toCreate.Add(createObj.ExternalId, createObj);
                 }
             }
@@ -153,28 +154,19 @@ namespace Cognite.Simulator.Extensions
         /// <param name="sequences">CDF Sequences resource</param>
         /// <param name="init">If true, the data set id, connector version and extra information rows are also 
         /// updated. Else, only the heartbeat row is updated</param>
-        /// <param name="connectorVersion">Version of the deployed connector</param>
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
-        /// <param name="dataSetId">ID of the data set holding simulator data</param>
-        /// <param name="extraInformation">Dictionary of any extra information to be added to the
+        /// <param name="update">Data to be updated, if init is set to true</param>
         /// sequence during initialization</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsHeartbeat(
             this SequencesResource sequences,
-            bool init,
-            string connectorVersion,
             string sequenceExternalId,
-            long? dataSetId,
-            Dictionary<string, string> extraInformation,
+            bool init,
+            SimulatorIntegrationUpdate update,
             CancellationToken token)
         {
-            if (sequenceExternalId == null || !dataSetId.HasValue)
-            {
-                return;
-            }
-
             var rowsToCreate = new List<SequenceDataCreate>();
             var rowData = new Dictionary<string, string>
                 {
@@ -182,14 +174,25 @@ namespace Cognite.Simulator.Extensions
                 };
             if (init)
             {
-                // Data set and version could only have changed on connector restart
-                rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{dataSetId.Value}");
-                rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{connectorVersion}");
-                if (extraInformation != null && extraInformation.Any())
+                if (update == null)
                 {
-                    extraInformation.ToList().ForEach(i => rowData.Add(i.Key, i.Value));
+                    throw new ArgumentNullException(nameof(update));
+                }
+
+                // Data set and version could only have changed on connector restart
+                if (update.DataSetId.HasValue)
+                {
+                    rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{update.DataSetId.Value}");
+                }
+                rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{update.ConnectorVersion}");
+                rowData.Add(SimulatorIntegrationSequenceRows.SimulatorVersion, $"{update.SimulatorVersion}");
+                rowData.Add(SimulatorIntegrationSequenceRows.SimulatorsApiEnabled, $"{update.SimulatorApiEnabled}");
+                if (update.ExtraInformation != null && update.ExtraInformation.Any())
+                {
+                    update.ExtraInformation.ToList().ForEach(i => rowData.Add(i.Key, i.Value));
                 }
             }
+            
             var rowCreate = ToSequenceData(rowData, sequenceExternalId, 0);
             rowsToCreate.Add(rowCreate);
             var result = await sequences.InsertAsync(

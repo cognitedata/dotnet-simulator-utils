@@ -126,6 +126,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ILogger<ConnectorBase> logger) : 
             base(
                 cdf,
+                new ConnectorConfig
+                {
+                    NamePrefix = "Test Connector",
+                    AddMachineNameSuffix = false
+                },
                 new List<SimulatorConfig>
                 {
                     config
@@ -134,11 +139,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             _pipeline = pipeline;
             _config = config;
-        }
-
-        public override string GetConnectorName()
-        {
-            return "Test Connector";
         }
 
         public override string GetConnectorVersion()
@@ -151,15 +151,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return TimeSpan.FromSeconds(2);
         }
 
+        public override string GetSimulatorVersion(string simulator)
+        {
+            return "1.2.3";
+        }
+
         public override async Task Init(CancellationToken token)
         {
             await EnsureSimulatorIntegrationsSequencesExists(token).ConfigureAwait(false);
             await UpdateIntegrationRows(
                 true,
-                new Dictionary<string, string>
-                {
-                    { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }
-                },
                 token).ConfigureAwait(false);
             await _pipeline.Init(_config, token).ConfigureAwait(false);
         }

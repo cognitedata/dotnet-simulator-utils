@@ -29,6 +29,7 @@ namespace Cognite.Simulator.Utils
 
         private readonly Dictionary<string, string> _simulatorSequenceIds;
         private readonly ILogger<ConnectorBase> _logger;
+        private readonly ConnectorConfig _config;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -38,6 +39,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="logger">Logger</param>
         public ConnectorBase(
             CogniteDestination cdf,
+            ConnectorConfig config,
             IList<SimulatorConfig> simulators,
             ILogger<ConnectorBase> logger)
         {
@@ -45,6 +47,7 @@ namespace Cognite.Simulator.Utils
             Simulators = simulators;
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
+            _config = config;
         }
 
         /// <summary>
@@ -78,22 +81,40 @@ namespace Cognite.Simulator.Utils
         public abstract Task Run(CancellationToken token);
 
         /// <summary>
-        /// Returns the connector name.This is reported periodically to CDF
-        /// </summary>
-        /// <returns>Connector name</returns>
-        public abstract string GetConnectorName();
-        
-        /// <summary>
         /// Returns the connector version. This is reported periodically to CDF
         /// </summary>
         /// <returns>Connector version</returns>
         public abstract string GetConnectorVersion();
-        
+
+        public abstract string GetSimulatorVersion(string simulator);
+
+        public virtual Dictionary<string, string> GetExtraInformation(string simulator)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        /// <summary>
+        /// Returns the connector name.This is reported periodically to CDF
+        /// </summary>
+        /// <returns>Connector name</returns>
+        public virtual string GetConnectorName()
+        {
+            return _config.GetConnectorName();
+        }
+
         /// <summary>
         /// How often to report the connector information back to CDF (Heartbeat)
         /// </summary>
         /// <returns>Time interval</returns>
-        public abstract TimeSpan GetHeartbeatInterval();
+        public virtual TimeSpan GetHeartbeatInterval()
+        {
+            return TimeSpan.FromSeconds(_config.StatusInterval);
+        }
+
+        public virtual bool ApiEnabled()
+        {
+            return _config.UseSimulatorsApi;
+        }
 
         /// <summary>
         /// For each simulator specified in the configuration, create a sequence in CDF containing the
@@ -105,13 +126,16 @@ namespace Cognite.Simulator.Utils
         protected async Task EnsureSimulatorIntegrationsSequencesExists(CancellationToken token)
         {
             var sequences = Cdf.CogniteClient.Sequences;
-            var simulatorsDict = Simulators.ToDictionary(
-                s => s.Name,
-                s => s.DataSetId);
+            var simulatorsDict = Simulators.Select(
+                s => new SimulatorIntegration
+                {
+                    Simulator = s.Name,
+                    DataSetId = s.DataSetId,
+                    ConnectorName = GetConnectorName()
+                });
             try
             {
                 var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                    GetConnectorName(),
                     simulatorsDict,
                     token).ConfigureAwait(false);
                 foreach (var integration in integrations)
@@ -134,7 +158,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected async Task UpdateIntegrationRows(
             bool init,
-            Dictionary<string, string> extraInformation,
             CancellationToken token)
         {
             var sequences = Cdf.CogniteClient.Sequences;
@@ -142,12 +165,22 @@ namespace Cognite.Simulator.Utils
             {
                 foreach (var simulator in Simulators)
                 {
+                    var update = init ?
+                    new SimulatorIntegrationUpdate
+                    {
+                        Simulator = simulator.Name,
+                        DataSetId = simulator.DataSetId,
+                        ConnectorName = GetConnectorName(),
+                        ConnectorVersion = GetConnectorVersion(),
+                        SimulatorVersion = GetSimulatorVersion(simulator.Name),
+                        ExtraInformation = GetExtraInformation(simulator.Name),
+                        SimulatorApiEnabled = ApiEnabled()
+                    }
+                    : null;
                     await sequences.UpdateSimulatorIntegrationsHeartbeat(
-                        init,
-                        GetConnectorVersion(),
                         _simulatorSequenceIds[simulator.Name],
-                        simulator.DataSetId,
-                        extraInformation,
+                        init,
+                        update,
                         token).ConfigureAwait(false);
                 }
             }
@@ -171,7 +204,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetHeartbeatInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
-                await UpdateIntegrationRows(false, null, token)
+                await UpdateIntegrationRows(false, token)
                     .ConfigureAwait(false);
             }
         }
