@@ -150,26 +150,25 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 foreach(var row in result.Rows)
                 {
                     var values = row.GetStringValues();
-                    bool isHeartbeat = values[0] == SimulatorIntegrationSequenceRows.Heartbeat;
-                    bool isDataSetId = values[0] == SimulatorIntegrationSequenceRows.DataSetId;
-                    bool isConnectorVersion = values[0] == SimulatorIntegrationSequenceRows.ConnectorVersion;
-                    bool isSimulatorVersion = values[0] == SimulatorIntegrationSequenceRows.SimulatorVersion;
-                    Assert.True(isHeartbeat || isDataSetId || isConnectorVersion || isSimulatorVersion);
-                    if (isHeartbeat)
-                    {
-                        Assert.True(long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
-                    }
-                    if (isConnectorVersion)
-                    {
-                        Assert.Equal("1.0.0", values[1]);
-                    }
-                    if (isDataSetId)
-                    {
-                        Assert.Equal(dataSetId.ToString(), values[1]);
-                    }
-                    if (isSimulatorVersion)
-                    {
-                        Assert.Equal("1.2.3", values[1]);
+                    switch (values[0]) {
+                        case SimulatorIntegrationSequenceRows.Heartbeat:
+                            Assert.True(long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
+                            break;
+                        case SimulatorIntegrationSequenceRows.DataSetId:
+                            Assert.Equal(dataSetId.ToString(), values[1]);
+                            break;
+                        case SimulatorIntegrationSequenceRows.ConnectorVersion:
+                            Assert.Equal("1.0.0", values[1]);
+                            break;
+                        case SimulatorIntegrationSequenceRows.SimulatorVersion:
+                            Assert.Equal("1.2.3", values[1]);
+                            break;
+                        case SimulatorIntegrationSequenceRows.SimulatorsApiEnabled:
+                            Assert.Equal(false, Boolean.Parse(values[1]));
+                            break;
+                        default:
+                            Assert.True(false);
+                            break;
                     }
                 }
             }
