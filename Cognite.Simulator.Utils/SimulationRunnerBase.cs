@@ -353,12 +353,19 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
-            var calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
-            var calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
+            U calcState;
+            V calcConfig;
+            if (simEv.HasSimulationRun) {
+                calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcTypeUserDefined);
+                calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcTypeUserDefined);
+            } else {
+                calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
+                calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
+            }
             if (calcConfig == null || calcState == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
-                throw new SimulationException($"Could not find a simulation configuration for {modelName}");
+                throw new SimulationException($"Could not find a simulation configuration for model: {modelName} calcType: {calcType} calcTypeUserDefined: {calcTypeUserDefined}");
             }
 
             if (calcConfig.Connector != _connectorConfig.GetConnectorName())
