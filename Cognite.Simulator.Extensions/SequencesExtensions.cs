@@ -155,7 +155,7 @@ namespace Cognite.Simulator.Extensions
         /// updated. Else, only the heartbeat row is updated</param>
         /// <param name="connectorVersion">Version of the deployed connector</param>
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
-        /// <param name="simulatorsApiEnabled"></param>
+        /// <param name="simulatorsApiEnabled">Whether simulators API is enabled. CDF events are used if false.</param>
         /// <param name="dataSetId">ID of the data set holding simulator data</param>
         /// <param name="extraInformation">Dictionary of any extra information to be added to the
         /// sequence during initialization</param>

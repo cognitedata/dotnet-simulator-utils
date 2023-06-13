@@ -25,6 +25,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
+            services.AddSingleton(new ConnectorConfig
+            {
+                NamePrefix = SampleSimulationRunner.connectorName,
+                AddMachineNameSuffix = false,
+                UseSimulatorsApi = true
+            });
             var simConfig = new SimulatorConfig
             {
                 Name = "TestSim",
@@ -123,6 +129,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
+            ConnectorConfig connectorConfig,
             ILogger<ConnectorBase> logger) : 
             base(
                 cdf,
@@ -130,6 +137,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     config
                 },
+                connectorConfig,
                 logger)
         {
             _pipeline = pipeline;
