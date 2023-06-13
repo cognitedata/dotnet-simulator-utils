@@ -72,9 +72,11 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> arguments);
 
         /// <summary>
-        /// Invoke the given command on the simulator using the provided arguments
+        /// Invoke the given command on the simulator using the provided arguments.
+        /// The <paramref name="command"/> parameter can be <c>null</c> in case 
+        /// the provided arguments are sufficient to run the command
         /// </summary>
-        /// <param name="command">Command to invoke</param>
+        /// <param name="command">Command to invoke, or <c>null</c></param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void RunCommand(
             string command, 
@@ -153,7 +155,7 @@ namespace Cognite.Simulator.Utils
         {
             if (!arguments.TryGetValue("type", out string argType))
             {
-                throw new SimulationException($"Command error: Assignment type not defined");
+                argType = null;
             }
             var extraArgs = arguments.Where(s => s.Key != "type")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
