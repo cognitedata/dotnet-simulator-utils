@@ -35,6 +35,7 @@ namespace Cognite.Simulator.Utils
         /// Initialize the connector with the given parameters
         /// </summary>
         /// <param name="cdf">CDF client wrapper</param>
+        /// <param name="config">Connector configuration</param>
         /// <param name="simulators">List of simulator configurations</param>
         /// <param name="logger">Logger</param>
         public ConnectorBase(
@@ -86,8 +87,20 @@ namespace Cognite.Simulator.Utils
         /// <returns>Connector version</returns>
         public abstract string GetConnectorVersion();
 
+        /// <summary>
+        /// Returns the version of the given simulator. The connector reads the version and
+        /// report it back to CDF
+        /// </summary>
+        /// <param name="simulator">Name of the simulator</param>
+        /// <returns>Version</returns>
         public abstract string GetSimulatorVersion(string simulator);
 
+        /// <summary>
+        /// Returns any extra information about the simulator integration. This information
+        /// is reported back to CDF
+        /// </summary>
+        /// <param name="simulator"></param>
+        /// <returns></returns>
         public virtual Dictionary<string, string> GetExtraInformation(string simulator)
         {
             return new Dictionary<string, string>();
@@ -111,6 +124,10 @@ namespace Cognite.Simulator.Utils
             return TimeSpan.FromSeconds(_config.StatusInterval);
         }
 
+        /// <summary>
+        /// Indicates if this connectors should use Cognite's Simulator Integration API
+        /// </summary>
+        /// <returns></returns>
         public virtual bool ApiEnabled()
         {
             return _config.UseSimulatorsApi;

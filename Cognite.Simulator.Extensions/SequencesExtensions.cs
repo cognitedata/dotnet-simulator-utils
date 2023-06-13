@@ -64,7 +64,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// For each simulator in <paramref name="simulators"/>, retrieve or create 
+        /// For each simulator in <paramref name="integrations"/>, retrieve or create 
         /// a simulator integration sequence in CDF
         /// </summary>
         /// <param name="sequences">CDF sequences resource</param>
@@ -156,7 +156,6 @@ namespace Cognite.Simulator.Extensions
         /// updated. Else, only the heartbeat row is updated</param>
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
         /// <param name="update">Data to be updated, if init is set to true</param>
-        /// sequence during initialization</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
