@@ -96,11 +96,21 @@ namespace Cognite.Simulator.Utils
                 foreach (var configuration in configurations)
                 {
                     var configObj = configuration.Value;
-                    var configState = _configLib.GetSimulationConfigurationState(
-                        configObj.Calculation.Model.Simulator,
-                        configObj.Calculation.Model.Name,
-                        configObj.CalculationType,
-                        configObj.CalcTypeUserDefined);
+                    U configState;
+                    if (_config.UseSimulatorsApi) {
+                        configState = _configLib.GetSimulationConfigurationState(
+                            configObj.Calculation.Model.Simulator,
+                            configObj.Calculation.Model.Name,
+                            configObj.CalculationName
+                        );
+                    } else {
+                        configState = _configLib.GetSimulationConfigurationState(
+                            configObj.Calculation.Model.Simulator,
+                            configObj.Calculation.Model.Name,
+                            configObj.CalculationType,
+                            configObj.CalcTypeUserDefined)
+                        ;
+                    }
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
                         configObj.Connector != _config.GetConnectorName() ||
