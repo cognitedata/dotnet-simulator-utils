@@ -52,17 +52,26 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var sequences = cdf.Sequences;
-            var simulators = new Dictionary<string, long>
+            var simulators = new List<SimulatorIntegration>
                 {
-                    { "PROSPER", dataSetId }, // Assumes this one exists in CDF
-                    { "SomeSimulator", dataSetId } // This one should be created
+                    new SimulatorIntegration
+                    {
+                        Simulator = "PROSPER", // Assumes this one exists in CDF
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                    },
+                    new SimulatorIntegration
+                    {
+                        Simulator = "SomeSimulator", // This one should be created
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                    }
                 };
 
             string? externalIdToDelete = null;
             try
             {
                 var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                    connectorName,
                     simulators,
                     CancellationToken.None).ConfigureAwait(false);
 
@@ -70,13 +79,13 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 foreach (var sim in simulators)
                 {
                     var seq = Assert.Single(integrations, i =>
-                        i.DataSetId == sim.Value &&
+                        i.DataSetId == sim.DataSetId &&
                         i.Metadata[BaseMetadata.DataTypeKey] == SimulatorIntegrationMetadata.DataType.MetadataValue() &&
-                        i.Metadata[BaseMetadata.SimulatorKey] == sim.Key &&
-                        i.Metadata[SimulatorIntegrationMetadata.ConnectorNameKey] == connectorName);
+                        i.Metadata[BaseMetadata.SimulatorKey] == sim.Simulator &&
+                        i.Metadata[SimulatorIntegrationMetadata.ConnectorNameKey] == sim.ConnectorName);
 
                     Assert.Equal(2, seq.Columns.Count());
-                    if (sim.Key == "SomeSimulator")
+                    if (sim.Simulator == "SomeSimulator")
                     {
                         externalIdToDelete = seq.ExternalId;
                     }
@@ -103,9 +112,14 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var sequences = cdf.Sequences;
-            var simulators = new Dictionary<string, long>
+            var simulators = new List<SimulatorIntegration>
                 {
-                    { "TestHeartbeatSimulator", dataSetId },
+                    new SimulatorIntegration
+                    {
+                        Simulator = "TestHeartbeatSimulator",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                    }
                 };
 
             string? externalIdToDelete = null;
@@ -113,28 +127,25 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             {
                 // Create a test simulator integration sequence
                 var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                    connectorName,
                     simulators,
                     CancellationToken.None).ConfigureAwait(false);
 
                 Assert.NotEmpty(integrations);
                 externalIdToDelete = integrations.First().ExternalId;
-                var integrationsMap = integrations.ToDictionary(
-                    i =>  i.ExternalId,
-                    i => dataSetId);
                 
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 
                 // Update the sequence with connector heartbeat
                 await sequences.UpdateSimulatorIntegrationsHeartbeat(
-                    true,
-                    "1.0.0",
                     externalIdToDelete,
-                    dataSetId,
-                    false,
-                    new Dictionary<string, string>
+                    true,
+                    new SimulatorIntegrationUpdate
                     {
-                        { SimulatorIntegrationSequenceRows.SimulatorVersion, "1.2.3" }
+                        Simulator = "TestHeartbeatSimulator",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                        ConnectorVersion = "1.0.0",
+                        SimulatorVersion = "1.2.3",
                     },
                     CancellationToken.None).ConfigureAwait(false);
 
