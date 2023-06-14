@@ -113,8 +113,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public int SchedulerTolerance { get; set; } = 300;
 
-        public bool UseSimulatorsApi { get; set; }
-
         /// <summary>
         /// Configuration related to error tolerance before reporting a failed run to the pipeline in CDF 
         /// </summary>
