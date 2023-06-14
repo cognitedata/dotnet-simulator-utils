@@ -238,7 +238,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         }
 
-        //[Fact]
+        // [Fact]
         public async Task TestSimulationRunnerBaseWithApi()
         {
             var services = new ServiceCollection();
@@ -345,10 +345,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 Assert.NotEmpty(updatedSimRuns.Items);
 
-                var simRun = updatedSimRuns.Items.First();
+                var simRunUpdated = updatedSimRuns.Items.First();
 
-                Assert.True(simRun.EventId.HasValue);
-                var simEvent = cdf.Events.GetAsync(simRun.EventId.Value, source.Token);
+                Assert.Equal(simRunUpdated.Id, runId);
+                Assert.True(simRunUpdated.EventId.HasValue);
+                var simEvent = cdf.Events.GetAsync(simRunUpdated.EventId.Value, source.Token);
             }
             finally
             {
