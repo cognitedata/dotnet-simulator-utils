@@ -119,6 +119,12 @@ namespace Cognite.Simulator.Utils
         public PipelineNotificationConfig PipelineNotification { get; set; }
 
         /// <summary>
+        /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
+        /// capabilities in CDF). Else, the connector will use only core CDF resources
+        /// </summary>
+        public bool UseSimulatorsApi { get; set; }
+
+        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
