@@ -86,7 +86,6 @@ namespace Cognite.Simulator.Utils
             ConfigurationLibrary = configLibrary;
         }
 
-        // TODO: this used to save model version and 
         private async Task<SimulationRun> UpdateSimulationRunStatus(
             long runId, 
             SimulationRunStatus status, 
@@ -553,7 +552,7 @@ namespace Cognite.Simulator.Utils
             CancellationToken token);
 
         /// <summary>
-        /// BUilds the run configuration dictionary to be stored in CDF as a sequence
+        /// Builds the run configuration dictionary to be stored in CDF as a sequence
         /// </summary>
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="modelState">Model state object</param>

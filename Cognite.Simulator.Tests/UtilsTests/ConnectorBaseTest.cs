@@ -25,12 +25,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
-            services.AddSingleton(new ConnectorConfig
-            {
-                NamePrefix = SampleSimulationRunner.connectorName,
-                AddMachineNameSuffix = false,
-                UseSimulatorsApi = true
-            });
             var simConfig = new SimulatorConfig
             {
                 Name = "TestSim",
