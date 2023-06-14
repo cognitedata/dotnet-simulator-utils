@@ -129,7 +129,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ConnectorConfig connectorConfig,
             ILogger<ConnectorBase> logger) : 
             base(
                 cdf,
@@ -142,7 +141,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     config
                 },
-                connectorConfig,
                 logger)
         {
             _pipeline = pipeline;

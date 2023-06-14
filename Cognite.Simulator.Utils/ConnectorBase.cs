@@ -43,7 +43,6 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ConnectorConfig config,
             ILogger<ConnectorBase> logger)
         {
             Cdf = cdf;

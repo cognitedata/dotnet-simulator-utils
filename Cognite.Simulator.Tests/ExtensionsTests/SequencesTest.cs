@@ -175,7 +175,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                             Assert.Equal("1.2.3", values[1]);
                             break;
                         case SimulatorIntegrationSequenceRows.SimulatorsApiEnabled:
-                            Assert.Equal(false, Boolean.Parse(values[1]));
+                            Assert.False(Boolean.Parse(values[1]));
                             break;
                         default:
                             Assert.True(false);
