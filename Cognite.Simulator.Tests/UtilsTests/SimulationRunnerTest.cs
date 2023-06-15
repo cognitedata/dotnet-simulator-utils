@@ -263,6 +263,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override void RunCommand(string command, Dictionary<string, string> arguments)
         {
+            if (command == null)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
             if (command == "Simulate")
             {
                 _output = _inputs.Sum();
