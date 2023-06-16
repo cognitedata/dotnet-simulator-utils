@@ -215,11 +215,11 @@ namespace Cognite.Simulator.Utils
                     {
                         (modelState, calcState, calcObj) = ValidateEventMetadata(e);
 
-                        if (calcState == null || calcObj == null)
+                        if (calcState == null || calcObj == null || calcObj.Connector != _connectorConfig.GetConnectorName())
                         {
                             _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 eventId, 
-                                calcObj.Connector);
+                                calcObj?.Connector);
                             continue;
                         }
 
