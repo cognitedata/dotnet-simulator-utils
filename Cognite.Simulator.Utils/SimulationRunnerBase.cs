@@ -134,7 +134,7 @@ namespace Cognite.Simulator.Utils
             return result;
         }
 
-        public async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(
+        private async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(
             Dictionary<string, long> simulatorDataSetMap,
             SimulationRunStatus status,
             CancellationToken token)
@@ -666,7 +666,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogDebug("Simulation run has no Event associated with it {Id}", simEv.Run.Id);
                     return;
                 }
-                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token);
+                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false);;
             }
             else
             {
@@ -740,18 +740,36 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class SimulationRunEvent
     {
+        /// <summary>
+        /// CDF Event representing a simulation run
+        /// </summary>
         public Event Event { get; set; }
+        /// <summary>
+        /// CDF SimulationRun resource representing a simulation run
+        /// </summary>
         public SimulationRun Run { get; set; }
 
+        /// <summary>
+        /// Run configuration as a dictionary of key-value pairs
+        /// </summary>
         public Dictionary<string, string> RunConfiguration { get; } = new Dictionary<string, string>();
 
+        /// <summary>
+        /// Whether the simulation run is represented as a SimulationRun entity or a CDF Event
+        /// </summary>
         public bool HasSimulationRun => Run != null;
 
+        /// <summary>
+        /// Creates a new simulation run event based on CDF event
+        /// </summary>
         public SimulationRunEvent(Event e)
         {
             Event = e;
         }
 
+        /// <summary>
+        /// Creates a new simulation run event based on simulation run CDF resource
+        /// </summary>
         public SimulationRunEvent(SimulationRun r)
         {
             Run = r;

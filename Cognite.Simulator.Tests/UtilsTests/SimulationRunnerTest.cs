@@ -334,7 +334,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.True(runner.MetadataInitialized);
 
-                // Uncomment when we have runTime param in place
+                // Uncomment when we have "validation end time" parameter support in the API
                 // // Check that output time series were created
                 // var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
                 // Assert.True(outTs.Any());
