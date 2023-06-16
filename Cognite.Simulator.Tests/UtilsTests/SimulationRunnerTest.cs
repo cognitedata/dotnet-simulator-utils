@@ -3,6 +3,7 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -16,6 +17,18 @@ using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    public class FactIfAttribute : FactAttribute
+    {
+        public FactIfAttribute(string envVar, string skipReason)
+        {
+            var envFlag = Environment.GetEnvironmentVariable(envVar);
+            if (envFlag == null || envFlag != "true")
+            {
+                Skip = skipReason;
+            }
+        }
+    }
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationRunnerTest
     {
@@ -32,6 +45,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton<SampleSimulatorClient>();
+            services.AddSingleton(new ConnectorConfig
+            {
+                NamePrefix = SampleSimulationRunner.connectorName,
+                AddMachineNameSuffix = false,
+                UseSimulatorsApi = false
+            });
 
             StateStoreConfig stateConfig = null;
 
@@ -231,6 +250,160 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         }
 
+        [FactIf(envVar: "ENABLE_SIMULATOR_API_TESTS", skipReason: "Immature Simulator APIs")]
+        [Trait("Category", "API")]
+        public async Task TestSimulationRunnerBaseWithApi()
+        {
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            services.AddHttpClient<FileDownloadClient>();
+            services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<StagingArea<ModelParsingInfo>>();
+            services.AddSingleton<ConfigurationLibraryTest>();
+            services.AddSingleton<SampleSimulationRunner>();
+            services.AddSingleton<SampleSimulatorClient>();
+            services.AddSingleton(new ConnectorConfig
+            {
+                NamePrefix = SampleSimulationRunner.connectorName,
+                AddMachineNameSuffix = false,
+                UseSimulatorsApi = true
+            });
+
+            StateStoreConfig stateConfig = null;
+
+            long? runId;
+            string sequenceId = "";
+            var tsToDelete = new List<string>();
+
+            using var source = new CancellationTokenSource();
+            using var provider = services.BuildServiceProvider();
+            var cdf = provider.GetRequiredService<Client>();
+            try
+            {
+                stateConfig = provider.GetRequiredService<StateStoreConfig>();
+
+                var modelLib = provider.GetRequiredService<ModeLibraryTest>();
+                var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                var runner = provider.GetRequiredService<SampleSimulationRunner>();
+
+                // Run model and configuration libraries to fetch the test model and
+                // test simulation configuration from CDF
+                await modelLib.Init(source.Token).ConfigureAwait(false);
+                await configLib.Init(source.Token).ConfigureAwait(false);
+
+                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                var linkedToken = linkedTokenSource.Token;
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
+                var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
+                taskList.AddRange(configLib.GetRunTasks(linkedToken));
+                await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+
+                Assert.NotEmpty(configLib.State);
+                var configState = Assert.Contains(
+                    "PROSPER-SC-UserDefined-SRT-Connector_Test_Model", // This simulator configuration should exist in CDF
+                    (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
+                var configObj = configLib.GetSimulationConfiguration(
+                    "PROSPER", "Connector Test Model", "UserDefined", "SRT");
+                Assert.NotNull(configObj);
+
+                var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
+                tsToDelete.AddRange(outTsIds);
+                var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
+                tsToDelete.AddRange(inTsIds);
+
+                // Create a simulation event ready to run for the test configuration
+                var simRuns = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
+                    new List<SimulationRunCreate>
+                    {
+                        new SimulationRunCreate
+                        {
+                            ModelName = configObj.ModelName,
+                            RoutineName = configObj.CalculationName,
+                            SimulatorName = configObj.Simulator
+                        }
+                    }, source.Token).ConfigureAwait(false);
+                Assert.NotEmpty(simRuns);
+                runId = simRuns.First().Id;
+
+                // Run the simulation runner and verify that the event above was picked up for execution
+                using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                var linkedToken2 = linkedTokenSource2.Token;
+                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(15));
+                var taskList2 = new List<Task> { runner.Run(linkedToken2) };
+                await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
+
+                Assert.True(runner.MetadataInitialized);
+
+                // Uncomment when we have "validation end time" parameter support in the API
+                // // Check that output time series were created
+                // var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
+                // Assert.True(outTs.Any());
+                // Assert.Equal(outTsIds.Count, outTs.Count());
+
+                // // Check that input time series were created
+                // var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
+                // Assert.True(inTs.Any());
+                // Assert.Equal(inTsIds.Count, inTs.Count());
+
+                var updatedSimRuns = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
+                    new SimulationRunQuery
+                    {
+                        Filter = new SimulationRunFilter
+                        {
+                            ModelName = configObj.ModelName,
+                            RoutineName = configObj.CalculationName,
+                            SimulatorName = configObj.Simulator,
+                            Status = SimulationRunStatus.failure // this fails due to the empty input time series at the time range, we need runTime param to fix this
+                        }
+                    }, source.Token).ConfigureAwait(false);
+                
+                Assert.NotEmpty(updatedSimRuns.Items);
+
+                var simRunUpdated = updatedSimRuns.Items.FirstOrDefault(s => s.Id == runId);
+
+                Assert.NotNull(simRunUpdated);
+                // // Uncomment when we have eventId persisted in the DB
+                // Assert.True(simRunUpdated.EventId.HasValue);
+                // var simEvent = await cdf.Events.GetAsync(simRunUpdated.EventId.Value, source.Token);
+                // Assert.NotNull(simEvent);
+
+                Assert.Equal(configObj.CalculationName, simRunUpdated.RoutineName);
+                Assert.Equal("PROSPER", simRunUpdated.SimulatorName);
+                Assert.Equal("Connector Test Model", simRunUpdated.ModelName);
+                Assert.StartsWith("No data points were found for time series", simRunUpdated.StatusMessage);
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(sequenceId))
+                {
+                    await cdf.Sequences.DeleteAsync(
+                        new List<string> { sequenceId }, source.Token).ConfigureAwait(false);
+                }
+                if (tsToDelete.Any())
+                {
+                    await cdf.TimeSeries.DeleteAsync(new TimeSeriesDelete
+                    {
+                        IgnoreUnknownIds = true,
+                        Items = tsToDelete.Select(i => new Identity(i)).ToList()
+                    }, source.Token).ConfigureAwait(false);
+                }
+                provider.Dispose(); // Dispose provider to also dispose managed services
+                if (Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (Directory.Exists("./configurations"))
+                {
+                    Directory.Delete("./configurations", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+
+        }
+
         private static Dictionary<string, string> ToRowDictionary(SequenceData data)
         {
             Dictionary<string, string> result = new();
@@ -299,7 +472,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     public class SampleSimulationRunner :
         RoutineRunnerBase<TestFileState, TestConfigurationState, SimulationConfigurationWithRoutine>
     {
-        private const string connectorName = "integration-tests-connector";
+        internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
 
         public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
@@ -309,13 +482,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ModeLibraryTest modelLibrary,
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
+            ConnectorConfig config,
             ILogger<SampleSimulationRunner> logger) :
-            base(
-                new ConnectorConfig
-                {
-                    NamePrefix = connectorName,
-                    AddMachineNameSuffix = false
-                },
+            base(config,
                 new List<SimulatorConfig>
                 {
                     new SimulatorConfig

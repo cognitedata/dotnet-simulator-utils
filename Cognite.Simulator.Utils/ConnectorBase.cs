@@ -26,6 +26,7 @@ namespace Cognite.Simulator.Utils
         /// List of simulator configurations handled by this connector
         /// </summary>
         protected IList<SimulatorConfig> Simulators { get; }
+        private ConnectorConfig Config { get; }
 
         private readonly Dictionary<string, string> _simulatorSequenceIds;
         private readonly ILogger<ConnectorBase> _logger;
@@ -46,6 +47,7 @@ namespace Cognite.Simulator.Utils
         {
             Cdf = cdf;
             Simulators = simulators;
+            Config = config;
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;

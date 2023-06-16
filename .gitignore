@@ -7,3 +7,4 @@
 *.runsettings
 .idea
 *.user
+.envrc

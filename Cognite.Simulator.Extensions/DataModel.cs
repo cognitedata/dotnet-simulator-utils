@@ -337,15 +337,14 @@ namespace Cognite.Simulator.Extensions
         public const string ConnectorVersion = "connectorVersion";
 
         /// <summary>
-        /// Simulator version key. Installed version of the simulator
-        /// </summary>
-        public const string SimulatorVersion = "simulatorVersion";
-
-        /// <summary>
         /// Api enabled key. Indicates if the simulator api is enabled for simulation runs or if it's using CDF Events
         /// </summary>
         public const string SimulatorsApiEnabled = "apiEnabled";
 
+        /// <summary>
+        /// Simulator version key. Installed version of the simulator
+        /// </summary>
+        public const string SimulatorVersion = "simulatorVersion";
     }
 
     /// <summary>

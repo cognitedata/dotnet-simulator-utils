@@ -72,6 +72,23 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <inheritdoc/>
+        public V GetSimulationConfiguration(
+            string simulator,
+            string modelName,
+            string calcName)
+        {
+            var calcConfigs = SimulationConfigurations.Values
+                .Where(c => c.Simulator == simulator &&
+                    c.ModelName == modelName &&
+                    c.CalculationName == calcName);
+            if (calcConfigs.Any())
+            {
+                return calcConfigs.First();
+            }
+            return null;
+        }
+
+        /// <inheritdoc/>
         public T GetSimulationConfigurationState(
             string simulator,
             string modelName,
@@ -83,6 +100,27 @@ namespace Cognite.Simulator.Utils
                     c.Value.ModelName == modelName &&
                     c.Value.CalculationType == calcType &&
                     (string.IsNullOrEmpty(calcTypeUserDefined) || c.Value.CalcTypeUserDefined == calcTypeUserDefined));
+            if (calcConfigs.Any())
+            {
+                var id = calcConfigs.First().Key;
+                if (State.TryGetValue(id, out var configState))
+                {
+                    return configState;
+                }
+            }
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public T GetSimulationConfigurationState(
+            string simulator,
+            string modelName,
+            string calcName)
+        {
+            var calcConfigs = SimulationConfigurations
+                .Where(c => c.Value.Simulator == simulator &&
+                    c.Value.ModelName == modelName &&
+                    c.Value.CalculationName == calcName);
             if (calcConfigs.Any())
             {
                 var id = calcConfigs.First().Key;
@@ -223,6 +261,30 @@ namespace Cognite.Simulator.Utils
             string modelName,
             string calcType,
             string calcTypeUserDefined);
+
+        /// <summary>
+        /// Get the simulator configuration state object with the given parameters
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <param name="calcName">Calculation name</param>
+        /// <returns>Simulation configuration state object</returns>
+        T GetSimulationConfigurationState(
+            string simulator,
+            string modelName,
+            string calcName);
+
+        /// <summary>
+        /// Get the simulation configuration object with the given properties
+        /// </summary>
+        /// <param name="simulator">Simulator name</param>
+        /// <param name="modelName">Model name</param>
+        /// <param name="calcName">Calculation name</param>
+        /// <returns>Simulation configuration state object</returns>
+        V GetSimulationConfiguration(
+            string simulator,
+            string modelName,
+            string calcName);
 
         /// <summary>
         /// Get the simulation configuration object with the given properties

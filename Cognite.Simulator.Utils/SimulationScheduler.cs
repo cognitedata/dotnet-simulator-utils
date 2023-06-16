@@ -1,6 +1,7 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -50,6 +51,34 @@ namespace Cognite.Simulator.Utils
             _config = config;
         }
 
+        private async Task<IEnumerable<SimulationRun>> CreateSimulationEventReadyToRun(
+            IEnumerable<SimulationEvent> simulationEvents,
+            CancellationToken token)
+        {
+            if (simulationEvents == null || !simulationEvents.Any())
+            {
+                return Enumerable.Empty<SimulationRun>();
+            }
+            var runsToCreate = simulationEvents.Select(e => new SimulationRunCreate(){
+                SimulatorName = e.Calculation.Model.Simulator,
+                ModelName = e.Calculation.Model.Name,
+                RoutineName = e.Calculation.Name,
+            }).ToList();
+            List<SimulationRun> runs = new List<SimulationRun>();
+
+            foreach (SimulationRunCreate runToCreate in runsToCreate)
+            {
+                var run = await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
+                    items: new List<SimulationRunCreate> { runToCreate },
+                    token: token
+                ).ConfigureAwait(false);
+                runs.AddRange(run);
+            }
+
+            return runs;
+        }
+
+
         /// <summary>
         /// Starts the scheduler loop. For the existing simulation configuration files,
         /// check the schedule and create simulation events in CDF accordingly
@@ -67,11 +96,21 @@ namespace Cognite.Simulator.Utils
                 foreach (var configuration in configurations)
                 {
                     var configObj = configuration.Value;
-                    var configState = _configLib.GetSimulationConfigurationState(
-                        configObj.Calculation.Model.Simulator,
-                        configObj.Calculation.Model.Name,
-                        configObj.CalculationType,
-                        configObj.CalcTypeUserDefined);
+                    U configState;
+                    if (_config.UseSimulatorsApi) {
+                        configState = _configLib.GetSimulationConfigurationState(
+                            configObj.Calculation.Model.Simulator,
+                            configObj.Calculation.Model.Name,
+                            configObj.CalculationName
+                        );
+                    } else {
+                        configState = _configLib.GetSimulationConfigurationState(
+                            configObj.Calculation.Model.Simulator,
+                            configObj.Calculation.Model.Name,
+                            configObj.CalculationType,
+                            configObj.CalcTypeUserDefined)
+                        ;
+                    }
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
                         configObj.Connector != _config.GetConnectorName() ||
@@ -118,9 +157,14 @@ namespace Cognite.Simulator.Utils
                 {
                     try
                     {
-                        var eventResult = await _cdf.CogniteClient.Events.CreateSimulationEventReadyToRun(
-                            eventsToCreate,
-                            token).ConfigureAwait(false);
+                        if(_config.UseSimulatorsApi)
+                        {
+                           await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
+                        } else {
+                            var eventResult = await _cdf.CogniteClient.Events.CreateSimulationEventReadyToRun(
+                                eventsToCreate,
+                                token).ConfigureAwait(false);
+                        }
                     }
                     catch (SimulationEventException ex)
                     {

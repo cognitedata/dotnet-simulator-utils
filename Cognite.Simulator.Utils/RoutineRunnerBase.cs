@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
         /// <exception cref="ConnectorException">When it was not possible to save the results in CDF</exception>
         protected override async Task RunSimulation(
-            Event e, 
+            SimulationRunEvent e, 
             DateTime startTime, 
             T modelState, 
             U configState, 
@@ -92,7 +92,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(e));
             }
-            _logger.LogInformation("Started running simulation event {ID}", e.ExternalId);
+            _logger.LogInformation("Started running simulation event {ID}", e.HasSimulationRun ? e.Run.Id.ToString() : e.Event.ExternalId);
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
             var inputData = new Dictionary<string, double>();
@@ -179,7 +179,7 @@ namespace Cognite.Simulator.Utils
             {
                 //Store model version time series
                 var mvts = await timeSeries
-                    .GetOrCreateSimulationModelVersion(configObj.Calculation, e.DataSetId, token)
+                    .GetOrCreateSimulationModelVersion(configObj.Calculation, modelState.DataSetId, token)
                     .ConfigureAwait(false);
                 dpsToCreate.Add(
                     new Identity(mvts.ExternalId),
@@ -187,12 +187,12 @@ namespace Cognite.Simulator.Utils
                 
                 // Store input time series
                 await timeSeries
-                    .GetOrCreateSimulationInputs(inputTsToCreate, e.DataSetId, token)
+                    .GetOrCreateSimulationInputs(inputTsToCreate, modelState.DataSetId, token)
                     .ConfigureAwait(false);
 
                 // Store output time series
                 await timeSeries
-                    .GetOrCreateSimulationOutputs(outputTsToCreate, e.DataSetId, token)
+                    .GetOrCreateSimulationOutputs(outputTsToCreate, modelState.DataSetId, token)
                     .ConfigureAwait(false);
 
             }
