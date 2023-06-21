@@ -324,9 +324,9 @@ namespace Cognite.Simulator.Utils
     public class SimulationConfigurationWithRoutine : SimulationConfigurationWithDataSampling
     {
         /// <summary>
-        /// Simulation manual inputs configuration
+        /// Simulation manual value inputs configuration
         /// </summary>
-        public IEnumerable<InputManualValueConfiguration> InputManualValues { get; set; }
+        public IEnumerable<InputConstantConfiguration> InputConstants { get; set; }
         
         /// <summary>
         /// Times series that will hold simulation output data points
@@ -563,9 +563,9 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Input time series configuration
+    /// Manually input the value into routine
     /// </summary>
-    public class InputManualValueConfiguration
+    public class InputConstantConfiguration
     {       
         /// <summary>
         /// Input name
@@ -595,7 +595,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// External ID to use when saving the input sample in CDF
         /// </summary>
-        public string SampleExternalId { get; set; }
+        public string SaveTimeseriesExternalId { get; set; }
     }
     
     /// <summary>

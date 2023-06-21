@@ -218,8 +218,8 @@ namespace Cognite.Simulator.Utils
                         throw new SimulationException($"Set error: Input time series with key {argValue} not found");
                     }
                     break;
-                case "inputManualValues":
-                    var matchingInputManualValues = _config.InputManualValues.Where(i => i.Type == argValue).ToList();
+                case "inputConstant":
+                    var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argValue).ToList();
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argValue))
                     {
                         // Set manual input

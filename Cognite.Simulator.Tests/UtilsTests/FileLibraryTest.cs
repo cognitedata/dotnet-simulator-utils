@@ -230,13 +230,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal("SimConnect-IntegrationTests-IT1-SampledSsd", input.SampleExternalId);
                 }
 
-                Assert.NotEmpty(simConf.InputManualValues);
-                foreach (var input in simConf.InputManualValues)
+                Assert.NotEmpty(simConf.InputConstants);
+                foreach (var input in simConf.InputConstants)
                 {
                     Assert.NotNull(input.Value);
                     Assert.NotNull(input.Type);
                     Assert.NotNull(input.Name);
-                    Assert.Equal("SimConnect-IntegrationTests-IM1-SampledSsd", input.SampleExternalId);
+                    Assert.Equal("SimConnect-IntegrationTests-IC1-SampledSsd", input.SaveTimeseriesExternalId);
                 }
 
                 var simConfState = lib.GetSimulationConfigurationState(
