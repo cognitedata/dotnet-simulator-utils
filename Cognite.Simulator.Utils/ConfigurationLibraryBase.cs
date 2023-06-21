@@ -324,6 +324,11 @@ namespace Cognite.Simulator.Utils
     public class SimulationConfigurationWithRoutine : SimulationConfigurationWithDataSampling
     {
         /// <summary>
+        /// Simulation manual inputs configuration
+        /// </summary>
+        public IEnumerable<InputManualValueConfiguration> InputManualValues { get; set; }
+        
+        /// <summary>
         /// Times series that will hold simulation output data points
         /// </summary>
         public IEnumerable<OutputTimeSeriesConfiguration> OutputTimeSeries { get; set; }
@@ -550,6 +555,42 @@ namespace Cognite.Simulator.Utils
         /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
         /// </summary>
         public string AggregateType { get; set; }
+
+        /// <summary>
+        /// External ID to use when saving the input sample in CDF
+        /// </summary>
+        public string SampleExternalId { get; set; }
+    }
+
+    /// <summary>
+    /// Input time series configuration
+    /// </summary>
+    public class InputManualValueConfiguration
+    {       
+        /// <summary>
+        /// Input name
+        /// </summary>
+        public string Name { get; set; }
+        
+        /// <summary>
+        /// Input type
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
+        /// Input unit (e.g. degC, BARg)
+        /// </summary>
+        public string Unit { get; set; }
+        
+        /// <summary>
+        /// Input unit type (e.g. Temperature, Pressure)
+        /// </summary>
+        public string UnitType { get; set; }
+
+        /// <summary>
+        /// The value of the manual input
+        /// </summary>
+        public double Value { get; set; }
 
         /// <summary>
         /// External ID to use when saving the input sample in CDF

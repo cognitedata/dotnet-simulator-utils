@@ -101,6 +101,36 @@ namespace Cognite.Simulator.Utils
             var inputTsToCreate = new List<SimulationInput>();
             IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
 
+            // Collect manual inputs, to run simulations and to store as time series and data points
+            if (configObj.InputManualValues != null) {
+                foreach (var inputValue in configObj.InputManualValues)
+                {
+                    var simInput = new SimulationInput
+                    {
+                        Calculation = configObj.Calculation,
+                        Type = inputValue.Type,
+                        Name = inputValue.Name,
+                        Unit = inputValue.Unit,
+                    };
+
+                    // If the manual input is to be saved with an external ID different than the
+                    // auto-generated one
+                    if (!string.IsNullOrEmpty(inputValue.SampleExternalId))
+                    {
+                        simInput.OverwriteTimeSeriesId(inputValue.SampleExternalId);
+                    }
+
+                    inputData[inputValue.Type] = inputValue.Value;
+                    inputTsToCreate.Add(simInput);
+                    dpsToCreate.Add(
+                        new Identity(simInput.TimeSeriesExternalId),
+                        new List<Datapoint> 
+                        { 
+                            new Datapoint(samplingRange.Midpoint, inputValue.Value) 
+                        });
+                }
+            }
+
             // Collect sampled inputs, to run simulations and to store as time series and data points
             foreach (var inputTs in configObj.InputTimeSeries)
             {

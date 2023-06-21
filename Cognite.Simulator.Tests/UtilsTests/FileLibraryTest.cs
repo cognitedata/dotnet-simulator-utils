@@ -172,6 +172,90 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }
             }
         }
+
+        [Fact]
+        [Trait("Category", "FileLibraryIntegrationTest")]
+        public async Task TestConfigurationLibraryWithManualInputs()
+        {
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            services.AddHttpClient<FileDownloadClient>();
+            services.AddSingleton<ConfigurationLibraryTest>();
+
+            StateStoreConfig stateConfig = null;
+
+            try
+            {
+                using var provider = services.BuildServiceProvider();
+                stateConfig = provider.GetRequiredService<StateStoreConfig>();
+                using var source = new CancellationTokenSource();
+
+                var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+                bool dirExists = Directory.Exists("./configurations");
+                Assert.True(dirExists, "Should have created a directory for the files");
+
+                Assert.NotEmpty(lib.State);
+                var state = Assert.Contains(
+                    "PROSPER-SC-UserDefined-SRT-Connector_Test_Model", // This simulator configuration should exist in CDF
+                    (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
+                Assert.Equal("PROSPER", state.Source);
+                Assert.Equal("Connector Test Model", state.ModelName);
+
+                // Start the library update loop that download and parses the files, stop after 5 secs
+                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                var linkedToken = linkedTokenSource.Token;
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
+                var modelLibTasks = lib.GetRunTasks(linkedToken);
+                await modelLibTasks
+                    .RunAll(linkedTokenSource)
+                    .ConfigureAwait(false);
+
+                // Verify that the files were downloaded and processed
+                Assert.True(state.Deserialized);
+                Assert.False(string.IsNullOrEmpty(state.FilePath));
+                Assert.True(File.Exists(state.FilePath));
+
+                var simConf = lib.GetSimulationConfiguration(
+                    "PROSPER", "Connector Test Model", "Simulation Runner Test");
+                Assert.NotNull(simConf);
+                Assert.Equal("UserDefined", simConf.CalculationType);
+                Assert.Equal("Simulation Runner Test", simConf.CalculationName);
+                Assert.Equal("SRT", simConf.CalcTypeUserDefined);
+                foreach (var input in simConf.InputTimeSeries)
+                {
+                    Assert.NotNull(input.Name);
+                    Assert.NotNull(input.SensorExternalId);
+                    Assert.Equal("SimConnect-IntegrationTests-IT1-SampledSsd", input.SampleExternalId);
+                }
+
+                Assert.NotEmpty(simConf.InputManualValues);
+                foreach (var input in simConf.InputManualValues)
+                {
+                    Assert.NotNull(input.Value);
+                    Assert.NotNull(input.Type);
+                    Assert.NotNull(input.Name);
+                    Assert.Equal("SimConnect-IntegrationTests-IM1-SampledSsd", input.SampleExternalId);
+                }
+
+                var simConfState = lib.GetSimulationConfigurationState(
+                    "PROSPER", "Connector Test Model", "Simulation Runner Test");
+                Assert.NotNull(simConfState);
+                Assert.Equivalent(state, simConfState, true);
+            }
+            finally
+            {
+                if (Directory.Exists("./configurations"))
+                {
+                    Directory.Delete("./configurations", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+        }
     }
 
     /// <summary>
