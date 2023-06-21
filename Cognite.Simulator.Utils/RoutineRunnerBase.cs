@@ -120,13 +120,19 @@ namespace Cognite.Simulator.Utils
                         simInput.OverwriteTimeSeriesId(inputValue.SaveTimeseriesExternalId);
                     }
 
-                    inputData[inputValue.Type] = inputValue.Value;
+                    
+                    if (!double.TryParse(inputValue.Value, out var inputConstValue))
+                    {
+                        throw new SimulationException($"Could not parse input constant {inputValue.Name} with value {inputValue.Value}. Only double precision values are supported.");
+                    }
+
+                    inputData[inputValue.Type] = inputConstValue;
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.TimeSeriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingRange.Midpoint, inputValue.Value) 
+                            new Datapoint(samplingRange.Midpoint, inputConstValue) 
                         });
                 }
             }

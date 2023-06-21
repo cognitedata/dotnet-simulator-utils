@@ -590,7 +590,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// The value of the manual input
         /// </summary>
-        public double Value { get; set; }
+        public string Value { get; set; }
 
         /// <summary>
         /// External ID to use when saving the input sample in CDF
