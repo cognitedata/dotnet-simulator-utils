@@ -233,7 +233,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(simConf.InputConstants);
                 foreach (var input in simConf.InputConstants)
                 {
-                    Assert.NotNull(input.Value);
+                    Assert.Equal(input.Value, "42");
                     Assert.NotNull(input.Type);
                     Assert.NotNull(input.Name);
                     Assert.Equal("SimConnect-IntegrationTests-IC1-SampledSsd", input.SaveTimeseriesExternalId);
