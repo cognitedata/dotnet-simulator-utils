@@ -174,8 +174,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        [Trait("Category", "FileLibraryIntegrationTest")]
-        public async Task TestConfigurationLibraryWithManualInputs()
+        public async Task TestConfigurationLibraryWithConstInputs()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
