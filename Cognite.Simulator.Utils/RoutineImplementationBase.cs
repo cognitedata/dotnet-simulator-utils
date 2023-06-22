@@ -222,6 +222,9 @@ namespace Cognite.Simulator.Utils
                     var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argValue).ToList();
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argValue))
                     {
+                        var inputManualValue = matchingInputManualValues.First();
+                        extraArgs.Add("unit", inputManualValue.Unit);
+                        extraArgs.Add("unitType", inputManualValue.UnitType);
                         // Set manual input
                         SetManualInput(_inputData[argValue].ToString(), extraArgs);
                     }
