@@ -197,7 +197,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(lib.State);
                 var state = Assert.Contains(
-                    "PROSPER-SC-UserDefined-SRT-Connector_Test_Model", // This simulator configuration should exist in CDF
+                    "PROSPER-SC-UserDefined-SRTWCI-Connector_Test_Model", // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal("PROSPER", state.Source);
                 Assert.Equal("Connector Test Model", state.ModelName);
@@ -217,29 +217,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(File.Exists(state.FilePath));
 
                 var simConf = lib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "Simulation Runner Test");
+                    "PROSPER", "Connector Test Model", "Simulation Runner Test With Constant Inputs");
                 Assert.NotNull(simConf);
                 Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("Simulation Runner Test", simConf.CalculationName);
-                Assert.Equal("SRT", simConf.CalcTypeUserDefined);
-                foreach (var input in simConf.InputTimeSeries)
-                {
-                    Assert.NotNull(input.Name);
-                    Assert.NotNull(input.SensorExternalId);
-                    Assert.Equal("SimConnect-IntegrationTests-IT1-SampledSsd", input.SampleExternalId);
-                }
-
+                Assert.Equal("Simulation Runner Test With Constant Inputs", simConf.CalculationName);
+                Assert.Equal("SRTWCI", simConf.CalcTypeUserDefined);
+                
+                Assert.Empty(simConf.InputTimeSeries);
                 Assert.NotEmpty(simConf.InputConstants);
                 foreach (var input in simConf.InputConstants)
                 {
-                    Assert.Equal(input.Value, "42");
+                    Assert.NotNull(input.Value);
                     Assert.NotNull(input.Type);
                     Assert.NotNull(input.Name);
-                    Assert.Equal("SimConnect-IntegrationTests-IC1-SampledSsd", input.SaveTimeseriesExternalId);
+                    Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
 
                 var simConfState = lib.GetSimulationConfigurationState(
-                    "PROSPER", "Connector Test Model", "Simulation Runner Test");
+                    "PROSPER", "Connector Test Model", "Simulation Runner Test With Constant Inputs");
                 Assert.NotNull(simConfState);
                 Assert.Equivalent(state, simConfState, true);
             }
