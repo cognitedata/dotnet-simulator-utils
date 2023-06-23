@@ -34,8 +34,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         private const long validationEndOverwrite = 1631304000000L;
 
-        [Fact]
-        public async Task TestSimulationRunnerBase()
+        [Theory]
+        [InlineData("Simulation Runner Test")]
+        [InlineData("Simulation Runner Test With Constant Inputs")]
+        public async Task TestSimulationRunnerBase(String simulationConfigurationName)
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -93,6 +95,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 tsToDelete.AddRange(outTsIds);
                 var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
+
+                if (configObj.InputConstants != null) {
+                    var inConstIds = configObj.InputConstants.Select(o => o.SaveTimeseriesExternalId).ToList();
+                    tsToDelete.AddRange(inConstIds);
+                }
 
                 // Create a simulation event ready to run for the test configuration
                 var events = await cdf.Events.CreateSimulationEventReadyToRun(
