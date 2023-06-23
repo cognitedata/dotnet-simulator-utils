@@ -88,7 +88,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     "PROSPER-SC-UserDefined-SRT-Connector_Test_Model", // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
                 var configObj = configLib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "UserDefined", "SRT");
+                    "PROSPER", "Connector Test Model", simulationConfigurationName);
                 Assert.NotNull(configObj);
 
                 var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
