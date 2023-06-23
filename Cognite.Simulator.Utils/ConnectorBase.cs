@@ -210,6 +210,30 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Update the heartbeat, data set id and connector version in CDF.
+        /// </summary>
+        private async Task UpdateIntegrationModel(
+            CancellationToken token)
+        {
+            var models = Cdf.CogniteClient.Beta.DataModels;
+            foreach (var simulator in Simulators)
+            {
+                var update = new SimulatorIntegrationUpdate
+                    {
+                        Simulator = simulator.Name,
+                        DataSetId = simulator.DataSetId,
+                        ConnectorName = GetConnectorName(),
+                        ConnectorVersion = GetConnectorVersion(),
+                        SimulatorVersion = GetSimulatorVersion(simulator.Name),
+                        ExtraInformation = GetExtraInformation(simulator.Name),
+                        SimulatorApiEnabled = ApiEnabled()
+                    };
+
+                await models.UpdateSimulatorIntegrationsHeartbeat(update, token).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Task that runs in a loop, reporting the connector information to CDF periodically
         /// (with the interval defined in <see cref="GetHeartbeatInterval"/>)
         /// </summary>
@@ -224,6 +248,8 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
                 await UpdateIntegrationRows(false, token)
+                    .ConfigureAwait(false);
+                await UpdateIntegrationModel(token)
                     .ConfigureAwait(false);
             }
         }
