@@ -202,8 +202,8 @@ namespace Cognite.Simulator.Utils
                         update,
                         token).ConfigureAwait(false);
 
-                    await UpdateIntegrationModel(init, token).ConfigureAwait(false);
                 }
+                await UpdateIntegrationModel(init, token).ConfigureAwait(false);
             }
             catch (SimulatorIntegrationSequenceException e)
             {
