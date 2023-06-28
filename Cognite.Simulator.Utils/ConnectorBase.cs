@@ -201,6 +201,8 @@ namespace Cognite.Simulator.Utils
                         init,
                         update,
                         token).ConfigureAwait(false);
+
+                    await UpdateIntegrationModel(init, token).ConfigureAwait(false);
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
@@ -213,6 +215,7 @@ namespace Cognite.Simulator.Utils
         /// Update the heartbeat, data set id and connector version in CDF.
         /// </summary>
         private async Task UpdateIntegrationModel(
+            bool init,
             CancellationToken token)
         {
             var models = Cdf.CogniteClient.Beta.DataModels;
@@ -229,7 +232,7 @@ namespace Cognite.Simulator.Utils
                         SimulatorApiEnabled = ApiEnabled()
                     };
 
-                await models.UpdateSimulatorIntegrationsHeartbeat(update, token).ConfigureAwait(false);
+                await models.UpdateSimulatorIntegrationsHeartbeat(init, update, token).ConfigureAwait(false);
             }
         }
 
@@ -248,8 +251,6 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
                 await UpdateIntegrationRows(false, token)
-                    .ConfigureAwait(false);
-                await UpdateIntegrationModel(token)
                     .ConfigureAwait(false);
             }
         }
