@@ -224,7 +224,9 @@ namespace Cognite.Simulator.Utils
                     {
                         var inputManualValue = matchingInputManualValues.First();
                         extraArgs.Add("unit", inputManualValue.Unit);
-                        extraArgs.Add("unitType", inputManualValue.UnitType);
+                        if (inputManualValue.UnitType != null) {
+                            extraArgs.Add("unitType", inputManualValue.UnitType);
+                        }
                         // Set manual input
                         SetManualInput(_inputData[argValue].ToString(), extraArgs);
                     }
