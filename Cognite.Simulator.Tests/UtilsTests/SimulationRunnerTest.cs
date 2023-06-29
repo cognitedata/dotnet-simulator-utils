@@ -34,8 +34,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         private const long validationEndOverwrite = 1631304000000L;
 
-        [Fact]
-        public async Task TestSimulationRunnerBase()
+        [Theory]
+        [InlineData("Simulation Runner Test", "SRT", false)]
+        [InlineData("Simulation Runner Test With Constant Inputs", "SRTWCI", true)]
+        public async Task TestSimulationRunnerBase(String calculationName, String calcType, bool useConstInputs)
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -83,16 +85,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(configLib.State);
                 var configState = Assert.Contains(
-                    "PROSPER-SC-UserDefined-SRT-Connector_Test_Model", // This simulator configuration should exist in CDF
+                    $"PROSPER-SC-UserDefined-{calcType}-Connector_Test_Model", // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
                 var configObj = configLib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "UserDefined", "SRT");
+                    "PROSPER", "Connector Test Model", calculationName);
                 Assert.NotNull(configObj);
 
                 var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
                 tsToDelete.AddRange(outTsIds);
                 var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
+
+                if (useConstInputs) {
+                    var inConstTsIds = configObj.InputConstants.Select(o => o.SaveTimeseriesExternalId).ToList();
+                    tsToDelete.AddRange(inConstTsIds);
+                    inTsIds.AddRange(inConstTsIds);
+                }
 
                 // Create a simulation event ready to run for the test configuration
                 var events = await cdf.Events.CreateSimulationEventReadyToRun(

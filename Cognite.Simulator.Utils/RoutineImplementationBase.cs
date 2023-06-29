@@ -205,27 +205,42 @@ namespace Cognite.Simulator.Utils
             var extraArgs = arguments.Where(s => s.Key != "type" && s.Key != "value")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
-            if (argType == "inputTimeSeries")
-            {
-                var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argValue).ToList();
-                if (matchingInputs.Any() && _inputData.ContainsKey(argValue))
-                {
-                    // Set input time series
-                    SetTimeSeriesInput(matchingInputs.First(), _inputData[argValue], extraArgs);
-                }
-                else
-                {
-                    throw new SimulationException($"Set error: Input time series with key {argValue} not found");
-                }
-            }
-            else if (argType == "manual")
-            {
-                // Set manual input
-                SetManualInput(argValue, extraArgs);
-            }
-            else
-            {
-                throw new SimulationException($"Set error: Invalid argument type {argType}");
+            switch(argType) {
+                case "inputTimeSeries":
+                    var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argValue).ToList();
+                    if (matchingInputs.Any() && _inputData.ContainsKey(argValue))
+                    {
+                        // Set input time series
+                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argValue], extraArgs);
+                    }
+                    else
+                    {
+                        throw new SimulationException($"Set error: Input time series with key {argValue} not found");
+                    }
+                    break;
+                case "inputConstant":
+                    var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argValue).ToList();
+                    if (matchingInputManualValues.Any() && _inputData.ContainsKey(argValue))
+                    {
+                        var inputManualValue = matchingInputManualValues.First();
+                        extraArgs.Add("unit", inputManualValue.Unit);
+                        if (inputManualValue.UnitType != null) {
+                            extraArgs.Add("unitType", inputManualValue.UnitType);
+                        }
+                        // Set manual input
+                        SetManualInput(_inputData[argValue].ToString(), extraArgs);
+                    }
+                    else
+                    {
+                        throw new SimulationException($"Set error: Manual value input with key {argValue} not found");
+                    }
+                    break;
+                case "manual":
+                    // Set manual input (from inside the routine, legacy)
+                    SetManualInput(argValue, extraArgs);
+                    break;
+                default:
+                    throw new SimulationException($"Set error: Invalid argument type {argType}");
             }
         }    
     }

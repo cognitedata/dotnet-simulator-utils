@@ -101,6 +101,42 @@ namespace Cognite.Simulator.Utils
             var inputTsToCreate = new List<SimulationInput>();
             IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
 
+            // Collect manual inputs, to run simulations and to store as time series and data points
+            if (configObj.InputConstants != null) {
+                foreach (var inputValue in configObj.InputConstants)
+                {
+                    var simInput = new SimulationInput
+                    {
+                        Calculation = configObj.Calculation,
+                        Type = inputValue.Type,
+                        Name = inputValue.Name,
+                        Unit = inputValue.Unit,
+                    };
+
+                    // If the manual input is to be saved with an external ID different than the
+                    // auto-generated one
+                    if (!string.IsNullOrEmpty(inputValue.SaveTimeseriesExternalId))
+                    {
+                        simInput.OverwriteTimeSeriesId(inputValue.SaveTimeseriesExternalId);
+                    }
+
+                    
+                    if (!double.TryParse(inputValue.Value, out var inputConstValue))
+                    {
+                        throw new SimulationException($"Could not parse input constant {inputValue.Name} with value {inputValue.Value}. Only double precision values are supported.");
+                    }
+
+                    inputData[inputValue.Type] = inputConstValue;
+                    inputTsToCreate.Add(simInput);
+                    dpsToCreate.Add(
+                        new Identity(simInput.TimeSeriesExternalId),
+                        new List<Datapoint> 
+                        { 
+                            new Datapoint(samplingRange.Midpoint, inputConstValue) 
+                        });
+                }
+            }
+
             // Collect sampled inputs, to run simulations and to store as time series and data points
             foreach (var inputTs in configObj.InputTimeSeries)
             {
