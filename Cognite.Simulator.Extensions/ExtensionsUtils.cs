@@ -65,10 +65,10 @@ namespace Cognite.Simulator.Extensions
         {
             if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
             {
-                return $"{calc.Type.ReplaceSpecialCharacters("_")}-{calc.UserDefinedType.ReplaceSpecialCharacters("_")}";
+                return calc.UserDefinedType.ReplaceSpecialCharacters("_");
             }
             return calc.Type.ReplaceSpecialCharacters("_");
-        }
+            }
         
         internal static string GetCalcTypeForNames(this SimulatorCalculation calc)
         {
