@@ -125,6 +125,12 @@ namespace Cognite.Simulator.Utils
         public bool UseSimulatorsApi { get; set; }
 
         /// <summary>
+        /// If <c>true</c>, the connector will use Cognite's Data Models API (requires enabling
+        /// capabilities in CDF). Else, the connector will use only core CDF resources (e.g. sequences)
+        /// </summary>
+        public bool UseDataModelsApi { get; set; }
+
+        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>

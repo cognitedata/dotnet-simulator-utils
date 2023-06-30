@@ -129,7 +129,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new ConnectorConfig
                 {
                     NamePrefix = "Test Connector",
-                    AddMachineNameSuffix = false
+                    AddMachineNameSuffix = false,
+                    UseDataModelsApi = true,
+                    UseSimulatorsApi = false,
                 },
                 new List<SimulatorConfig>
                 {

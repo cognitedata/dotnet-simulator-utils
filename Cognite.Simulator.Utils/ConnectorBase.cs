@@ -136,6 +136,15 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Indicates if this connectors should rely Cognite's Data Models API
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool DataModelsEnabled()
+        {
+            return _config.UseDataModelsApi;
+        }
+
+        /// <summary>
         /// For each simulator specified in the configuration, create a sequence in CDF containing the
         /// simulator name and connector name as meta-data. The sequence will have key-value pairs as
         /// rows. The keys are: heartbeat, data set id and connector version. The rows will be updated
@@ -180,12 +189,12 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             var sequences = Cdf.CogniteClient.Sequences;
+            var models = Cdf.CogniteClient.Beta.DataModels;
             try
             {
                 foreach (var simulator in Simulators)
                 {
-                    var update = init ?
-                    new SimulatorIntegrationUpdate
+                    var update = init ? new SimulatorIntegrationUpdate
                     {
                         Simulator = simulator.Name,
                         DataSetId = simulator.DataSetId,
@@ -194,45 +203,24 @@ namespace Cognite.Simulator.Utils
                         SimulatorVersion = GetSimulatorVersion(simulator.Name),
                         ExtraInformation = GetExtraInformation(simulator.Name),
                         SimulatorApiEnabled = ApiEnabled()
+                    } : new SimulatorIntegrationUpdate {
+                        Simulator = simulator.Name,
+                        ConnectorName = GetConnectorName(),
+                    };
+                    if (DataModelsEnabled())
+                    {
+                        await models.UpdateSimulatorIntegrationsHeartbeat(init, update, token).ConfigureAwait(false);    
                     }
-                    : null;
                     await sequences.UpdateSimulatorIntegrationsHeartbeat(
                         _simulatorSequenceIds[simulator.Name],
                         init,
                         update,
-                        token).ConfigureAwait(false);
-
+                        token).ConfigureAwait(false);                    
                 }
-                await UpdateIntegrationModel(init, token).ConfigureAwait(false);
             }
             catch (SimulatorIntegrationSequenceException e)
             {
                 throw new ConnectorException(e.Message, e.CogniteErrors);
-            }
-        }
-
-        /// <summary>
-        /// Update the heartbeat, data set id and connector version in CDF.
-        /// </summary>
-        private async Task UpdateIntegrationModel(
-            bool init,
-            CancellationToken token)
-        {
-            var models = Cdf.CogniteClient.Beta.DataModels;
-            foreach (var simulator in Simulators)
-            {
-                var update = new SimulatorIntegrationUpdate
-                    {
-                        Simulator = simulator.Name,
-                        DataSetId = simulator.DataSetId,
-                        ConnectorName = GetConnectorName(),
-                        ConnectorVersion = GetConnectorVersion(),
-                        SimulatorVersion = GetSimulatorVersion(simulator.Name),
-                        ExtraInformation = GetExtraInformation(simulator.Name),
-                        SimulatorApiEnabled = ApiEnabled()
-                    };
-
-                await models.UpdateSimulatorIntegrationsHeartbeat(init, update, token).ConfigureAwait(false);
             }
         }
 

@@ -111,6 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 NamePrefix = "scheduler-test-connector",
                 AddMachineNameSuffix = false,
                 UseSimulatorsApi = true,
+                UseDataModelsApi = true,
                 SchedulerUpdateInterval = 2,
             });
             services.AddSingleton<SampleSimulationScheduler>();

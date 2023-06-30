@@ -40,19 +40,19 @@ namespace Cognite.Simulator.Extensions
                     ExternalId = update.Simulator,
                     Space = dmSpace
                 }},
-                { "dataSetId", new RawPropertyValue<long?>() {
+                { SimulatorIntegrationSequenceRows.DataSetId, new RawPropertyValue<long?>() {
                     Value = update.DataSetId,
                 }},
-                { "connectorVersion", new RawPropertyValue<string>() {
+                { SimulatorIntegrationSequenceRows.ConnectorVersion, new RawPropertyValue<string>() {
                     Value = update.ConnectorVersion
                 }},
-                { "heartbeat", heartbeat },
-                { "simulatorVersion", new RawPropertyValue<string>() {
+                { SimulatorIntegrationSequenceRows.Heartbeat, heartbeat },
+                { SimulatorIntegrationSequenceRows.SimulatorVersion, new RawPropertyValue<string>() {
                     Value = update.SimulatorVersion,
                 }},
-                // { "simulatorApiEnabled", new RawPropertyValue<bool>() {
-                //     Value = update.SimulatorApiEnabled
-                // }},
+                { SimulatorIntegrationSequenceRows.SimulatorsApiEnabled, new RawPropertyValue<bool>() {
+                    Value = update.SimulatorApiEnabled
+                }},
             };
             var heartbeatOnly = new StandardInstanceWriteData() {
                 { "heartbeat", heartbeat }
