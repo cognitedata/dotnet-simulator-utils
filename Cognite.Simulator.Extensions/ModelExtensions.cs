@@ -1,6 +1,4 @@
-﻿using Cognite.Extensions;
-using Cognite.Extractor.Common;
-using CogniteSdk;
+﻿using Cognite.Extractor.Common;
 using CogniteSdk.Beta.DataModels;
 using CogniteSdk.Resources.Beta;
 using System;
@@ -29,16 +27,13 @@ namespace Cognite.Simulator.Extensions
             SimulatorIntegrationUpdate update,
             CancellationToken token)
         {
-            var dmSpace = "SimulatorIntegrationSpace"; // TODO: this will be in CDF space
-            var dmSimulatorIntegrationExternalId = "SimulatorIntegration";
-            var dmSimulatorExternalId = "Simulator";
             var heartbeat = new RawPropertyValue<long>() {
                 Value = DateTime.UtcNow.ToUnixTimeMilliseconds()
             };
             var initData = new StandardInstanceWriteData() {
                 { "simulator", new DirectRelationIdentifier() {
                     ExternalId = update.Simulator,
-                    Space = dmSpace
+                    Space = SimulatorIntegrationDms.Space
                 }},
                 { SimulatorIntegrationSequenceRows.DataSetId, new RawPropertyValue<long?>() {
                     Value = update.DataSetId,
@@ -55,19 +50,19 @@ namespace Cognite.Simulator.Extensions
                 }},
             };
             var heartbeatOnly = new StandardInstanceWriteData() {
-                { "heartbeat", heartbeat }
+                { SimulatorIntegrationSequenceRows.Heartbeat, heartbeat }
             };
             var simIntegrationProps = init ? initData : heartbeatOnly;
             var instances = new List<BaseInstanceWrite>() {
                 new NodeWrite() {
                     ExternalId = update.ConnectorName,
-                    Space = dmSpace,
+                    Space = SimulatorIntegrationDms.Space,
                     Sources = new List<InstanceData>() {
                         new InstanceData<StandardInstanceWriteData>
                         {
                             Source = new ContainerIdentifier() {
-                                ExternalId = dmSimulatorIntegrationExternalId,
-                                Space = dmSpace
+                                ExternalId = SimulatorIntegrationDms.SimulatorIntegrationContainer,
+                                Space = SimulatorIntegrationDms.Space
                             },
                             Properties = simIntegrationProps
                         }
@@ -82,13 +77,13 @@ namespace Cognite.Simulator.Extensions
                 };
                 instances.Add(new NodeWrite() {
                     ExternalId = update.Simulator,
-                    Space = dmSpace,
+                    Space = SimulatorIntegrationDms.Space,
                     Sources = new List<InstanceData>() {
                         new InstanceData<StandardInstanceWriteData>
                         {
                             Source = new ContainerIdentifier() {
-                                ExternalId = dmSimulatorExternalId,
-                                Space = dmSpace
+                                ExternalId = SimulatorIntegrationDms.SimulatorContainer,
+                                Space = SimulatorIntegrationDms.Space
                             },
                             Properties = simulatorProps
                         }

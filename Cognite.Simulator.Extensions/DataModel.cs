@@ -348,6 +348,28 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
+    /// Constants used in the simulator integration data model
+    /// E.g. external ids of the containers and spaces
+    /// </summary>
+    public static class SimulatorIntegrationDms
+    {
+        /// <summary>
+        /// Data Models Simulators space
+        /// </summary>
+        public const string Space = "SimulatorIntegrationSpace"; // later this will be replaced with the internal CDF space
+
+        /// <summary>
+        /// Data Models Simulator Integration container external id
+        /// </summary>
+        public const string SimulatorIntegrationContainer = "SimulatorIntegration";
+
+        /// <summary>
+        /// Data Models Simulator container external id
+        /// </summary>
+        public const string SimulatorContainer = "Simulator";
+    }
+
+    /// <summary>
     /// Types of simulator resources that can be stored in CDF
     /// </summary>
     public enum SimulatorDataType
