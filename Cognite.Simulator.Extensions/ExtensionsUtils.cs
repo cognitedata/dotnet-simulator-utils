@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Extensions
                 return calc.UserDefinedType.ReplaceSpecialCharacters("_");
             }
             return calc.Type.ReplaceSpecialCharacters("_");
-            }
+        }
         
         internal static string GetCalcTypeForNames(this SimulatorCalculation calc)
         {
