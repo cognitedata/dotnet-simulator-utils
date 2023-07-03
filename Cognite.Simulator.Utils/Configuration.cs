@@ -85,6 +85,12 @@ namespace Cognite.Simulator.Utils
         public int StatusInterval { get; set; } = 10;
 
         /// <summary>
+        /// The connector will check for license updates with this interval (in seconds)
+        /// </summary>
+        public int LicenseUpdateInterval { get; set; } = 3600;
+
+
+        /// <summary>
         /// The connector will fetch simulation calculation events from CDF with this interval (in seconds)
         /// </summary>
         public int FetchEventsInterval { get; set; } = 5;
