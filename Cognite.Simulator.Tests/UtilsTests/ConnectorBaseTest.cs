@@ -181,5 +181,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 return;
             }
         }
+        public override bool CheckLicenseStatus()
+        {
+            throw new NotImplementedException();
+            // TODO: Implement license check
+        }
     }
 }
