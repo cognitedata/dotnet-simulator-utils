@@ -177,7 +177,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected async Task UpdateIntegrationRows(
             bool init,
-            CancellationToken token)
+            CancellationToken token,
+            bool licenseCheck)
         {
             var sequences = Cdf.CogniteClient.Sequences;
             try
@@ -201,6 +202,14 @@ namespace Cognite.Simulator.Utils
                         init,
                         update,
                         token).ConfigureAwait(false);
+                    if (licenseCheck) // Every hour a license check is performed
+                    {
+                        await sequences.UpdateSimulatorIntegrationsLicenseTimestamp(
+                            _simulatorSequenceIds[simulator.Name],
+                            init,
+                            update,
+                            token).ConfigureAwait(false); 
+                    }
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
@@ -208,6 +217,7 @@ namespace Cognite.Simulator.Utils
                 throw new ConnectorException(e.Message, e.CogniteErrors);
             }
         }
+
 
         /// <summary>
         /// Task that runs in a loop, reporting the connector information to CDF periodically
@@ -228,6 +238,24 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task LicenseCheck(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task
+                    .Delay(GetLicenseCheckInterval(), token)
+                    .ConfigureAwait(false);
+                _logger.LogDebug("Updating connector license timestamp");
+                if (CheckLicenseStatus())
+                {
+                    await UpdateLicenseTimestampRows(false, token)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
     }
     
     /// <summary>

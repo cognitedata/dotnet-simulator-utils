@@ -209,6 +209,27 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
+        // <summary>
+        /// Update the simulator integration sequence with the connector license timestamp (last time seen)
+        /// </summary>
+        public static async Task UpdateSimulatorIntegrationsLicenseTimestamp(
+            this SequencesResource sequences,
+            string sequenceExternalId,
+            bool init,
+            SimulatorIntegrationUpdate update,
+            CancellationToken token)
+        {
+            // TODO: Similar code as UpdateSimulatorIntegrationsHeartbeat
+            
+            // Instead of updating the heartbeat row, you update the license timestamp row
+            var rowData = new Dictionary<string, string>
+                {
+                    { SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
+                };
+            // TODO: More code similar to UpdateSimulatorIntegrationsHeartbeat
+        }
+
+
         /// <summary>
         /// Store tabular simulation results as sequences
         /// </summary>
