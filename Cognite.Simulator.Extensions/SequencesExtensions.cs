@@ -210,8 +210,8 @@ namespace Cognite.Simulator.Extensions
         }
 
         // <summary>
-        /// Update the simulator integration sequence with the connector license timestamp (last time seen)
-        /// </summary>
+        // Update the simulator integration sequence with the connector license timestamp (last time seen)
+        // </summary>
         public static async Task UpdateSimulatorIntegrationsLicenseTimestamp(
             this SequencesResource sequences,
             string sequenceExternalId,
