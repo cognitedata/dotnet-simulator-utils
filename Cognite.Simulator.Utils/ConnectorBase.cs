@@ -130,7 +130,7 @@ namespace Cognite.Simulator.Utils
         /// How often to report the simulator license status information back to CDF (Heartbeat)
         /// </summary>
         /// <returns>Time interval</returns>
-        public virtual TimeSpan GetLicenseCheckInterval(string simulator)
+        public virtual TimeSpan GetLicenseCheckInterval()
         {
             return TimeSpan.FromSeconds(_config.LicenseUpdateInterval);
         }
