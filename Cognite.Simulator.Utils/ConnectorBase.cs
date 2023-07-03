@@ -178,7 +178,7 @@ namespace Cognite.Simulator.Utils
         protected async Task UpdateIntegrationRows(
             bool init,
             CancellationToken token,
-            bool licenseCheck)
+            bool licenseCheck = false)
         {
             var sequences = Cdf.CogniteClient.Sequences;
             try
@@ -202,13 +202,13 @@ namespace Cognite.Simulator.Utils
                         init,
                         update,
                         token).ConfigureAwait(false);
-                    if (licenseCheck) // Every hour a license check is performed
+                    if (licenseCheck is true) // Every hour a license check is performed
                     {
                         await sequences.UpdateSimulatorIntegrationsLicenseTimestamp(
                             _simulatorSequenceIds[simulator.Name],
                             init,
                             update,
-                            token).ConfigureAwait(false); 
+                            token).ConfigureAwait(false);
                     }
                 }
             }
@@ -238,6 +238,14 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+
+
+        /// <summary>
+        /// Abstract method to check the license of the simulator. 
+        /// This method should be overridden in each specific Connector class.
+        /// </summary>
+        /// <returns>True if the simulator has a valid license, false otherwise.</returns>
+        public abstract bool CheckLicenseStatus();
         /// <summary>
         /// 
         /// </summary>
@@ -251,7 +259,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector license timestamp");
                 if (CheckLicenseStatus())
                 {
-                    await UpdateLicenseTimestampRows(false, token)
+                    await UpdateIntegrationRows(false, token, true)
                         .ConfigureAwait(false);
                 }
             }
