@@ -217,61 +217,6 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
-        // <summary>
-        // Update the simulator integration sequence with the connector license timestamp (last time seen)
-        // </summary>
-        public static async Task UpdateSimulatorIntegrationsLicenseTimestamp(
-            this SequencesResource sequences,
-            string sequenceExternalId,
-            bool init,
-            SimulatorIntegrationUpdate update,
-            CancellationToken token)
-        {
-            var rowsToCreate = new List<SequenceDataCreate>();
-            var rowData = new Dictionary<string, string>
-            {
-                { SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
-            };
-            if (init)
-            {
-                if (update == null)
-                    {
-                        throw new ArgumentNullException(nameof(update));
-                    }
-
-                // Data set and version could only have changed on connector restart
-                if (update.DataSetId.HasValue)
-                {
-                    rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{update.DataSetId.Value}");
-                }
-                rowData.Add(SimulatorIntegrationSequenceRows.ConnectorVersion, $"{update.ConnectorVersion}");
-                rowData.Add(SimulatorIntegrationSequenceRows.SimulatorVersion, $"{update.SimulatorVersion}");
-                rowData.Add(SimulatorIntegrationSequenceRows.SimulatorsApiEnabled, $"{update.SimulatorApiEnabled}");
-                if (update.ExtraInformation != null && update.ExtraInformation.Any())
-                {
-                    update.ExtraInformation.ToList().ForEach(i => rowData.Add(i.Key, i.Value));
-                }
-            }
-
-            var rowCreate = ToSequenceData(rowData, sequenceExternalId, 0);
-            rowsToCreate.Add(rowCreate);
-            var result = await sequences.InsertAsync(
-                rowsToCreate,
-                keyChunkSize: 10,
-                valueChunkSize: 100,
-                sequencesChunk: 10,
-                throttleSize: 1,
-                RetryMode.None,
-                SanitationMode.None,
-                token).ConfigureAwait(false);
-            if (!result.IsAllGood)
-            {
-                throw new SimulatorIntegrationSequenceException("Could not update simulator integration license timestamp", result.Errors);
-            }
-        }
-
-
-
         /// <summary>
         /// Store tabular simulation results as sequences
         /// </summary>
