@@ -157,6 +157,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
         /// <param name="update">Data to be updated, if init is set to true</param>
         /// <param name="token">Cancellation token</param>
+        /// <param name="updateLicense"></param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsHeartbeat(
