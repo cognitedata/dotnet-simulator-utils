@@ -213,11 +213,12 @@ namespace Cognite.Simulator.Utils
                         token).ConfigureAwait(false);
                     if (licenseCheck is true) // Every hour a license check is performed
                     {
-                        await sequences.UpdateSimulatorIntegrationsLicenseTimestamp(
+                        await sequences.UpdateSimulatorIntegrationsHeartbeat(
                             _simulatorSequenceIds[simulator.Name],
                             init,
                             update,
-                            token).ConfigureAwait(false);
+                            token,
+                            true).ConfigureAwait(false);
                     }
                 }
             }

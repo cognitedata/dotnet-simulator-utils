@@ -164,13 +164,21 @@ namespace Cognite.Simulator.Extensions
             string sequenceExternalId,
             bool init,
             SimulatorIntegrationUpdate update,
-            CancellationToken token)
+            CancellationToken token,
+            bool updateLicense = false)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
-            var rowData = new Dictionary<string, string>
-                {
-                    { SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
-                };
+            var rowData = new Dictionary<string, string>();
+
+            if (updateLicense is true)
+            {
+                rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
+            }
+            else
+            {
+                rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
+            }
+
             if (init)
             {
                 if (update == null)
