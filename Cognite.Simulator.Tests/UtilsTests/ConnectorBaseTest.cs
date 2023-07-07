@@ -173,7 +173,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var linkedToken = linkedTokenSource.Token;
                 var taskList = new List<Task> 
                 { 
-                    Heartbeat(linkedToken), 
+                    Heartbeat(linkedToken),
+                    LicenseCheck(linkedToken),
                     _pipeline.PipelineUpdate(linkedToken)
                 };
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
@@ -184,11 +185,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Heartbeat will run until the token is canceled. Exit without throwing in this case
                 return;
             }
-        }
-        public override bool CheckLicenseStatus()
-        {
-            throw new NotImplementedException();
-            // TODO: Implement license check
         }
     }
 }
