@@ -166,6 +166,7 @@ namespace Cognite.Simulator.Extensions
             bool init,
             SimulatorIntegrationUpdate update,
             CancellationToken token,
+            bool updateHeartbeat = true,
             bool updateLicense = false)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
@@ -175,7 +176,7 @@ namespace Cognite.Simulator.Extensions
             {
                 rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
             }
-            else
+            if (updateHeartbeat is true)
             {
                 rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
             }

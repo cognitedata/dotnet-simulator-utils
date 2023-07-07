@@ -138,7 +138,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var sequenceExternalId = integrations.First().ExternalId;
                 
                 // Update the sequence with connector heartbeat
-                await cdf.Sequences.UpdateSimulatorIntegrationsHeartbeat(
+                await cdf.Sequences.UpdateSimulatorIntegrationsData(
                     sequenceExternalId,
                     true,
                     new SimulatorIntegrationUpdate

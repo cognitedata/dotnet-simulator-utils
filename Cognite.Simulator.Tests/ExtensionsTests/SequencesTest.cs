@@ -102,7 +102,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         }
 
         [Fact]
-        public async Task TestUpdateSimulatorIntegrationsHeartbeat()
+        public async Task TestUpdateSimulatorIntegrationsData()
         {
             const string connectorName = "integration-tests-connector";
             const long dataSetId = CdfTestClient.TestDataset;
@@ -113,14 +113,14 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var sequences = cdf.Sequences;
             var simulators = new List<SimulatorIntegration>
+            {
+                new SimulatorIntegration
                 {
-                    new SimulatorIntegration
-                    {
-                        Simulator = "TestHeartbeatSimulator",
-                        DataSetId = dataSetId,
-                        ConnectorName = connectorName,
-                    }
-                };
+                    Simulator = "TestHeartbeatSimulator",
+                    DataSetId = dataSetId,
+                    ConnectorName = connectorName,
+                }
+            };
 
             string? externalIdToDelete = null;
             try
@@ -135,8 +135,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 
-                // Update the sequence with connector heartbeat
-                await sequences.UpdateSimulatorIntegrationsHeartbeat(
+                // Update the sequence with connector heartbeat TODO FIX
+                await sequences.UpdateSimulatorIntegrationsData(
                     externalIdToDelete,
                     true,
                     new SimulatorIntegrationUpdate
@@ -147,7 +147,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                         ConnectorVersion = "1.0.0",
                         SimulatorVersion = "1.2.3",
                     },
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None,
+                    updateLicense: true).ConfigureAwait(false); // Added updateLicense argument as true.
 
                 // Verify that the sequence was updated correctly
                 var result = await sequences.ListRowsAsync(new SequenceRowQuery
@@ -164,6 +165,9 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     switch (values[0]) {
                         case SimulatorIntegrationSequenceRows.Heartbeat:
                             Assert.True(long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
+                            break;
+                        case SimulatorIntegrationSequenceRows.LicenseTimestamp: // Added case for LicenseTimestamp
+                            Assert.True(long.TryParse(values[1], out long licenseTimestamp) && licenseTimestamp >= now);
                             break;
                         case SimulatorIntegrationSequenceRows.DataSetId:
                             Assert.Equal(dataSetId.ToString(), values[1]);
@@ -192,6 +196,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 }
             }
         }
+
 
         [Fact]
         public async Task TestStoreSimulationResults()
