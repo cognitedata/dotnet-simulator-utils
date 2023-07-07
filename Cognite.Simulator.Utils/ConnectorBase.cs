@@ -251,11 +251,13 @@ namespace Cognite.Simulator.Utils
 
 
         /// <summary>
-        /// Abstract method to check the license of the simulator. 
         /// This method should be overridden in each specific Connector class.
         /// </summary>
         /// <returns>True if the simulator has a valid license, false otherwise.</returns>
-        public abstract bool CheckLicenseStatus();
+        public virtual bool CheckLicenseStatus()
+        {
+            return true;
+        }
         /// <summary>
         /// 
         /// </summary>
