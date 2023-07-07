@@ -51,6 +51,10 @@ namespace Cognite.Simulator.Utils.Automation
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Server = ActivateAutomationServer();
+            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // For now this is enough, to run this on Linux
+                Server = null;
             }
             else
             {
