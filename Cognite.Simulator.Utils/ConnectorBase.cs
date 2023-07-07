@@ -213,6 +213,7 @@ namespace Cognite.Simulator.Utils
                         token).ConfigureAwait(false);
                     if (licenseCheck is true) // Every hour a license check is performed
                     {
+                        _logger.LogDebug("888888888888888888 LICENSE CHECK TRUE  ");
                         await sequences.UpdateSimulatorIntegrationsHeartbeat(
                             _simulatorSequenceIds[simulator.Name],
                             init,
@@ -269,7 +270,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetLicenseCheckInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
-                if (CheckLicenseStatus())
+                if (CheckLicenseStatus() is true)
                 {
                     await UpdateIntegrationRows(false, token, true)
                         .ConfigureAwait(false);
