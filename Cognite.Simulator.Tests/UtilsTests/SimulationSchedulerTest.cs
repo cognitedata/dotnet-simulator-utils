@@ -148,7 +148,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         ConnectorName = simint.ConnectorName,
                         SimulatorApiEnabled = true,
                     },
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None,
+                    updateLicense: true).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();

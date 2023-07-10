@@ -139,6 +139,9 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     true,
                     new SimulatorIntegrationUpdate
                     {
+                        Simulator = "TestHeartbeatSimulator",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
                         ConnectorVersion = "1.0.0",
                         SimulatorVersion = "1.2.3",
                     },
