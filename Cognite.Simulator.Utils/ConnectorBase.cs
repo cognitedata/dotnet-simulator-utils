@@ -206,11 +206,6 @@ namespace Cognite.Simulator.Utils
                         SimulatorApiEnabled = ApiEnabled()
                     }
                     : null;
-                    await sequences.UpdateSimulatorIntegrationsData(
-                        _simulatorSequenceIds[simulator.Name],
-                        init,
-                        update,
-                        token).ConfigureAwait(false);
                     if (licenseCheck is true) // Every hour a license check is performed
                     {
                         await sequences.UpdateSimulatorIntegrationsData(
@@ -219,6 +214,14 @@ namespace Cognite.Simulator.Utils
                             update,
                             token,
                             updateLicense: true).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await sequences.UpdateSimulatorIntegrationsData(
+                            _simulatorSequenceIds[simulator.Name],
+                            init,
+                            update,
+                            token).ConfigureAwait(false);
                     }
                 }
             }
