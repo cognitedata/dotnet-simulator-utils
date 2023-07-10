@@ -213,7 +213,6 @@ namespace Cognite.Simulator.Utils
                         token).ConfigureAwait(false);
                     if (licenseCheck is true) // Every hour a license check is performed
                     {
-                        _logger.LogDebug("888888888888888888 LICENSE CHECK TRUE  ");
                         await sequences.UpdateSimulatorIntegrationsData(
                             _simulatorSequenceIds[simulator.Name],
                             init,
@@ -228,7 +227,6 @@ namespace Cognite.Simulator.Utils
                 throw new ConnectorException(e.Message, e.CogniteErrors);
             }
         }
-
 
         /// <summary>
         /// Task that runs in a loop, reporting the connector information to CDF periodically
@@ -248,8 +246,6 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
             }
         }
-
-
 
         /// <summary>
         /// This method should be overridden in each specific Connector class.
