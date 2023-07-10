@@ -213,6 +213,7 @@ namespace Cognite.Simulator.Utils
                             init,
                             update,
                             token,
+                            updateHeartbeat: false,
                             updateLicense: true).ConfigureAwait(false);
                     }
                     else
