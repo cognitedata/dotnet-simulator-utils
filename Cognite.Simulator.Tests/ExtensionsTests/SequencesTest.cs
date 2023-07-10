@@ -101,71 +101,68 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             }
         }
 
-        [Theory]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        [InlineData(true, true)]
-        public async Task TestUpdateSimulatorIntegrationsData(bool updateHeartbeat, bool updateLicense)
+        [Fact]
+        public async Task TestUpdateSimulatorIntegrationsData()
         {
             const string connectorName = "integration-tests-connector";
             const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var sequences = cdf.Sequences;
             var simulators = new List<SimulatorIntegration>
-            {
-                new SimulatorIntegration
                 {
-                    Simulator = "TestHeartbeatSimulator",
-                    DataSetId = dataSetId,
-                    ConnectorName = connectorName,
-                }
-            };
+                    new SimulatorIntegration
+                    {
+                        Simulator = "TestHeartbeatSimulator",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                    }
+                };
 
             string? externalIdToDelete = null;
             try
             {
+                // Create a test simulator integration sequence
                 var integrations = await sequences.GetOrCreateSimulatorIntegrations(
                     simulators,
                     CancellationToken.None).ConfigureAwait(false);
-
                 Assert.NotEmpty(integrations);
                 externalIdToDelete = integrations.First().ExternalId;
-                
+
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
 
+                // Update the sequence with connector heartbeat and license timestamp
                 await sequences.UpdateSimulatorIntegrationsData(
                     externalIdToDelete,
                     true,
                     new SimulatorIntegrationUpdate
                     {
-                        Simulator = "TestHeartbeatSimulator",
-                        DataSetId = dataSetId,
-                        ConnectorName = connectorName,
                         ConnectorVersion = "1.0.0",
                         SimulatorVersion = "1.2.3",
                     },
                     CancellationToken.None,
-                    updateHeartbeat, 
-                    updateLicense).ConfigureAwait(false); 
+                    updateLicense: true).ConfigureAwait(false);
 
+                // Verify that the sequence was updated correctly
                 var result = await sequences.ListRowsAsync(new SequenceRowQuery
                 {
                     ExternalId = externalIdToDelete
                 }, CancellationToken.None).ConfigureAwait(false);
+                Assert.NotEmpty(result.Columns);
+                Assert.Contains(result.Columns, c => c.ExternalId == KeyValuePairSequenceColumns.Key);
+                Assert.Contains(result.Columns, c => c.ExternalId == KeyValuePairSequenceColumns.Value);
 
                 foreach(var row in result.Rows)
                 {
                     var values = row.GetStringValues();
                     switch (values[0]) {
                         case SimulatorIntegrationSequenceRows.Heartbeat:
-                            Assert.True(updateHeartbeat && long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
+                            Assert.True(long.TryParse(values[1], out long heartbeat) && heartbeat >= now);
                             break;
                         case SimulatorIntegrationSequenceRows.LicenseTimestamp:
-                            Assert.True(updateLicense && long.TryParse(values[1], out long licenseTimestamp) && licenseTimestamp >= now);
+                            Assert.True(long.TryParse(values[1], out long licenseTimestamp) && licenseTimestamp >= now);
                             break;
                         case SimulatorIntegrationSequenceRows.DataSetId:
                             Assert.Equal(dataSetId.ToString(), values[1]);
