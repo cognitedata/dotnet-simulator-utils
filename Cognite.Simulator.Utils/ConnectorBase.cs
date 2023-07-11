@@ -136,6 +136,11 @@ namespace Cognite.Simulator.Utils
             return TimeSpan.FromSeconds(min3600);
         }
 
+        public virtual bool EnableLicenseCheck()
+        {
+            return _config.EnableLicenseCheck;
+        }
+
         /// <summary>
         /// Indicates if this connectors should use Cognite's Simulator Integration API
         /// </summary>
