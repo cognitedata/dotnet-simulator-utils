@@ -132,7 +132,8 @@ namespace Cognite.Simulator.Utils
         /// <returns>Time interval</returns>
         public virtual TimeSpan GetLicenseCheckInterval()
         {
-            return TimeSpan.FromSeconds(_config.LicenseUpdateInterval);
+            int min3600 = _config.LicenseUpdateInterval < 3600 ? 3600 : _config.LicenseUpdateInterval;
+            return TimeSpan.FromSeconds(min3600);
         }
 
         /// <summary>
@@ -147,7 +148,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// For each simulator specified in the configuration, create a sequence in CDF containing the
         /// simulator name and connector name as meta-data. The sequence will have key-value pairs as
-        /// rows. The keys are: heartbeat, data set id and connector version. The rows will be updated
+        /// rows. The keys are: heartbeat, data set id and sconnector version. The rows will be updated
         /// periodically by the connector, and indicate the status of the currently running connector to
         /// applications consuming this simulation integration data.
         /// </summary>
