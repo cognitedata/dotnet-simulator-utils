@@ -87,7 +87,12 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// The connector will check for license updates with this interval (in seconds)
         /// </summary>
-        public int LicenseUpdateInterval { get; set; } = 3;
+        public int LicenseUpdateInterval { get; set; } = 3600; // 1 hour
+
+        /// <summary>
+        /// If true, the connector will perform a license check. If false, the license check is skipped.
+        /// </summary>
+        public bool EnableLicenseCheck { get; set; } = false;
 
 
         /// <summary>
