@@ -174,7 +174,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList = new List<Task> 
                 { 
                     Heartbeat(linkedToken),
-                    LicenseCheck(linkedToken),
                     _pipeline.PipelineUpdate(linkedToken)
                 };
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
