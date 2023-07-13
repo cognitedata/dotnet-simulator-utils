@@ -85,17 +85,6 @@ namespace Cognite.Simulator.Utils
         public int StatusInterval { get; set; } = 10;
 
         /// <summary>
-        /// The connector will check for license updates with this interval (in seconds)
-        /// </summary>
-        public int LicenseUpdateInterval { get; set; } = 3600; // 1 hour
-
-        /// <summary>
-        /// If true, the connector will perform a license check. If false, the license check is skipped.
-        /// </summary>
-        public bool EnableLicenseCheck { get; set; } = false;
-
-
-        /// <summary>
         /// The connector will fetch simulation calculation events from CDF with this interval (in seconds)
         /// </summary>
         public int FetchEventsInterval { get; set; } = 5;
@@ -128,6 +117,11 @@ namespace Cognite.Simulator.Utils
         /// Configuration related to error tolerance before reporting a failed run to the pipeline in CDF 
         /// </summary>
         public PipelineNotificationConfig PipelineNotification { get; set; }
+
+        /// <summary>
+        /// Configure License checking, enable or change frequency
+        /// </summary>
+        public LicenseCheckConfig LicenseCheck { get; set; }
 
         /// <summary>
         /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
@@ -187,5 +181,21 @@ namespace Cognite.Simulator.Utils
         /// Size of the time frame in minutes
         /// </summary>
         public int MaxTime { get; set; } = 10;
+    }
+
+    /// <summary>
+    /// Configuration for license checks
+    /// </summary>
+    public class LicenseCheckConfig
+    {
+        /// <summary>
+        /// The connector will check for license updates with this frequency (in seconds)
+        /// </summary>
+        public int Frequency { get; set; } = 3600; // 1 hour TODO: Change to minutes instead of seconds
+
+        /// <summary>
+        /// Only check for license if this is set to true
+        /// </summary>
+        public bool Enabled { get; set; } = false;
     }
 }

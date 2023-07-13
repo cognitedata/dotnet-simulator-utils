@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.Utils;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
@@ -31,6 +32,8 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, string> _simulatorSequenceIds;
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
+
+        private string LastLicenseCheckTimestamp { get; set; } = "";
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -132,13 +135,16 @@ namespace Cognite.Simulator.Utils
         /// <returns>Time interval</returns>
         public virtual TimeSpan GetLicenseCheckInterval()
         {
-            int min3600 = _config.LicenseUpdateInterval < 3600 ? 3600 : _config.LicenseUpdateInterval;
+            int min3600 = _config.LicenseCheck.Frequency < 3600 ? 3600 : _config.LicenseCheck.Frequency;
             return TimeSpan.FromSeconds(min3600);
         }
-
-        public virtual bool EnableLicenseCheck()
+        
+        /// <summary>
+        /// If the connector should check and report the license status back to CDF
+        /// </summary>
+        public virtual bool ShouldLicenseCheck()
         {
-            return _config.EnableLicenseCheck;
+            return _config.LicenseCheck.Enabled;
         }
 
         /// <summary>
@@ -195,6 +201,10 @@ namespace Cognite.Simulator.Utils
             CancellationToken token,
             bool licenseCheck = false)
         {
+            if (licenseCheck)
+            {
+                LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+            }
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
@@ -209,27 +219,17 @@ namespace Cognite.Simulator.Utils
                         ConnectorVersion = GetConnectorVersion(),
                         SimulatorVersion = GetSimulatorVersion(simulator.Name),
                         ExtraInformation = GetExtraInformation(simulator.Name),
-                        SimulatorApiEnabled = ApiEnabled()
+                        SimulatorApiEnabled = ApiEnabled(),
+                        // Maybe add LicenseEnabled here, so that it will display if the sequence should have license timestamp
                     }
                     : null;
-                    if (licenseCheck is true) // Every hour a license check is performed
-                    {
-                        await sequences.UpdateSimulatorIntegrationsData(
-                            _simulatorSequenceIds[simulator.Name],
-                            init,
-                            update,
-                            token,
-                            updateHeartbeat: false,
-                            updateLicense: true).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await sequences.UpdateSimulatorIntegrationsData(
-                            _simulatorSequenceIds[simulator.Name],
-                            init,
-                            update,
-                            token).ConfigureAwait(false);
-                    }
+                    await sequences.UpdateSimulatorIntegrationsData(
+                        _simulatorSequenceIds[simulator.Name],
+                        init,
+                        update,
+                        token,
+                        updateLicense: licenseCheck,
+                        LastLicenseCheckTimestamp: LastLicenseCheckTimestamp).ConfigureAwait(false);
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
@@ -261,7 +261,7 @@ namespace Cognite.Simulator.Utils
         /// This method should be overridden in each specific Connector class.
         /// </summary>
         /// <returns>True if the simulator has a valid license, false otherwise.</returns>
-        public virtual bool CheckLicenseStatus()
+        public virtual bool CheckLicenseStatus() // make this abstract?
         {
             return true;
         }

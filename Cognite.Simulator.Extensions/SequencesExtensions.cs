@@ -159,6 +159,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">Cancellation token</param>
         /// <param name="updateHeartbeat"></param>
         /// <param name="updateLicense"></param>
+        /// <param name="LastLicenseCheckTimestamp"></param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsData(
@@ -167,19 +168,16 @@ namespace Cognite.Simulator.Extensions
             bool init,
             SimulatorIntegrationUpdate update,
             CancellationToken token,
-            bool updateHeartbeat = true,
+            string LastLicenseCheckTimestamp,
             bool updateLicense = false)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
             var rowData = new Dictionary<string, string>();
 
+            rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
             if (updateLicense is true)
             {
-                rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
-            }
-            if (updateHeartbeat is true)
-            {
-                rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
+                rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, LastLicenseCheckTimestamp);
             }
 
             if (init)
@@ -190,6 +188,7 @@ namespace Cognite.Simulator.Extensions
                 }
 
                 // Data set and version could only have changed on connector restart
+                // license check enable on init
                 if (update.DataSetId.HasValue)
                 {
                     rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{update.DataSetId.Value}");
