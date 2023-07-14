@@ -201,7 +201,7 @@ namespace Cognite.Simulator.Utils
             CancellationToken token,
             bool licenseCheck = false)
         {
-            if (licenseCheck)
+            if (licenseCheck && !init)
             {
                 LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
             }
