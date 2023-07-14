@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
 
-        private string LastLicenseCheckTimestamp { get; set; } = "";
+        private string LastLicenseCheckTimestamp { get; set; } = "0";
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -201,7 +201,7 @@ namespace Cognite.Simulator.Utils
             CancellationToken token,
             bool licenseCheck = false)
         {
-            if (licenseCheck && !init)
+            if (licenseCheck is true && init is false)
             {
                 LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
             }
