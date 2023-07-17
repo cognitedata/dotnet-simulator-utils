@@ -168,25 +168,16 @@ namespace Cognite.Simulator.Extensions
             bool init,
             SimulatorIntegrationUpdate update,
             CancellationToken token,
-            string LastLicenseCheckTimestamp,
-            bool updateLicense = false)
+            string LastLicenseCheckTimestamp)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
             var rowData = new Dictionary<string, string>();
 
             rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
-            if (updateLicense is true)
-            {
-                rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, LastLicenseCheckTimestamp);
-            }
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, LastLicenseCheckTimestamp);
 
             if (init)
             {
-                if (update == null)
-                {
-                    throw new ArgumentNullException(nameof(update));
-                }
-
                 // Data set and version could only have changed on connector restart
                 // license check enable on init
                 if (update.DataSetId.HasValue)

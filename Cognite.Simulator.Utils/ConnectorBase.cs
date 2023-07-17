@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
 
-        private string LastLicenseCheckTimestamp { get; set; } = "0";
+        private string LastLicenseCheckTimestamp { get; set; } = "Not checked yet";
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -205,6 +205,10 @@ namespace Cognite.Simulator.Utils
             {
                 LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
             }
+            if (licenseCheck is false)
+            {
+                LastLicenseCheckTimestamp = "License check is disabled";
+            }
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
@@ -220,7 +224,6 @@ namespace Cognite.Simulator.Utils
                         SimulatorVersion = GetSimulatorVersion(simulator.Name),
                         ExtraInformation = GetExtraInformation(simulator.Name),
                         SimulatorApiEnabled = ApiEnabled(),
-                        // Maybe add LicenseEnabled here, so that it will display if the sequence should have license timestamp
                     }
                     : null;
                     await sequences.UpdateSimulatorIntegrationsData(
@@ -228,7 +231,6 @@ namespace Cognite.Simulator.Utils
                         init,
                         update,
                         token,
-                        updateLicense: licenseCheck,
                         LastLicenseCheckTimestamp: LastLicenseCheckTimestamp).ConfigureAwait(false);
                 }
             }

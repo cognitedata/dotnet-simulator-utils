@@ -419,6 +419,11 @@ namespace Cognite.Simulator.Extensions
         public bool SimulatorApiEnabled { get; set; }
         
         /// <summary>
+        /// Flag indicating if there 
+        /// </summary>
+        public bool LicenseCheckEnabled { get; set; }
+
+        /// <summary>
         /// Any extra information that can be registered by the connector
         /// </summary>
         public Dictionary<string, string> ExtraInformation { get; set; } = new Dictionary<string, string>();
