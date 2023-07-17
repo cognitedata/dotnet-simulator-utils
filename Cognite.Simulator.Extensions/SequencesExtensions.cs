@@ -179,7 +179,6 @@ namespace Cognite.Simulator.Extensions
             if (init)
             {
                 // Data set and version could only have changed on connector restart
-                // license check enable on init
                 if (update.DataSetId.HasValue)
                 {
                     rowData.Add(SimulatorIntegrationSequenceRows.DataSetId, $"{update.DataSetId.Value}");
