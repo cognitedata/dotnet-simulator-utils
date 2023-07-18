@@ -157,7 +157,8 @@ namespace Cognite.Simulator.Extensions
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
         /// <param name="update">Data to be updated, if init is set to true</param>
         /// <param name="token">Cancellation token</param>
-        /// <param name="LastLicenseCheckTimestamp"></param>
+        /// <param name="lastLicenseCheckTimestamp"></param>
+        /// <param name="lastLicenseCheckResult"></param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
         public static async Task UpdateSimulatorIntegrationsData(
@@ -166,13 +167,15 @@ namespace Cognite.Simulator.Extensions
             bool init,
             SimulatorIntegrationUpdate update,
             CancellationToken token,
-            string LastLicenseCheckTimestamp)
+            string lastLicenseCheckTimestamp,
+            string lastLicenseCheckResult)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
             var rowData = new Dictionary<string, string>();
 
             rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
-            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, LastLicenseCheckTimestamp);
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, lastLicenseCheckTimestamp);
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseStatus, lastLicenseCheckResult);
 
             if (init)
             {

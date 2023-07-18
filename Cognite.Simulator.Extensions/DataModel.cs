@@ -350,6 +350,11 @@ namespace Cognite.Simulator.Extensions
         /// License key (Last time seen)
         /// </summary>
         public const string LicenseTimestamp = "licenseTimestamp";
+
+        /// <summary>
+        /// License key (Last result)
+        /// </summary>
+        public const string LicenseStatus = "licenseStatus";
     }
 
     /// <summary>

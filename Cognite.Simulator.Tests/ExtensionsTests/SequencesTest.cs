@@ -146,7 +146,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                         SimulatorVersion = "1.2.3",
                     },
                     CancellationToken.None,
-                    LastLicenseCheckTimestamp: $"{now}").ConfigureAwait(false);
+                    lastLicenseCheckTimestamp: $"{now}",
+                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
                 // Verify that the sequence was updated correctly
                 var result = await sequences.ListRowsAsync(new SequenceRowQuery
@@ -166,6 +167,9 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                             break;
                         case SimulatorIntegrationSequenceRows.LicenseTimestamp:
                             Assert.True(long.TryParse(values[1], out long licenseTimestamp) && licenseTimestamp >= now);
+                            break;
+                        case SimulatorIntegrationSequenceRows.LicenseStatus:
+                            Assert.Equal("Available", values[1]);
                             break;
                         case SimulatorIntegrationSequenceRows.DataSetId:
                             Assert.Equal(dataSetId.ToString(), values[1]);

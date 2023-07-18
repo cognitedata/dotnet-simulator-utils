@@ -149,7 +149,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         SimulatorApiEnabled = true,
                     },
                     CancellationToken.None,
-                    LastLicenseCheckTimestamp: $"{testStartTimeMillis}").ConfigureAwait(false);
+                    lastLicenseCheckTimestamp: $"{testStartTimeMillis}",
+                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();

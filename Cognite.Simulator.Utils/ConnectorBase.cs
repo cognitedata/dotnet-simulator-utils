@@ -33,7 +33,8 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
 
-        private string LastLicenseCheckTimestamp { get; set; } = "Not checked yet";
+        private string LastLicenseCheckTimestamp { get; set; } = "";
+        private string LastLicenseCheckResult { get; set; } = "Disabled";
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -199,16 +200,21 @@ namespace Cognite.Simulator.Utils
         protected async Task UpdateIntegrationRows(
             bool init,
             CancellationToken token,
-            bool licenseCheck = false)
+            bool licenseCheck = false,
+            string licenseCheckStatus = "")
         {
-            if (licenseCheck is true && init is false)
+            if (licenseCheck is true)
             {
-                LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                if (init is false)
+                {
+                    LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                    LastLicenseCheckResult = licenseCheckStatus;
+                }
+                else {
+                    LastLicenseCheckResult = "Not checked yet.";
+                }
             }
-            if (licenseCheck is false)
-            {
-                LastLicenseCheckTimestamp = "License check is disabled";
-            }
+
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
@@ -231,7 +237,8 @@ namespace Cognite.Simulator.Utils
                         init,
                         update,
                         token,
-                        LastLicenseCheckTimestamp: LastLicenseCheckTimestamp).ConfigureAwait(false);
+                        lastLicenseCheckTimestamp: LastLicenseCheckTimestamp,
+                        lastLicenseCheckResult: LastLicenseCheckResult).ConfigureAwait(false);
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
@@ -278,11 +285,9 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetLicenseCheckInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
-                if (CheckLicenseStatus() is true)
-                {
-                    await UpdateIntegrationRows(false, token, true)
-                        .ConfigureAwait(false);
-                }
+                string licenseCheckStatus = CheckLicenseStatus() ? "Available" : "Not available";
+                await UpdateIntegrationRows(false, token, true, licenseCheckStatus: licenseCheckStatus)
+                    .ConfigureAwait(false);
             }
         }
     }
