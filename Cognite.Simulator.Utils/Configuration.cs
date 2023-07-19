@@ -189,9 +189,9 @@ namespace Cognite.Simulator.Utils
     public class LicenseCheckConfig
     {
         /// <summary>
-        /// The connector will check for license updates with this frequency (in seconds)
+        /// The connector will check for license updates with this interval (in seconds)
         /// </summary>
-        public int Frequency { get; set; } = 3600; // 1 hour TODO: Change to minutes instead of seconds
+        public int Interval { get; set; } = 3600; // 1 hour TODO: Change to minutes instead of seconds
 
         /// <summary>
         /// Only check for license if this is set to true

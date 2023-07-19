@@ -136,7 +136,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>Time interval</returns>
         public virtual TimeSpan GetLicenseCheckInterval()
         {
-            int min3600 = _config.LicenseCheck.Frequency < 3600 ? 3600 : _config.LicenseCheck.Frequency;
+            int min3600 = _config.LicenseCheck.Interval < 3600 ? 3600 : _config.LicenseCheck.Interval;
             return TimeSpan.FromSeconds(min3600);
         }
         
