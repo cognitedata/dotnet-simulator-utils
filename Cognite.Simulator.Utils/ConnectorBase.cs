@@ -215,7 +215,7 @@ namespace Cognite.Simulator.Utils
                         _simulatorSequenceIds[simulator.Name],
                         init,
                         update,
-                        token).ConfigureAwait(false);                    
+                        token).ConfigureAwait(false);
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
