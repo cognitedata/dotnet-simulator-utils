@@ -367,6 +367,11 @@ namespace Cognite.Simulator.Extensions
         /// Data Models Simulator container external id
         /// </summary>
         public const string SimulatorContainer = "Simulator";
+
+        /// <summary>
+        /// Data Models Simulator Integration view version
+        /// </summary>
+        public const string ViewVersion = "1";
     }
 
     /// <summary>
