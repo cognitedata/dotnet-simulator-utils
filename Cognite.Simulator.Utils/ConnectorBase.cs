@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Utils
         private readonly ConnectorConfig _config;
 
         private string LastLicenseCheckTimestamp { get; set; } = "";
-        private string LastLicenseCheckResult { get; set; } = "Disabled";
+        private string LastLicenseCheckResult { get; set; } = "License check disabled";
 
         /// <summary>
         /// Initialize the connector with the given parameters
