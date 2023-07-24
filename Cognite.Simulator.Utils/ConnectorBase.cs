@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
 
-        private string LastLicenseCheckTimestamp { get; set; } = "";
+        private long LastLicenseCheckTimestamp { get; set; } = 0;
         private string LastLicenseCheckResult { get; set; } = "License check disabled";
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace Cognite.Simulator.Utils
             {
                 if (init is false)
                 {
-                    LastLicenseCheckTimestamp = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                    LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                     LastLicenseCheckResult = licenseCheckStatus;
                 }
                 else {

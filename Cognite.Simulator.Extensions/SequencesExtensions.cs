@@ -167,14 +167,14 @@ namespace Cognite.Simulator.Extensions
             bool init,
             SimulatorIntegrationUpdate update,
             CancellationToken token,
-            string lastLicenseCheckTimestamp,
+            long lastLicenseCheckTimestamp,
             string lastLicenseCheckResult)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
             var rowData = new Dictionary<string, string>();
 
             rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
-            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, lastLicenseCheckTimestamp);
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{lastLicenseCheckTimestamp}");
             rowData.Add(SimulatorIntegrationSequenceRows.LicenseStatus, lastLicenseCheckResult);
 
             if (init)

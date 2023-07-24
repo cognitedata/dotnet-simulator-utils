@@ -146,7 +146,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                         SimulatorVersion = "1.2.3",
                     },
                     CancellationToken.None,
-                    lastLicenseCheckTimestamp: $"{now}",
+                    lastLicenseCheckTimestamp: now,
                     lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
                 // Verify that the sequence was updated correctly

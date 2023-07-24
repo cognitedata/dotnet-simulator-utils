@@ -191,7 +191,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// The connector will check for license updates with this interval (in seconds)
         /// </summary>
-        public int Interval { get; set; } = 3600; // 1 hour TODO: Change to minutes instead of seconds
+        public int Interval { get; set; } = 3600;
 
         /// <summary>
         /// Only check for license if this is set to true
