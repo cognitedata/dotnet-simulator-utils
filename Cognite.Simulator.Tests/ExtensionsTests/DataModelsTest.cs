@@ -88,7 +88,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             }
             finally
             {
-                // Cleanup created damta model instances
+                // Cleanup created data model instances
                 if (externalIdToDelete != null)
                 {
                     await dataModels.DeleteInstances(new List<InstanceIdentifier> {
