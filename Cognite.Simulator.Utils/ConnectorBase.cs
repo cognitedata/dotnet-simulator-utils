@@ -203,7 +203,6 @@ namespace Cognite.Simulator.Utils
             CancellationToken token,
             bool licenseCheck = false)
         {
-
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
