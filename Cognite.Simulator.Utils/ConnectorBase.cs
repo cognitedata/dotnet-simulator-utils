@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Utils
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; } = 0;
-        private string LastLicenseCheckResult { get; set; } = "License check disabled";
+        private string LastLicenseCheckResult { get; set; }
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -55,6 +55,7 @@ namespace Cognite.Simulator.Utils
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;
+            LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
         }
 
         /// <summary>
@@ -202,10 +203,6 @@ namespace Cognite.Simulator.Utils
             CancellationToken token,
             bool licenseCheck = false)
         {
-            if (licenseCheck && init)
-            {
-                LastLicenseCheckResult = "Not checked yet";
-            }
 
             var sequences = Cdf.CogniteClient.Sequences;
             try
