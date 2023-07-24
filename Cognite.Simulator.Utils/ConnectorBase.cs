@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
 
-        private long LastLicenseCheckTimestamp { get; set; } = 0;
+        private long LastLicenseCheckTimestamp { get; set; }
         private string LastLicenseCheckResult { get; set; }
 
         /// <summary>
