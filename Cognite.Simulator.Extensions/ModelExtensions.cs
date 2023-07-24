@@ -16,6 +16,19 @@ namespace Cognite.Simulator.Extensions
     {
         /// <summary>
         /// Update the simulator integration data model with the connector heartbeat (last time seen)
+        /// This requires a SimulatorIntegration datamodel in SimulatorIntegrationSpace:
+        /// type Simulator @view(version: "1") {
+        ///     name: String!
+        ///     description: String
+        /// }
+        /// type SimulatorIntegration @view(version: "1") {
+        ///     simulator: Simulator
+        ///     dataSetId: Int64
+        ///     connectorVersion: String!
+        ///     simulatorVersion: String!
+        ///     heartbeat: Int64
+        ///     apiEnabled: Boolean
+        /// }
         /// </summary>
         /// <param name="models">CDF data models</param>
         /// <param name="init">If init, upsert all properties, otherwise only heartbeat</param>
