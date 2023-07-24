@@ -16,7 +16,7 @@ namespace Cognite.Simulator.Extensions
     {
         /// <summary>
         /// Update the simulator integration data model with the connector heartbeat (last time seen)
-        /// This requires a SimulatorIntegration datamodel in SimulatorIntegrationSpace:
+        /// This requires a SimulatorIntegration model in SimulatorIntegrationSpace:
         /// type Simulator @view(version: "1") {
         ///     name: String!
         ///     description: String
