@@ -27,6 +27,10 @@ namespace Cognite.Simulator.Extensions
             SimulatorIntegrationUpdate update,
             CancellationToken token)
         {
+            if (update == null)
+            {
+                throw new ArgumentNullException(nameof(update));
+            }
             var heartbeat = new RawPropertyValue<long>() {
                 Value = DateTime.UtcNow.ToUnixTimeMilliseconds()
             };
