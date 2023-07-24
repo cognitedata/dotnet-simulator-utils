@@ -200,8 +200,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected async Task UpdateIntegrationRows(
             bool init,
-            CancellationToken token,
-            bool licenseCheck = false)
+            CancellationToken token)
         {
             var sequences = Cdf.CogniteClient.Sequences;
             try
@@ -278,7 +277,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
-                await UpdateIntegrationRows(false, token, true)
+                await UpdateIntegrationRows(false, token)
                     .ConfigureAwait(false);
             }
         }
