@@ -200,19 +200,11 @@ namespace Cognite.Simulator.Utils
         protected async Task UpdateIntegrationRows(
             bool init,
             CancellationToken token,
-            bool licenseCheck = false,
-            string licenseCheckStatus = "")
+            bool licenseCheck = false)
         {
-            if (licenseCheck is true)
+            if (licenseCheck && init)
             {
-                if (init is false)
-                {
-                    LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                    LastLicenseCheckResult = licenseCheckStatus;
-                }
-                else {
-                    LastLicenseCheckResult = "Not checked yet.";
-                }
+                LastLicenseCheckResult = "Not checked yet";
             }
 
             var sequences = Cdf.CogniteClient.Sequences;
@@ -270,13 +262,16 @@ namespace Cognite.Simulator.Utils
         /// This method should be overridden in each specific Connector class.
         /// </summary>
         /// <returns>True if the simulator has a valid license, false otherwise.</returns>
-        public virtual bool CheckLicenseStatus() // make this abstract?
+        public virtual bool CheckLicenseStatus()
         {
             return true;
         }
         /// <summary>
-        /// 
+        /// Task that runs in a loop, reporting the connector license status to CDF periodically
+        /// (with the interval defined in <see cref="GetLicenseCheckInterval"/>)
         /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
         public async Task LicenseCheck(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
@@ -285,8 +280,9 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetLicenseCheckInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
-                string licenseCheckStatus = CheckLicenseStatus() ? "Available" : "Not available";
-                await UpdateIntegrationRows(false, token, true, licenseCheckStatus: licenseCheckStatus)
+                LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
+                LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
+                await UpdateIntegrationRows(false, token, true)
                     .ConfigureAwait(false);
             }
         }

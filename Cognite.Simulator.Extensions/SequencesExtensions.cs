@@ -179,6 +179,10 @@ namespace Cognite.Simulator.Extensions
 
             if (init)
             {
+                if (update == null)
+                {
+                    throw new ArgumentNullException(nameof(update));
+                }
                 // Data set and version could only have changed on connector restart
                 if (update.DataSetId.HasValue)
                 {

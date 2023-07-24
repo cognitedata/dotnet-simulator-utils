@@ -349,7 +349,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// License key (Last time seen)
         /// </summary>
-        public const string LicenseTimestamp = "licenseTimestamp";
+        public const string LicenseTimestamp = "licenseLastCheckedTime";
 
         /// <summary>
         /// License key (Last result)

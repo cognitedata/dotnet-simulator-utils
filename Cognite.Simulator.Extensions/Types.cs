@@ -419,7 +419,7 @@ namespace Cognite.Simulator.Extensions
         public bool SimulatorApiEnabled { get; set; }
         
         /// <summary>
-        /// Flag indicating if there 
+        /// Flag indicating if there connector will check for simulator liceses
         /// </summary>
         public bool LicenseCheckEnabled { get; set; }
 
