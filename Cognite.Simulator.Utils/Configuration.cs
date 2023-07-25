@@ -121,7 +121,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Configure License checking, enable or change frequency
         /// </summary>
-        public LicenseCheckConfig LicenseCheck { get; set; }
+        public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
 
         /// <summary>
         /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
