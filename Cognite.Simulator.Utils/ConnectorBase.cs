@@ -55,7 +55,6 @@ namespace Cognite.Simulator.Utils
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;
-            LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
         }
 
         /// <summary>
@@ -201,7 +200,11 @@ namespace Cognite.Simulator.Utils
         protected async Task UpdateIntegrationRows(
             bool init,
             CancellationToken token)
-        {
+        {   
+            if (init)
+            {
+                LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
+            }
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
