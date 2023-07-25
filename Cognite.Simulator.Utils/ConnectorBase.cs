@@ -195,7 +195,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Update the heartbeat, data set id and connector version in CDF. Data set id and connector
         /// version are not expected to change while the connector is running, and are only set during
-        /// initialization
+        /// initialization.
         /// </summary>
         protected async Task UpdateIntegrationRows(
             bool init,
