@@ -196,6 +196,6 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Only check for license if this is set to true
         /// </summary>
-        public bool Enabled { get; set; };
+        public bool Enabled { get; set; }
     }
 }
