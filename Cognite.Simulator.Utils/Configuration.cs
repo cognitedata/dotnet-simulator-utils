@@ -119,6 +119,11 @@ namespace Cognite.Simulator.Utils
         public PipelineNotificationConfig PipelineNotification { get; set; }
 
         /// <summary>
+        /// Configure License checking, enable or change frequency
+        /// </summary>
+        public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
+
+        /// <summary>
         /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
         /// capabilities in CDF). Else, the connector will use only core CDF resources
         /// </summary>
@@ -176,5 +181,21 @@ namespace Cognite.Simulator.Utils
         /// Size of the time frame in minutes
         /// </summary>
         public int MaxTime { get; set; } = 10;
+    }
+
+    /// <summary>
+    /// Configuration for license checks
+    /// </summary>
+    public class LicenseCheckConfig
+    {
+        /// <summary>
+        /// The connector will check for license updates with this interval (in seconds)
+        /// </summary>
+        public int Interval { get; set; } = 3600;
+
+        /// <summary>
+        /// Only check for license if this is set to true
+        /// </summary>
+        public bool Enabled { get; set; }
     }
 }
