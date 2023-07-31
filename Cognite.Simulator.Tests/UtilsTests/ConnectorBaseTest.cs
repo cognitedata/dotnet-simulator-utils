@@ -25,6 +25,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
+            //services.AddSingleton<RemoteConfigManager<RemoteConfig>>();
+            //services.AddLogging();
             var simConfig = new SimulatorConfig
             {
                 Name = "TestSim",
@@ -93,6 +95,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
                     true,
                     source.Token).ConfigureAwait(false);
+                //var configTest = cdf.ExtPipes.GetCurrentConfigAsync("symmetry-extraction-pipeline-kenneths", source.Token).ConfigureAwait(false);
+                //Assert.NotNull(configTest);
                 Assert.Contains(pipelines, p => p.ExternalId == cdfConfig.ExtractionPipeline.PipelineId);
                 Assert.Contains(pipelines, p => p.LastSeen >= timestamp);
             }

@@ -22,7 +22,7 @@ namespace Cognite.Simulator.Utils
         private readonly PipelineNotificationConfig _pipeConfig;
         private CogniteSdk.ExtPipe _pipeline;
         private bool _available;
-        
+        //private readonly RemoteConfigManager<RemoteConfig> _remoteConfigManager;
         internal static string LastErrorMessage;
 
         /// <summary>
@@ -39,11 +39,13 @@ namespace Cognite.Simulator.Utils
             PipelineNotificationConfig pipeConfig,
             CogniteDestination destination,
             ILogger<ExtractionPipeline> logger)
+            //RemoteConfigManager<RemoteConfig> remoteConfigManager)
         {
             _logger = logger;
             _cdf = destination;
             _cdfConfig = cdfConfig;
             _pipeConfig = pipeConfig;
+            //_remoteConfigManager = remoteConfigManager;
         }
         
         /// <summary>
@@ -103,6 +105,19 @@ namespace Cognite.Simulator.Utils
                 return;
             }
             _available = true;
+            try
+            {
+                var config = await _cdf.CogniteClient.ExtPipes.GetCurrentConfigAsync(
+                    _cdfConfig.ExtractionPipeline.PipelineId, 
+                    token).ConfigureAwait(false);
+                //var config = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
+                _logger.LogInformation("Fetched remote config: {Config}", config);
+                // Now you have access to the fetched configuration `config`
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Could not fetch the remote configuration: {Message}", ex.Message);
+            }
         }
 
         /// <summary>
@@ -137,7 +152,23 @@ namespace Cognite.Simulator.Utils
                 _logger.LogWarning("Could not report status to extraction pipeline: {Message}", ex.Message);
             }
         }
-
+        
+       /*public async Task<RemoteConfig> FetchExtractionPipelineRemoteConfig(CancellationToken token)
+        {
+            try
+            {
+                var config = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
+                _logger.LogInformation("Fetched remote config: {Config}", config);
+                return config;
+                // now you have access to the fetched configuration `config`
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Could not fetch remote config: {Message}", ex.Message);
+                return null;
+            }
+        }
+        */
         /// <summary>
         /// Starts a notification loop that reports the connector status to the 
         /// pipeline with the configured frequency
