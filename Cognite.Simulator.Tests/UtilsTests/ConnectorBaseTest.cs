@@ -175,7 +175,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                 var linkedToken = linkedTokenSource.Token;
-                var taskList = new List<Task> { Heartbeat(linkedToken), _pipeline.PipelineUpdate(linkedToken) };
+                var taskList = new List<Task> 
+                { 
+                    Heartbeat(linkedToken),
+                    _pipeline.PipelineUpdate(linkedToken)
+                };
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
                 linkedTokenSource.Dispose();
             }

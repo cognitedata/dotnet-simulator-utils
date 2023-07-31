@@ -209,6 +209,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
                 // Needs to retry due to eventual consistency when updating CDF events.
                 retryCount = 0;
+                Event? foundFailureEvent = null;
                 while (retryCount < 20)
                 {
                     var foundFailureEvents = await events.FindSimulationEvents(
@@ -219,16 +220,15 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                         { SimulatorIntegrationMetadata.ConnectorNameKey, fakeConnectorName }
                         },
                         CancellationToken.None).ConfigureAwait(false);
-                    if (!foundFailureEvents.Any())
+                    var filteredFailureEvents = foundFailureEvents
+                        .Where(e => e.ExternalId == readyEvent.ExternalId);
+                    if (!filteredFailureEvents.Any())
                     {
                         retryCount++;
                         await Task.Delay(100).ConfigureAwait(false);
                         continue;
                     }
-                    Assert.NotEmpty(foundFailureEvents);
-                    var foundFailureEvent = foundFailureEvents
-                        .Where(e => e.ExternalId == readyEvent.ExternalId)
-                        .First();
+                    foundFailureEvent = filteredFailureEvents.First();
                     Assert.Equal(SimulationEventStatusValues.Failure, foundFailureEvent.Metadata[SimulationEventMetadata.StatusKey]);
                     Assert.Equal(simDate.ToUnixTimeMilliseconds(), foundFailureEvent.StartTime);
                     Assert.Equal("Calculation failed", foundFailureEvent.Metadata[SimulationEventMetadata.StatusMessageKey]);
@@ -238,7 +238,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     Assert.True(foundFailureEvent.EndTime > simDate.ToUnixTimeMilliseconds());
                     break;
                 }
-
+                Assert.NotNull(foundFailureEvent);
             }
             finally
             {

@@ -345,6 +345,16 @@ namespace Cognite.Simulator.Extensions
         /// Simulator version key. Installed version of the simulator
         /// </summary>
         public const string SimulatorVersion = "simulatorVersion";
+
+        /// <summary>
+        /// License key (Last time seen)
+        /// </summary>
+        public const string LicenseTimestamp = "licenseLastCheckedTime";
+
+        /// <summary>
+        /// License key (Last result)
+        /// </summary>
+        public const string LicenseStatus = "licenseStatus";
     }
 
     /// <summary>

@@ -138,7 +138,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var sequenceExternalId = integrations.First().ExternalId;
                 
                 // Update the sequence with connector heartbeat
-                await cdf.Sequences.UpdateSimulatorIntegrationsHeartbeat(
+                await cdf.Sequences.UpdateSimulatorIntegrationsData(
                     sequenceExternalId,
                     true,
                     new SimulatorIntegrationUpdate
@@ -148,7 +148,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         ConnectorName = simint.ConnectorName,
                         SimulatorApiEnabled = true,
                     },
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None,
+                    lastLicenseCheckTimestamp: testStartTimeMillis,
+                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();

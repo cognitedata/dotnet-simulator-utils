@@ -157,27 +157,32 @@ namespace Cognite.Simulator.Extensions
         /// <param name="sequenceExternalId">Simulator integration sequence external id</param>
         /// <param name="update">Data to be updated, if init is set to true</param>
         /// <param name="token">Cancellation token</param>
+        /// <param name="lastLicenseCheckTimestamp">Timestamp of the last license check</param>
+        /// <param name="lastLicenseCheckResult">Result of the last license check</param>
         /// <exception cref="SimulatorIntegrationSequenceException">Thrown when one or more sequences
         /// rows could not be updated. The exception contains the list of errors</exception>
-        public static async Task UpdateSimulatorIntegrationsHeartbeat(
+        public static async Task UpdateSimulatorIntegrationsData(
             this SequencesResource sequences,
             string sequenceExternalId,
             bool init,
             SimulatorIntegrationUpdate update,
-            CancellationToken token)
+            CancellationToken token,
+            long lastLicenseCheckTimestamp,
+            string lastLicenseCheckResult)
         {
             var rowsToCreate = new List<SequenceDataCreate>();
-            var rowData = new Dictionary<string, string>
-                {
-                    { SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}" }
-                };
+            var rowData = new Dictionary<string, string>();
+
+            rowData.Add(SimulatorIntegrationSequenceRows.Heartbeat, $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}");
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseTimestamp, $"{lastLicenseCheckTimestamp}");
+            rowData.Add(SimulatorIntegrationSequenceRows.LicenseStatus, lastLicenseCheckResult);
+
             if (init)
             {
                 if (update == null)
                 {
                     throw new ArgumentNullException(nameof(update));
                 }
-
                 // Data set and version could only have changed on connector restart
                 if (update.DataSetId.HasValue)
                 {
