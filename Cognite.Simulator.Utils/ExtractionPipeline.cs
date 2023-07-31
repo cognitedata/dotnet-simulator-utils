@@ -106,9 +106,10 @@ namespace Cognite.Simulator.Utils
             }
             _available = true;
             try
-            {
+            {   
+                var pipID = _cdfConfig.ExtractionPipeline.PipelineId;
                 var config = await _cdf.CogniteClient.ExtPipes.GetCurrentConfigAsync(
-                    _cdfConfig.ExtractionPipeline.PipelineId, 
+                    pipID, 
                     token).ConfigureAwait(false);
                 //var config = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
                 _logger.LogInformation("Fetched remote config: {Config}", config);
