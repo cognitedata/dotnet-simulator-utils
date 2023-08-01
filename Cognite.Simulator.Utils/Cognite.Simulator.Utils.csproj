@@ -21,7 +21,13 @@
 
   <ItemGroup>
     <!--<PackageReference Include="Cognite.ExtractorUtils" Version="1.11.0" />-->
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Common\Cognite.Common.csproj" />
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Config\Cognite.Config.csproj" />
     <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" />
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Logging\Cognite.Logging.csproj" />
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Metrics\Cognite.Metrics.csproj" />
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.StateStorage\Cognite.StateStorage.csproj" />
+    <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Testing\Cognite.Testing.csproj" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
