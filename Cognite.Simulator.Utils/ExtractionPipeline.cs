@@ -154,22 +154,6 @@ namespace Cognite.Simulator.Utils
             }
         }
         
-       /*public async Task<RemoteConfig> FetchExtractionPipelineRemoteConfig(CancellationToken token)
-        {
-            try
-            {
-                var config = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
-                _logger.LogInformation("Fetched remote config: {Config}", config);
-                return config;
-                // now you have access to the fetched configuration `config`
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Could not fetch remote config: {Message}", ex.Message);
-                return null;
-            }
-        }
-        */
         /// <summary>
         /// Starts a notification loop that reports the connector status to the 
         /// pipeline with the configured frequency
