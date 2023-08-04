@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <PackageReference Include="Cognite.ExtractorUtils" Version="1.11.0" />
+    <!-- Use this to test the local version of Extractor Utils -->
+    <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\ExtractorUtils\ExtractorUtils.csproj" /> -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
