@@ -463,6 +463,12 @@ namespace Cognite.Simulator.Utils
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(overwriteValue);
                 }
+                else if (simEv.Run.ValidationEndTime.HasValue)
+                {
+                    // If the SimulationRun contains a validation end overwrite, use that instead of
+                    // the current time
+                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
+                }
                 else
                 {
                     // If the validation end time should be in the past, subtract the 
