@@ -100,6 +100,70 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 }
             }
         }
+        [Fact]
+        public async Task TestUpsertItemInKVPSequence()
+        {
+            const string connectorName = "integration-tests-connector";
+            const long dataSetId = CdfTestClient.TestDataset;
+            var services = new ServiceCollection();
+
+            using var provider = services.BuildServiceProvider();
+            var cdf = provider.GetRequiredService<Client>();
+            var sequences = cdf.Sequences;
+            string externalId = "Test-Sequence-1111";
+
+            try
+            {
+                var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
+
+                await sequences.UpdateSimulatorIntegrationsData(
+                    externalId,
+                    true,
+                    new SimulatorIntegrationUpdate
+                    {
+                        Simulator = "TestHeartbeatSimulator",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                        ConnectorVersion = "1.0.0",
+                        SimulatorVersion = "1.2.3",
+                    },
+                    CancellationToken.None,
+                    lastLicenseCheckTimestamp: now,
+                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
+
+                await sequences.UpsertItemInKVPSequence(
+                    externalId,
+                    SimulatorIntegrationSequenceRows.SimulatorStatus, 
+                    "Running",
+                    CancellationToken.None).ConfigureAwait(false);
+
+                // Verify that the sequence was updated correctly
+                var result = await sequences.ListRowsAsync(new SequenceRowQuery
+                    {
+                        ExternalId = externalId
+                    }, CancellationToken.None).ConfigureAwait(false);
+
+                Assert.NotEmpty(result.Columns);
+                Assert.Contains(result.Columns, c => c.ExternalId == KeyValuePairSequenceColumns.Key);
+                Assert.Contains(result.Columns, c => c.ExternalId == KeyValuePairSequenceColumns.Value);
+
+                foreach(var row in result.Rows)
+                {
+                    var values = row.GetStringValues();
+                    switch (values[0]) {
+                        case SimulatorIntegrationSequenceRows.SimulatorStatus:
+                            Assert.Equal("Running", values[1]);
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                // Cleanup created resources
+                await sequences.DeleteAsync(new List<string> { externalId }, CancellationToken.None).ConfigureAwait(false);
+            }
+
+        }
 
         [Fact]
         public async Task TestUpdateSimulatorIntegrationsData()

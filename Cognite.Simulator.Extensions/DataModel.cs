@@ -355,6 +355,12 @@ namespace Cognite.Simulator.Extensions
         /// License key (Last result)
         /// </summary>
         public const string LicenseStatus = "licenseStatus";
+
+        /// <summary>
+        /// License key (Last result)
+        /// </summary>
+        public const string SimulatorStatus = "simulatorStatus";
+
     }
 
     /// <summary>
