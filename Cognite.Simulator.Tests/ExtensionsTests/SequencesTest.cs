@@ -131,11 +131,11 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     CancellationToken.None).ConfigureAwait(false);
                 Assert.NotEmpty(integrations);
                 externalId = integrations.First().ExternalId;
-
+                var calculationStatus = "Calculation Running";
                 await sequences.UpsertItemInKVPSequence(
                     externalId,
                     SimulatorIntegrationSequenceRows.SimulatorStatus, 
-                    "Running",
+                    calculationStatus,
                     CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the sequence was updated correctly
@@ -153,7 +153,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     var values = row.GetStringValues();
                     switch (values[0]) {
                         case SimulatorIntegrationSequenceRows.SimulatorStatus:
-                            Assert.Equal("Running", values[1]);
+                            Assert.Equal(calculationStatus, values[1]);
                             break;
                     }
                 }
