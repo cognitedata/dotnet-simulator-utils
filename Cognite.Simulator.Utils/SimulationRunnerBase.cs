@@ -234,7 +234,7 @@ namespace Cognite.Simulator.Utils
                             calcState,
                             calcObj,
                             metadata);
-                        PublishSimulationRunStatus("Calculation Running", token);
+                        PublishSimulationRunStatus("RUNNING_CALCULATION", token);
                         await InitSimulationRun(
                             e,
                             startTime,
