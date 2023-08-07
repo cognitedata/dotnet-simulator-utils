@@ -106,6 +106,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             const string connectorName = "integration-tests-connector";
             const long dataSetId = CdfTestClient.TestDataset;
             var services = new ServiceCollection();
+            services.AddCogniteTestClient();
 
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
