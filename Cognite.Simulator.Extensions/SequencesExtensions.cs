@@ -568,7 +568,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        // Simply upserts a key value pair into a key value pair based sequence
+        /// Simply upserts a key value pair into a key value pair based sequence
         /// </summary>
         /// <param name="sequences">CDF Sequence resource</param>
         /// <param name="externalId">External id of the sequence.</param>
