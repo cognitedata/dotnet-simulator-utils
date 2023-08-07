@@ -415,7 +415,7 @@ namespace Cognite.Simulator.Utils
                     sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token);
                 }
 
-                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, "connectorStatus", runStatus, token);
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token);
             }
 
             catch (Exception e)
