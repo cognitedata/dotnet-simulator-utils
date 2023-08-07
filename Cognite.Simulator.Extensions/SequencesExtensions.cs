@@ -568,12 +568,13 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        // Simply upserts a key value pair into a key value pair based sequence
+        /// Simply upserts a key value pair into a key value pair based sequence
         /// </summary>
         /// <param name="sequences">CDF Sequence resource</param>
-        /// <param name="externalId">External id of the sequence.</param>
-        /// <param name="updatekey">Key in sequence to update</param>
+        /// <param name="sequenceExternalId">External id of the sequence.</param>
+        /// <param name="updateKey">Key in sequence to update</param>
         /// <param name="updateValue">Value to update the Key value pair to</param>
+        /// <param name="token">The cancellation token</param>
         /// <returns>Nothing</returns>
         public static async 
         Task UpsertItemInKVPSequence(this SequencesResource sequences, string sequenceExternalId, string updateKey, string updateValue, CancellationToken token) {
@@ -582,7 +583,7 @@ namespace Cognite.Simulator.Extensions
             }
             SequenceRowQuery query = new SequenceRowQuery();
             query.ExternalId = sequenceExternalId;
-            var sequenceList = await sequences.ListRowsAsync(query, token);
+            var sequenceList = await sequences.ListRowsAsync(query, token).ConfigureAwait(false);;
             var rows = sequenceList.Rows;
             var columns = sequenceList.Columns;
             var newRows = rows.Select(r => new SequenceRow
@@ -636,12 +637,13 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        // Gets the externalId of a SimulatorIntegrations sequence (This function can throw an exception)
+        /// Gets the externalId of a SimulatorIntegrations sequence (This function can throw an exception)
         /// </summary>
         /// <param name="sequences">CDF Sequence resource</param>
         /// <param name="simulatorName">The simulator name.</param>
         /// <param name="simulatorDataSetId">The simulator datasetId</param>
         /// <param name="connectorName">The connector Name</param>
+        /// <param name="token">The cancellation token</param>
         /// <returns>externalId string</returns>
         public static async Task<string> GetSequenceExternalId(this SequencesResource sequences, string simulatorName, long simulatorDataSetId, string connectorName, CancellationToken token) {
              var _simulatorSequenceIds = new Dictionary<string, string>();
