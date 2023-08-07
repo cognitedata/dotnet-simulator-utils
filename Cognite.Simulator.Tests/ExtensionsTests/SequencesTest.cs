@@ -111,26 +111,26 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var sequences = cdf.Sequences;
-            string externalId = "Test-Sequence-1111";
+            var simulators = new List<SimulatorIntegration>
+                {
+                    new SimulatorIntegration
+                    {
+                        Simulator = "TestSimulatorStatus",
+                        DataSetId = dataSetId,
+                        ConnectorName = connectorName,
+                    }
+                };
+
+            string? externalId = null;
 
             try
             {
-                var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
-
-                await sequences.UpdateSimulatorIntegrationsData(
-                    externalId,
-                    true,
-                    new SimulatorIntegrationUpdate
-                    {
-                        Simulator = "TestHeartbeatSimulator",
-                        DataSetId = dataSetId,
-                        ConnectorName = connectorName,
-                        ConnectorVersion = "1.0.0",
-                        SimulatorVersion = "1.2.3",
-                    },
-                    CancellationToken.None,
-                    lastLicenseCheckTimestamp: now,
-                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
+                // Create a test simulator integration sequence
+                var integrations = await sequences.GetOrCreateSimulatorIntegrations(
+                    simulators,
+                    CancellationToken.None).ConfigureAwait(false);
+                Assert.NotEmpty(integrations);
+                externalId = integrations.First().ExternalId;
 
                 await sequences.UpsertItemInKVPSequence(
                     externalId,
@@ -161,7 +161,10 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             finally
             {
                 // Cleanup created resources
-                await sequences.DeleteAsync(new List<string> { externalId }, CancellationToken.None).ConfigureAwait(false);
+                if (externalId != null)
+                {
+                    await sequences.DeleteAsync(new List<string> { externalId }, CancellationToken.None).ConfigureAwait(false);
+                }
             }
 
         }
