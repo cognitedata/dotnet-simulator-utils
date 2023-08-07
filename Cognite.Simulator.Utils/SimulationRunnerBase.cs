@@ -527,7 +527,6 @@ namespace Cognite.Simulator.Utils
                     simEv,
                     validationEnd);
             }
-        
             // Run the simulation
             await RunSimulation(
                 simEv,
@@ -537,7 +536,6 @@ namespace Cognite.Simulator.Utils
                 configObj,
                 samplingRange,
                 token).ConfigureAwait(false);
-            
             // Update event with success status
             if (simEv.HasSimulationRun)
             {
