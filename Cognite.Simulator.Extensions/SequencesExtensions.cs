@@ -636,13 +636,13 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        // Gets the externalId of a SimulatorIntegrations sequence
+        // Gets the externalId of a SimulatorIntegrations sequence (This function can throw an exception)
         /// </summary>
         /// <param name="sequences">CDF Sequence resource</param>
         /// <param name="simulatorName">The simulator name.</param>
         /// <param name="simulatorDataSetId">The simulator datasetId</param>
         /// <param name="connectorName">The connector Name</param>
-        /// <returns>Nothing</returns>
+        /// <returns>externalId string</returns>
         public static async Task<string> GetSequenceExternalId(this SequencesResource sequences, string simulatorName, long simulatorDataSetId, string connectorName, CancellationToken token) {
              var _simulatorSequenceIds = new Dictionary<string, string>();
             List<string> _simulators = new List<string> { simulatorName };
@@ -653,17 +653,17 @@ namespace Cognite.Simulator.Extensions
                     DataSetId = simulatorDataSetId,
                     ConnectorName = connectorName
                 });
+            
             var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                simulatorsDict,
-                token).ConfigureAwait(false);
+                    simulatorsDict,
+                    token).ConfigureAwait(false);
             foreach (var integration in integrations)
             {
                 _simulatorSequenceIds.Add(
                     integration.Metadata[BaseMetadata.SimulatorKey],
                     integration.ExternalId);
             }
-            // string simulator = _simulators.ToDictionary(s => s.Name, s => s.DataSetId).FirstOrDefault().Key;
-            return _simulatorSequenceIds[simulatorName];
+            return _simulatorSequenceIds[simulatorName];                
         }
     }
 
