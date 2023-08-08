@@ -359,7 +359,12 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Status of the connector (indicates whether a calculation is running or not)
         /// </summary>
-        public const string ConnectorStatus = "simulatorStatus";
+        public const string ConnectorStatus = "connectorStatus";
+
+        /// <summary>
+        /// Timestamp of when the connector went into the new connectorStatus state
+        /// </summary>        
+        public const string ConnectorStatusTimestamp = "connectorStatusTimestamp";
 
     }
 

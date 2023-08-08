@@ -283,7 +283,7 @@ namespace Cognite.Simulator.Utils
                             e, 
                             token).ConfigureAwait(false);
                         
-                        PublishSimulationRunStatus("", token);
+                        PublishSimulationRunStatus("IDLE", token);
 
                     }
                     
@@ -414,8 +414,10 @@ namespace Cognite.Simulator.Utils
                     SimulatorConfig item = _simulators[0]; // Retrieve the first item
                     sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token);
                 }
-
+                var now = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
                 await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token);
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatusTimestamp, now, token);
+
             }
 
             catch (Exception e)
