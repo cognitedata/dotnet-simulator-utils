@@ -87,7 +87,7 @@ namespace Cognite.Simulator.Utils
             EventsAlreadyProcessed = new Dictionary<string, long>();
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
-
+            sequenceExternalId = "";
         }
 
         private async Task<SimulationRun> UpdateSimulationRunStatus(

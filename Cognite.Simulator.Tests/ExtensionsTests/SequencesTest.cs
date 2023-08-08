@@ -100,6 +100,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 }
             }
         }
+
         [Fact]
         public async Task TestUpsertItemInKVPSequence()
         {
@@ -168,6 +169,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             }
 
         }
+
 
         [Fact]
         public async Task TestUpdateSimulatorIntegrationsData()
