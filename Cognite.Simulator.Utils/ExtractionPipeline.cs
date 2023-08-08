@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extractor.Configuration;
+using System.IO;
 
 namespace Cognite.Simulator.Utils
 {
@@ -236,6 +238,50 @@ namespace Cognite.Simulator.Utils
             }
             services.AddSingleton(config.PipelineNotification);
             services.AddScoped<ExtractionPipeline>();
+        }
+        /// <summary>
+        /// Uses a minimum config that needs "cognite" and type: "specified",
+        /// then uses that to either fetch remote Config Extraction Pipeline, or just adds
+        /// the local one based on if "type" is remote or local.
+        /// </summary>
+        /// <typeparam name="T">Type of config</typeparam>
+        /// <param name="services">Service collection</param>
+        /// <param name="path">Path to config file</param>
+        /// <param name="types">Types to use for deserialization</param>
+        /// <param name="appId">App ID for measuring network data</param>
+        /// <param name="token">Cancellation token</param>
+        /// <param name="version">Config version</param>
+        /// <param name="acceptedConfigVersions">Accepted config versions</param>
+        public static async Task<T> AddConfiguration<T>(
+            this IServiceCollection services,
+            string path,
+            Type[] types,
+            string appId,
+            CancellationToken token,
+            int version = 1,
+            int[] acceptedConfigVersions = null) where T : BaseConfig
+        {
+            var bufferConfigFile = false;
+            var setDestination = true;
+            var localConfig = services.AddConfig<T>(path, version);
+            var remoteConfig = new RemoteConfig
+            {
+                Type = localConfig.Type,
+                Cognite = localConfig.Cognite
+            };
+            
+            return await services.AddRemoteConfig<T>(
+                logger: null,
+                path: path,
+                types: types,
+                appId: appId,
+                userAgent: null,
+                setDestination: setDestination,
+                bufferConfigFile: bufferConfigFile,
+                remoteConfig: remoteConfig,
+                token: token,
+                acceptedConfigVersions: acceptedConfigVersions
+            );
         }
     }
 }
