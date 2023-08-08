@@ -412,11 +412,11 @@ namespace Cognite.Simulator.Utils
             {
                 if (sequenceExternalId == "" && _simulators.Count > 0) {
                     SimulatorConfig item = _simulators[0]; // Retrieve the first item
-                    sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token);
+                    sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token).ConfigureAwait(false);
                 }
                 var now = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
-                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token);
-                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatusTimestamp, now, token);
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token).ConfigureAwait(false);
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatusTimestamp, now, token).ConfigureAwait(false);
 
             }
 
