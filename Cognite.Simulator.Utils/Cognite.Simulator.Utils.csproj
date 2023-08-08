@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cognite.ExtractorUtils" Version="1.13.1" />
+    <PackageReference Include="Cognite.ExtractorUtils" Version="1.11.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
