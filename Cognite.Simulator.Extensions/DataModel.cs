@@ -364,7 +364,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Timestamp of when the connector went into the new connectorStatus state
         /// </summary>        
-        public const string ConnectorStatusTimestamp = "connectorStatusTimestamp";
+        public const string ConnectorStatusTimestamp = "connectorStatusUpdatedTime";
 
     }
 
