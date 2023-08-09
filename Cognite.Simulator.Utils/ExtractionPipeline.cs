@@ -244,7 +244,7 @@ namespace Cognite.Simulator.Utils
         /// then uses that to either fetch remote Config Extraction Pipeline, or just adds
         /// the local one based on if "type" is remote or local.
         /// </summary>
-        /// <typeparam name="T">Type of config</typeparam>
+        /// <typeparam name="T">The complete config object to be parsed</typeparam>
         /// <param name="services">Service collection</param>
         /// <param name="path">Path to config file</param>
         /// <param name="types">Types to use for deserialization</param>
@@ -261,8 +261,6 @@ namespace Cognite.Simulator.Utils
             int version = 1,
             int[] acceptedConfigVersions = null) where T : BaseConfig
         {
-            var bufferConfigFile = false;
-            var setDestination = true;
             var localConfig = services.AddConfig<T>(path, version);
             var remoteConfig = new RemoteConfig
             {
@@ -276,8 +274,8 @@ namespace Cognite.Simulator.Utils
                 types: types,
                 appId: appId,
                 userAgent: null,
-                setDestination: setDestination,
-                bufferConfigFile: bufferConfigFile,
+                setDestination: true,
+                bufferConfigFile: false,
                 remoteConfig: remoteConfig,
                 token: token,
                 acceptedConfigVersions: acceptedConfigVersions
