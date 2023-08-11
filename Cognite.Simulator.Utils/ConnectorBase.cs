@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extractor.Configuration;
 
 namespace Cognite.Simulator.Utils
 {
@@ -16,7 +17,7 @@ namespace Cognite.Simulator.Utils
     /// The connector information is saved as a CDF sequence, where the rows
     /// are key/value pairs (see <seealso cref="SimulatorIntegrationSequenceRows"/>)
     /// </summary>
-    public abstract class ConnectorBase
+    public abstract class ConnectorBase<T> where T : BaseConfig
     {
         /// <summary>
         /// CDF client wrapper
@@ -30,11 +31,13 @@ namespace Cognite.Simulator.Utils
         private ConnectorConfig Config { get; }
 
         private readonly Dictionary<string, string> _simulatorSequenceIds;
-        private readonly ILogger<ConnectorBase> _logger;
+        private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
         private string LastLicenseCheckResult { get; set; }
+
+        private readonly RemoteConfigManager<T> _remoteconfigmanager;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -47,7 +50,8 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ILogger<ConnectorBase> logger)
+            ILogger<ConnectorBase<T>> logger,
+            RemoteConfigManager<T> remoteConfigManager)
         {
             Cdf = cdf;
             Simulators = simulators;
@@ -55,6 +59,7 @@ namespace Cognite.Simulator.Utils
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;
+            _remoteconfigmanager = remoteConfigManager;
         }
 
         /// <summary>
@@ -284,6 +289,31 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
             }
         }
+        public async Task CheckForNewConfig(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task
+                    .Delay(900000, token) // Run every 15 minutes
+                    .ConfigureAwait(false);
+                _logger.LogDebug("Checking remote config");
+                if (_remoteconfigmanager == null) return;
+                var newConfig = await _remoteconfigmanager.FetchLatest(token).ConfigureAwait(false);
+                if (newConfig != null)
+                {
+                    throw new NewConfigDetected();
+                }
+            }
+        }
+    }
+
+    public class NewConfigDetected : Exception
+    {
+    }
+
+    interface IFullConfig
+    {
+        
     }
     
     /// <summary>
