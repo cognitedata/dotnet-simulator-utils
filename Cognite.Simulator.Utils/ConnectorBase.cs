@@ -310,11 +310,6 @@ namespace Cognite.Simulator.Utils
     public class NewConfigDetected : Exception
     {
     }
-
-    interface IFullConfig
-    {
-        
-    }
     
     /// <summary>
     /// Represents errors related to the connector operation
