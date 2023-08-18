@@ -430,6 +430,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public static List<double> _inputs;
         public static double? _output;
+
+        public override string GetPropertyValue(Dictionary<string, string> args)
+        {
+            return "1"; //Just an arbitrary value
+        }
         public SampleRoutine(SimulationConfigurationWithRoutine config, Dictionary<string, double> inputData)
             :base(config, inputData)
         {
