@@ -21,8 +21,13 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, double> _inputData;
         private readonly Dictionary<string, double> _simulationResults;
         private Dictionary<string, LocalVariable> _variables;
-        private int _loopIteration ;
-        private int _loopNestingLevel;
+
+        private Dictionary<string, string> _specialVariables;
+        // private int _loopIteration ;
+        private int _currentScope;
+        // declare a variable to hold the current loop iterator as a Stack
+        private Stack<string> _currentLoopIterator;
+
 
         /// <summary>
         /// Creates a new simulation routine with the given configuration
@@ -42,8 +47,9 @@ namespace Cognite.Simulator.Utils
             _simulationResults = new Dictionary<string, double>();
             _inputData = inputData;
             _variables = new Dictionary<string, LocalVariable>();
-            _loopIteration = 0;
-            _loopNestingLevel = 0;
+            _currentScope = 0;
+            _currentLoopIterator = new Stack<string>();
+            _specialVariables = new Dictionary<string, string>();
         }
 
         /// <summary>
@@ -83,12 +89,15 @@ namespace Cognite.Simulator.Utils
         public void CreateLocalVariable(string localVariable, string value)
         {
             string accessor = CreateLocalVariableAccessor(localVariable);
-            // DebugLog($"\r\nCreating local variable {localVariable} with value = {value}\r\n");
+            string iterator = _currentLoopIterator.Any() ?  _currentLoopIterator.Peek() : "";
+            // Console.WriteLine($"\r\nCreating local variable {localVariable} with value = {value} . Level = {_currentScope} Iter = {iterator} \r\n");
             _variables[accessor] = new LocalVariable { 
                 Name = localVariable, 
                 Value = value,
-                DeclaredInLoopIteration = _loopIteration,
-                Level = _loopNestingLevel
+                DeclaredInLoopIteration = _currentLoopIterator.Any() ? int.Parse(GetLocalVariable(_currentLoopIterator.Peek()).Value) : 0,
+                DeclaredInLoopIterator = iterator,
+                Scope = _currentScope,
+                Accessor = accessor
             };
         }
 
@@ -97,34 +106,89 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="localVariable"></param>
         /// <param name="value"></param>
-        public string GetLocalVariable(string localVariable)
+        public LocalVariable GetLocalVariable(string localVariable)
         {
-            int nestingLevel = _loopNestingLevel; 
-            int customLoopIteration = _loopIteration;
-            while (true)
-            {
-                try
-                {
-                    string accessor = CreateLocalVariableAccessor(localVariable, nestingLevel, customLoopIteration);
-                    if (!_variables.ContainsKey(accessor))
-                    {
-                        throw new SimulationException($"Access local variable error: local variable {localVariable} not defined (Nesting level: {nestingLevel})");
-                    }
+            // int nestingLevel = _currentScopeLevel; 
+            // int customLoopIteration = _loopIteration;
+            // while (true)
+            // {
+            //     try
+            //     {
+            //         string accessor = CreateLocalVariableAccessor(localVariable, nestingLevel, customLoopIteration);
+            //         if (!_variables.ContainsKey(accessor))
+            //         {
+            //             throw new SimulationException($"Access local variable error: local variable {localVariable} not defined (Nesting level: {nestingLevel})");
+            //         }
 
-                    string value = _variables[accessor].Value;
-                    return value;
-                }
-                catch (Exception e) when (e is SimulationException)
+            //         string value = _variables[accessor].Value;
+            //         return value;
+            //     }
+            //     catch (Exception e) when (e is SimulationException)
+            //     {
+            //         if (nestingLevel <= 0)
+            //         {
+            //             throw new SimulationRoutineException($"Unable to access local variable {localVariable}");
+            //         }
+            //         nestingLevel--; 
+            //         customLoopIteration = 0;
+            //     }
+            // }
+
+            // First try to access the variable in the current scope
+            string accessor = CreateLocalVariableAccessor(localVariable, _currentScope);
+            // Console.WriteLine($"Accessing local variable {localVariable} with accessor = {accessor} . Level = {_currentScopeLevel} \r\n");
+            if (_variables.ContainsKey(accessor))
+            {
+                // Console.WriteLine($"Accessing local variable {localVariable} with value = {_variables[accessor].Value} . Level = {_currentScopeLevel} \r\n");
+                return _variables[accessor];
+            } else {
+                string currentLoopIterator = _currentLoopIterator.Any() ? _currentLoopIterator.Peek() : "";
+
+                int currentLoopIteration = 0;
+                if (_currentLoopIterator.Any())
                 {
-                    if (nestingLevel <= 0)
-                    {
-                        throw new SimulationRoutineException($"Unable to access local variable {localVariable}");
-                    }
-                    nestingLevel--; 
-                    customLoopIteration = 0;
+                    currentLoopIteration = int.Parse(_specialVariables[currentLoopIterator]);
+                }
+                // Loop through all the variables and find the ones declared in the nearest parent scope
+                var matchingVariablesInParentScope = _variables.Where(v => v.Value.Name == localVariable && v.Value.Scope < _currentScope).ToList();
+                var matchingVariablesInCurrentScope = _variables.Where(v => v.Value.Name == localVariable && v.Value.Scope == _currentScope && v.Value.DeclaredInLoopIteration == currentLoopIteration && v.Value.DeclaredInLoopIterator == currentLoopIterator).ToList();
+                if (matchingVariablesInCurrentScope.Any())
+                {
+                    var matchingVariable = matchingVariablesInCurrentScope.OrderByDescending(v => v.Value.Scope).First();
+                    // Console.WriteLine($"Accessing local variable {localVariable} with value = {matchingVariable.Value} . Level = {_currentScopeLevel} \r\n");
+                    return matchingVariable.Value;
+                } else if (matchingVariablesInParentScope.Any())
+                {
+                    var matchingVariable = matchingVariablesInParentScope.OrderByDescending(v => v.Value.Scope).First();
+                    // Console.WriteLine($"Accessing local variable {localVariable} with value = {matchingVariable.Value} . Level = {_currentScopeLevel} \r\n");
+                    return matchingVariable.Value;
+                } else if (_specialVariables.ContainsKey(localVariable)) {
+                    return new LocalVariable { 
+                        Name = localVariable, 
+                        Value = _specialVariables[localVariable],
+                        DeclaredInLoopIteration = -1,
+                        DeclaredInLoopIterator = "",
+                        Scope = -1,
+                        Accessor = localVariable
+                    };
+                }
+                 else {
+                    throw new SimulationRoutineException($"Unable to access local variable {localVariable}. Has it been declared?");
                 }
             }
         }
+
+        // public void SetLocalVariableValue(string localVariable, string value)
+        // {
+        //     if (IsLocalVariableDefined(localVariable))
+        //     {
+        //         string accessor = GetLocalVariable(localVariable).Accessor;
+        //         // Console.WriteLine($"\r\nSetting local variable {localVariable} with value = {value} . Level = {_currentScopeLevel} Iter = {LoopIterator} \r\n");
+        //         _variables[accessor].Value = value;
+        //     } else {
+        //         throw new SimulationRoutineException($"Unable to set local variable {localVariable}. Has it been declared?");
+        //     }
+        // }
 
         /// <summary>
         /// Creates a local variable accessor - to access it in the dictionary  
@@ -132,10 +196,16 @@ namespace Cognite.Simulator.Utils
         /// <param name="loopNestedLevel">Nesting level of the loop in which the variable was declared (for nested loops)</param>
         /// <param name="customLoopIteration">Iteration of the loop in which the variable was declared</param>
         /// </summary>
-       public string CreateLocalVariableAccessor(string localVariable, int? loopNestedLevel = null, int? customLoopIteration = null)
+       public string CreateLocalVariableAccessor(string localVariable, int? scopeLevel = null)
         {
-            int nestingLevel = loopNestedLevel ?? _loopNestingLevel;
-            int iteration = customLoopIteration ?? _loopIteration;
+            int nestingLevel = scopeLevel ?? _currentScope;
+            // int iteration = customLoopIteration ?? LoopIterator;
+            string iteration = "";
+            foreach (var item in _currentLoopIterator.Reverse())
+            {
+                iteration += _specialVariables[item] + "_";
+            }
+
             return $"{nestingLevel}-{iteration}-{localVariable}";
         }
 
@@ -230,6 +300,7 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
         public virtual Dictionary<string, double> PerformSimulation()
         {
+            // Console.WriteLine($"Performing simulation with {_routine} routine");
             _simulationResults.Clear();
             if (_config.CalculationType != "UserDefined")
             {
@@ -273,6 +344,10 @@ namespace Cognite.Simulator.Utils
             {
                 throw new SimulationException($"Loop error: timesToLoop not defined");
             }
+            if (!args.TryGetValue("loopIterator", out string localLoopIterator))
+            {
+                throw new SimulationException($"Loop error: loopIterator not defined");
+            }
 
 
             try
@@ -286,21 +361,26 @@ namespace Cognite.Simulator.Utils
                 ).ToArray();
 
                 int timesToLoopValue = int.Parse(timesToLoop);
-                _loopNestingLevel++;    
 
+                _specialVariables[localLoopIterator] = "0";
+                _currentLoopIterator.Push(localLoopIterator);
+                _currentScope++;    
                 for (int i = 1; i <= timesToLoopValue; i++)
                 {
-                    _loopIteration++;
-                    DebugLog($"\r\n--Loop iteration {i}--\r\n");
+                    // IncrementLoopIterator();
+                    // DebugLog($"--Loop iteration {i}--\r\n");
                     foreach (var step in stepsArray)
                     {
                         StepParse(step.Type, step.Step, step.Arguments);
                     }
+                    _specialVariables[localLoopIterator] = i.ToString();
+                    CleanupScopedVariablesAfterLoopIteration(i, _currentLoopIterator.Peek());
                 }
-                
-                //Reset loop iteration and nesting level
-                _loopIteration -= timesToLoopValue;
-                _loopNestingLevel--;
+                // LoopIterator -= timesToLoopValue;
+                _specialVariables.Remove(localLoopIterator);
+                _currentLoopIterator.Pop();
+                CleanupScopedVariables(_currentScope);
+                _currentScope--;
             }
             catch (System.Exception e)
             {
@@ -309,9 +389,123 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private bool SolveEquation(string leftSide, string comparator, string rightSide)
+        {
+            // Sanitize inputs by removing leading and trailing white spaces
+            leftSide = leftSide.Trim();
+            rightSide = rightSide.Trim();
+
+            double leftValue, rightValue;
+
+            if (double.TryParse(leftSide, out leftValue) && double.TryParse(rightSide, out rightValue))
+            {
+                switch (comparator)
+                {
+                    case "==": return Math.Abs(leftValue - rightValue) < double.Epsilon;
+                    case "!=": return Math.Abs(leftValue - rightValue) >= double.Epsilon;
+                    case ">=": return leftValue >= rightValue;
+                    case "<=": return leftValue <= rightValue;
+                    case "<": return leftValue < rightValue;
+                    case ">": return leftValue > rightValue;
+                    default: throw new NotSupportedException("Unsupported comparator");
+                }
+            }
+            else
+            {
+                switch (comparator)
+                {
+                    case "==": return leftSide == rightSide;
+                    case "!=": return leftSide != rightSide;
+                    default: throw new SimulationRoutineException($"Unable to parse equation {leftSide} {comparator} {rightSide}");
+                }
+            }
+        }
+
+
+        void VerifyArgumentString<T>(Dictionary<string, T> arguments, string argumentName, out T argumentValue)
+        {
+            if (!arguments.TryGetValue(argumentName, out argumentValue))
+            {
+                throw new SimulationException($"Loop error: {argumentName} not defined");
+            }
+        }
+
+
+        private void ParseConditional(Dictionary<string, object> arguments, string[] keysToExclude) {
+            var elseSteps = new JArray();
+            
+            if (!arguments.TryGetValue("ifSteps", out object ifStepsObject) || !(ifStepsObject is JArray ifSteps))
+            {
+                throw new SimulationException("Conditional error: ifSteps not defined");
+            }
+
+            if (arguments.TryGetValue("elseSteps", out object elseStepsObject) && (elseStepsObject is JArray elseStepsParsed))
+            {
+                elseSteps = elseStepsParsed;
+            }
+
+            var args = arguments
+                .Where(s => !keysToExclude.Contains(s.Key))
+                .ToDictionary(dict => dict.Key, dict => (string)dict.Value);
+
+            args = PerformVariableSubstitutionInArguments(args);
+
+            VerifyArgumentString(args, "leftSide", out string leftSide);
+
+            VerifyArgumentString(args, "comparator", out string comparator);
+
+            VerifyArgumentString(args, "rightSide", out string rightSide);
+
+            bool equationSolution = SolveEquation(leftSide, comparator, rightSide);
+
+            Console.WriteLine($"equationSolution: {equationSolution} Solving = {leftSide} {comparator} {rightSide}");
+
+            var stepsToRun = equationSolution ? ifSteps : elseSteps;
+
+            _currentScope++;
+            stepsToRun.Select(item => new CalculationProcedureStep
+            {
+                Type = (string)item["type"],
+                Step = (int)item["step"],
+                Arguments = item["arguments"].ToObject<Dictionary<string, object>>()
+            })
+            .ToList()
+            .ForEach(step =>
+            {
+                StepParse(step.Type, step.Step, step.Arguments);
+            });
+            CleanupScopedVariables(_currentScope);
+            _currentScope--;
+            Console.WriteLine($"Current scope level: {_currentScope} after conditional");
+        }
+
+        private void CleanupScopedVariables(int level)
+        {
+            // Remove all variables that were declared in the current scope
+            var variablesToRemove = _variables.Where(v => v.Value.Scope == level).ToList();
+            foreach (var variable in variablesToRemove)
+            {
+                _variables.Remove(variable.Key);
+            }
+        }
+
+        private void CleanupScopedVariablesAfterLoopIteration(int level, string currentLoopIterator = "")
+        {
+            // Remove all variables that were declared in the current scope
+            var variablesToRemove = _variables.Where(v => v.Value.DeclaredInLoopIteration == level && v.Value.DeclaredInLoopIterator == currentLoopIterator).ToList();
+            foreach (var variable in variablesToRemove)
+            {
+                _variables.Remove(variable.Key);
+            }
+        }
+
         private void StepParse(string stepType, int step , Dictionary<string, object> stepArguments)
         {
-            var stringArgs = stepArguments.Where(s => s.Key != "steps")
+            // Console.WriteLine($"StepParse: {stepType} {step} . Scope Level : {_currentScope}");
+            
+            string[] keysToExclude = { "steps", "ifSteps", "elseSteps" };
+
+            var stringArgs = stepArguments.Where(s => !keysToExclude.Contains(s.Key))
                                 .ToDictionary(dict => dict.Key, dict => (string) dict.Value);
             try
             {
@@ -335,6 +529,11 @@ namespace Cognite.Simulator.Utils
                     case "Loop":
                         {
                             ParseLoop(stepArguments);
+                            break;
+                        }
+                    case "Conditional":
+                        {
+                            ParseConditional(stepArguments, keysToExclude);
                             break;
                         }
                         throw new SimulationRoutineException($"Invalid procedure step: {stepType}", step: step);
@@ -373,13 +572,14 @@ namespace Cognite.Simulator.Utils
             {
                 throw new SimulationException($"Get error: Assignment type not defined");
             }
+            arguments = PerformVariableSubstitutionInArguments(arguments);
             if (!arguments.TryGetValue("value", out string argValue) )
             {   
                 if (!arguments.TryGetValue("storeInLocalVariable", out string checkLocalVariable)){
                     throw new SimulationException($"Get error: Output value not defined");
                 }
             }
-            arguments = PerformVariableSubstitutionInArguments(arguments);
+            
 
             var extraArgs = arguments.Where(s => s.Key != "type" && s.Key != "value")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
@@ -396,12 +596,12 @@ namespace Cognite.Simulator.Utils
                             var output = matchingOutputs.First();
                             try
                             {
-                                _simulationResults[output.Type] = double.Parse(GetLocalVariable(tslocalVariable));
+                                _simulationResults[output.Type] = double.Parse(GetLocalVariable(tslocalVariable).Value);
 
                             }
                             catch (System.Exception)
                             {
-                                throw new SimulationRoutineException($"Unable to convert local variable ${tslocalVariable} with value ${GetLocalVariable(tslocalVariable)} to double");
+                                throw new SimulationRoutineException($"Unable to convert local variable ${tslocalVariable} with value ${GetLocalVariable(tslocalVariable).Value} to double");
                             }
                         } else {
                             // Set output time series
@@ -438,9 +638,13 @@ namespace Cognite.Simulator.Utils
 
         private string SubstituteLocalVariable(string currentValue, string localVariable)
         {
-            if (IsLocalVariableDefined(localVariable))
+            if (IsLocalVariableDefined(localVariable) )
             {
-                string newValue = GetLocalVariable(localVariable);
+                string newValue = GetLocalVariable(localVariable).Value;
+                return ReplaceAllInstancesInString(currentValue, localVariable,newValue );
+            } else if ( _specialVariables.ContainsKey(localVariable) )
+            {
+                string newValue = _specialVariables[localVariable];
                 return ReplaceAllInstancesInString(currentValue, localVariable,newValue );
             }
             else
@@ -529,6 +733,11 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class LocalVariable {
         /// <summary>
+        /// For fast access to this variable in the dictionary
+        /// </summary>
+        public string Accessor { get; set; }
+
+        /// <summary>
         /// Name of the variable
         /// </summary>
         public string Name { get; set; }
@@ -544,9 +753,14 @@ namespace Cognite.Simulator.Utils
         public int DeclaredInLoopIteration { get; set; }
 
         /// <summary>
-        /// Nesting level this variable is created in
+        /// Declared in which loop iterator
         /// </summary>
-        public int Level { get; set; }
+        public string DeclaredInLoopIterator { get; set; }
+
+        /// <summary>
+        /// The scope this variable is created in
+        /// </summary>
+        public int Scope { get; set; }
     }
 
     /// <summary>
