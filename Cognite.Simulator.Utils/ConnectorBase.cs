@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.Utils;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
@@ -31,6 +32,9 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, string> _simulatorSequenceIds;
         private readonly ILogger<ConnectorBase> _logger;
         private readonly ConnectorConfig _config;
+
+        private long LastLicenseCheckTimestamp { get; set; }
+        private string LastLicenseCheckResult { get; set; }
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -127,6 +131,24 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// How often to report the simulator license status information back to CDF (Heartbeat)
+        /// </summary>
+        /// <returns>Time interval</returns>
+        public virtual TimeSpan GetLicenseCheckInterval()
+        {
+            int min3600 = _config.LicenseCheck.Interval < 3600 ? 3600 : _config.LicenseCheck.Interval;
+            return TimeSpan.FromSeconds(min3600);
+        }
+        
+        /// <summary>
+        /// If the connector should check and report the license status back to CDF
+        /// </summary>
+        public virtual bool ShouldLicenseCheck()
+        {
+            return _config.LicenseCheck.Enabled;
+        }
+
+        /// <summary>
         /// Indicates if this connectors should use Cognite's Simulator Integration API
         /// </summary>
         /// <returns></returns>
@@ -173,12 +195,16 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Update the heartbeat, data set id and connector version in CDF. Data set id and connector
         /// version are not expected to change while the connector is running, and are only set during
-        /// initialization
+        /// initialization.
         /// </summary>
         protected async Task UpdateIntegrationRows(
             bool init,
             CancellationToken token)
-        {
+        {   
+            if (init)
+            {
+                LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
+            }
             var sequences = Cdf.CogniteClient.Sequences;
             try
             {
@@ -193,14 +219,16 @@ namespace Cognite.Simulator.Utils
                         ConnectorVersion = GetConnectorVersion(),
                         SimulatorVersion = GetSimulatorVersion(simulator.Name),
                         ExtraInformation = GetExtraInformation(simulator.Name),
-                        SimulatorApiEnabled = ApiEnabled()
+                        SimulatorApiEnabled = ApiEnabled(),
                     }
                     : null;
-                    await sequences.UpdateSimulatorIntegrationsHeartbeat(
+                    await sequences.UpdateSimulatorIntegrationsData(
                         _simulatorSequenceIds[simulator.Name],
                         init,
                         update,
-                        token).ConfigureAwait(false);
+                        token,
+                        lastLicenseCheckTimestamp: LastLicenseCheckTimestamp,
+                        lastLicenseCheckResult: LastLicenseCheckResult).ConfigureAwait(false);
                 }
             }
             catch (SimulatorIntegrationSequenceException e)
@@ -228,6 +256,34 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// This method should be overridden in each specific Connector class.
+        /// </summary>
+        /// <returns>True if the simulator has a valid license, false otherwise.</returns>
+        public virtual bool CheckLicenseStatus()
+        {
+            return true;
+        }
+        /// <summary>
+        /// Task that runs in a loop, reporting the connector license status to CDF periodically
+        /// (with the interval defined in <see cref="GetLicenseCheckInterval"/>)
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task LicenseCheck(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task
+                    .Delay(GetLicenseCheckInterval(), token)
+                    .ConfigureAwait(false);
+                _logger.LogDebug("Updating connector license timestamp");
+                LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
+                LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
+                await UpdateIntegrationRows(false, token)
+                    .ConfigureAwait(false);
+            }
+        }
     }
     
     /// <summary>
