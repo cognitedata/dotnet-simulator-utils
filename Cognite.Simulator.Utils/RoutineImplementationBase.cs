@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Cognite.Extractor.Utils;
 
 namespace Cognite.Simulator.Utils
 {
@@ -28,20 +30,24 @@ namespace Cognite.Simulator.Utils
         // declare a variable to hold the current loop iterator as a Stack
         private Stack<string> _currentLoopIterator;
 
+        private readonly CogniteConfig _connectorConfig;
+
 
         /// <summary>
         /// Creates a new simulation routine with the given configuration
         /// </summary>
         /// <param name="config">Simulation configuration object</param>
         /// <param name="inputData">Data to use as input</param>
+        /// <param name="cdf"></param>
         public RoutineImplementationBase(
             SimulationConfigurationWithRoutine config,
-            Dictionary<string, double> inputData)
+            Dictionary<string, double> inputData, CogniteConfig cogniteConfig)
         {
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
+            _connectorConfig = cogniteConfig;
             _routine = config.Routine;
             _config = config;
             _simulationResults = new Dictionary<string, double>();
@@ -86,19 +92,63 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="localVariable"></param>
         /// <param name="value"></param>
-        public void CreateLocalVariable(string localVariable, string value)
+        public void CreateLocalVariable(string localVariable, object value)
         {
             string accessor = CreateLocalVariableAccessor(localVariable);
             string iterator = _currentLoopIterator.Any() ?  _currentLoopIterator.Peek() : "";
-            // Console.WriteLine($"\r\nCreating local variable {localVariable} with value = {value} . Level = {_currentScope} Iter = {iterator} \r\n");
+            Console.WriteLine($"\r\nCreating local variable {localVariable} with value = {value} .Type = {GetDataType((string)value)} \r\n");
             _variables[accessor] = new LocalVariable { 
                 Name = localVariable, 
                 Value = value,
-                DeclaredInLoopIteration = _currentLoopIterator.Any() ? int.Parse(GetLocalVariable(_currentLoopIterator.Peek()).Value) : 0,
+                DeclaredInLoopIteration = _currentLoopIterator.Any() ? int.Parse(GetLocalVariable(_currentLoopIterator.Peek()).Value.ToString()) : 0,
                 DeclaredInLoopIterator = iterator,
                 Scope = _currentScope,
-                Accessor = accessor
+                Accessor = accessor,
+                VariableType = GetDataType((string)value)
             };
+        }
+
+        public static Type GetDataType(string inputString)
+        {
+            if (! (inputString.StartsWith("{") && inputString.EndsWith("}") || inputString.StartsWith("[") && inputString.EndsWith("]")))
+            {
+                if (double.TryParse(inputString, out _))
+                {
+                    return typeof(double); 
+                } else {
+                    return typeof(string);
+                }
+            }
+            try
+            {
+                JToken token = JToken.Parse(inputString);
+
+                if (token.Type == JTokenType.Object)
+                {
+                    return typeof(JObject);
+                }
+                else if (token.Type == JTokenType.Array)
+                {
+                    return typeof(JArray);
+                }
+                else if (token.Type == JTokenType.String)
+                {
+                    return typeof(string);
+                }
+                else if (token.Type == JTokenType.Float)
+                {
+                    return typeof(double);
+                }
+                else
+                {
+                    return typeof(object); // Fallback for other types
+                }
+            }
+            catch (JsonReaderException)
+            {
+                // Parsing error, handle it as needed
+                return typeof(object); // Return a fallback type
+            }
         }
 
         // <summary>
@@ -234,15 +284,52 @@ namespace Cognite.Simulator.Utils
         /// <param name="arguments">Extra arguments</param>
         public void SetLocalVariable(string localVariable , string argType, Dictionary<string, string> arguments)
         {
-            
             switch (argType)
             {
                 case "userDefined":
-                    if (!arguments.TryGetValue("value", out string localVariableValue))
+                    if (arguments.TryGetValue("performLocalVariableOperation", out string performLocalVariableOperation))
                     {
-                        throw new SimulationException($"Get local error: value for assignment to local variable not defined");
+                        VerifyArgumentString(arguments, "useLocalVariable", out string currentlocalVariable);
+
+                        switch (performLocalVariableOperation)
+                        {
+                            case "length" :
+                                if (IsLocalVariableDefined(currentlocalVariable))
+                                {
+                                    if (GetLocalVariable(currentlocalVariable).IsArray()) {
+                                        var arr = (JArray)GetLocalVariable(currentlocalVariable).Value;
+                                        CreateLocalVariable(localVariable, arr.Count.ToString());
+                                    } else {
+                                        throw new SimulationException($"Set local error: local variable {currentlocalVariable} is not an array");
+                                    }
+                                } else {
+                                    throw new SimulationException($"Set local error: local variable {currentlocalVariable} not defined");
+                                }
+                                break;
+                            case "getIndex":
+                                VerifyArgumentString(arguments, "performLocalVariableOperationParam1", out string index);
+                                if (IsLocalVariableDefined(currentlocalVariable))
+                                {
+                                    if (GetLocalVariable(currentlocalVariable).IsArray()) {
+                                        var arr = (JArray)GetLocalVariable(currentlocalVariable).Value;
+                                        CreateLocalVariable(localVariable, arr[int.Parse(index)].ToString());
+                                    } else {
+                                        throw new SimulationException($"Set local error: local variable {currentlocalVariable} is not an array");
+                                    }
+                                } else {
+                                    throw new SimulationException($"Set local error: local variable {currentlocalVariable} not defined");
+                                }
+                                break;
+                        }
+                    } else {
+                        if (!arguments.TryGetValue("value", out string localVariableValue))
+                        {
+                            throw new SimulationException($"Get local error: value for assignment to local variable not defined");
+                        }
+
+                        CreateLocalVariable(localVariable, localVariableValue);
                     }
-                    CreateLocalVariable(localVariable, localVariableValue);
+
                     break;
                 case "manual":
                     string value = GetPropertyValue(arguments);
@@ -298,8 +385,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>Simulation results</returns>
         /// <exception cref="SimulationException">When the simulation configuration is invalid</exception>
         /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
-        public virtual Dictionary<string, double> PerformSimulation()
-        {
+        public async Task<Dictionary<string, double>> PerformSimulation() {
             // Console.WriteLine($"Performing simulation with {_routine} routine");
             _simulationResults.Clear();
             if (_config.CalculationType != "UserDefined")
@@ -317,7 +403,7 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
-                    ParseProcedure(procedure);
+                    await ParseProcedure(procedure);
                 }
                 catch (SimulationRoutineException e)
                 {
@@ -499,7 +585,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void StepParse(string stepType, int step , Dictionary<string, object> stepArguments)
+        private async Task StepParse(string stepType, int step , Dictionary<string, object> stepArguments)
         {
             // Console.WriteLine($"StepParse: {stepType} {step} . Scope Level : {_currentScope}");
             
@@ -536,6 +622,11 @@ namespace Cognite.Simulator.Utils
                             ParseConditional(stepArguments, keysToExclude);
                             break;
                         }
+                    case "Getgraphql":
+                        {
+                            await ParseGraphQLStep(stepArguments);
+                            break;
+                        }
                         throw new SimulationRoutineException($"Invalid procedure step: {stepType}", step: step);
                 };
             }
@@ -545,12 +636,12 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void ParseProcedure(CalculationProcedure procedure)
+        private async Task ParseProcedure(CalculationProcedure procedure)
         {
             var orderedSteps = procedure.Steps.OrderBy(s => s.Step).ToList();
             foreach (var step in orderedSteps)
             {
-                StepParse(step.Type, step.Step, step.Arguments);
+                await StepParse(step.Type, step.Step, step.Arguments);
             }
         }
 
@@ -564,6 +655,41 @@ namespace Cognite.Simulator.Utils
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
             // Perform command
             RunCommand(argType, extraArgs);
+        }
+
+        /// <summary>
+        /// Parses a GraphQL query and returns the result
+        /// </summary>
+        private async Task ParseGraphQLStep(Dictionary<string, object> arguments) {
+            if (_connectorConfig == null)
+            {
+                throw new SimulationException($"ParseGraphQLStep error: Cognite client not defined");
+            }
+            
+            var stringArgs = arguments.Where(s => s.Key != "type")
+                                .ToDictionary(dict => dict.Key, dict => (string) dict.Value);
+            VerifyArgumentString(stringArgs, "endpoint", out string graphQlEndpoint);
+            VerifyArgumentString(stringArgs, "query", out string query);
+            VerifyArgumentString(stringArgs, "jsonPath", out string jsonPath);
+
+            var client = new GraphQLClient(graphQlEndpoint, _connectorConfig);
+            object value = null;
+            try
+            {
+                var json = await client.SendQueryAsync(query);
+                value = GraphQLClient.GetValueFromPath(json, jsonPath);
+            }
+            catch (Exception e)
+            {
+                throw new SimulationException($"ParseGraphQLStep error: Unable to get OAuth token" + e.Message.ToString());
+            }
+
+            // object json = await ResolveGraphqlQuery(query);
+            // Console.WriteLine($"json: {json}");
+            // Console.WriteLine($"value: {value}");
+            // Console.WriteLine($"value type: {value.GetType()}");
+            VerifyArgumentString(stringArgs, "storeInLocalVariable", out string localVariable);
+            CreateLocalVariable(localVariable, value);
         }
 
         private void ParseGet(Dictionary<string, string> arguments)
@@ -596,12 +722,12 @@ namespace Cognite.Simulator.Utils
                             var output = matchingOutputs.First();
                             try
                             {
-                                _simulationResults[output.Type] = double.Parse(GetLocalVariable(tslocalVariable).Value);
+                                _simulationResults[output.Type] = double.Parse(GetLocalVariable(tslocalVariable).Value.ToString());
 
                             }
                             catch (System.Exception)
                             {
-                                throw new SimulationRoutineException($"Unable to convert local variable ${tslocalVariable} with value ${GetLocalVariable(tslocalVariable).Value} to double");
+                                throw new SimulationRoutineException($"Unable to convert local variable ${tslocalVariable} with value ${GetLocalVariable(tslocalVariable).Value.ToString()} to double");
                             }
                         } else {
                             // Set output time series
@@ -640,7 +766,7 @@ namespace Cognite.Simulator.Utils
         {
             if (IsLocalVariableDefined(localVariable) )
             {
-                string newValue = GetLocalVariable(localVariable).Value;
+                string newValue = GetLocalVariable(localVariable).Value.ToString();
                 return ReplaceAllInstancesInString(currentValue, localVariable,newValue );
             } else if ( _specialVariables.ContainsKey(localVariable) )
             {
@@ -745,7 +871,24 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Value of the variable
         /// </summary>
-        public string Value { get; set; }
+        public object Value
+        {
+            get
+            {
+                if (IsArray()) {
+                    return JArray.Parse(_value.ToString());
+                }
+                // Implement any custom logic here if needed
+                return _value;
+            }
+            set
+            {
+                // Implement any custom logic here if needed
+                _value = value;
+            }
+        }
+
+        private object _value;
 
         /// <summary>
         /// Declared in which loop iteration
@@ -761,6 +904,37 @@ namespace Cognite.Simulator.Utils
         /// The scope this variable is created in
         /// </summary>
         public int Scope { get; set; }
+
+        /// <summary>
+        /// The type of the variable
+        /// </summary>
+        public Type VariableType { get; set; }
+
+        /// <summary>
+        /// Gets a value from a path in the object
+        /// </summary>
+        public string GetPathValueFromObject(string path) {
+            if (this.Value is JObject) {
+                return GraphQLClient.GetValueFromPath((JObject)Value, path).ToString();
+            } else {
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// Checks if the value is a json object
+        /// </summary>
+        public bool IsJson() {
+            Console.WriteLine($"Type from LocalVariable : {this.VariableType}, {this.Value.GetType()} ");
+            return this.VariableType == typeof(JObject);
+        }
+
+        /// <summary>
+        /// Checks if the value is a array object
+        /// </summary>
+        public bool IsArray() {
+            return this.VariableType == typeof(JArray);
+        }
     }
 
     /// <summary>

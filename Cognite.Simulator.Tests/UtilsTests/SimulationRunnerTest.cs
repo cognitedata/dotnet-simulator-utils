@@ -437,7 +437,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return "1"; //Just an arbitrary value
         }
         public SampleRoutine(SimulationConfigurationWithRoutine config, Dictionary<string, double> inputData)
-            :base(config, inputData)
+            :base(config, inputData, null)
         {
             _inputs = new List<double>();
             _output = null;
@@ -479,7 +479,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Dictionary<string, double> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData);
-            return Task.FromResult(routine.PerformSimulation());
+            return routine.PerformSimulation();
         }
     }
 

@@ -251,6 +251,58 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return this.simulationConfig;
         }
 
+        public SimulationConfigurationWithRoutine SetAndGetGraphQl()
+        {
+            var routine = new List<CalculationProcedure>
+            {
+                new CalculationProcedure
+                {
+                    Order = 1,
+                    Steps = new List<CalculationProcedureStep>
+                    {
+                        new CalculationProcedureStep
+                        {
+                            Step = 1,
+                            Type = "Get",
+                            Arguments = new Dictionary<string, object>
+                            {
+                                { "type", "userDefined" },
+                                { "value", "1" },
+                                { "storeInLocalVariable", "val"}
+                            }
+                        },
+                        new CalculationProcedureStep
+                        {
+                            Step = 2,
+                            Type = "Getgraphql",
+                            Arguments = new Dictionary<string, object>
+                            {
+                                { "query", "{ listItems {} }" },
+                                { "jsonPath", "data[0]" },
+                                { "storeInLocalVariable", "graphQlResult"},
+                            }
+                        },
+                        new CalculationProcedureStep
+                        {
+                            Step = 3,
+                            Type = "Set",
+                            Arguments = new Dictionary<string, object>
+                            {
+                                { "type", "manual" },
+                                { "objectName", "PRODUCED GAS" },
+                                { "objectProperty", "Mass Flow" },
+                                { "value", "graphQlResult" },
+                                { "substituteLocalVariableIn", "value"},
+                                { "useLocalVariable", "graphQlResult"}
+                            }
+                        },
+                    }
+                },
+            };
+            this.simulationConfig.Routine = routine;
+            return this.simulationConfig;
+        }
+
         public SimulationConfigurationWithRoutine GetConfig() {
             return this.simulationConfig;
         }
@@ -258,7 +310,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class RoutineRunnerTestCommon: RoutineImplementationBase {
         public RoutineRunnerTestCommon(SimulationConfigurationWithRoutine simulationConfig, Dictionary<string, double> arguments)
-            :base(simulationConfig, arguments)
+            :base(simulationConfig, arguments, null)
         {
         }
 
@@ -329,12 +381,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        protected void TriggerSimulation()
+        protected async void TriggerSimulation()
         {
             Assert.False(this.IsLocalVariableDefined("val"));
-            this.PerformSimulation();
+            await this.PerformSimulation();
             var val = this.GetLocalVariable("val");
-            Assert.True(val.Value == "1");
+            Assert.True(val.Value.ToString() == "1");
             Assert.True(val.Accessor == "0--val");
             Assert.True(this.IsLocalVariableDefined("val"));
 
@@ -359,14 +411,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 _output.WriteLine($"Testing created variables in the loop scope: Variable value = {val.Value}");
                 Assert.True(val.Scope == 1);
                 Assert.True(val.DeclaredInLoopIteration == (functionCalls-1));
-                Assert.True(val.Value == "200");
+                Assert.True(val.Value.ToString() == "200");
 
                 _output.WriteLine($"Making sure that same named variables in different scopes get local values");
-                Assert.True(val.Value != "1");
+                Assert.True(val.Value.ToString() != "1");
 
                 var iterator = this.GetLocalVariable("i");
                 _output.WriteLine($"Testing iterator: {iterator.Value}");
-                Assert.True(iterator.Value == (functionCalls-1).ToString());
+                Assert.True(iterator.Value.ToString() == (functionCalls-1).ToString());
                 functionCalls++;
             }
         }
@@ -383,9 +435,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        protected void TriggerSimulation()
+        protected async void TriggerSimulation()
         {
-            this.PerformSimulation();
+            await this.PerformSimulation();
             _output.WriteLine($"Testing if did go to the If statement");
             Assert.True(functionCalls == 1);
         }
@@ -400,9 +452,48 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var val = this.GetLocalVariable("val");
                 _output.WriteLine($"If we end up in the conditional, this part would be called");
                 Assert.True(val.Scope == 1);
-                Assert.True(val.Value == "Local variable is = 200");
+                Assert.True(val.Value.ToString() == "Local variable is = 200");
                 functionCalls++;
             }
+        }
+    }
+
+    public class RoutineRunnerGraphqlTest: RoutineRunnerTestCommon
+    {
+        private readonly ITestOutputHelper _output;
+        private int functionCalls = 0;
+        public RoutineRunnerGraphqlTest(ITestOutputHelper output)
+            :base(new RoutineBuilderTest().SetAndGetGraphQl(), null)
+        {
+            _output = output;
+        }
+
+        [Fact]
+        protected async void TriggerSimulation()
+        {
+            await this.PerformSimulation();
+            _output.WriteLine($"Testing if all the steps are executed");
+            Assert.True(functionCalls == 1);
+        }
+
+        public override void SetManualInput(string value, Dictionary<string, string> arguments)
+        {
+            Console.WriteLine($"Function calls: {functionCalls}");
+            Console.WriteLine($"Value: {value}");
+            var val = this.GetLocalVariable("graphQlResult");
+            Console.WriteLine($"Val JSON: {val.IsJson()}");
+            Console.WriteLine("Name = " + val.GetPathValueFromObject("name"));
+            if (functionCalls == 0)  {
+                _output.WriteLine("Testing created variables in the global scope");
+                Assert.True(value == "1");
+            } else {
+                
+                _output.WriteLine($"If we end up in the conditional, this part would be called");
+                Assert.True(val.Scope == 1);
+                Assert.True(val.Value.ToString() == "Local variable is = 200");
+            }
+            functionCalls++;
+
         }
     }
 }
