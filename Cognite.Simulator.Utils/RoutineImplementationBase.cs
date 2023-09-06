@@ -1,4 +1,5 @@
 using Cognite.Simulator.Utils;
+using Jint;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -100,6 +101,8 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException("Missing calculation routine");
             }
 
+            ParseJSProcedure();
+
             var orderedRoutine = _routine.OrderBy(p => p.Order).ToList();
 
             foreach (var procedure in orderedRoutine)
@@ -117,6 +120,51 @@ namespace Cognite.Simulator.Utils
             return _simulationResults;
         }
 
+        public int SampleFnAdd(int a, int b)
+        {
+            return a + b;
+        }
+
+        public string SampleFnSayHello(string name)
+        {
+            return $"Hello, {name}!";
+        }
+
+        private void ParseJSProcedure() {
+            Engine engine = null;
+
+            try
+            {
+                // The Jint Engine does not implement IDisposable,
+                // so explicit disposal is not necessary.
+                engine = CreateEngine();
+
+                var jsCode = @"
+                    console('JavaScript is running!');
+                    var result = dotNetInterop.SampleFnAdd(3, 5);
+                    console('Result from .NET: ' + result);
+                    var greeting = dotNetInterop.SampleFnSayHello('John');
+                    console('Greeting from .NET: ' + greeting);
+                ";
+
+                engine.Execute(jsCode);
+
+            }
+            finally
+            {
+                // Dispose engine in a finally block to ensure it's disposed of
+                engine?.Dispose();
+            }
+        }
+
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2000:Dispose objects before losing scope", Justification = "Engine doesn't implement IDisposable.")]
+        private Engine CreateEngine()
+        {
+            return new Engine()
+                .SetValue("dotNetInterop", this) // Expose .NET object to JavaScript
+                .SetValue("console", new Action<object>(Console.WriteLine)); // Expose Console.WriteLine to JavaScript
+        }
         private void ParseProcedure(CalculationProcedure procedure)
         {
             var orderedSteps = procedure.Steps.OrderBy(s => s.Step).ToList();
