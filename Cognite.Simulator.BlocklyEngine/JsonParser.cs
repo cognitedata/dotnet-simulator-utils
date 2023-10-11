@@ -256,7 +256,7 @@ namespace BlocklyEngine
 
     void ParseValue(JToken valueToken, IBlock block)
     {
-        var childNode = valueToken["block"] ?? valueToken["shadow"];
+        var childNode = (valueToken as JProperty)?.Value["block"] ?? (valueToken as JProperty)?.Value["shadow"];
         if (childNode == null) return;
         var childBlock = ParseBlock(childNode);
 
