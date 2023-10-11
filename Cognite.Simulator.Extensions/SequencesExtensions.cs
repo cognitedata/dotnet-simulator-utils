@@ -655,7 +655,7 @@ namespace Cognite.Simulator.Extensions
                 };
             
             var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                    simulatorsDict,
+                    new List<SimulatorIntegration> { simulatorsDict },
                     token).ConfigureAwait(false);
             foreach (var integration in integrations)
             {
