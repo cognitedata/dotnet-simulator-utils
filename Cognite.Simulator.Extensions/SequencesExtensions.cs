@@ -646,26 +646,24 @@ namespace Cognite.Simulator.Extensions
         /// <param name="token">The cancellation token</param>
         /// <returns>externalId string</returns>
         public static async Task<string> GetSequenceExternalId(this SequencesResource sequences, string simulatorName, long simulatorDataSetId, string connectorName, CancellationToken token) {
-             var _simulatorSequenceIds = new Dictionary<string, string>();
-            List<string> _simulators = new List<string> { simulatorName };
-            var simulatorsDict = _simulators.Select(
-                s => new SimulatorIntegration
+            var simulatorSequenceIds = new Dictionary<string, string>();
+            var simulatorsDict = new SimulatorIntegration
                 {
                     Simulator = simulatorName,
                     DataSetId = simulatorDataSetId,
                     ConnectorName = connectorName
-                });
+                };
             
             var integrations = await sequences.GetOrCreateSimulatorIntegrations(
                     simulatorsDict,
                     token).ConfigureAwait(false);
             foreach (var integration in integrations)
             {
-                _simulatorSequenceIds.Add(
+                simulatorSequenceIds.Add(
                     integration.Metadata[BaseMetadata.SimulatorKey],
                     integration.ExternalId);
             }
-            return _simulatorSequenceIds[simulatorName];                
+            return simulatorSequenceIds[simulatorName];                
         }
     }
 
