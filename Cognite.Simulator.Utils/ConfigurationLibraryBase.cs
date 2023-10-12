@@ -375,7 +375,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Dictionary containing any argument needed by specific simulator client to execute the step
         /// </summary>
-        public Dictionary<string, string> Arguments { get; set; }
+        public Dictionary<string, object> Arguments { get; set; }
     }
     
     /// <summary>

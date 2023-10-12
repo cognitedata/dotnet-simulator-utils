@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -430,8 +431,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public static List<double> _inputs;
         public static double? _output;
+
+        public override string GetPropertyValue(Dictionary<string, string> args)
+        {
+            return "1"; //Just an arbitrary value
+        }
         public SampleRoutine(SimulationConfigurationWithRoutine config, Dictionary<string, double> inputData)
-            :base(config, inputData)
+            :base(config, inputData, null)
         {
             _inputs = new List<double>();
             _output = null;
@@ -473,7 +479,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Dictionary<string, double> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData);
-            return Task.FromResult(routine.PerformSimulation());
+            return routine.PerformSimulation();
         }
     }
 
@@ -507,6 +513,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 client,
                 logger)
         {
+
         }
 
         protected override void InitSimulationEventMetadata(
