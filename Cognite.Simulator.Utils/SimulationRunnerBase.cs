@@ -53,6 +53,9 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected IConfigurationProvider<U, V> ConfigurationLibrary { get; }
 
+        private string sequenceExternalId;
+
+
         /// <summary>
         /// Create a new instance of the runner with the provided parameters
         /// </summary>
@@ -84,6 +87,7 @@ namespace Cognite.Simulator.Utils
             EventsAlreadyProcessed = new Dictionary<string, long>();
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
+            sequenceExternalId = "";
         }
 
         private async Task<SimulationRun> UpdateSimulationRunStatus(
@@ -229,6 +233,7 @@ namespace Cognite.Simulator.Utils
                             calcState,
                             calcObj,
                             metadata);
+                        PublishSimulationRunStatus("RUNNING_CALCULATION", token);
                         await InitSimulationRun(
                             e,
                             startTime,
@@ -276,6 +281,9 @@ namespace Cognite.Simulator.Utils
                             startTime, 
                             e, 
                             token).ConfigureAwait(false);
+                        
+                        PublishSimulationRunStatus("IDLE", token);
+
                     }
                     
                 }
@@ -396,6 +404,27 @@ namespace Cognite.Simulator.Utils
             V configObj,
             Dictionary<string, string> metadata);
 
+        async void PublishSimulationRunStatus(string runStatus, CancellationToken token) {
+            var sequences = _cdfSequences;
+            
+            try
+            {
+                if (sequenceExternalId == "" && _simulators.Count > 0) {
+                    SimulatorConfig item = _simulators[0]; // Retrieve the first item
+                    sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token).ConfigureAwait(false);
+                }
+                var now = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token).ConfigureAwait(false);
+                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatusTimestamp, now, token).ConfigureAwait(false);
+
+            }
+
+            catch (Exception e)
+            {
+                throw new ConnectorException(e.Message);
+            }
+        }
+
         /// <summary>
         /// Initialize the simulation event execution
         /// </summary>
@@ -499,7 +528,6 @@ namespace Cognite.Simulator.Utils
                     simEv,
                     validationEnd);
             }
-
             // Run the simulation
             await RunSimulation(
                 simEv,
@@ -509,7 +537,6 @@ namespace Cognite.Simulator.Utils
                 configObj,
                 samplingRange,
                 token).ConfigureAwait(false);
-
             // Update event with success status
             if (simEv.HasSimulationRun)
             {

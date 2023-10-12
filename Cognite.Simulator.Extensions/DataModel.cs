@@ -355,6 +355,17 @@ namespace Cognite.Simulator.Extensions
         /// License key (Last result)
         /// </summary>
         public const string LicenseStatus = "licenseStatus";
+
+        /// <summary>
+        /// Status of the connector (indicates whether a calculation is running or not)
+        /// </summary>
+        public const string ConnectorStatus = "connectorStatus";
+
+        /// <summary>
+        /// Timestamp of when the connector went into the new connectorStatus state
+        /// </summary>        
+        public const string ConnectorStatusTimestamp = "connectorStatusUpdatedTime";
+
     }
 
     /// <summary>
