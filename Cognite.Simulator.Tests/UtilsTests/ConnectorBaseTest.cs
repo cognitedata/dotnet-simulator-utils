@@ -25,6 +25,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector<BaseConfig>>();
             services.AddSingleton<ExtractionPipeline>();
+            services.AddSingleton<RemoteConfigManager<BaseConfig>>();
             var simConfig = new SimulatorConfig
             {
                 Name = "TestSim",
