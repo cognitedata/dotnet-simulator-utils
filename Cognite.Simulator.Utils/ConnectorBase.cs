@@ -289,6 +289,10 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
             }
         }
+        
+        /// <summary>
+        /// Task that runs in a loop, checking for new config in extraction pipelines
+        /// </summary>
         public async Task CheckForNewConfig(CancellationToken token)
         {
             while (!token.IsCancellationRequested)

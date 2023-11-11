@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddTransient<TestConnector>();
+            services.AddTransient<TestConnector<BaseConfig>>();
             services.AddSingleton<ExtractionPipeline>();
             var simConfig = new SimulatorConfig
             {
@@ -36,7 +36,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var provider = services.BuildServiceProvider();
             using var source = new CancellationTokenSource();
 
-            var connector = provider.GetRequiredService<TestConnector>();
+            var BasicBaseConfig = new BaseConfig();
+            var connector = provider.GetRequiredService<TestConnector<BaseConfig>>();
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
@@ -110,20 +111,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+
+
     /// <summary>
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector : ConnectorBase
+    internal class TestConnector<T> : ConnectorBase<T> where T : BaseConfig
     {
         private readonly ExtractionPipeline _pipeline;
+        private readonly RemoteConfigManager<T> _remoteConfigManager;
         private readonly SimulatorConfig _config;
    
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ILogger<ConnectorBase> logger) : 
+            ILogger<ConnectorBase<T>> logger,
+            RemoteConfigManager<T> remoteConfigManager) : 
             base(
                 cdf,
                 new ConnectorConfig
@@ -135,10 +140,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     config
                 },
-                logger)
+                logger,
+                remoteConfigManager)
         {
             _pipeline = pipeline;
             _config = config;
+            _remoteConfigManager = remoteConfigManager;
         }
 
         public override string GetConnectorVersion()
