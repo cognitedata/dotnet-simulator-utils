@@ -23,9 +23,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddTransient<TestConnector<BaseConfig>>();
+            services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
-            services.AddSingleton<RemoteConfigManager<BaseConfig>>();
             var simConfig = new SimulatorConfig
             {
                 Name = "TestSim",
@@ -118,18 +117,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector<T> : ConnectorBase<T> where T : BaseConfig
+    internal class TestConnector : ConnectorBase<SimulatorConfig>
     {
         private readonly ExtractionPipeline _pipeline;
-        private readonly RemoteConfigManager<T> _remoteConfigManager;
+        private readonly RemoteConfigManager<SimulatorConfig> _remoteConfigManager;
         private readonly SimulatorConfig _config;
-   
+
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ILogger<ConnectorBase<T>> logger,
-            RemoteConfigManager<T> remoteConfigManager) : 
+            ILogger<TestConnector> logger,
+            RemoteConfigManager<SimulatorConfig> remoteConfigManager) :
             base(
                 cdf,
                 new ConnectorConfig
