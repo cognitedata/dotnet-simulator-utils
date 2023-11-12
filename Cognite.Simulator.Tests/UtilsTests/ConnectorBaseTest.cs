@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
 
             var BasicBaseConfig = new BaseConfig();
-            var connector = provider.GetRequiredService<TestConnector<BaseConfig>>();
+            var connector = provider.GetRequiredService<TestConnector>();
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
