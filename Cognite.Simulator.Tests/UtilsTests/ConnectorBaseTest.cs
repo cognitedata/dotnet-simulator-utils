@@ -23,7 +23,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestConnectorBase()
         {
             var services = new ServiceCollection();
-            using var tokenSource = new CancellationTokenSource();
             services.AddCogniteTestClient();
             services.AddLogger();
             services.AddCogniteClient("TestConnector", "TestConnector/v1.0.0 (Cognite)");
@@ -46,8 +45,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var connector = provider.GetRequiredService<TestConnector>();
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
-            
-            var destination = provider.GetRequiredService<CogniteDestination>();
 
             string? externalIdToDelete = null;
             try
