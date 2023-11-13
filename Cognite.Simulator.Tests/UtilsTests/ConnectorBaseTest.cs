@@ -24,13 +24,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             using var tokenSource = new CancellationTokenSource();
             CancellationToken token = tokenSource.Token;
-
-            services.AddConfiguration<BaseConfig>(
+            BaseConfig baseConfig;
+            baseConfig = await services.AddConfiguration<BaseConfig>(
                 path: "fix later",
                 types: new Type[] { },
                 appId: "replace later",
                 token: token
-            ).GetAwaiter().GetResult();
+            )
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
