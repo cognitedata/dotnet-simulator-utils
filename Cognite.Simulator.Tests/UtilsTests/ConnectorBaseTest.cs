@@ -30,7 +30,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 types: new Type[] { },
                 appId: "replace later",
                 token: token
-            )
+            );
             services.AddCogniteTestClient();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
