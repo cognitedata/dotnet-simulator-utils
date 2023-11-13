@@ -25,6 +25,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var tokenSource = new CancellationTokenSource();
             services.AddCogniteTestClient();
             services.AddSingleton<BaseConfig>();
+            services.AddSingleton<RemoteConfigManager<BaseConfig>>();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
             var simConfig = new SimulatorConfig
