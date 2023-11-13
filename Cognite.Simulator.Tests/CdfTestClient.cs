@@ -87,16 +87,6 @@ namespace Cognite.Simulator.Tests
                 Location = _statePath
             };
 
-            using var tokenSource = new CancellationTokenSource();
-            CancellationToken token = tokenSource.Token;
-
-            services.AddConfiguration<BaseConfig>(
-                path: "fix later",
-                types: new Type[] { },
-                appId: "replace later",
-                token: token
-            ).GetAwaiter().GetResult();
-
             // Configure staging
             services.AddSingleton(stagingConfig);
 
