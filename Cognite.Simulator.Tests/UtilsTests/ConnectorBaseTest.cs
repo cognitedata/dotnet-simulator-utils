@@ -1,4 +1,5 @@
 ﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
@@ -24,8 +25,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             using var tokenSource = new CancellationTokenSource();
             services.AddCogniteTestClient();
-            services.AddSingleton<BaseConfig>();
-            //services.AddSingleton<RemoteConfigManager<BaseConfig>>();
+            services.AddLogger();
+            services.AddCogniteClient("TestConnector", "TestConnector/v1.0.0 (Cognite)");
+            BaseConfig baseConfig = new BaseConfig();
+            services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
+            services.AddSingleton<BaseConfig>(baseConfig);
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
             var simConfig = new SimulatorConfig
@@ -39,10 +43,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var provider = services.BuildServiceProvider();
             using var source = new CancellationTokenSource();
 
-            var BasicBaseConfig = new BaseConfig();
             var connector = provider.GetRequiredService<TestConnector>();
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
+            
+            var destination = provider.GetRequiredService<CogniteDestination>();
 
             string? externalIdToDelete = null;
             try
