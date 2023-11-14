@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Cognite.Simulator.Utils
 {
@@ -82,7 +83,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="simulator">Simulator name</param>
         /// <param name="modelName">Model name</param>
-        protected void RemoveLocalFiles(string simulator, string modelName)
+        protected virtual void RemoveLocalFiles(string simulator, string modelName)
         {
             var modelVersions = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
@@ -94,7 +95,7 @@ namespace Cognite.Simulator.Utils
                 .ToList();
             foreach (var version in modelVersions)
             {
-                StateUtils.DeleteLocalFile(version.FilePath);
+                StateUtils.DeleteLocalDirectory(Path.GetDirectoryName(version.FilePath));
             }
         }
 

@@ -27,7 +27,8 @@ namespace Cognite.Simulator.Utils
             {
                 foreach(var state in stateToDelete)
                 {
-                    DeleteLocalFile(state.FilePath);
+                    var dirPath = Path.GetDirectoryName(state.FilePath);
+                    DeleteLocalDirectory(dirPath);
                     col.Delete(state.Id);
                 }
             }
@@ -47,7 +48,10 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
             foreach (var state in states)
             {
-                DeleteLocalFile(state.FilePath);
+                // get directory path from file path 
+                // (file path is the directory path + file name)
+                var dirPath = Path.GetDirectoryName(state.FilePath);
+                DeleteLocalDirectory(dirPath);
             }
         }
 
@@ -60,6 +64,18 @@ namespace Cognite.Simulator.Utils
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
                 File.Delete(path);
+            }
+        }
+
+        /// <summary>
+        /// Delete a directory stored locally
+        /// </summary>
+        /// <param name="path">Path to the directory</param>
+        public static void DeleteLocalDirectory(string path)
+        {
+            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
             }
         }
     }
