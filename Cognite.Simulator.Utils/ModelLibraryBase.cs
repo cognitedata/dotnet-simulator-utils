@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="simulator">Simulator name</param>
         /// <param name="modelName">Model name</param>
-        protected virtual void RemoveLocalFiles(string simulator, string modelName)
+        protected void RemoveLocalFiles(string simulator, string modelName)
         {
             var modelVersions = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
