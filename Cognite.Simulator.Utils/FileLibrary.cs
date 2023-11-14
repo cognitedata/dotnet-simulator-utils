@@ -1,4 +1,4 @@
-﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
@@ -215,6 +215,14 @@ namespace Cognite.Simulator.Utils
             return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
         }
 
+        public void CreateDirectoryIfNotExists(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
+        
 
         /// <summary>
         /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
@@ -257,7 +265,9 @@ namespace Cognite.Simulator.Utils
                         if (response.Any() && response.First().DownloadUrl != null)
                         {
                             var uri = response.First().DownloadUrl;
-                            var filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
+                            var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
+                            CreateDirectoryIfNotExists(storageFolder);
+                            var filename = Path.Combine(  storageFolder, $"{file.CdfId}.{file.GetExtension()}");
                             bool downloaded = await _downloadClient
                                 .DownloadFileAsync(uri, filename)
                                 .ConfigureAwait(false);
