@@ -25,7 +25,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddLogger();
-            services.AddCogniteClient("TestConnector", "TestConnector/v1.0.0 (Cognite)");
             BaseConfig baseConfig = new BaseConfig();
             services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
             services.AddSingleton<BaseConfig>(baseConfig);
