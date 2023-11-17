@@ -313,6 +313,9 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Exception used to restart connector
+    /// </summary>
     public class NewConfigDetected : Exception
     {
     }
