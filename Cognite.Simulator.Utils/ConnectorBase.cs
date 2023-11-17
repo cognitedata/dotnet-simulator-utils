@@ -36,6 +36,7 @@ namespace Cognite.Simulator.Utils
 
         private long LastLicenseCheckTimestamp { get; set; }
         private string LastLicenseCheckResult { get; set; }
+        private const int FIFTEEN_MIN = 9000;
 
         private readonly RemoteConfigManager<T> _remoteconfigmanager;
 
@@ -46,6 +47,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="config">Connector configuration</param>
         /// <param name="simulators">List of simulator configurations</param>
         /// <param name="logger">Logger</param>
+        /// <param name="remoteConfigManager"></param>
         public ConnectorBase(
             CogniteDestination cdf,
             ConnectorConfig config,
@@ -298,7 +300,7 @@ namespace Cognite.Simulator.Utils
             while (!token.IsCancellationRequested)
             {
                 await Task
-                    .Delay(900000, token) // Run every 15 minutes
+                    .Delay(FIFTEEN_MIN, token) // Run every 15 minutes
                     .ConfigureAwait(false);
                 _logger.LogDebug("Checking remote config");
                 if (_remoteconfigmanager == null) return;
