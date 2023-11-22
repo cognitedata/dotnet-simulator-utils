@@ -95,7 +95,12 @@ namespace Cognite.Simulator.Utils
                 .ToList();
             foreach (var version in modelVersions)
             {
-                StateUtils.DeleteLocalDirectory(Path.GetDirectoryName(version.FilePath));
+                if (version.IsInDirectory) {
+                    var dirPath = Path.GetDirectoryName(version.FilePath);
+                    StateUtils.DeleteLocalDirectory(dirPath);
+                } else {
+                    StateUtils.DeleteLocalFile(version.FilePath);
+                }
             }
         }
 
@@ -338,7 +343,8 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
-                Version = Version
+                Version = Version,
+                IsInDirectory = IsInDirectory
             };
         }
     }

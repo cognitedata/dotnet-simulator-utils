@@ -27,8 +27,14 @@ namespace Cognite.Simulator.Utils
             {
                 foreach(var state in stateToDelete)
                 {
-                    var dirPath = Path.GetDirectoryName(state.FilePath);
-                    DeleteLocalDirectory(dirPath);
+                    if (state.IsInDirectory) {
+                        // get directory path from file path 
+                        // (file path is the directory path + file name)
+                        var dirPath = Path.GetDirectoryName(state.FilePath);
+                        DeleteLocalDirectory(dirPath);
+                    } else {
+                        DeleteLocalFile(state.FilePath);
+                    }
                     col.Delete(state.Id);
                 }
             }
@@ -48,10 +54,14 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
             foreach (var state in states)
             {
-                // get directory path from file path 
-                // (file path is the directory path + file name)
-                var dirPath = Path.GetDirectoryName(state.FilePath);
-                DeleteLocalDirectory(dirPath);
+                if (state.IsInDirectory)
+                {
+                    var dirPath = Path.GetDirectoryName(state.FilePath);
+                    DeleteLocalDirectory(dirPath);
+                } else {
+                    DeleteLocalFile(state.FilePath);
+                }
+                
             }
         }
 

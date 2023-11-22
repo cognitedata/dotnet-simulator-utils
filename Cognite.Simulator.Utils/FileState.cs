@@ -49,7 +49,22 @@ namespace Cognite.Simulator.Utils
         }
 
         private string _source;
-        
+
+        private bool _isInDirectory = false;
+
+        /// <summary>
+        /// If the file is stored in a directory, or as a single file
+        /// </summary>
+        public bool IsInDirectory {
+            get => _isInDirectory;
+            set
+            {
+                if (value == _isInDirectory) return;
+                LastTimeModified = DateTime.UtcNow;
+                _isInDirectory = value;
+            }
+        }
+
         /// <summary>
         /// Source of this file. Typically the name of the simulator
         /// </summary>
@@ -181,6 +196,7 @@ namespace Cognite.Simulator.Utils
             _createdTime = poco.CreatedTime;
             _cdfId = poco.CdfId;
             _updatedTime = poco.UpdatedTime;
+            _isInDirectory = poco.IsInDirectory;
         }
 
         /// <summary>
@@ -199,7 +215,8 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
-                UpdatedTime = UpdatedTime
+                UpdatedTime = UpdatedTime,
+                IsInDirectory = IsInDirectory
             };
         }
     }
@@ -251,6 +268,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("updated-time")]
         public long UpdatedTime { get; set; }
-    }
 
+        /// <summary>
+        /// Storage directory for the file
+        /// </summary>
+        [StateStoreProperty("is-stored-in-directory")]
+        public bool IsInDirectory { get; set; }
+    }
 }
