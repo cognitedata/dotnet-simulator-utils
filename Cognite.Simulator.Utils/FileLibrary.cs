@@ -215,7 +215,7 @@ namespace Cognite.Simulator.Utils
             return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
         }
 
-        public void CreateDirectoryIfNotExists(string directoryPath)
+        private void CreateDirectoryIfNotExists(string directoryPath)
         {
             if (!Directory.Exists(directoryPath))
             {
