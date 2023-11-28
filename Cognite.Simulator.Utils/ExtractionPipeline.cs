@@ -240,8 +240,8 @@ namespace Cognite.Simulator.Utils
             services.AddScoped<ExtractionPipeline>();
         }
         /// <summary>
-        /// if type: remote is instead of local, it will fetch config from Fusion, if local, it will use the local config file
-        /// Example from config.yml if one wishes to use the remote config from Fusion:
+        /// Use `type: remote` to fetch the config from Fusion, or use `type: local` to use the local file instead
+        /// Example from config.yml using the remote config from Fusion
         /// type: remote # this is required
         /// cognite:
         ///   project: ...
