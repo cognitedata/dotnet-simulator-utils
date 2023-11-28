@@ -38,7 +38,7 @@ namespace Cognite.Simulator.Utils
         private string LastLicenseCheckResult { get; set; }
         private const int FIFTEEN_MIN = 9000;
 
-        private readonly RemoteConfigManager<T> _remoteconfigmanager;
+        private readonly RemoteConfigManager<T> _remoteConfigManager;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Utils
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;
-            _remoteconfigmanager = remoteConfigManager;
+            _remoteConfigManager = remoteConfigManager;
         }
 
         /// <summary>
@@ -303,8 +303,8 @@ namespace Cognite.Simulator.Utils
                     .Delay(FIFTEEN_MIN, token) // Run every 15 minutes
                     .ConfigureAwait(false);
                 _logger.LogDebug("Checking remote config");
-                if (_remoteconfigmanager == null) return;
-                var newConfig = await _remoteconfigmanager.FetchLatest(token).ConfigureAwait(false);
+                if (_remoteConfigManager == null) return;
+                var newConfig = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
                 if (newConfig != null)
                 {
                     throw new NewConfigDetected();
