@@ -295,7 +295,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Task that runs in a loop, checking for new config in extraction pipelines
         /// </summary>
-        public async Task CheckForNewConfig(CancellationToken token)
+        public async Task CheckRemoteConfig(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
