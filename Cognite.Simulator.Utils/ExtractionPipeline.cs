@@ -286,7 +286,7 @@ namespace Cognite.Simulator.Utils
                 remoteConfig: remoteConfig,
                 token: token,
                 acceptedConfigVersions: acceptedConfigVersions
-            );
+            ).ConfigureAwait(false);
         }
     }
 }
