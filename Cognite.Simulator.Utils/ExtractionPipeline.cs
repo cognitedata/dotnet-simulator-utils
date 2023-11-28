@@ -240,9 +240,16 @@ namespace Cognite.Simulator.Utils
             services.AddScoped<ExtractionPipeline>();
         }
         /// <summary>
-        /// Uses a minimum config that needs "cognite" and type: "specified",
-        /// then uses that to either fetch remote Config Extraction Pipeline, or just adds
-        /// the local one based on if "type" is remote or local.
+        /// if type: remote is instead of local, it will fetch config from Fusion, if local, it will use the local config file
+        /// Example from config.yml if one wishes to use the remote config from Fusion:
+        /// type: remote # this is required
+        /// cognite:
+        ///   project: ...
+        ///   host: ...
+        ///   extraction-pipeline:
+        ///       pipeline-id: ... # as well as this
+        ///   idp-authentication:
+        ///       ...
         /// </summary>
         /// <typeparam name="T">The complete config object to be parsed</typeparam>
         /// <param name="services">Service collection</param>
