@@ -1,4 +1,5 @@
 ﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
@@ -23,6 +24,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            services.AddLogger();
+            services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
+            services.AddSingleton<BaseConfig>();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
             var simConfig = new SimulatorConfig
@@ -110,20 +114,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+
     /// <summary>
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector : ConnectorBase
+    internal class TestConnector : ConnectorBase<BaseConfig>
     {
         private readonly ExtractionPipeline _pipeline;
+        private readonly RemoteConfigManager<BaseConfig> _remoteConfigManager;
         private readonly SimulatorConfig _config;
-   
+
+
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ILogger<ConnectorBase> logger) : 
+            ILogger<TestConnector> logger,
+            RemoteConfigManager<BaseConfig> remoteConfigManager) :
             base(
                 cdf,
                 new ConnectorConfig
@@ -135,10 +143,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     config
                 },
-                logger)
+                logger,
+                remoteConfigManager)
         {
             _pipeline = pipeline;
             _config = config;
+            _remoteConfigManager = remoteConfigManager;
         }
 
         public override string GetConnectorVersion()

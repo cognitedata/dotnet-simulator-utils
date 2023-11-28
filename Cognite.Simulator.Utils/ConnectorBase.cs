@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extractor.Configuration;
 
 namespace Cognite.Simulator.Utils
 {
@@ -16,7 +17,7 @@ namespace Cognite.Simulator.Utils
     /// The connector information is saved as a CDF sequence, where the rows
     /// are key/value pairs (see <seealso cref="SimulatorIntegrationSequenceRows"/>)
     /// </summary>
-    public abstract class ConnectorBase
+    public abstract class ConnectorBase<T> where T : BaseConfig
     {
         /// <summary>
         /// CDF client wrapper
@@ -30,11 +31,14 @@ namespace Cognite.Simulator.Utils
         private ConnectorConfig Config { get; }
 
         private readonly Dictionary<string, string> _simulatorSequenceIds;
-        private readonly ILogger<ConnectorBase> _logger;
+        private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
         private string LastLicenseCheckResult { get; set; }
+        private const int FIFTEEN_MIN = 9000;
+
+        private readonly RemoteConfigManager<T> _remoteConfigManager;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -43,11 +47,13 @@ namespace Cognite.Simulator.Utils
         /// <param name="config">Connector configuration</param>
         /// <param name="simulators">List of simulator configurations</param>
         /// <param name="logger">Logger</param>
+        /// <param name="remoteConfigManager"></param>
         public ConnectorBase(
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ILogger<ConnectorBase> logger)
+            ILogger<ConnectorBase<T>> logger,
+            RemoteConfigManager<T> remoteConfigManager)
         {
             Cdf = cdf;
             Simulators = simulators;
@@ -55,6 +61,7 @@ namespace Cognite.Simulator.Utils
             _simulatorSequenceIds = new Dictionary<string, string>();
             _logger = logger;
             _config = config;
+            _remoteConfigManager = remoteConfigManager;
         }
 
         /// <summary>
@@ -284,6 +291,33 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
             }
         }
+        
+        /// <summary>
+        /// Task that runs in a loop, checking for new config in extraction pipelines
+        /// </summary>
+        public async Task CheckRemoteConfig(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task
+                    .Delay(FIFTEEN_MIN, token) // Run every 15 minutes
+                    .ConfigureAwait(false);
+                _logger.LogDebug("Checking remote config updates");
+                if (_remoteConfigManager == null) return;
+                var newConfig = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
+                if (newConfig != null)
+                {
+                    throw new NewConfigDetected();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Exception used to restart connector
+    /// </summary>
+    public class NewConfigDetected : Exception
+    {
     }
     
     /// <summary>

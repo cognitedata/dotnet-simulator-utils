@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extractor.Configuration;
+using System.IO;
 
 namespace Cognite.Simulator.Utils
 {
@@ -236,6 +238,55 @@ namespace Cognite.Simulator.Utils
             }
             services.AddSingleton(config.PipelineNotification);
             services.AddScoped<ExtractionPipeline>();
+        }
+        /// <summary>
+        /// Use `type: remote` to fetch the config from Fusion, or use `type: local` to use the local file instead
+        /// Example from config.yml using the remote config from Fusion
+        /// type: remote # this is required
+        /// cognite:
+        ///   project: ...
+        ///   host: ...
+        ///   extraction-pipeline:
+        ///       pipeline-id: ... # as well as this
+        ///   idp-authentication:
+        ///       ...
+        /// </summary>
+        /// <typeparam name="T">The complete config object to be parsed</typeparam>
+        /// <param name="services">Service collection</param>
+        /// <param name="path">Path to config file</param>
+        /// <param name="types">Types to use for deserialization</param>
+        /// <param name="appId">App ID for measuring network data</param>
+        /// <param name="token">Cancellation token</param>
+        /// <param name="version">Config version</param>
+        /// <param name="acceptedConfigVersions">Accepted config versions</param>
+        public static async Task<T> AddConfiguration<T>(
+            this IServiceCollection services,
+            string path,
+            Type[] types,
+            string appId,
+            CancellationToken token,
+            int version = 1,
+            int[] acceptedConfigVersions = null) where T : BaseConfig
+        {
+            var localConfig = services.AddConfig<T>(path, version);
+            var remoteConfig = new RemoteConfig
+            {
+                Type = localConfig.Type,
+                Cognite = localConfig.Cognite
+            };
+            
+            return await services.AddRemoteConfig<T>(
+                logger: null,
+                path: path,
+                types: types,
+                appId: appId,
+                userAgent: null,
+                setDestination: true,
+                bufferConfigFile: false,
+                remoteConfig: remoteConfig,
+                token: token,
+                acceptedConfigVersions: acceptedConfigVersions
+            ).ConfigureAwait(false);
         }
     }
 }
