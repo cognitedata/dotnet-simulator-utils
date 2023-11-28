@@ -302,7 +302,7 @@ namespace Cognite.Simulator.Utils
                 await Task
                     .Delay(FIFTEEN_MIN, token) // Run every 15 minutes
                     .ConfigureAwait(false);
-                _logger.LogDebug("Checking remote config");
+                _logger.LogDebug("Checking remote config updates");
                 if (_remoteConfigManager == null) return;
                 var newConfig = await _remoteConfigManager.FetchLatest(token).ConfigureAwait(false);
                 if (newConfig != null)
