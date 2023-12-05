@@ -143,29 +143,10 @@ namespace Cognite.Simulator.Utils
             SimulationRunStatus status,
             CancellationToken token)
         {
-            if (_connectorConfig.UseSimulatorsApi)
-            {
-                var simulationRuns = await FindSimulationRunsWithStatus(
-                    simulatorDataSetMap, 
-                    status, token).ConfigureAwait(false);
-                return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();
-            }
-            IEnumerable<Event> simulationEvents = new List<Event>();
-            if (status == SimulationRunStatus.ready)
-            {
-                simulationEvents = await _cdfEvents.FindSimulationEventsReadyToRun(
-                    simulatorDataSetMap,
-                    _connectorConfig.GetConnectorName(),
-                    token).ConfigureAwait(false);
-            }
-            else if (status == SimulationRunStatus.running)
-            {
-                simulationEvents = await _cdfEvents.FindSimulationEventsRunning(
-                    simulatorDataSetMap,
-                    _connectorConfig.GetConnectorName(),
-                    token).ConfigureAwait(false);
-            }
-            return simulationEvents.Select(e => new SimulationRunEvent(e)).ToList();
+            var simulationRuns = await FindSimulationRunsWithStatus(
+                simulatorDataSetMap, 
+                status, token).ConfigureAwait(false);
+            return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();           
         }
 
         /// <summary>

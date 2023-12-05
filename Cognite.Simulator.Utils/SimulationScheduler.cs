@@ -97,20 +97,20 @@ namespace Cognite.Simulator.Utils
                 {
                     var configObj = configuration.Value;
                     U configState;
-                    if (_config.UseSimulatorsApi) {
+                    //if (_config.UseSimulatorsApi) {
                         configState = _configLib.GetSimulationConfigurationState(
                             configObj.Calculation.Model.Simulator,
                             configObj.Calculation.Model.Name,
                             configObj.CalculationName
                         );
-                    } else {
+                    /*} else {
                         configState = _configLib.GetSimulationConfigurationState(
                             configObj.Calculation.Model.Simulator,
                             configObj.Calculation.Model.Name,
                             configObj.CalculationType,
                             configObj.CalcTypeUserDefined)
                         ;
-                    }
+                    }*/
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
                         configObj.Connector != _config.GetConnectorName() ||
@@ -157,14 +157,7 @@ namespace Cognite.Simulator.Utils
                 {
                     try
                     {
-                        if(_config.UseSimulatorsApi)
-                        {
-                           await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
-                        } else {
-                            var eventResult = await _cdf.CogniteClient.Events.CreateSimulationEventReadyToRun(
-                                eventsToCreate,
-                                token).ConfigureAwait(false);
-                        }
+                        await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
                     }
                     catch (SimulationEventException ex)
                     {
