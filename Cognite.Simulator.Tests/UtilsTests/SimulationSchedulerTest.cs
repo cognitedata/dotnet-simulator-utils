@@ -174,6 +174,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(configObj);
 
                 // Should have created at least one simulation event ready to run
+                /*
                 var simRuns = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
                     new SimulationRunQuery
                     {
@@ -185,6 +186,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             Status = SimulationRunStatus.ready
                         }
                     }, source.Token).ConfigureAwait(false);
+                */
+                var query = new SimulationRunQuery()
+                {
+                    Filter = new SimulationRunFilter()
+                    {
+                        SimulatorName = configObj.Simulator,
+                        Status = SimulationRunStatus.ready
+                    }
+                };
+                var simRuns = await cdf.CogniteClient.Alpha.Simulators
+                    .ListSimulationRunsAsync(query, source.Token)
+                    .ConfigureAwait(false);;
+
                 Assert.NotEmpty(simRuns.Items);
 
                 // check if there are any simulation runs in the time span of the test
