@@ -147,6 +147,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         DataSetId = simint.DataSetId,
                         ConnectorName = simint.ConnectorName,
                         SimulatorApiEnabled = true,
+                        Heartbeat = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                     CancellationToken.None,
                     lastLicenseCheckTimestamp: testStartTimeMillis,
