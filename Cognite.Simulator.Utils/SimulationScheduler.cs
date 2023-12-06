@@ -59,11 +59,16 @@ namespace Cognite.Simulator.Utils
             {
                 return Enumerable.Empty<SimulationRun>();
             }
-            var runsToCreate = simulationEvents.Select(e => new SimulationRunCreate(){
-                SimulatorName = e.Calculation.Model.Simulator,
-                ModelName = e.Calculation.Model.Name,
-                RoutineName = e.Calculation.Name,
-            }).ToList();
+            
+            var runsToCreate = simulationEvents.Select(e => {
+                var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
+                return new SimulationRunCreate(){
+                    SimulatorName = e.Calculation.Model.Simulator,
+                    ModelName = e.Calculation.Model.Name,
+                    RoutineName = e.Calculation.Name,
+                    RunType = runType,
+                };
+        }).ToList();
             List<SimulationRun> runs = new List<SimulationRun>();
 
             foreach (SimulationRunCreate runToCreate in runsToCreate)

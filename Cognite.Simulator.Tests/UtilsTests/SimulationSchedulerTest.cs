@@ -54,8 +54,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
                     simulators,
                     CancellationToken.None).ConfigureAwait(false);
-
+                
                 var sequenceExternalId = integrations.First().ExternalId;
+
+                await cdf.Sequences.UpdateSimulatorIntegrationsData(
+                    sequenceExternalId,
+                    true,
+                    new SimulatorIntegrationUpdate
+                    {
+                        Simulator = simint.Simulator,
+                        DataSetId = simint.DataSetId,
+                        ConnectorName = simint.ConnectorName,
+                        SimulatorApiEnabled = true,
+                    },
+                    CancellationToken.None,
+                    lastLicenseCheckTimestamp: 0,
+                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
+
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
@@ -79,18 +94,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(configObj);
 
                 // Should have created at least one simulation event ready to run
-                var events = await cdf.Events.FindSimulationEventsReadyToRun(
-                    new Dictionary<string, long>
-                    {
-                        { configObj.Simulator, CdfTestClient.TestDataset }
-                    },
-                    configObj.Connector,
-                    source.Token
-                    ).ConfigureAwait(false);
-                Assert.NotEmpty(events);
-                Assert.Contains(events, e => e.Metadata.ContainsKey(
-                    SimulationEventMetadata.RunTypeKey) && e.Metadata[SimulationEventMetadata.RunTypeKey] == "scheduled");
-                eventIds.AddRange(events.Select(e => e.ExternalId));
+                var events = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
+                    new SimulationRunQuery {
+                        Filter = new SimulationRunFilter {
+                            ModelName = configObj.ModelName,
+                            RoutineName = configObj.CalculationName,
+                            SimulatorName = configObj.Simulator,
+                            Status = SimulationRunStatus.ready
+                        }
+                    }, source.Token).ConfigureAwait(false);
+
+                Assert.NotEmpty(events.Items);
+                // order events.Items by created time in descending order and filter only items created in the last 10 seconds
+                var latestEvents = events.Items.OrderByDescending(e => e.CreatedTime).ToList();
+                var latestEventsFiltered = latestEvents.Where(e => e.CreatedTime > DateTimeOffset.UtcNow.AddSeconds(-10).ToUnixTimeMilliseconds()).ToList();
+                Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
+                //eventIds.AddRange(events.Select(e => e.ExternalId));
             }
             finally
             {
@@ -98,6 +117,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     await cdf.Events.DeleteAsync(eventIds, source.Token)
                         .ConfigureAwait(false);
+
+                    // TODO Delete simulation runs created on the API
                 }
                 provider.Dispose(); // Dispose provider to also dispose managed services
                 if (Directory.Exists("./configurations"))
