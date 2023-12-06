@@ -44,10 +44,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             try
             {
-                var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                using var source = new CancellationTokenSource();
-                using var provider = services.BuildServiceProvider();
-                var cdf = provider.GetRequiredService<Client>();
                 var simint = new SimulatorIntegration () {
                     Simulator = "PROSPER",
                     DataSetId = CdfTestClient.TestDataset,
