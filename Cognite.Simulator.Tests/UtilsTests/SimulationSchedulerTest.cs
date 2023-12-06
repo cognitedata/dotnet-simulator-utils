@@ -44,6 +44,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             try
             {
+                var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                using var source = new CancellationTokenSource();
+                using var provider = services.BuildServiceProvider();
+                var cdf = provider.GetRequiredService<Client>();
+                var simint = new SimulatorIntegration () {
+                    Simulator = "PROSPER",
+                    DataSetId = CdfTestClient.TestDataset,
+                    ConnectorName = "scheduler-test-connector",
+                };
+                var simulators = new List<SimulatorIntegration> { simint };
+
+                var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
+                    simulators,
+                    CancellationToken.None).ConfigureAwait(false);
+
+                var sequenceExternalId = integrations.First().ExternalId;
+
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 var scheduler = provider.GetRequiredService<SampleSimulationScheduler>();
