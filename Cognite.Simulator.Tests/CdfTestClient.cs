@@ -49,10 +49,7 @@ namespace Cognite.Simulator.Tests
                 Tenant = tenant,
                 ClientId = clientId,
                 Secret = secret,
-                Scopes = new[]
-                {
-                    $"{host}/.default"
-                }
+                Scopes = new Common.ListOrSpaceSeparated($"{host}/.default")
             };
 
             var cogConfig = new CogniteConfig

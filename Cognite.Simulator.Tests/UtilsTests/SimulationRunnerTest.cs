@@ -78,7 +78,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
                 var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
@@ -103,24 +103,39 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }
 
                 // Create a simulation event ready to run for the test configuration
-                var events = await cdf.Events.CreateSimulationEventReadyToRun(
-                    new List<SimulationEvent>
-                    {
-                        new SimulationEvent
-                        {
-                            Calculation = configObj.Calculation,
-                            CalculationId = configState.Id,
-                            Connector = configObj.Connector,
-                            DataSetId = CdfTestClient.TestDataset,
-                            RunType = "manual",
-                            UserEmail = configObj.UserEmail,
-                            ValidationEndOverwrite = validationEndOverwrite
-                        }
+                // var events = await cdf.Events.CreateSimulationEventReadyToRun(
+                //     new List<SimulationEvent>
+                //     {
+                //         new SimulationEvent
+                //         {
+                //             Calculation = configObj.Calculation,
+                //             CalculationId = configState.Id,
+                //             Connector = configObj.Connector,
+                //             DataSetId = CdfTestClient.TestDataset,
+                //             RunType = "manual",
+                //             UserEmail = configObj.UserEmail,
+                //             ValidationEndOverwrite = validationEndOverwrite
+                //         }
 
-                    },
-                    source.Token).ConfigureAwait(false);
+                //     },
+                //     source.Token).ConfigureAwait(false);
+                await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
+
+
+                var events = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
+                    new List<SimulationRunCreate>
+                    {
+                        new SimulationRunCreate
+                        {
+                            ModelName = configObj.ModelName,
+                            RoutineName = configObj.CalculationName,
+                            SimulatorName = configObj.Simulator,
+                            RunType = SimulationRunType.external,
+                            ValidationEndTime = validationEndOverwrite
+                        }
+                    }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(events);
-                eventId = events.First().ExternalId;
+                eventId = events.First().EventId.ToString();
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -256,6 +271,36 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }
             }
 
+        }
+
+        public static async Task SimulateProsperRunningAsync( Client cdf, string connectorName = "scheduler-test-connector" ) {
+
+            var simint = new SimulatorIntegration () {
+                Simulator = "PROSPER",
+                DataSetId = CdfTestClient.TestDataset,
+                ConnectorName = connectorName,
+            };
+            var simulators = new List<SimulatorIntegration> { simint };
+
+            var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
+                simulators,
+                CancellationToken.None).ConfigureAwait(false);
+            
+            var sequenceExternalId = integrations.First().ExternalId;
+
+            await cdf.Sequences.UpdateSimulatorIntegrationsData(
+                sequenceExternalId,
+                true,
+                new SimulatorIntegrationUpdate
+                {
+                    Simulator = simint.Simulator,
+                    DataSetId = simint.DataSetId,
+                    ConnectorName = simint.ConnectorName,
+                    SimulatorApiEnabled = true,
+                },
+                CancellationToken.None,
+                lastLicenseCheckTimestamp: 0,
+                lastLicenseCheckResult: "Available").ConfigureAwait(false);
         }
 
         [FactIf(envVar: "ENABLE_SIMULATOR_API_TESTS", skipReason: "Immature Simulator APIs")]
