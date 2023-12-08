@@ -253,22 +253,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     },
                     source.Token).ConfigureAwait(false);
                 var dictResult = ToRowDictionary(data);
-                // Assert.True(dictResult.ContainsKey("runEventId"));
-                // Assert.Equal(eventId.ToString(), dictResult["runEventId"]);
-                // Assert.True(dictResult.ContainsKey("calcTime"));
-                // Assert.Equal(eventCalcTime.ToString(), dictResult["calcTime"]);
+
+                Assert.True(dictResult.ContainsKey("runId"));
+                Assert.Equal(runId.ToString(), dictResult["runId"]);
+                Assert.True(dictResult.ContainsKey("calcTime"));
+                Assert.Equal(eventCalcTime.ToString(), dictResult["calcTime"]);
 
                 // Verify sampling start, end and calculation time values
-                // Assert.True(dictResult.ContainsKey("samplingEnd"));
-                // Assert.True(dictResult.ContainsKey("samplingStart"));
-                // Assert.True(dictResult.ContainsKey("validationEndOffset"));
+                Assert.True(dictResult.ContainsKey("samplingEnd"));
+                Assert.True(dictResult.ContainsKey("samplingStart"));
+                Assert.True(dictResult.ContainsKey("validationEndOffset"));
 
-                // SamplingRange range = new TimeRange()
-                // {
-                //     Min = long.Parse(dictResult["samplingStart"]),
-                //     Max = long.Parse(dictResult["samplingEnd"])
-                // };
-                // Assert.Equal(eventCalcTime, range.Midpoint);
+                SamplingRange range = new TimeRange()
+                {
+                    Min = long.Parse(dictResult["samplingStart"]),
+                    Max = long.Parse(dictResult["samplingEnd"])
+                };
+                Assert.Equal(eventCalcTime, range.Midpoint);
             }
             finally
             {
