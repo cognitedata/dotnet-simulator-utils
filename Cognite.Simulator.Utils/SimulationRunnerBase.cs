@@ -189,6 +189,15 @@ namespace Cognite.Simulator.Utils
                     .Where(e => e.HasSimulationRun || (!EventsAlreadyProcessed.Keys.Contains(e.Event.ExternalId)))
                     .ToList();
 
+                // sort by event time
+                allEvents.Sort((e1, e2) => {
+                    return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
+                });
+
+                // // get the first 3 events
+                // allEvents = allEvents.Take(3).ToList();
+                
+
                 foreach (SimulationRunEvent e in allEvents)
                 {
                     var eventId = e.HasSimulationRun ? e.Run.Id.ToString() : e.Event.ExternalId;
@@ -240,7 +249,7 @@ namespace Cognite.Simulator.Utils
                             e.Run = await UpdateSimulationRunStatus(
                                 e.Run.Id,
                                 SimulationRunStatus.failure,
-                                ex.Message == null || ex.Message.Length < 100 ? ex.Message : ex.Message.Substring(0, 99),
+                                ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
                                 token).ConfigureAwait(false);
                         }
                         else
@@ -472,6 +481,11 @@ namespace Cognite.Simulator.Utils
                     // If the event contains a validation end overwrite, use that instead of
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(overwriteValue);
+                }
+                else if (simEv.Run.ValidationEndTime.HasValue) {
+                    // If the event contains a validation end overwrite, use that instead of
+                    // the current time
+                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
                 }
                 else
                 {

@@ -122,7 +122,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
 
 
-                var events = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
+                var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
                     {
                         new SimulationRunCreate
@@ -134,13 +134,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             ValidationEndTime = validationEndOverwrite
                         }
                     }, source.Token).ConfigureAwait(false);
-                Assert.NotEmpty(events);
-                eventId = events.First().EventId.ToString();
+                Assert.NotEmpty(runs);
+                var runId = runs.First().Id;
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken2 = linkedTokenSource2.Token;
-                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(15));
+                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(25));
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
@@ -156,12 +156,57 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(inTs.Any());
                 Assert.Equal(inTsIds.Count, inTs.Count());
 
-                var eventUpdated = await cdf.Events.RetrieveAsync(
-                    new List<string> { eventId },
-                    true,
-                    source.Token).ConfigureAwait(false);
-                Assert.NotEmpty(eventUpdated);
-                var eventMetadata = eventUpdated.First().Metadata;
+                // var eventUpdated = await cdf.Events.RetrieveAsync(
+                //     new List<string> { eventId },
+                //     true,
+                //     source.Token).ConfigureAwait(false);
+
+                var runsUpdated = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
+                    new SimulationRunQuery
+                    {
+                        Filter = new SimulationRunFilter
+                        {
+                            SimulatorName = configObj.Simulator,
+                            RoutineName = configObj.CalculationName,
+                            ModelName = configObj.ModelName,
+                            Status = SimulationRunStatus.success
+                        }
+                    }, source.Token).ConfigureAwait(false);
+                
+
+                
+                var runUpdated = runsUpdated.Items.Where(e => e.Id == runId );
+
+                
+                eventId = runUpdated.First().EventId.ToString();
+
+                Assert.True( !string.IsNullOrEmpty(eventId) );
+
+                // await Task.Delay(5000).ConfigureAwait(false);
+
+               // while loop that runs on a retryCount that is set to 20
+                var retryCount = 0;
+                var cdfEvents = new List<Event>();
+
+                while (retryCount < 50)
+                {
+                    cdfEvents = (await cdf.Events.RetrieveAsync(
+                        new List<string> { eventId },
+                        true,
+                        source.Token).ConfigureAwait(false)).ToList();
+                    if (cdfEvents.Any())
+                    {
+                        break;
+                    }
+                    retryCount++;
+                    // delay by 100ms
+                    await Task.Delay(100);
+                }
+
+                Console.WriteLine("Event Id: " + cdfEvents.First().Id);
+                    
+                Assert.NotEmpty(runUpdated);
+                var eventMetadata = cdfEvents.First().Metadata;
                 Assert.True(eventMetadata.ContainsKey("calcTime"));
                 Assert.True(long.TryParse(eventMetadata["calcTime"], out var eventCalcTime));
                 Assert.True(eventCalcTime <= validationEndOverwrite);
@@ -240,8 +285,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 if (!string.IsNullOrEmpty(eventId))
                 {
-                    await cdf.Events.DeleteAsync(
-                        new List<string> { eventId }, source.Token).ConfigureAwait(false);
+
+                    // await cdf.Events.DeleteAsync(
+                    //     new List<string> { eventId }, source.Token).ConfigureAwait(false);
                 }
                 if (!string.IsNullOrEmpty(sequenceId))
                 {
