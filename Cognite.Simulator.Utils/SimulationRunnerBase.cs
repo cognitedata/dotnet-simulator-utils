@@ -411,7 +411,7 @@ namespace Cognite.Simulator.Utils
 
             catch (Exception e)
             {
-                throw new ConnectorException(e.Message);
+                // throw new ConnectorException(e.Message);
             }
         }
 

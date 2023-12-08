@@ -633,6 +633,12 @@ namespace Cognite.Simulator.Extensions
             if (!result.IsAllGood)
             {
                 Console.WriteLine("Unable to update integration sequence");
+                // print all result.errors
+                foreach (var error in result.Errors)
+                {
+                    Console.WriteLine(error.Message);
+                }
+
                 throw new SimulatorIntegrationSequenceException("Could not update simulator integration sequence", result.Errors);
             }
         }
