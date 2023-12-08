@@ -618,17 +618,17 @@ namespace Cognite.Simulator.Extensions
                 Rows = newRows
             };
             var rowsToCreate = new List<SequenceDataCreate>();
-                rowsToCreate.Add(sequenceData);
-                var result = await sequences.InsertAsync(
-                    rowsToCreate,
-                    keyChunkSize: 10,
-                    valueChunkSize: 100,
-                    sequencesChunk: 10,
-                    throttleSize: 1,
-                    RetryMode.None,
-                    SanitationMode.None,
-                    token
-                ).ConfigureAwait(false);
+            rowsToCreate.Add(sequenceData);
+            var result = await sequences.InsertAsync(
+                rowsToCreate,
+                keyChunkSize: 10,
+                valueChunkSize: 100,
+                sequencesChunk: 10,
+                throttleSize: 1,
+                RetryMode.None,
+                SanitationMode.None,
+                token
+            ).ConfigureAwait(false);
                 
             if (!result.IsAllGood)
             {

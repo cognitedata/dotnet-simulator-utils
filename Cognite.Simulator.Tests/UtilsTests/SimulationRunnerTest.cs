@@ -156,11 +156,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(inTs.Any());
                 Assert.Equal(inTsIds.Count, inTs.Count());
 
-                // var eventUpdated = await cdf.Events.RetrieveAsync(
-                //     new List<string> { eventId },
-                //     true,
-                //     source.Token).ConfigureAwait(false);
-
                 var runsUpdated = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
                     new SimulationRunQuery
                     {
