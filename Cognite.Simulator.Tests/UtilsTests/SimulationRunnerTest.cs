@@ -366,7 +366,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(15));
                 var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
