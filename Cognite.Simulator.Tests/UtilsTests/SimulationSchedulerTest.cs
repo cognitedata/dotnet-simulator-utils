@@ -132,7 +132,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        [FactIf(envVar: "ENABLE_SIMULATOR_API_TESTS", skipReason: "Immature Simulator APIs")]
+        [Fact]
         [Trait("Category", "API")]
         public async Task TestSimulationSchedulerBaseWithApi()
         {

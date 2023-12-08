@@ -102,25 +102,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     inTsIds.AddRange(inConstTsIds);
                 }
 
-                // Create a simulation event ready to run for the test configuration
-                // var events = await cdf.Events.CreateSimulationEventReadyToRun(
-                //     new List<SimulationEvent>
-                //     {
-                //         new SimulationEvent
-                //         {
-                //             Calculation = configObj.Calculation,
-                //             CalculationId = configState.Id,
-                //             Connector = configObj.Connector,
-                //             DataSetId = CdfTestClient.TestDataset,
-                //             RunType = "manual",
-                //             UserEmail = configObj.UserEmail,
-                //             ValidationEndOverwrite = validationEndOverwrite
-                //         }
-
-                //     },
-                //     source.Token).ConfigureAwait(false);
                 await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
-
 
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
@@ -339,7 +321,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 lastLicenseCheckResult: "Available").ConfigureAwait(false);
         }
 
-        [FactIf(envVar: "ENABLE_SIMULATOR_API_TESTS", skipReason: "Immature Simulator APIs")]
+        [Fact]
         [Trait("Category", "API")]
         public async Task TestSimulationRunnerBaseWithApi()
         {
@@ -380,6 +362,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token).ConfigureAwait(false);
                 await configLib.Init(source.Token).ConfigureAwait(false);
 
+                await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
+
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
@@ -408,7 +392,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         {
                             ModelName = configObj.ModelName,
                             RoutineName = configObj.CalculationName,
-                            SimulatorName = configObj.Simulator
+                            SimulatorName = configObj.Simulator,
+                            ValidationEndTime = validationEndOverwrite
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns);
@@ -424,15 +409,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(runner.MetadataInitialized);
 
                 // Uncomment when we have "validation end time" parameter support in the API
-                // // Check that output time series were created
-                // var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
-                // Assert.True(outTs.Any());
-                // Assert.Equal(outTsIds.Count, outTs.Count());
+                // Check that output time series were created
+                var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
+                Assert.True(outTs.Any());
+                Assert.Equal(outTsIds.Count, outTs.Count());
 
-                // // Check that input time series were created
-                // var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
-                // Assert.True(inTs.Any());
-                // Assert.Equal(inTsIds.Count, inTs.Count());
+                // Check that input time series were created
+                var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
+                Assert.True(inTs.Any());
+                Assert.Equal(inTsIds.Count, inTs.Count());
 
                 var updatedSimRuns = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
                     new SimulationRunQuery
@@ -442,7 +427,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             ModelName = configObj.ModelName,
                             RoutineName = configObj.CalculationName,
                             SimulatorName = configObj.Simulator,
-                            Status = SimulationRunStatus.failure // this fails due to the empty input time series at the time range, we need runTime param to fix this
+                            Status = SimulationRunStatus.success
                         }
                     }, source.Token).ConfigureAwait(false);
                 
@@ -451,15 +436,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var simRunUpdated = updatedSimRuns.Items.FirstOrDefault(s => s.Id == runId);
 
                 Assert.NotNull(simRunUpdated);
-                // // Uncomment when we have eventId persisted in the DB
-                // Assert.True(simRunUpdated.EventId.HasValue);
-                // var simEvent = await cdf.Events.GetAsync(simRunUpdated.EventId.Value, source.Token);
-                // Assert.NotNull(simEvent);
+                Assert.True(simRunUpdated.EventId.HasValue);
+                var simEvent = await cdf.Events.GetAsync(simRunUpdated.EventId.Value, source.Token);
+                Assert.NotNull(simEvent);
 
                 Assert.Equal(configObj.CalculationName, simRunUpdated.RoutineName);
                 Assert.Equal("PROSPER", simRunUpdated.SimulatorName);
                 Assert.Equal("Connector Test Model", simRunUpdated.ModelName);
-                Assert.StartsWith("No data points were found for time series", simRunUpdated.StatusMessage);
+                Assert.StartsWith("Calculation ran to completion", simRunUpdated.StatusMessage);
+                Assert.Equal(SimulationRunStatus.success, simRunUpdated.Status);
             }
             finally
             {
