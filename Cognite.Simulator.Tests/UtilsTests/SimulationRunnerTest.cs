@@ -549,8 +549,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
 
-        public Dictionary<string, long> AlreadyProcessed => EventsAlreadyProcessed;
-
         public SampleSimulationRunner(
             CogniteDestination cdf,
             ModeLibraryTest modelLibrary,
