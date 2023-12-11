@@ -37,13 +37,6 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Keeps a list of events already processed by the connector. Since updates to CDF
-        /// Events are eventually consistent, there is a risk of fetching and processing events
-        /// already processed. Caching the processed events locally prevents that
-        /// </summary>
-        protected Dictionary<string, long> EventsAlreadyProcessed { get; }
-
-        /// <summary>
         /// Library containing the simulator model files
         /// </summary>
         protected IModelProvider<T> ModelLibrary { get; }
@@ -84,7 +77,6 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
-            EventsAlreadyProcessed = new Dictionary<string, long>();
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
             sequenceExternalId = "";
@@ -186,7 +178,7 @@ namespace Cognite.Simulator.Utils
                 var allEvents = new List<SimulationRunEvent>(simulationEvents);
                 allEvents.AddRange(simulationRunningEvents);
                 allEvents = allEvents
-                    .Where(e => e.HasSimulationRun || (!EventsAlreadyProcessed.Keys.Contains(e.Event.ExternalId)))
+                    .Where(e => e.HasSimulationRun)
                     .ToList();
 
                 // sort by event time
@@ -260,7 +252,6 @@ namespace Cognite.Simulator.Utils
                                 null,
                                 ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
                                 token).ConfigureAwait(false);
-                            EventsAlreadyProcessed[e.Event.ExternalId] = e.Event.LastUpdatedTime;
                         }
                     }
                     finally
@@ -276,17 +267,6 @@ namespace Cognite.Simulator.Utils
 
                     }
                     
-                }
-
-                // Remove old entries from the list of already processed events
-                var nowMs = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                var expiredEvents = EventsAlreadyProcessed
-                    .Where(e => (nowMs - e.Value) > _connectorConfig.SimulationEventTolerance * 1000)
-                    .Select(e => e.Key)
-                    .ToList();
-                foreach (var ev in expiredEvents)
-                {
-                    EventsAlreadyProcessed.Remove(ev);
                 }
 
                 await Task.Delay(interval, token).ConfigureAwait(false);
@@ -549,7 +529,6 @@ namespace Cognite.Simulator.Utils
                     null,
                     "Calculation ran to completion",
                     token).ConfigureAwait(false);
-                EventsAlreadyProcessed[simEv.Event.ExternalId] = simEv.Event.LastUpdatedTime;
             }
         }
 
