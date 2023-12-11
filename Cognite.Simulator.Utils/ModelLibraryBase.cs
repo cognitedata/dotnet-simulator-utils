@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Cognite.Simulator.Utils
 {
@@ -94,7 +95,12 @@ namespace Cognite.Simulator.Utils
                 .ToList();
             foreach (var version in modelVersions)
             {
-                StateUtils.DeleteLocalFile(version.FilePath);
+                if (version.IsInDirectory) {
+                    var dirPath = Path.GetDirectoryName(version.FilePath);
+                    StateUtils.DeleteLocalDirectory(dirPath);
+                } else {
+                    StateUtils.DeleteLocalFile(version.FilePath);
+                }
             }
         }
 
@@ -337,7 +343,8 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
-                Version = Version
+                Version = Version,
+                IsInDirectory = IsInDirectory
             };
         }
     }
