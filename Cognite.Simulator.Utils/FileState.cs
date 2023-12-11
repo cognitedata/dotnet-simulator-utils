@@ -50,7 +50,7 @@ namespace Cognite.Simulator.Utils
 
         private string _source;
 
-        private bool _isInDirectory = false;
+        private bool _isInDirectory;
 
         /// <summary>
         /// If the file is stored in a directory, or as a single file
