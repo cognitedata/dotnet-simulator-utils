@@ -287,7 +287,6 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
                             file.FilePath = filename;
-                            
                             // Update the timestamp of the last time the file changed. Next run, no need to fetch files changed before this timestamp.
                             // The code below only expands the time range.
                             _libState.UpdateDestinationRange(
