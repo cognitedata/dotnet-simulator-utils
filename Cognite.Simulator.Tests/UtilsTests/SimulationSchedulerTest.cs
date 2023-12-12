@@ -109,7 +109,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latestEvents = events.Items.OrderByDescending(e => e.CreatedTime).ToList();
                 var latestEventsFiltered = latestEvents.Where(e => e.CreatedTime > DateTimeOffset.UtcNow.AddSeconds(-10).ToUnixTimeMilliseconds()).ToList();
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
-                //eventIds.AddRange(events.Select(e => e.ExternalId));
             }
             finally
             {
