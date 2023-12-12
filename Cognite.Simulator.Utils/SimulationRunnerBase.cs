@@ -185,11 +185,6 @@ namespace Cognite.Simulator.Utils
                 allEvents.Sort((e1, e2) => {
                     return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
                 });
-
-                // // get the first 3 events
-                // allEvents = allEvents.Take(3).ToList();
-                
-
                 foreach (SimulationRunEvent e in allEvents)
                 {
                     var eventId = e.HasSimulationRun ? e.Run.Id.ToString() : e.Event.ExternalId;
