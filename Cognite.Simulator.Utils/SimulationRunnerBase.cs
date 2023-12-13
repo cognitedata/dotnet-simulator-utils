@@ -37,13 +37,6 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Keeps a list of events already processed by the connector. Since updates to CDF
-        /// Events are eventually consistent, there is a risk of fetching and processing events
-        /// already processed. Caching the processed events locally prevents that
-        /// </summary>
-        protected Dictionary<string, long> EventsAlreadyProcessed { get; }
-
-        /// <summary>
         /// Library containing the simulator model files
         /// </summary>
         protected IModelProvider<T> ModelLibrary { get; }
@@ -84,7 +77,6 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
-            EventsAlreadyProcessed = new Dictionary<string, long>();
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
             sequenceExternalId = "";
@@ -143,29 +135,10 @@ namespace Cognite.Simulator.Utils
             SimulationRunStatus status,
             CancellationToken token)
         {
-            if (_connectorConfig.UseSimulatorsApi)
-            {
-                var simulationRuns = await FindSimulationRunsWithStatus(
-                    simulatorDataSetMap, 
-                    status, token).ConfigureAwait(false);
-                return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();
-            }
-            IEnumerable<Event> simulationEvents = new List<Event>();
-            if (status == SimulationRunStatus.ready)
-            {
-                simulationEvents = await _cdfEvents.FindSimulationEventsReadyToRun(
-                    simulatorDataSetMap,
-                    _connectorConfig.GetConnectorName(),
-                    token).ConfigureAwait(false);
-            }
-            else if (status == SimulationRunStatus.running)
-            {
-                simulationEvents = await _cdfEvents.FindSimulationEventsRunning(
-                    simulatorDataSetMap,
-                    _connectorConfig.GetConnectorName(),
-                    token).ConfigureAwait(false);
-            }
-            return simulationEvents.Select(e => new SimulationRunEvent(e)).ToList();
+            var simulationRuns = await FindSimulationRunsWithStatus(
+                simulatorDataSetMap, 
+                status, token).ConfigureAwait(false);
+            return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();           
         }
 
         /// <summary>
@@ -205,9 +178,13 @@ namespace Cognite.Simulator.Utils
                 var allEvents = new List<SimulationRunEvent>(simulationEvents);
                 allEvents.AddRange(simulationRunningEvents);
                 allEvents = allEvents
-                    .Where(e => e.HasSimulationRun || (!EventsAlreadyProcessed.Keys.Contains(e.Event.ExternalId)))
+                    .Where(e => e.HasSimulationRun)
                     .ToList();
 
+                // sort by event time
+                allEvents.Sort((e1, e2) => {
+                    return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
+                });
                 foreach (SimulationRunEvent e in allEvents)
                 {
                     var eventId = e.HasSimulationRun ? e.Run.Id.ToString() : e.Event.ExternalId;
@@ -259,7 +236,7 @@ namespace Cognite.Simulator.Utils
                             e.Run = await UpdateSimulationRunStatus(
                                 e.Run.Id,
                                 SimulationRunStatus.failure,
-                                ex.Message == null || ex.Message.Length < 100 ? ex.Message : ex.Message.Substring(0, 99),
+                                ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
                                 token).ConfigureAwait(false);
                         }
                         else
@@ -270,7 +247,6 @@ namespace Cognite.Simulator.Utils
                                 null,
                                 ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
                                 token).ConfigureAwait(false);
-                            EventsAlreadyProcessed[e.Event.ExternalId] = e.Event.LastUpdatedTime;
                         }
                     }
                     finally
@@ -286,17 +262,6 @@ namespace Cognite.Simulator.Utils
 
                     }
                     
-                }
-
-                // Remove old entries from the list of already processed events
-                var nowMs = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                var expiredEvents = EventsAlreadyProcessed
-                    .Where(e => (nowMs - e.Value) > _connectorConfig.SimulationEventTolerance * 1000)
-                    .Select(e => e.Key)
-                    .ToList();
-                foreach (var ev in expiredEvents)
-                {
-                    EventsAlreadyProcessed.Remove(ev);
                 }
 
                 await Task.Delay(interval, token).ConfigureAwait(false);
@@ -421,7 +386,7 @@ namespace Cognite.Simulator.Utils
 
             catch (Exception e)
             {
-                throw new ConnectorException(e.Message);
+                // throw new ConnectorException(e.Message);
             }
         }
 
@@ -492,6 +457,11 @@ namespace Cognite.Simulator.Utils
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(overwriteValue);
                 }
+                else if (simEv.Run.ValidationEndTime.HasValue) {
+                    // If the event contains a validation end overwrite, use that instead of
+                    // the current time
+                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
+                }
                 else
                 {
                     // If the validation end time should be in the past, subtract the 
@@ -554,7 +524,6 @@ namespace Cognite.Simulator.Utils
                     null,
                     "Calculation ran to completion",
                     token).ConfigureAwait(false);
-                EventsAlreadyProcessed[simEv.Event.ExternalId] = simEv.Event.LastUpdatedTime;
             }
         }
 

@@ -59,11 +59,16 @@ namespace Cognite.Simulator.Utils
             {
                 return Enumerable.Empty<SimulationRun>();
             }
-            var runsToCreate = simulationEvents.Select(e => new SimulationRunCreate(){
-                SimulatorName = e.Calculation.Model.Simulator,
-                ModelName = e.Calculation.Model.Name,
-                RoutineName = e.Calculation.Name,
-            }).ToList();
+            
+            var runsToCreate = simulationEvents.Select(e => {
+                var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
+                return new SimulationRunCreate(){
+                    SimulatorName = e.Calculation.Model.Simulator,
+                    ModelName = e.Calculation.Model.Name,
+                    RoutineName = e.Calculation.Name,
+                    RunType = runType,
+                };
+        }).ToList();
             List<SimulationRun> runs = new List<SimulationRun>();
 
             foreach (SimulationRunCreate runToCreate in runsToCreate)
@@ -97,20 +102,20 @@ namespace Cognite.Simulator.Utils
                 {
                     var configObj = configuration.Value;
                     U configState;
-                    if (_config.UseSimulatorsApi) {
+                    //if (_config.UseSimulatorsApi) {
                         configState = _configLib.GetSimulationConfigurationState(
                             configObj.Calculation.Model.Simulator,
                             configObj.Calculation.Model.Name,
                             configObj.CalculationName
                         );
-                    } else {
+                    /*} else {
                         configState = _configLib.GetSimulationConfigurationState(
                             configObj.Calculation.Model.Simulator,
                             configObj.Calculation.Model.Name,
                             configObj.CalculationType,
                             configObj.CalcTypeUserDefined)
                         ;
-                    }
+                    }*/
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
                         configObj.Connector != _config.GetConnectorName() ||
@@ -157,14 +162,7 @@ namespace Cognite.Simulator.Utils
                 {
                     try
                     {
-                        if(_config.UseSimulatorsApi)
-                        {
-                           await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
-                        } else {
-                            var eventResult = await _cdf.CogniteClient.Events.CreateSimulationEventReadyToRun(
-                                eventsToCreate,
-                                token).ConfigureAwait(false);
-                        }
+                        await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
                     }
                     catch (SimulationEventException ex)
                     {
