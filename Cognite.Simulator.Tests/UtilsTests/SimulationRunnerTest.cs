@@ -293,12 +293,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public static async Task SimulateProsperRunningAsync( Client cdf, string connectorName = "scheduler-test-connector" ) {
 
-            var simint = new SimulatorIntegration () {
+            var simint = new Extensions.SimulatorIntegration () {
                 Simulator = "PROSPER",
                 DataSetId = CdfTestClient.TestDataset,
                 ConnectorName = connectorName,
             };
-            var simulators = new List<SimulatorIntegration> { simint };
+            var simulators = new List<Extensions.SimulatorIntegration> { simint };
 
             var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
                 simulators,
@@ -309,7 +309,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             await cdf.Sequences.UpdateSimulatorIntegrationsData(
                 sequenceExternalId,
                 true,
-                new SimulatorIntegrationUpdate
+                new Extensions.SimulatorIntegrationUpdate
                 {
                     Simulator = simint.Simulator,
                     DataSetId = simint.DataSetId,

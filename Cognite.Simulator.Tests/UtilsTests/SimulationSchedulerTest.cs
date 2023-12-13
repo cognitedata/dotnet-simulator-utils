@@ -44,12 +44,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             try
             {
-                var simint = new SimulatorIntegration () {
+                var simint = new Extensions.SimulatorIntegration () {
                     Simulator = "PROSPER",
                     DataSetId = CdfTestClient.TestDataset,
                     ConnectorName = "scheduler-test-connector",
                 };
-                var simulators = new List<SimulatorIntegration> { simint };
+                var simulators = new List<Extensions.SimulatorIntegration> { simint };
 
                 var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
                     simulators,
@@ -60,7 +60,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await cdf.Sequences.UpdateSimulatorIntegrationsData(
                     sequenceExternalId,
                     true,
-                    new SimulatorIntegrationUpdate
+                    new Extensions.SimulatorIntegrationUpdate
                     {
                         Simulator = simint.Simulator,
                         DataSetId = simint.DataSetId,
@@ -156,12 +156,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
-            var simint = new SimulatorIntegration () {
+            var simint = new Extensions.SimulatorIntegration () {
                 Simulator = "PROSPER",
                 DataSetId = CdfTestClient.TestDataset,
                 ConnectorName = "scheduler-test-connector",
             };
-            var simulators = new List<SimulatorIntegration> { simint };
+            var simulators = new List<Extensions.SimulatorIntegration> { simint };
             try
             {
                 var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
@@ -174,7 +174,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await cdf.Sequences.UpdateSimulatorIntegrationsData(
                     sequenceExternalId,
                     true,
-                    new SimulatorIntegrationUpdate
+                    new Extensions.SimulatorIntegrationUpdate
                     {
                         Simulator = simint.Simulator,
                         DataSetId = simint.DataSetId,
