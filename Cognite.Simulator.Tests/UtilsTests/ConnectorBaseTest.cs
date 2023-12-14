@@ -27,6 +27,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestConnectorBase()
         {
+            var timestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
+            var simulatorName = $"TestSim {timestamp}";
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddLogger();
@@ -36,7 +38,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ExtractionPipeline>();
             var simConfig = new SimulatorConfig
             {
-                Name = "TestSim",
+                Name = simulatorName,
                 DataSetId = CdfTestClient.TestDataset
             };
             services.AddSingleton(simConfig);
@@ -49,9 +51,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
+            // prepopulate the TestSim simulator
+            await cdf.Alpha.Simulators.CreateAsync(
+                new []
+                {
+                    new SimulatorCreate()
+                        {
+                            ExternalId = simulatorName,
+                            Name = "TestSim",
+                            FileExtensionTypes = new List<string> { "test" },
+                            Enabled = true,
+                        }
+                }
+            ).ConfigureAwait(false);
+
             try
             {
-                var timestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 await connector
                     .Init(source.Token)
                     .ConfigureAwait(false);
@@ -59,14 +74,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var integrationsRes = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                     new SimulatorIntegrationQuery(),
                     source.Token).ConfigureAwait(false);
-                var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == "TestSim");
+                var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == simulatorName);
 
                 Assert.NotNull(integration);
-                Assert.Equal("TestSim", integration.SimulatorExternalId);
+                Assert.Equal(simulatorName, integration.SimulatorExternalId);
                 Assert.Equal("1.2.3", integration.SimulatorVersion);
                 Assert.Equal(CdfTestClient.TestDataset, integration.DataSetId);
                 Assert.Equal("v0.0.1", integration.ConnectorVersion);
-                Assert.Equal("Test Connector", integration.ExternalId);
+                Assert.StartsWith($"Test Connector", integration.ExternalId);
                 Assert.True(integration.Heartbeat >= timestamp);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
@@ -85,6 +100,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
+                await cdf.Alpha.Simulators.DeleteAsync(
+                    new [] { new Identity("TestSim") },
+                    source.Token).ConfigureAwait(false);
                 await cdf.ExtPipes
                     .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
             }
@@ -113,7 +131,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 new ConnectorConfig
                 {
-                    NamePrefix = "Test Connector",
+                    NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
                     AddMachineNameSuffix = false
                 },
                 new List<SimulatorConfig>
