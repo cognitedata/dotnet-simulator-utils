@@ -101,7 +101,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             finally
             {
                 await cdf.Alpha.Simulators.DeleteAsync(
-                    new [] { new Identity("TestSim") },
+                    new [] { new Identity(simulatorName) },
                     source.Token).ConfigureAwait(false);
                 await cdf.ExtPipes
                     .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
