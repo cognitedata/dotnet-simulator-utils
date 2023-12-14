@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
         /// This should include a call to
-        /// <see cref="EnsureSimulatorIntegrationsSequencesExists(CancellationToken)"/>
+        /// <see cref="EnsureSimulatorIntegrationsExists(CancellationToken)"/>
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public abstract Task Init(CancellationToken token);
@@ -171,7 +171,7 @@ namespace Cognite.Simulator.Utils
         /// periodically by the connector, and indicate the status of the currently running connector to
         /// applications consuming this simulation integration data.
         /// </summary>
-        protected async Task EnsureSimulatorIntegrationsSequencesExists(CancellationToken token)
+        protected async Task EnsureSimulatorIntegrationsExists(CancellationToken token)
         {
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
@@ -188,6 +188,15 @@ namespace Cognite.Simulator.Utils
                     if (existing == null)
                     {
                         _logger.LogInformation("Creating new simulator integration for {Simulator}", simulatorName);
+                        var existingSimulators = await Cdf.CogniteClient.Alpha.Simulators.ListAsync(
+                            new SimulatorQuery (),
+                            token).ConfigureAwait(false);
+                        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorName);
+                        if (existingSimulator == null)
+                        {
+                            _logger.LogWarning("Simulator {Simulator} not found in CDF", simulatorName);
+                            throw new ConnectorException($"Simulator {simulatorName} not found in CDF");
+                        }
                         var integrationToCreate = new SimulatorIntegrationCreate
                         {
                             ExternalId = connectorName,

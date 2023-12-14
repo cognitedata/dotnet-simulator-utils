@@ -4,6 +4,7 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,6 +20,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorBaseTest
     {
+        /// <summary>
+        /// Test that the connector can report status back to CDF
+        /// It also checks whether extraction pipeline is created  
+        /// </summary>
         [Fact]
         public async Task TestConnectorBase()
         {
@@ -44,7 +49,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
-            string? externalIdToDelete = null;
             try
             {
                 var timestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
@@ -52,34 +56,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .Init(source.Token)
                     .ConfigureAwait(false);
 
-                // externalIdToDelete = connector.GetSimulatorIntegartionExternalId("TestSim");
-                Assert.NotNull(externalIdToDelete);
-
-                // var rowQuery = new SequenceRowQuery
-                // {
-                //     ExternalId = externalIdToDelete,
-                // };
-                var integrationsRes = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
-                    new CogniteSdk.Alpha.SimulationRunQuery(),
+                var integrationsRes = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                    new SimulatorIntegrationQuery(),
                     source.Token).ConfigureAwait(false);
-                var 
+                var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == "TestSim");
 
-                // var rowsResult = await cdf.Sequences.ListRowsAsync(
-                //     rowQuery,
-                //     source.Token).ConfigureAwait(false);
-                // Assert.NotNull(rowsResult);
-                // Assert.NotEmpty(rowsResult.Rows);
-
-                // IDictionary<string, string> resultDict = rowsResult.Rows.ToDictionary(
-                //     r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
-                // var heartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
-                // var connVersion = Assert.Contains(SimulatorIntegrationSequenceRows.ConnectorVersion, resultDict);
-                // var simDataset = Assert.Contains(SimulatorIntegrationSequenceRows.DataSetId, resultDict);
-                // var simVersion = Assert.Contains(SimulatorIntegrationSequenceRows.SimulatorVersion, resultDict);
-                // Assert.True(long.Parse(heartbeat) > timestamp);
-                // Assert.Equal(connector.GetConnectorVersion(), connVersion);
-                // Assert.Equal(CdfTestClient.TestDataset, long.Parse(simDataset));
-                // Assert.Equal("1.2.3", simVersion);
+                Assert.NotNull(integration);
+                Assert.Equal("TestSim", integration.SimulatorExternalId);
+                Assert.Equal("1.2.3", integration.SimulatorVersion);
+                Assert.Equal(CdfTestClient.TestDataset, integration.DataSetId);
+                Assert.Equal("v0.0.1", integration.ConnectorVersion);
+                Assert.Equal("Test Connector", integration.ExternalId);
+                Assert.True(integration.Heartbeat >= timestamp);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
                 // to report a heartbeat back to CDF at least once.
@@ -87,15 +75,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
                 await connector.Run(linkedToken).ConfigureAwait(false);
-
-                // rowsResult = await cdf.Sequences.ListRowsAsync(
-                //     rowQuery,
-                //     source.Token).ConfigureAwait(false);
-
-                // resultDict = rowsResult.Rows.ToDictionary(
-                //     r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
-                // var lastHeartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
-                // Assert.True(long.Parse(lastHeartbeat) > long.Parse(heartbeat));
 
                 var pipelines = await cdf.ExtPipes.RetrieveAsync(
                     new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
@@ -106,14 +85,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (externalIdToDelete != null)
-                {
-                    await cdf.Sequences
-                        .DeleteAsync(new List<string> { externalIdToDelete }, CancellationToken.None)
-                        .ConfigureAwait(false);
-                }
+                // print cdfConfig.ExtractionPipeline.PipelineId
+                // Console.WriteLine("--------------------- " + cdfConfig.ExtractionPipeline?.PipelineId);
                 await cdf.ExtPipes
-                    .DeleteAsync(new []{ cdfConfig.ExtractionPipeline.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
+                    .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
             }
         }
     }
@@ -172,7 +147,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override async Task Init(CancellationToken token)
         {
-            await EnsureSimulatorIntegrationsSequencesExists(token).ConfigureAwait(false);
+            await EnsureSimulatorIntegrationsExists(token).ConfigureAwait(false);
             await UpdateIntegrationRows(
                 true,
                 token).ConfigureAwait(false);

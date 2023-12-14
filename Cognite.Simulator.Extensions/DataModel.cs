@@ -160,6 +160,18 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
+    /// Metadata keys present in the sequences containing information about the
+    /// existing simulation integrations
+    /// </summary>
+    public static class SimulatorIntegrationMetadata
+    {
+        /// <summary>
+        /// Name of the connector handling the integration with a simulator
+        /// </summary>
+        public const string ConnectorNameKey = "connector";
+    }
+
+    /// <summary>
     /// Metadata keys present in simulation events (simulation calculations)
     /// </summary>
     public static class SimulationEventMetadata
