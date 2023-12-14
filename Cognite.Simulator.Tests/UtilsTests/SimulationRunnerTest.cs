@@ -309,6 +309,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             SimulatorExternalId = "PROSPER",
                             DataSetId = CdfTestClient.TestDataset,
                             Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
+                            ConnectorVersion = "N/A",
+                            SimulatorVersion = "N/A",
                             RunApiEnabled = true,
                         }
                     }
