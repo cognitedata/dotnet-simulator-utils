@@ -103,7 +103,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     inTsIds.AddRange(inConstTsIds);
                 }
 
-                await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
+                await TestHelpers.SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
 
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
@@ -292,44 +292,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         }
 
-        public static async Task SimulateProsperRunningAsync(Client cdf, string connectorName = "scheduler-test-connector" ) {
-            var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
-                new SimulatorIntegrationQuery
-                {
-                }
-            ).ConfigureAwait(false);
-            var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == "PROSPER");
-            if (existing == null) {
-                await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
-                    new List<SimulatorIntegrationCreate>
-                    {
-                        new SimulatorIntegrationCreate
-                        {
-                            ExternalId = connectorName,
-                            SimulatorExternalId = "PROSPER",
-                            DataSetId = CdfTestClient.TestDataset,
-                            Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
-                            ConnectorVersion = "N/A",
-                            SimulatorVersion = "N/A",
-                            RunApiEnabled = true,
-                        }
-                    }
-                ).ConfigureAwait(false);
-            } else {
-                await cdf.Alpha.Simulators.UpdateSimulatorIntegrationAsync(
-                    new List<SimulatorIntegrationUpdateItem>
-                    {
-                        new SimulatorIntegrationUpdateItem(existing.Id)
-                        {
-                            Update = new SimulatorIntegrationUpdate
-                            {
-                                Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds())
-                            }
-                        }
-                    }
-                ).ConfigureAwait(false);
-            }
-        }
+        
         private static Dictionary<string, string> ToRowDictionary(SequenceData data)
         {
             Dictionary<string, string> result = new();
