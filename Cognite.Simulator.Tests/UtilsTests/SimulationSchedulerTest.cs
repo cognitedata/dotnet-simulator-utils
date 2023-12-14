@@ -44,32 +44,46 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             try
             {
-                var simint = new Extensions.SimulatorIntegration () {
-                    Simulator = "PROSPER",
-                    DataSetId = CdfTestClient.TestDataset,
-                    ConnectorName = "scheduler-test-connector",
-                };
-                var simulators = new List<Extensions.SimulatorIntegration> { simint };
+                // var simint = new Extensions.SimulatorIntegration () {
+                //     Simulator = "PROSPER",
+                //     DataSetId = CdfTestClient.TestDataset,
+                //     ConnectorName = "scheduler-test-connector",
+                // };
+                // var simulators = new List<Extensions.SimulatorIntegration> { simint };
 
-                var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
-                    simulators,
-                    CancellationToken.None).ConfigureAwait(false);
+                // var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
+                //     simulators,
+                //     CancellationToken.None).ConfigureAwait(false);
                 
-                var sequenceExternalId = integrations.First().ExternalId;
+                // var sequenceExternalId = integrations.First().ExternalId;
 
-                await cdf.Sequences.UpdateSimulatorIntegrationsData(
-                    sequenceExternalId,
-                    true,
-                    new Extensions.SimulatorIntegrationUpdate
-                    {
-                        Simulator = simint.Simulator,
-                        DataSetId = simint.DataSetId,
-                        ConnectorName = simint.ConnectorName,
-                        SimulatorApiEnabled = true,
-                    },
-                    CancellationToken.None,
-                    lastLicenseCheckTimestamp: 0,
-                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
+
+                // var updateObj = new CogniteSdk.Alpha.SimulatorIntegrationCreate
+                //     {
+                //         ExternalId = sequenceExternalId,
+                //         SimulatorExternalId = simint.Simulator,
+                //         DataSetId = simint.DataSetId ?? 0L,
+                //         RunApiEnabled = true,
+                //         ConnectorVersion = "n/a",
+                //         SimulatorVersion = "n/a",
+                //     };
+                // await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
+                //     new List<CogniteSdk.Alpha.SimulatorIntegrationCreate> { updateObj }, source.Token
+                // ).ConfigureAwait(false);
+
+                // await cdf.Sequences.UpdateSimulatorIntegrationsData(
+                //     sequenceExternalId,
+                //     true,
+                //     new Extensions.SimulatorIntegrationUpdate
+                //     {
+                //         Simulator = simint.Simulator,
+                //         DataSetId = simint.DataSetId,
+                //         ConnectorName = simint.ConnectorName,
+                //         SimulatorApiEnabled = true,
+                //     },
+                //     CancellationToken.None,
+                //     lastLicenseCheckTimestamp: 0,
+                //     lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -156,34 +170,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
-            var simint = new Extensions.SimulatorIntegration () {
-                Simulator = "PROSPER",
-                DataSetId = CdfTestClient.TestDataset,
-                ConnectorName = "scheduler-test-connector",
-            };
-            var simulators = new List<Extensions.SimulatorIntegration> { simint };
+            // var simint = new Extensions.SimulatorIntegration () {
+            //     Simulator = "PROSPER",
+            //     DataSetId = CdfTestClient.TestDataset,
+            //     ConnectorName = "scheduler-test-connector",
+            // };
+            // var simulators = new List<Extensions.SimulatorIntegration> { simint };
             try
             {
-                var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
-                    simulators,
-                    CancellationToken.None).ConfigureAwait(false);
+                // var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
+                //     simulators,
+                //     CancellationToken.None).ConfigureAwait(false);
 
-                var sequenceExternalId = integrations.First().ExternalId;
+                // var sequenceExternalId = integrations.First().ExternalId;
                 
-                // Update the sequence with connector heartbeat
-                await cdf.Sequences.UpdateSimulatorIntegrationsData(
-                    sequenceExternalId,
-                    true,
-                    new Extensions.SimulatorIntegrationUpdate
-                    {
-                        Simulator = simint.Simulator,
-                        DataSetId = simint.DataSetId,
-                        ConnectorName = simint.ConnectorName,
-                        SimulatorApiEnabled = true,
-                    },
-                    CancellationToken.None,
-                    lastLicenseCheckTimestamp: testStartTimeMillis,
-                    lastLicenseCheckResult: "Available").ConfigureAwait(false);
+                // // Update the sequence with connector heartbeat
+                // await cdf.Sequences.UpdateSimulatorIntegrationsData(
+                //     sequenceExternalId,
+                //     true,
+                //     new Extensions.SimulatorIntegrationUpdate
+                //     {
+                //         Simulator = simint.Simulator,
+                //         DataSetId = simint.DataSetId,
+                //         ConnectorName = simint.ConnectorName,
+                //         SimulatorApiEnabled = true,
+                //     },
+                //     CancellationToken.None,
+                //     lastLicenseCheckTimestamp: testStartTimeMillis,
+                //     lastLicenseCheckResult: "Available").ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();

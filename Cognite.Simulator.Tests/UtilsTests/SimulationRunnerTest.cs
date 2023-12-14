@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
@@ -246,7 +247,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(dictResult.ContainsKey("samplingStart"));
                 Assert.True(dictResult.ContainsKey("validationEndOffset"));
 
-                SamplingRange range = new TimeRange()
+                SamplingRange range = new CogniteSdk.TimeRange()
                 {
                     Min = long.Parse(dictResult["samplingStart"]),
                     Max = long.Parse(dictResult["samplingEnd"])
@@ -291,34 +292,41 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         }
 
-        public static async Task SimulateProsperRunningAsync( Client cdf, string connectorName = "scheduler-test-connector" ) {
-
-            var simint = new Extensions.SimulatorIntegration () {
-                Simulator = "PROSPER",
-                DataSetId = CdfTestClient.TestDataset,
-                ConnectorName = connectorName,
-            };
-            var simulators = new List<Extensions.SimulatorIntegration> { simint };
-
-            var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
-                simulators,
-                CancellationToken.None).ConfigureAwait(false);
-            
-            var sequenceExternalId = integrations.First().ExternalId;
-
-            await cdf.Sequences.UpdateSimulatorIntegrationsData(
-                sequenceExternalId,
-                true,
-                new Extensions.SimulatorIntegrationUpdate
+        public static async Task SimulateProsperRunningAsync(Client cdf, string connectorName = "scheduler-test-connector" ) {
+            var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                new SimulatorIntegrationQuery
                 {
-                    Simulator = simint.Simulator,
-                    DataSetId = simint.DataSetId,
-                    ConnectorName = simint.ConnectorName,
-                    SimulatorApiEnabled = true,
-                },
-                CancellationToken.None,
-                lastLicenseCheckTimestamp: 0,
-                lastLicenseCheckResult: "Available").ConfigureAwait(false);
+                }
+            ).ConfigureAwait(false);
+            var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == "PROSPER");
+            if (existing == null) {
+                await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
+                    new List<SimulatorIntegrationCreate>
+                    {
+                        new SimulatorIntegrationCreate
+                        {
+                            ExternalId = connectorName,
+                            SimulatorExternalId = "PROSPER",
+                            DataSetId = CdfTestClient.TestDataset,
+                            Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
+                            RunApiEnabled = true,
+                        }
+                    }
+                ).ConfigureAwait(false);
+            } else {
+                await cdf.Alpha.Simulators.UpdateSimulatorIntegrationAsync(
+                    new List<SimulatorIntegrationUpdateItem>
+                    {
+                        new SimulatorIntegrationUpdateItem(existing.Id)
+                        {
+                            Update = new SimulatorIntegrationUpdate
+                            {
+                                Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds())
+                            }
+                        }
+                    }
+                ).ConfigureAwait(false);
+            }
         }
         private static Dictionary<string, string> ToRowDictionary(SequenceData data)
         {

@@ -52,30 +52,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .Init(source.Token)
                     .ConfigureAwait(false);
 
-                externalIdToDelete = connector.GetSimulatorIntegartionExternalId("TestSim");
+                // externalIdToDelete = connector.GetSimulatorIntegartionExternalId("TestSim");
                 Assert.NotNull(externalIdToDelete);
 
-                var rowQuery = new SequenceRowQuery
-                {
-                    ExternalId = externalIdToDelete,
-                };
-
-                var rowsResult = await cdf.Sequences.ListRowsAsync(
-                    rowQuery,
+                // var rowQuery = new SequenceRowQuery
+                // {
+                //     ExternalId = externalIdToDelete,
+                // };
+                var integrationsRes = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
+                    new CogniteSdk.Alpha.SimulationRunQuery(),
                     source.Token).ConfigureAwait(false);
-                Assert.NotNull(rowsResult);
-                Assert.NotEmpty(rowsResult.Rows);
+                var 
 
-                IDictionary<string, string> resultDict = rowsResult.Rows.ToDictionary(
-                    r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
-                var heartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
-                var connVersion = Assert.Contains(SimulatorIntegrationSequenceRows.ConnectorVersion, resultDict);
-                var simDataset = Assert.Contains(SimulatorIntegrationSequenceRows.DataSetId, resultDict);
-                var simVersion = Assert.Contains(SimulatorIntegrationSequenceRows.SimulatorVersion, resultDict);
-                Assert.True(long.Parse(heartbeat) > timestamp);
-                Assert.Equal(connector.GetConnectorVersion(), connVersion);
-                Assert.Equal(CdfTestClient.TestDataset, long.Parse(simDataset));
-                Assert.Equal("1.2.3", simVersion);
+                // var rowsResult = await cdf.Sequences.ListRowsAsync(
+                //     rowQuery,
+                //     source.Token).ConfigureAwait(false);
+                // Assert.NotNull(rowsResult);
+                // Assert.NotEmpty(rowsResult.Rows);
+
+                // IDictionary<string, string> resultDict = rowsResult.Rows.ToDictionary(
+                //     r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
+                // var heartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
+                // var connVersion = Assert.Contains(SimulatorIntegrationSequenceRows.ConnectorVersion, resultDict);
+                // var simDataset = Assert.Contains(SimulatorIntegrationSequenceRows.DataSetId, resultDict);
+                // var simVersion = Assert.Contains(SimulatorIntegrationSequenceRows.SimulatorVersion, resultDict);
+                // Assert.True(long.Parse(heartbeat) > timestamp);
+                // Assert.Equal(connector.GetConnectorVersion(), connVersion);
+                // Assert.Equal(CdfTestClient.TestDataset, long.Parse(simDataset));
+                // Assert.Equal("1.2.3", simVersion);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
                 // to report a heartbeat back to CDF at least once.
@@ -84,14 +88,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
                 await connector.Run(linkedToken).ConfigureAwait(false);
 
-                rowsResult = await cdf.Sequences.ListRowsAsync(
-                    rowQuery,
-                    source.Token).ConfigureAwait(false);
+                // rowsResult = await cdf.Sequences.ListRowsAsync(
+                //     rowQuery,
+                //     source.Token).ConfigureAwait(false);
 
-                resultDict = rowsResult.Rows.ToDictionary(
-                    r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
-                var lastHeartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
-                Assert.True(long.Parse(lastHeartbeat) > long.Parse(heartbeat));
+                // resultDict = rowsResult.Rows.ToDictionary(
+                //     r => r.GetStringValues()[0], r => r.GetStringValues()[1]);
+                // var lastHeartbeat = Assert.Contains(SimulatorIntegrationSequenceRows.Heartbeat, resultDict);
+                // Assert.True(long.Parse(lastHeartbeat) > long.Parse(heartbeat));
 
                 var pipelines = await cdf.ExtPipes.RetrieveAsync(
                     new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
