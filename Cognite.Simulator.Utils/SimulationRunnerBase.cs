@@ -685,7 +685,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogDebug("Simulation run has no Event associated with it {Id}", simEv.Run.Id);
                     return;
                 }
-                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false); ;
+                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false);
             }
             else
             {

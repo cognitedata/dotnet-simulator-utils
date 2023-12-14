@@ -85,8 +85,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                // print cdfConfig.ExtractionPipeline.PipelineId
-                // Console.WriteLine("--------------------- " + cdfConfig.ExtractionPipeline?.PipelineId);
                 await cdf.ExtPipes
                     .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
             }
