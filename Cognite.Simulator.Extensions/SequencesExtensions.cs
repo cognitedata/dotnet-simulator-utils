@@ -392,29 +392,6 @@ namespace Cognite.Simulator.Extensions
             }
             return seqCreate;
         }
-
-        /// <summary>
-        /// Read the values of a <see cref="SequenceRow"/> and returns
-        /// it as a string array
-        /// </summary>
-        /// <param name="row">CDF Sequence row</param>
-        /// <returns>Array containing the row values</returns>
-        public static string[] GetStringValues(this SequenceRow row)
-        {
-            var result = new List<string>();
-            foreach (var val in row.Values)
-            {
-                if (val != null && val.Type == MultiValueType.STRING)
-                {
-                    result.Add(((MultiValue.String)val).Value);
-                }
-                else
-                {
-                    result.Add(null);
-                }
-            }
-            return result.ToArray();
-        }
     }
 
     /// <summary>
