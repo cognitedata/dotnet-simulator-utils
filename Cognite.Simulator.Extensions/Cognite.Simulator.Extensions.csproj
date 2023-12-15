@@ -22,7 +22,6 @@
   </ItemGroup> 
   <ItemGroup>
     <PackageReference Include="Cognite.Extensions" Version="1.17.1" />
-    <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" /> -->
   </ItemGroup> 
 
 </Project>
