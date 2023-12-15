@@ -9,6 +9,7 @@ using CogniteSdk.Resources.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,7 +47,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected IConfigurationProvider<U, V> ConfigurationLibrary { get; }
 
-        private string sequenceExternalId;
+        private long? simulatorIntegrationId;
 
 
         /// <summary>
@@ -79,13 +80,12 @@ namespace Cognite.Simulator.Utils
             _logger = logger;
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
-            sequenceExternalId = "";
         }
 
         private async Task<SimulationRun> UpdateSimulationRunStatus(
-            long runId, 
-            SimulationRunStatus status, 
-            string statusMessage, 
+            long runId,
+            SimulationRunStatus status,
+            string statusMessage,
             CancellationToken token)
         {
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
@@ -100,8 +100,8 @@ namespace Cognite.Simulator.Utils
         }
 
         private async Task<IEnumerable<SimulationRun>> FindSimulationRunsWithStatus(
-            Dictionary<string, long> simulators, 
-            SimulationRunStatus status, 
+            Dictionary<string, long> simulators,
+            SimulationRunStatus status,
             CancellationToken token)
         {
             var result = new List<SimulationRun>();
@@ -136,9 +136,9 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             var simulationRuns = await FindSimulationRunsWithStatus(
-                simulatorDataSetMap, 
+                simulatorDataSetMap,
                 status, token).ConfigureAwait(false);
-            return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();           
+            return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();
         }
 
         /// <summary>
@@ -182,7 +182,8 @@ namespace Cognite.Simulator.Utils
                     .ToList();
 
                 // sort by event time
-                allEvents.Sort((e1, e2) => {
+                allEvents.Sort((e1, e2) =>
+                {
                     return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
                 });
                 foreach (SimulationRunEvent e in allEvents)
@@ -199,7 +200,7 @@ namespace Cognite.Simulator.Utils
                         if (calcState == null || calcObj == null || calcObj.Connector != _connectorConfig.GetConnectorName())
                         {
                             _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
-                                eventId, 
+                                eventId,
                                 calcObj?.Connector);
                             continue;
                         }
@@ -252,16 +253,16 @@ namespace Cognite.Simulator.Utils
                     finally
                     {
                         await StoreRunConfiguration(
-                            calcState, 
-                            calcObj, 
-                            startTime, 
-                            e, 
+                            calcState,
+                            calcObj,
+                            startTime,
+                            e,
                             token).ConfigureAwait(false);
-                        
+
                         PublishSimulationRunStatus("IDLE", token);
 
                     }
-                    
+
                 }
 
                 await Task.Delay(interval, token).ConfigureAwait(false);
@@ -327,10 +328,13 @@ namespace Cognite.Simulator.Utils
             }
             U calcState;
             V calcConfig;
-            if (simEv.HasSimulationRun) {
+            if (simEv.HasSimulationRun)
+            {
                 calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcTypeUserDefined);
                 calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcTypeUserDefined);
-            } else {
+            }
+            else
+            {
                 calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
                 calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
             }
@@ -369,19 +373,37 @@ namespace Cognite.Simulator.Utils
             V configObj,
             Dictionary<string, string> metadata);
 
-        async void PublishSimulationRunStatus(string runStatus, CancellationToken token) {
-            var sequences = _cdfSequences;
-            
+        async void PublishSimulationRunStatus(string runStatus, CancellationToken token)
+        {
             try
             {
-                if (sequenceExternalId == "" && _simulators.Count > 0) {
-                    SimulatorConfig item = _simulators[0]; // Retrieve the first item
-                    sequenceExternalId = await SequencesExtensions.GetSequenceExternalId(sequences, item.Name, item.DataSetId, _connectorConfig.GetConnectorName(), token).ConfigureAwait(false);
+                if (!simulatorIntegrationId.HasValue && _simulators.Count > 0)
+                {
+                    SimulatorConfig simulator = _simulators[0]; // Retrieve the first item
+                    var integrationRes = await _cdfSimulators.ListSimulatorIntegrationsAsync(
+                        new SimulatorIntegrationQuery(),
+                        token).ConfigureAwait(false);
+                    var integration = integrationRes.Items.FirstOrDefault(i => i.SimulatorExternalId == simulator.Name && i.ExternalId == _connectorConfig.GetConnectorName());
+                    if (integration == null)
+                    {
+                        throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
+                    }
+                    simulatorIntegrationId = integration.Id;
                 }
-                var now = $"{DateTime.UtcNow.ToUnixTimeMilliseconds()}";
-                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatus, runStatus, token).ConfigureAwait(false);
-                await SequencesExtensions.UpsertItemInKVPSequence(_cdfSequences, sequenceExternalId, SimulatorIntegrationSequenceRows.ConnectorStatusTimestamp, now, token).ConfigureAwait(false);
-
+                var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
+                var simulatorIntegrationUpdate = new SimulatorIntegrationUpdate
+                    {
+                        ConnectorStatus = new Update<string>(runStatus),
+                        ConnectorStatusUpdatedTime = new Update<long>(now)
+                    };
+                await _cdfSimulators.UpdateSimulatorIntegrationAsync(
+                    new [] {
+                        new SimulatorIntegrationUpdateItem(simulatorIntegrationId.Value) {
+                            Update = simulatorIntegrationUpdate
+                        }
+                    },
+                    token
+                ).ConfigureAwait(false);
             }
 
             catch (Exception e)
@@ -425,9 +447,9 @@ namespace Cognite.Simulator.Utils
             if (simEv.HasSimulationRun)
             {
                 simEv.Run = await UpdateSimulationRunStatus(
-                    simEv.Run.Id, 
-                    SimulationRunStatus.running, 
-                    null, 
+                    simEv.Run.Id,
+                    SimulationRunStatus.running,
+                    null,
                     token).ConfigureAwait(false);
             }
             else
@@ -449,7 +471,7 @@ namespace Cognite.Simulator.Utils
                     throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
                 }
                 // Determine the validation end time
-                if (!simEv.HasSimulationRun 
+                if (!simEv.HasSimulationRun
                     && simEv.Event.Metadata.TryGetValue(SimulationEventMetadata.ValidationEndOverwriteKey, out string validationEndOverwrite)
                     && long.TryParse(validationEndOverwrite, out long overwriteValue))
                 {
@@ -457,7 +479,8 @@ namespace Cognite.Simulator.Utils
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(overwriteValue);
                 }
-                else if (simEv.Run.ValidationEndTime.HasValue) {
+                else if (simEv.Run.ValidationEndTime.HasValue)
+                {
                     // If the event contains a validation end overwrite, use that instead of
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
@@ -662,7 +685,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogDebug("Simulation run has no Event associated with it {Id}", simEv.Run.Id);
                     return;
                 }
-                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false);;
+                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false);
             }
             else
             {

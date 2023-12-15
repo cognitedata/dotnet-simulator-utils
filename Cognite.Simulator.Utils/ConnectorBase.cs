@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extractor.Configuration;
+using CogniteSdk.Alpha;
+using CogniteSdk;
 
 namespace Cognite.Simulator.Utils
 {
@@ -30,7 +32,7 @@ namespace Cognite.Simulator.Utils
         protected IList<SimulatorConfig> Simulators { get; }
         private ConnectorConfig Config { get; }
 
-        private readonly Dictionary<string, string> _simulatorSequenceIds;
+        private readonly Dictionary<string, long> _simulatorIntegrationIds;
         private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
@@ -58,31 +60,30 @@ namespace Cognite.Simulator.Utils
             Cdf = cdf;
             Simulators = simulators;
             Config = config;
-            _simulatorSequenceIds = new Dictionary<string, string>();
+            _simulatorIntegrationIds = new Dictionary<string, long>();
             _logger = logger;
             _config = config;
             _remoteConfigManager = remoteConfigManager;
         }
 
         /// <summary>
-        /// Returns the external ID of the sequence in CDF that contains information 
-        /// about the simulator integration, if any
+        /// Returns the ID of the simulator integration resource in CDF, if any
         /// </summary>
         /// <param name="simulator">Simulator name</param>
-        /// <returns>External ID, or null if not found</returns>
-        public string GetSimulatorIntegartionExternalId(string simulator)
+        /// <returns>Simulator integration ID, or null if not found</returns>
+        public long? GetSimulatorIntegrationId(string simulator)
         {
-            if (!_simulatorSequenceIds.ContainsKey(simulator))
+            if (!_simulatorIntegrationIds.ContainsKey(simulator))
             {
                 return null;
             }
-            return _simulatorSequenceIds[simulator];
+            return _simulatorIntegrationIds[simulator];
         }
 
         /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
         /// This should include a call to
-        /// <see cref="EnsureSimulatorIntegrationsSequencesExists(CancellationToken)"/>
+        /// <see cref="EnsureSimulatorIntegrationsExists(CancellationToken)"/>
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public abstract Task Init(CancellationToken token);
@@ -165,35 +166,59 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// For each simulator specified in the configuration, create a sequence in CDF containing the
-        /// simulator name and connector name as meta-data. The sequence will have key-value pairs as
-        /// rows. The keys are: heartbeat, data set id and connector version. The rows will be updated
+        /// For each simulator specified in the configuration, create a simulator integration in CDF containing the
+        /// simulator name, connector name, data set id, connector version, etc. These parameters will be updated
         /// periodically by the connector, and indicate the status of the currently running connector to
         /// applications consuming this simulation integration data.
         /// </summary>
-        protected async Task EnsureSimulatorIntegrationsSequencesExists(CancellationToken token)
+        protected async Task EnsureSimulatorIntegrationsExists(CancellationToken token)
         {
-            var sequences = Cdf.CogniteClient.Sequences;
-            var simulatorsDict = Simulators.Select(
-                s => new SimulatorIntegration
-                {
-                    Simulator = s.Name,
-                    DataSetId = s.DataSetId,
-                    ConnectorName = GetConnectorName()
-                });
+            var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
             {
-                var integrations = await sequences.GetOrCreateSimulatorIntegrations(
-                    simulatorsDict,
+                var integrationRes = await simulatorsApi.ListSimulatorIntegrationsAsync(
+                    new SimulatorIntegrationQuery(),
                     token).ConfigureAwait(false);
-                foreach (var integration in integrations)
+                var integrations = integrationRes.Items;
+                var connectorName = GetConnectorName();
+                foreach (var simulator in Simulators)
                 {
-                    _simulatorSequenceIds.Add(
-                        integration.Metadata[BaseMetadata.SimulatorKey],
-                        integration.ExternalId);
+                    var simulatorName = simulator.Name;
+                    var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulator.Name);
+                    if (existing == null)
+                    {
+                        _logger.LogInformation("Creating new simulator integration for {Simulator}", simulatorName);
+                        var existingSimulators = await Cdf.CogniteClient.Alpha.Simulators.ListAsync(
+                            new SimulatorQuery (),
+                            token).ConfigureAwait(false);
+                        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorName);
+                        if (existingSimulator == null)
+                        {
+                            _logger.LogWarning("Simulator {Simulator} not found in CDF", simulatorName);
+                            throw new ConnectorException($"Simulator {simulatorName} not found in CDF");
+                        }
+                        var integrationToCreate = new SimulatorIntegrationCreate
+                        {
+                            ExternalId = connectorName,
+                            SimulatorExternalId = simulatorName,
+                            DataSetId = simulator.DataSetId,
+                            ConnectorVersion = GetConnectorVersion(),
+                            SimulatorVersion = GetSimulatorVersion(simulatorName),
+                            RunApiEnabled = ApiEnabled(),
+                        };
+                        var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
+                            integrationToCreate
+                        }, token).ConfigureAwait(false);
+                        _simulatorIntegrationIds[simulatorName] = res.First().Id;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Found existing simulator integration for {Simulator}", simulatorName);
+                        _simulatorIntegrationIds[simulatorName] = existing.Id;
+                    }
                 }
             }
-            catch (SimulatorIntegrationSequenceException e)
+            catch (CogniteException e)
             {
                 throw new ConnectorException(e.Message, e.CogniteErrors);
             }
@@ -212,33 +237,43 @@ namespace Cognite.Simulator.Utils
             {
                 LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
             }
-            var sequences = Cdf.CogniteClient.Sequences;
+            var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
             {
                 foreach (var simulator in Simulators)
                 {
-                    var update = init ?
-                    new SimulatorIntegrationUpdate
+                    var integrationUpdate = init ? new SimulatorIntegrationUpdate
                     {
-                        Simulator = simulator.Name,
-                        DataSetId = simulator.DataSetId,
-                        ConnectorName = GetConnectorName(),
-                        ConnectorVersion = GetConnectorVersion(),
-                        SimulatorVersion = GetSimulatorVersion(simulator.Name),
-                        ExtraInformation = GetExtraInformation(simulator.Name),
-                        SimulatorApiEnabled = ApiEnabled(),
+                        DataSetId = new Update<long> { Set = simulator.DataSetId },
+                        ConnectorVersion = new Update<string> { Set = GetConnectorVersion() },
+                        SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) },
+                        RunApiEnabled = new Update<bool> { Set = ApiEnabled() },
+                        ConnectorStatus = new Update<string> { Set = "IDLE" },
+                        ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                        Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                        LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                    } : new SimulatorIntegrationUpdate {
+                        Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                        LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                    };
+                    var simIntegrationId = GetSimulatorIntegrationId(simulator.Name);
+                    if (simIntegrationId == null)
+                    {
+                        _logger.LogWarning("Simulator integration for {Simulator} not found", simulator.Name);
+                        throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
                     }
-                    : null;
-                    await sequences.UpdateSimulatorIntegrationsData(
-                        _simulatorSequenceIds[simulator.Name],
-                        init,
-                        update,
-                        token,
-                        lastLicenseCheckTimestamp: LastLicenseCheckTimestamp,
-                        lastLicenseCheckResult: LastLicenseCheckResult).ConfigureAwait(false);
+                    var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(GetSimulatorIntegrationId(simulator.Name).Value)
+                        {
+                            Update = integrationUpdate,
+                        };
+                    await simulatorsApi.UpdateSimulatorIntegrationAsync(
+                        new [] { integrationUpdateItem },
+                        token).ConfigureAwait(false);
                 }
             }
-            catch (SimulatorIntegrationSequenceException e)
+            catch (CogniteException e)
             {
                 throw new ConnectorException(e.Message, e.CogniteErrors);
             }

@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
@@ -102,7 +103,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     inTsIds.AddRange(inConstTsIds);
                 }
 
-                await SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
+                await TestHelpers.SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
 
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
@@ -246,7 +247,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(dictResult.ContainsKey("samplingStart"));
                 Assert.True(dictResult.ContainsKey("validationEndOffset"));
 
-                SamplingRange range = new TimeRange()
+                SamplingRange range = new CogniteSdk.TimeRange()
                 {
                     Min = long.Parse(dictResult["samplingStart"]),
                     Max = long.Parse(dictResult["samplingEnd"])
@@ -291,35 +292,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         }
 
-        public static async Task SimulateProsperRunningAsync( Client cdf, string connectorName = "scheduler-test-connector" ) {
-
-            var simint = new SimulatorIntegration () {
-                Simulator = "PROSPER",
-                DataSetId = CdfTestClient.TestDataset,
-                ConnectorName = connectorName,
-            };
-            var simulators = new List<SimulatorIntegration> { simint };
-
-            var integrations = await cdf.Sequences.GetOrCreateSimulatorIntegrations(
-                simulators,
-                CancellationToken.None).ConfigureAwait(false);
-            
-            var sequenceExternalId = integrations.First().ExternalId;
-
-            await cdf.Sequences.UpdateSimulatorIntegrationsData(
-                sequenceExternalId,
-                true,
-                new SimulatorIntegrationUpdate
-                {
-                    Simulator = simint.Simulator,
-                    DataSetId = simint.DataSetId,
-                    ConnectorName = simint.ConnectorName,
-                    SimulatorApiEnabled = true,
-                },
-                CancellationToken.None,
-                lastLicenseCheckTimestamp: 0,
-                lastLicenseCheckResult: "Available").ConfigureAwait(false);
-        }
+        
         private static Dictionary<string, string> ToRowDictionary(SequenceData data)
         {
             Dictionary<string, string> result = new();
