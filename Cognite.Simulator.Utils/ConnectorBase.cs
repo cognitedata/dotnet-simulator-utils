@@ -1,4 +1,4 @@
-﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Microsoft.Extensions.Logging;
@@ -192,20 +192,23 @@ namespace Cognite.Simulator.Utils
                             new SimulatorQuery (),
                             token).ConfigureAwait(false);
                         var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorName);
+
                         if (existingSimulator == null)
                         {
                             _logger.LogWarning("Simulator {Simulator} not found in CDF", simulatorName);
                             throw new ConnectorException($"Simulator {simulatorName} not found in CDF");
                         }
+
                         var integrationToCreate = new SimulatorIntegrationCreate
                         {
                             ExternalId = connectorName,
                             SimulatorExternalId = simulatorName,
                             DataSetId = simulator.DataSetId,
-                            ConnectorVersion = GetConnectorVersion(),
-                            SimulatorVersion = GetSimulatorVersion(simulatorName),
-                            RunApiEnabled = ApiEnabled(),
+                            ConnectorVersion = GetConnectorVersion() ?? "N/A",
+                            SimulatorVersion = GetSimulatorVersion(simulatorName) ?? "N/A",
+                            RunApiEnabled = ApiEnabled()
                         };
+
                         var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
                             integrationToCreate
                         }, token).ConfigureAwait(false);
@@ -245,8 +248,8 @@ namespace Cognite.Simulator.Utils
                     var integrationUpdate = init ? new SimulatorIntegrationUpdate
                     {
                         DataSetId = new Update<long> { Set = simulator.DataSetId },
-                        ConnectorVersion = new Update<string> { Set = GetConnectorVersion() },
-                        SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) },
+                        ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
+                        SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) ?? "N/A" },
                         RunApiEnabled = new Update<bool> { Set = ApiEnabled() },
                         ConnectorStatus = new Update<string> { Set = "IDLE" },
                         ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
