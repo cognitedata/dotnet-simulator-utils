@@ -162,7 +162,7 @@ namespace Cognite.Simulator.Utils
         /// <returns></returns>
         public virtual bool ApiEnabled()
         {
-            return _config.UseSimulatorsApi;
+            return true;
         }
 
         /// <summary>
