@@ -40,7 +40,8 @@ namespace Cognite.Simulator.Tests {
                         {
                             Update = new SimulatorIntegrationUpdate
                             {
-                                Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds())
+                                Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds()),
+                                RunApiEnabled = new Update<bool>(true),
                             }
                         }
                     }
