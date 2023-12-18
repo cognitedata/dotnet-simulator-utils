@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
         /// This should include a call to
-        /// <see cref="EnsureSimulatorIntegrationsExists(CancellationToken)"/>
+        /// <see cref="EnsureSimulatorIntegrationsExist(CancellationToken)"/>
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public abstract Task Init(CancellationToken token);
@@ -171,7 +171,7 @@ namespace Cognite.Simulator.Utils
         /// periodically by the connector, and indicate the status of the currently running connector to
         /// applications consuming this simulation integration data.
         /// </summary>
-        protected async Task EnsureSimulatorIntegrationsExists(CancellationToken token)
+        protected async Task EnsureSimulatorIntegrationsExist(CancellationToken token)
         {
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
@@ -232,7 +232,7 @@ namespace Cognite.Simulator.Utils
         /// version are not expected to change while the connector is running, and are only set during
         /// initialization.
         /// </summary>
-        protected async Task UpdateIntegrationRows(
+        protected async Task UpdateSimulatorIntegrations(
             bool init,
             CancellationToken token)
         {   
@@ -296,7 +296,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetHeartbeatInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
-                await UpdateIntegrationRows(false, token)
+                await UpdateSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
             }
         }
@@ -325,7 +325,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
-                await UpdateIntegrationRows(false, token)
+                await UpdateSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
             }
         }

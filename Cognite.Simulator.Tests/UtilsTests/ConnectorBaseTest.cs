@@ -163,8 +163,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override async Task Init(CancellationToken token)
         {
-            await EnsureSimulatorIntegrationsExists(token).ConfigureAwait(false);
-            await UpdateIntegrationRows(
+            await EnsureSimulatorIntegrationsExist(token).ConfigureAwait(false);
+            await UpdateSimulatorIntegrations(
                 true,
                 token).ConfigureAwait(false);
             await _pipeline.Init(_config, token).ConfigureAwait(false);
