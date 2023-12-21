@@ -200,9 +200,9 @@ namespace Cognite.Simulator.Utils
 
                         if (calcState == null || calcObj == null || calcObj.Connector != _connectorConfig.GetConnectorName())
                         {
-                            //_logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
-                            //    eventId,
-                            //    calcObj?.Connector);
+                            _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
+                               eventId,
+                               calcObj?.Connector);
                             skipped = true;
                             continue;
                         }
@@ -336,12 +336,8 @@ namespace Cognite.Simulator.Utils
             V calcConfig;
             if (simEv.HasSimulationRun)
             {
-                // Console.WriteLine("========Has simulation run============");
                 calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcTypeUserDefined);
-                // Console.WriteLine("Calcstate = {0}", calcState == null ? "null" : "not null");
                 calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcTypeUserDefined);
-                // Console.WriteLine("CalcConfig = {0}", calcConfig == null ? "null" : "not null");
-
             }
             else
             {
@@ -453,10 +449,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(configObj));
             }
-            _logger.LogDebug("Initializing simulation run for event");
+
             if (simEv.HasSimulationRun)
             {
-                _logger.LogDebug("Updating simulation run status to running 1 ");
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
                     SimulationRunStatus.running,
@@ -513,8 +508,6 @@ namespace Cognite.Simulator.Utils
                     validationEnd,
                     token).ConfigureAwait(false);
 
-                Console.WriteLine("Sampling range = {0}", samplingRange == null ? "null" : "not null");
-
                 _logger.LogInformation("Running calculation {Type} for model {ModelName}. Calculation time: {Time}",
                     configObj.CalculationType,
                     configObj.ModelName,
@@ -535,7 +528,6 @@ namespace Cognite.Simulator.Utils
                     simEv,
                     validationEnd);
             }
-            _logger.LogDebug("Running the actual simulation");
             // Run the simulation
             await RunSimulation(
                 simEv,
@@ -546,9 +538,7 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
-                
             await EndSimulationRun(simEv, startTime, modelState, configState, configObj, metadata, token);
-            
         }
 
         protected virtual async Task EndSimulationRun(SimulationRunEvent simEv,
