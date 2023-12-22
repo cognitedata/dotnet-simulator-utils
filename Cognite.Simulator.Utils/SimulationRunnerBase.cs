@@ -537,7 +537,7 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
-            await EndSimulationRun(simEv, token);
+            await EndSimulationRun(simEv, token).ConfigureAwait(false);
             
         }
 
