@@ -537,6 +537,25 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
+             // Update event with success status
+            if (simEv.HasSimulationRun)
+            {
+                simEv.Run = await UpdateSimulationRunStatus(
+                    simEv.Run.Id,
+                    SimulationRunStatus.success,
+                    "Calculation ran to completion",
+                    token).ConfigureAwait(false);
+            }
+            else
+            {
+                simEv.Event = await _cdfEvents.UpdateSimulationEventToSuccess(
+                    simEv.Event.ExternalId,
+                    startTime,
+                    null,
+                    "Calculation ran to completion",
+                    token).ConfigureAwait(false);
+            }
+
             await EndSimulationRun(simEv, token).ConfigureAwait(false);
             
         }
