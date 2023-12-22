@@ -460,7 +460,6 @@ namespace Cognite.Simulator.Utils
             }
             else
             {
-                _logger.LogDebug("Updating simulation event status to running 2");
                 simEv.Event = await _cdfEvents.UpdateSimulationEventToRunning(
                     simEv.Event.ExternalId,
                     startTime,
