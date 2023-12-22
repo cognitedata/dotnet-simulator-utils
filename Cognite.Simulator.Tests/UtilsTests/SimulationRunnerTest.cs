@@ -388,6 +388,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
+        protected override async Task EndSimulationRun(SimulationRunEvent simEv,
+            CancellationToken token)
+        {
+
+        }
+
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
             TestConfigurationState configState,
