@@ -537,35 +537,16 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
-            await EndSimulationRun(simEv, startTime, modelState, configState, configObj, metadata, token);
+            await EndSimulationRun(simEv, token);
+            
         }
 
-        protected virtual async Task EndSimulationRun(SimulationRunEvent simEv,
-            DateTime startTime,
-            T modelState,
-            U configState,
-            V configObj,
-            Dictionary<string, string> metadata,
-            CancellationToken token) {
-            // Update event with success status
-            if (simEv.HasSimulationRun)
-            {
-                simEv.Run = await UpdateSimulationRunStatus(
-                    simEv.Run.Id,
-                    SimulationRunStatus.success,
-                    "Calculation ran to completion",
-                    token).ConfigureAwait(false);
-            }
-            else
-            {
-                simEv.Event = await _cdfEvents.UpdateSimulationEventToSuccess(
-                    simEv.Event.ExternalId,
-                    startTime,
-                    null,
-                    "Calculation ran to completion",
-                    token).ConfigureAwait(false);
-            }
-        }
+        /// <summary>
+        /// Called after the simulation run has finished. This method can be used to
+        /// perform any cleanup or other actions that need to be done after the run.
+        /// </summary>
+        protected abstract Task EndSimulationRun(SimulationRunEvent simEv,
+            CancellationToken token) ;
 
         /// <summary>
         /// Run a simulation and saves the results back to CDF. Different simulators
