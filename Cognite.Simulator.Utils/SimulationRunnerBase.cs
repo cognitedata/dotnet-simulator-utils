@@ -1,4 +1,4 @@
-﻿using Cognite.Extensions;
+using Cognite.Extensions;
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
@@ -193,6 +193,7 @@ namespace Cognite.Simulator.Utils
                     T modelState = null;
                     U calcState = null;
                     V calcObj = null;
+                    bool skipped = false;
                     try
                     {
                         (modelState, calcState, calcObj) = ValidateEventMetadata(e);
@@ -200,8 +201,9 @@ namespace Cognite.Simulator.Utils
                         if (calcState == null || calcObj == null || calcObj.Connector != _connectorConfig.GetConnectorName())
                         {
                             _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
-                                eventId,
-                                calcObj?.Connector);
+                               eventId,
+                               calcObj?.Connector);
+                            skipped = true;
                             continue;
                         }
 
@@ -252,14 +254,18 @@ namespace Cognite.Simulator.Utils
                     }
                     finally
                     {
-                        await StoreRunConfiguration(
-                            calcState,
-                            calcObj,
-                            startTime,
-                            e,
-                            token).ConfigureAwait(false);
-
-                        PublishSimulationRunStatus("IDLE", token);
+                        // the following check was added because the code below was running even for skipped events
+                        if (!skipped)
+                        {
+                            await StoreRunConfiguration(
+                                calcState,
+                                calcObj,
+                                startTime,
+                                e,
+                                token).ConfigureAwait(false);
+                            _logger.LogDebug("Calculation run finished for event {Id}", eventId);
+                            PublishSimulationRunStatus("IDLE", token);
+                        }
 
                     }
 
@@ -530,7 +536,8 @@ namespace Cognite.Simulator.Utils
                 configObj,
                 samplingRange,
                 token).ConfigureAwait(false);
-            // Update event with success status
+
+             // Update event with success status
             if (simEv.HasSimulationRun)
             {
                 simEv.Run = await UpdateSimulationRunStatus(
@@ -548,7 +555,17 @@ namespace Cognite.Simulator.Utils
                     "Calculation ran to completion",
                     token).ConfigureAwait(false);
             }
+
+            await EndSimulationRun(simEv, token).ConfigureAwait(false);
+            
         }
+
+        /// <summary>
+        /// Called after the simulation run has finished. This method can be used to
+        /// perform any cleanup or other actions that need to be done after the run.
+        /// </summary>
+        protected abstract Task EndSimulationRun(SimulationRunEvent simEv,
+            CancellationToken token) ;
 
         /// <summary>
         /// Run a simulation and saves the results back to CDF. Different simulators
