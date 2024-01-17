@@ -2,6 +2,7 @@
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -325,16 +326,37 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override TestFileState StateFromFile(CogniteSdk.File file)
         {
-            return new TestFileState(file.ExternalId)
+            // return new TestFileState(file.ExternalId)
+            // {
+            //     CdfId = file.Id,
+            //     DataSetId = file.DataSetId,
+            //     CreatedTime = file.CreatedTime,
+            //     UpdatedTime = file.LastUpdatedTime,
+            //     ModelName = file.Metadata[ModelMetadata.NameKey],
+            //     Source = file.Source,
+            //     Processed = false,
+            //     Version = int.Parse(file.Metadata[ModelMetadata.VersionKey])
+            // };
+            throw new NotImplementedException();
+        }
+
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision)
+        {
+            if (modelRevision == null)
             {
-                CdfId = file.Id,
-                DataSetId = file.DataSetId,
-                CreatedTime = file.CreatedTime,
-                UpdatedTime = file.LastUpdatedTime,
-                ModelName = file.Metadata[ModelMetadata.NameKey],
-                Source = file.Source,
+                throw new ArgumentNullException(nameof(modelRevision));
+            }
+
+            return new TestFileState(modelRevision.ExternalId)
+            {
+                CdfId = modelRevision.Id,
+                DataSetId = modelRevision.DataSetId,
+                CreatedTime = modelRevision.CreatedTime,
+                UpdatedTime = modelRevision.LastUpdatedTime,
+                ModelName = modelRevision.ModelExternalId,
+                Source = modelRevision.SimulatorExternalId,
                 Processed = false,
-                Version = int.Parse(file.Metadata[ModelMetadata.VersionKey])
+                Version = (int) modelRevision.CreatedTime / 1000 // TODO: Fix this once we have versions
             };
         }
     }
@@ -388,6 +410,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Source = file.Source,
                 Deserialized = false
             };
+        }
+
+        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision)
+        {
+            throw new NotImplementedException();
         }
     }
 }

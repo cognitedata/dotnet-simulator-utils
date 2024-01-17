@@ -43,6 +43,11 @@ namespace Cognite.Simulator.Utils
         /// CDF files resource. Can be used to read and write files in CDF
         /// </summary>
         protected CogniteSdk.Resources.FilesResource CdfFiles { get; private set; }
+
+        /// <summary>
+        /// CDF files resource. Can be used to read and write files in CDF
+        /// </summary>
+        protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
         
         /// <summary>
         /// Logger object
@@ -84,6 +89,7 @@ namespace Cognite.Simulator.Utils
             _simulators = simulators;
             Cdf = cdf;
             CdfFiles = Cdf.CogniteClient.Files;
+            CdfSimulatorResources = Cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             Logger = logger;
             State = new Dictionary<string, T>();
@@ -159,6 +165,14 @@ namespace Cognite.Simulator.Utils
         protected abstract T StateFromFile(CogniteSdk.File file);
 
         /// <summary>
+        /// Creates a state object of type <typeparamref name="T"/> from a
+        /// CDF Simulator model revision passed as parameter
+        /// </summary>
+        /// <param name="modelRevision">CDF Simulator model revision</param>
+        /// <returns>File state object</returns>
+        protected abstract T StateFromModelRevision(CogniteSdk.Alpha.SimulatorModelRevision modelRevision);
+
+        /// <summary>
         /// Fetch the Files from CDF for the configured simulators and datasets.
         /// Build a local state to keep track of what files exist and which ones have 
         /// been downloaded
@@ -169,39 +183,119 @@ namespace Cognite.Simulator.Utils
             bool onlyLatest,
             CancellationToken token)
         {
-            DateTime? updatedAfter = null;
-            if (onlyLatest && !_libState.DestinationExtractedRange.IsEmpty)
-            {
-                updatedAfter = _libState.DestinationExtractedRange.Last;
-            }
-            var files = await CdfFiles.FindSimulatorFiles(
-                _resourceType,
-                _simulators.ToDictionary(s => s.Name, s => (long?)s.DataSetId),
-                updatedAfter,
-                token).ConfigureAwait(false);
+            if (_resourceType == SimulatorDataType.ModelFile) {
+                long createdAfter = 
+                onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ? _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
-            foreach (var file in files)
-            {
-                T fState = StateFromFile(file);
-                if (fState == null)
-                {
-                    continue;
+                // var files = await CdfFiles.FindSimulatorFiles(
+                //     _resourceType,
+                //     _simulators.ToDictionary(s => s.Name, s => (long?)s.DataSetId),
+                //     createdAfter,
+                //     token).ConfigureAwait(false);
+
+                // TODO: add API filter by simulator external id
+                var simulatorsMap = _simulators.ToDictionary(s => s.Name, s => s);
+
+                var modelRevisionsRes = await CdfSimulatorResources
+                    .ListSimulatorModelRevisionsAsync(
+                        new CogniteSdk.Alpha.SimulatorModelRevisionQuery
+                        {
+                            // TODO: we need to filter by simulator external id
+                            // and maybe data set id?
+                        },
+                        token
+                    ).ConfigureAwait(false);
+
+                var modelRevisions = modelRevisionsRes.Items.Where(
+                    m => m.CreatedTime > createdAfter && simulatorsMap.ContainsKey(m.SimulatorExternalId)
+                ).ToList();
+
+                // var files = await CdfFiles.RetrieveAsync(
+                //     modelRevisionFileIds,
+                //     true,
+                //     token
+                // ).ConfigureAwait(false);
+
+                // var filesRevisionsMap = modelRevisionsRes.Items.ToDictionary(
+                //     f => f.FileId,
+                //     f => f.ExternalId
+                // );
+
+                foreach (var revision in modelRevisions) {
+                    T rState = StateFromModelRevision(revision);
+                    if (rState == null)
+                    {
+                        continue;
+                    }
+                    var fileId = revision.FileId.ToString();
+                    if (!State.ContainsKey(fileId))
+                    {
+                        // If the file does not exist locally, add it to the state store
+                        State.Add(fileId, rState);
+                    }
                 }
-                if (!State.ContainsKey(file.ExternalId))
+
+                // foreach (var file in files)
+                // {
+                //     T fState = StateFromModelRevision(file);
+                //     if (fState == null)
+                //     {
+                //         continue;
+                //     }
+                //     var revisionExternalId = filesRevisionsMap[file.Id];
+
+                //     if (!State.ContainsKey(revisionExternalId))
+                //     {
+                //         // If the file does not exist locally, add it to the state store
+                //         State.Add(revisionExternalId, fState);
+                //     }
+                //     // TODO: not sure this ever happens with the new API
+                //     // else if (State[fState.Id].UpdatedTime < fState.UpdatedTime)
+                //     // {
+                //     //     // If the file exists in the state store but was updated in CDF, use the new file instead
+                //     //     await _store.RemoveFileStates(
+                //     //         _config.FilesTable,
+                //     //         new List<FileState> { State[fState.Id] },
+                //     //         token).ConfigureAwait(false);
+                //     //     State[fState.Id] = fState;
+                //     // }
+                // }
+            } else {
+                DateTime? updatedAfter = null;
+                if (onlyLatest && !_libState.DestinationExtractedRange.IsEmpty)
                 {
-                    // If the file does not exist locally, add it to the state store
-                    State.Add(file.ExternalId, fState);
+                    updatedAfter = _libState.DestinationExtractedRange.Last;
                 }
-                else if (State[fState.Id].UpdatedTime < fState.UpdatedTime)
+                var files = await CdfFiles.FindSimulatorFiles(
+                    _resourceType,
+                    _simulators.ToDictionary(s => s.Name, s => (long?)s.DataSetId),
+                    updatedAfter,
+                    token).ConfigureAwait(false);
+
+                foreach (var file in files)
                 {
-                    // If the file exists in the state store but was updated in CDF, use the new file instead
-                    await _store.RemoveFileStates(
-                        _config.FilesTable,
-                        new List<FileState> { State[fState.Id] },
-                        token).ConfigureAwait(false);
-                    State[fState.Id] = fState;
+                    T fState = StateFromFile(file);
+                    if (fState == null)
+                    {
+                        continue;
+                    }
+                    if (!State.ContainsKey(file.ExternalId))
+                    {
+                        // If the file does not exist locally, add it to the state store
+                        State.Add(file.ExternalId, fState);
+                    }
+                    else if (State[fState.Id].UpdatedTime < fState.UpdatedTime)
+                    {
+                        // If the file exists in the state store but was updated in CDF, use the new file instead
+                        await _store.RemoveFileStates(
+                            _config.FilesTable,
+                            new List<FileState> { State[fState.Id] },
+                            token).ConfigureAwait(false);
+                        State[fState.Id] = fState;
+                    }
                 }
             }
+            
         }
 
         /// <summary>
@@ -258,9 +352,10 @@ namespace Cognite.Simulator.Utils
                         CogniteTime.FromUnixTimeMilliseconds(file.CreatedTime).ToISOString(),
                         CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
                     try
-                    {
+                    {   
+                        var fileId = _resourceType == SimulatorDataType.ModelFile ? new Identity(file.CdfId) : new Identity(file.Id);
                         var response = await CdfFiles
-                            .DownloadAsync(new[] { new Identity(file.Id) }, token)
+                            .DownloadAsync(new[] { fileId }, token)
                             .ConfigureAwait(false);
                         if (response.Any() && response.First().DownloadUrl != null)
                         {
@@ -270,6 +365,8 @@ namespace Cognite.Simulator.Utils
                                                  
                             if (file.GetExtension() == "json")
                             {
+                                // TODO: this should phased out when we have routines in place
+                                // or what is it for?
                                 filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
                             } else {
                                 var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");

@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
+using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils
 {
@@ -119,29 +120,51 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-            var allVersions = GetAllModelVersions(state.Source, state.ModelName);
-            if (allVersions.Any())
+            var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
+            if (localRevisions.Any())
             {
-                var versionsInCdf = await CdfFiles.FindModelVersions(
-                    state.Model,
-                    state.DataSetId,
-                    token).ConfigureAwait(false);
-                var statesToDelete = new List<T>();
-                foreach (var version in allVersions)
-                {
-                    if (!versionsInCdf.Any(v => v.ExternalId == version.Id))
+                // var versionsInCdf = await CdfFiles.FindModelVersions(
+                //     state.Model,
+                //     state.DataSetId,
+                //     token).ConfigureAwait(false);
+
+                var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
+                    new SimulatorModelRevisionQuery
                     {
-                        statesToDelete.Add(version);
-                        State.Remove(version.Id);
-                    }
-                }
-                if (statesToDelete.Any())
-                {
-                    Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
-                        statesToDelete.Count,
-                        string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
-                    await RemoveStates(statesToDelete, token).ConfigureAwait(false);
-                }
+                        Filter = new SimulatorModelRevisionFilter
+                        {
+                            ModelExternalIds = new List<string> { state.Model.Name }
+                        },
+                        Sort = new List<SimulatorSortItem>
+                        {
+                            new SimulatorSortItem
+                            {
+                                Property = "createdTime",
+                                Order = SimulatorSortOrder.desc
+                            }
+                        }
+                    }, token).ConfigureAwait(false);
+                
+                var revisionsInCdf = modelRevisionsInCdfRes.Items;
+
+                // TODO: this will never happen with the current API
+                // Should we check if the file exists in CDF and delete revision when it doesn't?
+            //     var statesToDelete = new List<T>();
+            //     foreach (var revision in localRevisions)
+            //     {
+            //         if (!revisionsInCdf.Any(v => v.FileId.ToString() == revision.Id))
+            //         {
+            //             statesToDelete.Add(revision);
+            //             State.Remove(revision.Id);
+            //         }
+            //     }
+            //     if (statesToDelete.Any())
+            //     {
+            //         Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
+            //             statesToDelete.Count,
+            //             string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
+            //         await RemoveStates(statesToDelete, token).ConfigureAwait(false);
+            //     }
             }
         }
         
@@ -200,6 +223,20 @@ namespace Cognite.Simulator.Utils
                 if (file.ParsingInfo != null && file.ParsingInfo.Status != ParsingStatus.ready)
                 {
                     await Staging.UpdateEntry(file.Id, (V) file.ParsingInfo, token).ConfigureAwait(false);
+                    
+                    var newStatus = file.ParsingInfo.Status == ParsingStatus.success
+                                ? SimulatorModelRevisionStatus.success
+                                : SimulatorModelRevisionStatus.failure;
+
+                    var modelRevisionPatch =
+                        new SimulatorModelRevisionUpdateItem(long.Parse(file.Id)) {
+                            Update =
+                                new SimulatorModelRevisionUpdate {
+                                    Status = new Update<SimulatorModelRevisionStatus>(newStatus),
+                                }
+                        };
+
+                    await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
                 }
             }
         }
@@ -309,7 +346,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Model data associated with this state
         /// </summary>
-        public SimulatorModel Model => new SimulatorModel()
+        public Extensions.SimulatorModel Model => new Extensions.SimulatorModel()
         {
             Name = ModelName,
             Simulator = Source

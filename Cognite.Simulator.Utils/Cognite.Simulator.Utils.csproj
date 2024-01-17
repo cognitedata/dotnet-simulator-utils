@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cognite.ExtractorUtils" Version="1.17.1" />
+    <PackageReference Include="Cognite.ExtractorUtils" Version="1.18.0" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\ExtractorUtils\ExtractorUtils.csproj" /> -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
