@@ -42,19 +42,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(lib.State);
                 var v1 = Assert.Contains(
-                    "PROSPER-Connector_Test_Model-1", // This file should exist in CDF
+                    "3278253965959443", // This this revision should exist in CDF
                     (IReadOnlyDictionary<string, TestFileState>)lib.State);
                 Assert.Equal("PROSPER", v1.Source);
-                Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal(1, v1.Version);
+                Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelName);
+                Assert.Equal(v1.CreatedTime / 1000, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    "PROSPER-Connector_Test_Model-2", // This file should exist in CDF
+                    "3165990457849207", // This file should exist in CDF
                     (IReadOnlyDictionary<string, TestFileState>)lib.State);
                 Assert.Equal("PROSPER", v2.Source);
-                Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal(2, v2.Version);
+                Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelName);
+                Assert.Equal(v2.CreatedTime / 1000, v2.Version);
                 Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -326,17 +326,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override TestFileState StateFromFile(CogniteSdk.File file)
         {
-            // return new TestFileState(file.ExternalId)
-            // {
-            //     CdfId = file.Id,
-            //     DataSetId = file.DataSetId,
-            //     CreatedTime = file.CreatedTime,
-            //     UpdatedTime = file.LastUpdatedTime,
-            //     ModelName = file.Metadata[ModelMetadata.NameKey],
-            //     Source = file.Source,
-            //     Processed = false,
-            //     Version = int.Parse(file.Metadata[ModelMetadata.VersionKey])
-            // };
             throw new NotImplementedException();
         }
 
@@ -347,16 +336,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new ArgumentNullException(nameof(modelRevision));
             }
 
-            return new TestFileState(modelRevision.ExternalId)
+            return new TestFileState(modelRevision.Id.ToString())
             {
-                CdfId = modelRevision.Id,
+                CdfId = modelRevision.FileId,
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,
                 UpdatedTime = modelRevision.LastUpdatedTime,
                 ModelName = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
-                Version = (int) modelRevision.CreatedTime / 1000 // TODO: Fix this once we have versions
+                // modelRevision.CreatedTime / 1000 and convert to int
+                Version = (int)(modelRevision.CreatedTime / 1000),
             };
         }
     }

@@ -86,28 +86,33 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelName">Model name</param>
         protected void RemoveLocalFiles(string simulator, string modelName)
         {
-            var modelVersions = State.Values
+            Console.WriteLine("----------------- Removing local files for {0} {1}", simulator, modelName);
+            var modelVersionsAll = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
                     && (f.IsExtracted || !f.CanRead)
                     && f.ModelName == modelName
                     && f.Source == simulator)
                 .OrderByDescending(f => f.Version)
-                .Skip(1)
                 .ToList();
-            foreach (var version in modelVersions)
+            var latestVersion = modelVersionsAll.FirstOrDefault();
+            var modelVersionsToDelete = modelVersionsAll.Skip(1);
+            foreach (var version in modelVersionsToDelete)
             {
-                if (version.IsInDirectory) {
-                    var dirPath = Path.GetDirectoryName(version.FilePath);
-                    StateUtils.DeleteLocalDirectory(dirPath);
-                } else {
-                    StateUtils.DeleteLocalFile(version.FilePath);
+                // multiple revisions might refer to the same file
+                if (latestVersion.FilePath != version.FilePath) {
+                    if (version.IsInDirectory) {
+                        var dirPath = Path.GetDirectoryName(version.FilePath);
+                        StateUtils.DeleteLocalDirectory(dirPath);
+                    } else {
+                        StateUtils.DeleteLocalFile(version.FilePath);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Verify that the model files stored locally have an equivalent
-        /// in CDF. This ensures that model files deleted from CDF will also
+        /// Verify that the model files stored locally have an equivalent model revisions in CDF.
+        /// This ensures that model revisions deleted from CDF will also
         /// be removed from the local library
         /// </summary>
         /// <param name="state">Model file state to verify</param>
@@ -123,11 +128,6 @@ namespace Cognite.Simulator.Utils
             var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
             if (localRevisions.Any())
             {
-                // var versionsInCdf = await CdfFiles.FindModelVersions(
-                //     state.Model,
-                //     state.DataSetId,
-                //     token).ConfigureAwait(false);
-
                 var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
                     new SimulatorModelRevisionQuery
                     {
@@ -147,24 +147,26 @@ namespace Cognite.Simulator.Utils
                 
                 var revisionsInCdf = modelRevisionsInCdfRes.Items;
 
-                // TODO: this will never happen with the current API
+                // TODO: when would this happen?
                 // Should we check if the file exists in CDF and delete revision when it doesn't?
-            //     var statesToDelete = new List<T>();
-            //     foreach (var revision in localRevisions)
-            //     {
-            //         if (!revisionsInCdf.Any(v => v.FileId.ToString() == revision.Id))
-            //         {
-            //             statesToDelete.Add(revision);
-            //             State.Remove(revision.Id);
-            //         }
-            //     }
-            //     if (statesToDelete.Any())
-            //     {
-            //         Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
-            //             statesToDelete.Count,
-            //             string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
-            //         await RemoveStates(statesToDelete, token).ConfigureAwait(false);
-            //     }
+                var statesToDelete = new List<T>();
+                foreach (var revision in localRevisions)
+                {
+                    if (!revisionsInCdf.Any(v => v.Id.ToString() == revision.Id))
+                    {
+                        Console.WriteLine("+++++++++++++++++++ Removing model version {0} {1} v{2} not found in CDF",
+                            revision.Source, revision.ModelName, revision.Version);
+                        statesToDelete.Add(revision);
+                        State.Remove(revision.Id);
+                    }
+                }
+                if (statesToDelete.Any())
+                {
+                    Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
+                        statesToDelete.Count,
+                        string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
+                    await RemoveStates(statesToDelete, token).ConfigureAwait(false);
+                }
             }
         }
         
@@ -218,18 +220,21 @@ namespace Cognite.Simulator.Utils
 
         private async Task UpdateModelParsingInfo(IEnumerable<T> modelStates, CancellationToken token)
         {
-            foreach(var file in modelStates)
+            foreach(var revision in modelStates)
             {
-                if (file.ParsingInfo != null && file.ParsingInfo.Status != ParsingStatus.ready)
+                if (revision.ParsingInfo != null && revision.ParsingInfo.Status != ParsingStatus.ready)
                 {
-                    await Staging.UpdateEntry(file.Id, (V) file.ParsingInfo, token).ConfigureAwait(false);
+                    await Staging.UpdateEntry(revision.Id, (V) revision.ParsingInfo, token).ConfigureAwait(false);
                     
-                    var newStatus = file.ParsingInfo.Status == ParsingStatus.success
+                    // TODO: add more model revision statuses
+                    var newStatus = revision.ParsingInfo.Status == ParsingStatus.success
                                 ? SimulatorModelRevisionStatus.success
-                                : SimulatorModelRevisionStatus.failure;
+                                : revision.ParsingInfo.Status == ParsingStatus.failure
+                                    ? SimulatorModelRevisionStatus.failure
+                                    : SimulatorModelRevisionStatus.unknown;
 
                     var modelRevisionPatch =
-                        new SimulatorModelRevisionUpdateItem(long.Parse(file.Id)) {
+                        new SimulatorModelRevisionUpdateItem(long.Parse(revision.Id)) {
                             Update =
                                 new SimulatorModelRevisionUpdate {
                                     Status = new Update<SimulatorModelRevisionStatus>(newStatus),

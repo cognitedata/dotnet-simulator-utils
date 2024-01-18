@@ -173,9 +173,54 @@ namespace Cognite.Simulator.Utils
         protected abstract T StateFromModelRevision(CogniteSdk.Alpha.SimulatorModelRevision modelRevision);
 
         /// <summary>
+        /// Find file ids of model revisions that have been created after the latest timestamp in the local store
+        /// Build a local state to keep track of what files exist and which ones have
+        /// been downloaded.
+        /// </summary>
+        private async Task FindFilesByRevisions(
+            bool onlyLatest,
+            CancellationToken token)
+        {
+            long createdAfter = 
+                onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
+                    _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
+
+            // TODO: add API filter by simulator external id
+            var simulatorsMap = _simulators.ToDictionary(s => s.Name, s => s);
+
+            var modelRevisionsRes = await CdfSimulatorResources
+                .ListSimulatorModelRevisionsAsync(
+                    new CogniteSdk.Alpha.SimulatorModelRevisionQuery
+                    {
+                        // TODO: we need to filter by simulator external id
+                        // and maybe data set id?
+                    },
+                    token
+                ).ConfigureAwait(false);
+
+            var modelRevisions = modelRevisionsRes.Items.Where(
+                m => m.CreatedTime > createdAfter && simulatorsMap.ContainsKey(m.SimulatorExternalId)
+            ).ToList();
+
+            foreach (var revision in modelRevisions) {
+                T rState = StateFromModelRevision(revision);
+                if (rState == null)
+                {
+                    continue;
+                }
+                var revisionId = revision.Id.ToString();
+                if (!State.ContainsKey(revisionId))
+                {
+                    // If the revision does not exist locally, add it to the state store
+                    State.Add(revisionId, rState);
+                }
+            }
+        }
+
+        /// <summary>
         /// Fetch the Files from CDF for the configured simulators and datasets.
         /// Build a local state to keep track of what files exist and which ones have 
-        /// been downloaded
+        /// been downloaded.
         /// </summary>
         /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
         /// <param name="token">Cancellation token</param>
@@ -184,83 +229,11 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             if (_resourceType == SimulatorDataType.ModelFile) {
-                long createdAfter = 
-                onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ? _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
-
-                // var files = await CdfFiles.FindSimulatorFiles(
-                //     _resourceType,
-                //     _simulators.ToDictionary(s => s.Name, s => (long?)s.DataSetId),
-                //     createdAfter,
-                //     token).ConfigureAwait(false);
-
-                // TODO: add API filter by simulator external id
-                var simulatorsMap = _simulators.ToDictionary(s => s.Name, s => s);
-
-                var modelRevisionsRes = await CdfSimulatorResources
-                    .ListSimulatorModelRevisionsAsync(
-                        new CogniteSdk.Alpha.SimulatorModelRevisionQuery
-                        {
-                            // TODO: we need to filter by simulator external id
-                            // and maybe data set id?
-                        },
-                        token
-                    ).ConfigureAwait(false);
-
-                var modelRevisions = modelRevisionsRes.Items.Where(
-                    m => m.CreatedTime > createdAfter && simulatorsMap.ContainsKey(m.SimulatorExternalId)
-                ).ToList();
-
-                // var files = await CdfFiles.RetrieveAsync(
-                //     modelRevisionFileIds,
-                //     true,
-                //     token
-                // ).ConfigureAwait(false);
-
-                // var filesRevisionsMap = modelRevisionsRes.Items.ToDictionary(
-                //     f => f.FileId,
-                //     f => f.ExternalId
-                // );
-
-                foreach (var revision in modelRevisions) {
-                    T rState = StateFromModelRevision(revision);
-                    if (rState == null)
-                    {
-                        continue;
-                    }
-                    var fileId = revision.FileId.ToString();
-                    if (!State.ContainsKey(fileId))
-                    {
-                        // If the file does not exist locally, add it to the state store
-                        State.Add(fileId, rState);
-                    }
-                }
-
-                // foreach (var file in files)
-                // {
-                //     T fState = StateFromModelRevision(file);
-                //     if (fState == null)
-                //     {
-                //         continue;
-                //     }
-                //     var revisionExternalId = filesRevisionsMap[file.Id];
-
-                //     if (!State.ContainsKey(revisionExternalId))
-                //     {
-                //         // If the file does not exist locally, add it to the state store
-                //         State.Add(revisionExternalId, fState);
-                //     }
-                //     // TODO: not sure this ever happens with the new API
-                //     // else if (State[fState.Id].UpdatedTime < fState.UpdatedTime)
-                //     // {
-                //     //     // If the file exists in the state store but was updated in CDF, use the new file instead
-                //     //     await _store.RemoveFileStates(
-                //     //         _config.FilesTable,
-                //     //         new List<FileState> { State[fState.Id] },
-                //     //         token).ConfigureAwait(false);
-                //     //     State[fState.Id] = fState;
-                //     // }
-                // }
+                // Use the simulator model revisions API
+                await FindFilesByRevisions(onlyLatest, token).ConfigureAwait(false);
             } else {
+                // Deprecated: based on files API
+                // Used only for calculations now only
                 DateTime? updatedAfter = null;
                 if (onlyLatest && !_libState.DestinationExtractedRange.IsEmpty)
                 {
