@@ -90,16 +90,21 @@ namespace Cognite.Simulator.Utils
             var modelVersionsAll = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
                     && (f.IsExtracted || !f.CanRead)
-                    && f.ModelName == modelName
                     && f.Source == simulator)
-                .OrderByDescending(f => f.Version)
                 .ToList();
-            var latestVersion = modelVersionsAll.FirstOrDefault();
-            var modelVersionsToDelete = modelVersionsAll.Skip(1);
+            var currentModelVersions = modelVersionsAll
+                .Where(f => f.ModelName == modelName)
+                .OrderByDescending(f => f.Version);
+            var otherModelVersionsMap = modelVersionsAll
+                .Where(f => f.ModelName != modelName)
+                .ToDictionary(f => f.FilePath, f => true);
+            var latestVersion = currentModelVersions.FirstOrDefault();
+            var modelVersionsToDelete = currentModelVersions.Skip(1);
             foreach (var version in modelVersionsToDelete)
             {
                 // multiple revisions might refer to the same file
-                if (latestVersion.FilePath != version.FilePath) {
+                // delete the file only if no other revision refers to it
+                if (latestVersion.FilePath != version.FilePath && !otherModelVersionsMap.ContainsKey(version.FilePath)) {
                     if (version.IsInDirectory) {
                         var dirPath = Path.GetDirectoryName(version.FilePath);
                         StateUtils.DeleteLocalDirectory(dirPath);
@@ -193,7 +198,7 @@ namespace Cognite.Simulator.Utils
             var modelGroups = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
                 .GroupBy(f => new { f.Source, f.ModelName });
-
+            // TODO: mode away from using the model name as the key
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
