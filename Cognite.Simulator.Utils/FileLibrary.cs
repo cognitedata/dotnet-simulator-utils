@@ -3,6 +3,7 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -169,8 +170,9 @@ namespace Cognite.Simulator.Utils
         /// CDF Simulator model revision passed as parameter
         /// </summary>
         /// <param name="modelRevision">CDF Simulator model revision</param>
+        /// <param name="model">CDF Simulator model</param>
         /// <returns>File state object</returns>
-        protected abstract T StateFromModelRevision(CogniteSdk.Alpha.SimulatorModelRevision modelRevision);
+        protected abstract T StateFromModelRevision(CogniteSdk.Alpha.SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model);
 
         /// <summary>
         /// Find file ids of model revisions that have been created after the latest timestamp in the local store
@@ -188,12 +190,21 @@ namespace Cognite.Simulator.Utils
             // TODO: add API filter by simulator external id
             var simulatorsMap = _simulators.ToDictionary(s => s.Name, s => s);
 
+            // TODO: get simulator model by external ID
+            var modelsRes = await CdfSimulatorResources
+                .ListSimulatorModelsAsync(new SimulatorModelQuery(), token).ConfigureAwait(false);
+
+            var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
+
+            var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
+
             var modelRevisionsRes = await CdfSimulatorResources
                 .ListSimulatorModelRevisionsAsync(
-                    new CogniteSdk.Alpha.SimulatorModelRevisionQuery
-                    {
-                        // TODO: we need to filter by simulator external id
-                        // and maybe data set id?
+                    new SimulatorModelRevisionQuery() {
+                        Filter = new SimulatorModelRevisionFilter() {
+                            // TODO: add filter by simulator external id, dataset
+                            ModelExternalIds = modelExternalIds,  
+                        }
                     },
                     token
                 ).ConfigureAwait(false);
@@ -203,7 +214,8 @@ namespace Cognite.Simulator.Utils
             ).ToList();
 
             foreach (var revision in modelRevisions) {
-                T rState = StateFromModelRevision(revision);
+                var model = modelsMap[revision.ModelExternalId];
+                T rState = StateFromModelRevision(revision, model);
                 if (rState == null)
                 {
                     continue;

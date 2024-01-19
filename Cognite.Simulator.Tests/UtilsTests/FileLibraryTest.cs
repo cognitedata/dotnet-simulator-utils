@@ -40,20 +40,40 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 bool dirExists = Directory.Exists("./files");
                 Assert.True(dirExists, "Should have created a directory for the files");
 
+                var cdf = provider.GetRequiredService<CogniteDestination>();
+
+                // Precondition: verify that revisions exist in CDF
+                var revisions = await cdf.CogniteClient.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
+                    new SimulatorModelRevisionQuery
+                    {
+                        Filter = new SimulatorModelRevisionFilter
+                        {
+                            ModelExternalIds = new []{ "PROSPER-Connector_Test_Model" },
+                        },
+                    }).ConfigureAwait(false);
+
+                var revisionMap = revisions.Items.ToDictionary(r => r.ExternalId, r => r);
+
+                // PROSPER-Connector_Test_Model-1 should exist in CDF
+                Assert.Contains("PROSPER-Connector_Test_Model-1", revisionMap);
+                Assert.Contains("PROSPER-Connector_Test_Model-2", revisionMap);
+
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+
                 Assert.NotEmpty(lib.State);
                 var v1 = Assert.Contains(
-                    "3278253965959443", // This this revision should exist in CDF
-                    (IReadOnlyDictionary<string, TestFileState>)lib.State);
+                    revisionMap["Connector_Test_Model_1"].FileId.ToString(), // This this revision should exist in CDF
+                    libState);
                 Assert.Equal("PROSPER", v1.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelName);
+                Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
                 Assert.Equal(v1.CreatedTime / 1000, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    "3165990457849207", // This file should exist in CDF
-                    (IReadOnlyDictionary<string, TestFileState>)lib.State);
+                    revisionMap["Connector_Test_Model_2"].FileId.ToString(), // This file should exist in CDF
+                    libState);
                 Assert.Equal("PROSPER", v2.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelName);
+                Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
                 Assert.Equal(v2.CreatedTime / 1000, v2.Version);
                 Assert.False(v2.Processed);
 
@@ -329,11 +349,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
             throw new NotImplementedException();
         }
 
-        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision)
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
         {
             if (modelRevision == null)
             {
                 throw new ArgumentNullException(nameof(modelRevision));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
             }
 
             return new TestFileState(modelRevision.Id.ToString())
@@ -342,10 +367,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,
                 UpdatedTime = modelRevision.LastUpdatedTime,
-                ModelName = modelRevision.ModelExternalId,
+                ModelName = model.Name,
+                ModelExternalId = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
-                // modelRevision.CreatedTime / 1000 and convert to int
                 Version = (int)(modelRevision.CreatedTime / 1000),
             };
         }
@@ -402,7 +427,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             };
         }
 
-        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision)
+        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
         {
             throw new NotImplementedException();
         }

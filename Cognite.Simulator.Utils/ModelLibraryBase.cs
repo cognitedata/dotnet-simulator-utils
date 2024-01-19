@@ -133,7 +133,7 @@ namespace Cognite.Simulator.Utils
                     {
                         Filter = new SimulatorModelRevisionFilter
                         {
-                            ModelExternalIds = new List<string> { state.Model.Name }
+                            ModelExternalIds = new List<string> { state.ModelExternalId }
                         },
                         Sort = new List<SimulatorSortItem>
                         {
@@ -197,6 +197,11 @@ namespace Cognite.Simulator.Utils
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
+
+                foreach (var file in group)
+                {
+                    Console.WriteLine("//////////// Extracting model information for {0} {1} v{2}", file.Source, file.ModelName, file.Version);
+                }
 
                 // Extract the data for each model file (version) in this group
                 try
@@ -380,6 +385,7 @@ namespace Cognite.Simulator.Utils
             {
                 Id = Id,
                 ModelName = ModelName,
+                ModelExternalId = ModelExternalId,
                 Source = Source,
                 DataSetId = DataSetId,
                 FilePath = FilePath,
