@@ -1,4 +1,5 @@
 ﻿using Cognite.Extensions;
+using Cognite.Extensions.DataModels.QueryBuilder;
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
@@ -392,9 +393,13 @@ namespace Cognite.Simulator.Utils
                 {
                     SimulatorConfig simulator = _simulators[0]; // Retrieve the first item
                     var integrationRes = await _cdfSimulators.ListSimulatorIntegrationsAsync(
-                        new SimulatorIntegrationQuery(),
+                        new SimulatorIntegrationQuery() {
+                            Filter = new SimulatorIntegrationFilter() {
+                                simulatorExternalIds = new List<string>() { simulator.Name },
+                            }
+                        },
                         token).ConfigureAwait(false);
-                    var integration = integrationRes.Items.FirstOrDefault(i => i.SimulatorExternalId == simulator.Name && i.ExternalId == _connectorConfig.GetConnectorName());
+                    var integration = integrationRes.Items.FirstOrDefault(i => i.ExternalId == _connectorConfig.GetConnectorName());
                     if (integration == null)
                     {
                         throw new ConnectorException($"Simulator integration for {simulator.Name} not found");

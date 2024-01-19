@@ -139,14 +139,6 @@ namespace Cognite.Simulator.Utils
                         Filter = new SimulatorModelRevisionFilter
                         {
                             ModelExternalIds = new List<string> { state.ModelExternalId }
-                        },
-                        Sort = new List<SimulatorSortItem>
-                        {
-                            new SimulatorSortItem
-                            {
-                                Property = "createdTime",
-                                Order = SimulatorSortOrder.desc
-                            }
                         }
                     }, token).ConfigureAwait(false);
                 
@@ -251,6 +243,7 @@ namespace Cognite.Simulator.Utils
                                 }
                         };
 
+                    // TODO add update by external id
                     await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
                 }
             }

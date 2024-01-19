@@ -172,7 +172,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelRevision">CDF Simulator model revision</param>
         /// <param name="model">CDF Simulator model</param>
         /// <returns>File state object</returns>
-        protected abstract T StateFromModelRevision(CogniteSdk.Alpha.SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model);
+        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model);
 
         /// <summary>
         /// Find file ids of model revisions that have been created after the latest timestamp in the local store
@@ -187,12 +187,16 @@ namespace Cognite.Simulator.Utils
                 onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                     _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
-            // TODO: add API filter by simulator external id
-            var simulatorsMap = _simulators.ToDictionary(s => s.Name, s => s);
+            // TODO: add API filter by simulator external ids
+            var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
 
             // TODO: get simulator model by external ID
             var modelsRes = await CdfSimulatorResources
-                .ListSimulatorModelsAsync(new SimulatorModelQuery(), token).ConfigureAwait(false);
+                .ListSimulatorModelsAsync(new SimulatorModelQuery() {
+                    Filter = new SimulatorModelFilter() {
+                        SimulatorExternalIds = simulatorsExternalIds
+                    }
+                }, token).ConfigureAwait(false);
 
             var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
 
@@ -203,6 +207,7 @@ namespace Cognite.Simulator.Utils
                     new SimulatorModelRevisionQuery() {
                         Filter = new SimulatorModelRevisionFilter() {
                             // TODO: add filter by simulator external id, dataset
+                            // TODO: filter by created time
                             ModelExternalIds = modelExternalIds,  
                         }
                     },
@@ -210,7 +215,7 @@ namespace Cognite.Simulator.Utils
                 ).ConfigureAwait(false);
 
             var modelRevisions = modelRevisionsRes.Items.Where(
-                m => m.CreatedTime > createdAfter && simulatorsMap.ContainsKey(m.SimulatorExternalId)
+                m => m.CreatedTime > createdAfter
             ).ToList();
 
             foreach (var revision in modelRevisions) {
