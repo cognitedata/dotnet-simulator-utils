@@ -62,7 +62,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(lib.State);
                 var v1 = Assert.Contains(
-                    revisionMap["Connector_Test_Model_1"].FileId.ToString(), // This this revision should exist in CDF
+                    revisionMap["PROSPER-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal("PROSPER", v1.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
@@ -70,7 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    revisionMap["Connector_Test_Model_2"].FileId.ToString(), // This file should exist in CDF
+                    revisionMap["PROSPER-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal("PROSPER", v2.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
