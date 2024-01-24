@@ -66,7 +66,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     libState);
                 Assert.Equal("PROSPER", v1.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
-                Assert.Equal(v1.CreatedTime / 1000, v1.Version);
+                Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
@@ -74,7 +74,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     libState);
                 Assert.Equal("PROSPER", v2.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
-                Assert.Equal(v2.CreatedTime / 1000, v2.Version);
+                Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -371,7 +371,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelExternalId = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
-                Version = (int)(modelRevision.CreatedTime / 1000),
+                Version = modelRevision.VersionNumber,
             };
         }
     }

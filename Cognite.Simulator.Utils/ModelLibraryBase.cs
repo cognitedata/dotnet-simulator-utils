@@ -151,8 +151,6 @@ namespace Cognite.Simulator.Utils
                 {
                     if (!revisionsInCdf.Any(v => v.Id.ToString() == revision.Id))
                     {
-                        Console.WriteLine("+++++++++++++++++++ Removing model version {0} {1} v{2} not found in CDF",
-                            revision.Source, revision.ModelName, revision.Version);
                         statesToDelete.Add(revision);
                         State.Remove(revision.Id);
                     }
@@ -354,7 +352,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Model data associated with this state
         /// </summary>
-        public Extensions.SimulatorModel Model => new Extensions.SimulatorModel()
+        public SimulatorModelInfo Model => new SimulatorModelInfo()
         {
             Name = ModelName,
             Simulator = Source

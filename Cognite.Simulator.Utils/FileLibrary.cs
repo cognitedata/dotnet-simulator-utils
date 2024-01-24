@@ -187,10 +187,8 @@ namespace Cognite.Simulator.Utils
                 onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                     _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
-            // TODO: add API filter by simulator external ids
             var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
 
-            // TODO: get simulator model by external ID
             var modelsRes = await CdfSimulatorResources
                 .ListSimulatorModelsAsync(new SimulatorModelQuery() {
                     Filter = new SimulatorModelFilter() {
@@ -206,19 +204,14 @@ namespace Cognite.Simulator.Utils
                 .ListSimulatorModelRevisionsAsync(
                     new SimulatorModelRevisionQuery() {
                         Filter = new SimulatorModelRevisionFilter() {
-                            // TODO: add filter by simulator external id, dataset
-                            // TODO: filter by created time
+                            CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
                             ModelExternalIds = modelExternalIds,  
                         }
                     },
                     token
                 ).ConfigureAwait(false);
 
-            var modelRevisions = modelRevisionsRes.Items.Where(
-                m => m.CreatedTime > createdAfter
-            ).ToList();
-
-            foreach (var revision in modelRevisions) {
+            foreach (var revision in modelRevisionsRes.Items) {
                 var model = modelsMap[revision.ModelExternalId];
                 T rState = StateFromModelRevision(revision, model);
                 if (rState == null)

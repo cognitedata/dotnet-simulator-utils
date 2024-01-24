@@ -30,7 +30,7 @@ namespace Cognite.Simulator.Extensions
         /// the boundary conditions map cannot be found</exception>
         public static async Task<SequenceData> FindModelBoundaryConditions(
             this SequencesResource sequences,
-            SimulatorModel model,
+            SimulatorModelInfo model,
             CancellationToken token)
         {
             if (model == null || string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Simulator))

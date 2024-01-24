@@ -1,5 +1,4 @@
 ﻿using Cognite.Extensions;
-using Cognite.Extensions.DataModels.QueryBuilder;
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
@@ -234,12 +233,7 @@ namespace Cognite.Simulator.Utils
                                 _logger.LogError(error.Message);
                             }
                         }
-                        _logger.LogError("Calculation run failed with error: {Message}, {Trace}", ex.Message, ex.StackTrace);
-                        if (ex is AggregateException) {
-                            foreach (var inner in ((AggregateException) ex).InnerExceptions) {
-                                _logger.LogError("Calculation run failed with error, inner exception: {Message}, trace: {StackTrace}", inner.Message, inner.StackTrace);
-                            }
-                        }
+                        _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
                         if (e.HasSimulationRun)
                         {
                             e.Run = await UpdateSimulationRunStatus(

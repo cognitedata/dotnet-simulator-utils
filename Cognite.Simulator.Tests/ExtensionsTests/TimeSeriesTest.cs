@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;
 
-            var model = new SimulatorModel
+            var model = new SimulatorModelInfo
             {
                 Name = "Connector Test Model",
                 Simulator = "TestSimulator"
@@ -106,7 +106,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;
 
-            var model = new SimulatorModel
+            var model = new SimulatorModelInfo
             {
                 Name = "Connector Test Model",
                 Simulator = "TestSimulator"

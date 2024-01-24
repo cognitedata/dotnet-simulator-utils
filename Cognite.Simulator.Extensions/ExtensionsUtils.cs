@@ -51,12 +51,12 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
-        internal static string GetModelNameForIds(this SimulatorModel model)
+        internal static string GetModelNameForIds(this SimulatorModelInfo model)
         {
             return model.Name.ReplaceSpecialCharacters("_");
         }
 
-        internal static string GetModelNameForNames(this SimulatorModel model)
+        internal static string GetModelNameForNames(this SimulatorModelInfo model)
         {
             return model.Name.ReplaceSlashAndBackslash("_");
         }
@@ -103,7 +103,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         internal static Dictionary<string, string> GetCommonMetadata(
-            this SimulatorModel model,
+            this SimulatorModelInfo model,
             SimulatorDataType dataType)
         {
             return new Dictionary<string, string>()

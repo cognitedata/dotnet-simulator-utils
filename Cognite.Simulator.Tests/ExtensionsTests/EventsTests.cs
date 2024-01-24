@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var fakeCalcId = "TestSimulator-Connector_Test_model-UserDefined-Test_Calc";
             var fakeConnectorName = "test-connector";
 
-            var model = new SimulatorModel
+            var model = new SimulatorModelInfo
             {
                 Simulator = "TestSimulator",
                 Name = "Connector Test Model"

@@ -8,7 +8,7 @@ namespace Cognite.Simulator.Extensions
     /// <summary>
     /// Represents a simulator model file
     /// </summary>
-    public class SimulatorModel
+    public class SimulatorModelInfo
     {
         /// <summary>
         /// Simulator name
@@ -45,7 +45,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Simulator model associated with this calculation
         /// </summary>
-        public SimulatorModel Model { get; set; }
+        public SimulatorModelInfo Model { get; set; }
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Model associated with this boundary condition
         /// </summary>
-        public SimulatorModel Model { get; set; }
+        public SimulatorModelInfo Model { get; set; }
 
 
         /// <summary>
