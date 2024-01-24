@@ -86,7 +86,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelName">Model name</param>
         protected void RemoveLocalFiles(string simulator, string modelName)
         {
-            Console.WriteLine("----------------- Removing local files for {0} {1}", simulator, modelName);
             var modelVersionsAll = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
                     && (f.IsExtracted || !f.CanRead)
@@ -144,8 +143,6 @@ namespace Cognite.Simulator.Utils
                 
                 var revisionsInCdf = modelRevisionsInCdfRes.Items;
 
-                // TODO: when would this happen?
-                // Should we check if the file exists in CDF and delete revision when it doesn't?
                 var statesToDelete = new List<T>();
                 foreach (var revision in localRevisions)
                 {
@@ -192,11 +189,6 @@ namespace Cognite.Simulator.Utils
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
-
-                foreach (var file in group)
-                {
-                    Console.WriteLine("//////////// Extracting model information for {0} {1} v{2}", file.Source, file.ModelName, file.Version);
-                }
 
                 // Extract the data for each model file (version) in this group
                 try

@@ -65,6 +65,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revisionMap["PROSPER-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal("PROSPER", v1.Source);
+                Assert.Equal("Connector Test Model", v1.ModelName);
                 Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
@@ -73,6 +74,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revisionMap["PROSPER-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal("PROSPER", v2.Source);
+                Assert.Equal("Connector Test Model", v2.ModelName);
                 Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);

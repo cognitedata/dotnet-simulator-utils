@@ -348,8 +348,6 @@ namespace Cognite.Simulator.Utils
                                                  
                             if (file.GetExtension() == "json")
                             {
-                                // TODO: this should phased out when we have routines in place
-                                // or what is it for?
                                 filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
                             } else {
                                 var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
