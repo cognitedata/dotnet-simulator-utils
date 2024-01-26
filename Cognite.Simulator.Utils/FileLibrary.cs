@@ -347,7 +347,11 @@ namespace Cognite.Simulator.Utils
                         CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
                     try
                     {   
-                        var fileId = _resourceType == SimulatorDataType.ModelFile ? new Identity(file.CdfId) : new Identity(file.Id);
+                        if (_resourceType != SimulatorDataType.ModelFile) {
+                            continue; // TODO this is handled by routines now, we don't need to download files
+                            // TODO: this method shouldn't even run for routines (?)
+                        }
+                        var fileId = new Identity(file.CdfId);
                         var response = await CdfFiles
                             .DownloadAsync(new[] { fileId }, token)
                             .ConfigureAwait(false);
