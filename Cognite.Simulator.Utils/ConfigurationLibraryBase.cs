@@ -2,12 +2,15 @@
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,10 +29,11 @@ namespace Cognite.Simulator.Utils
     public abstract class ConfigurationLibraryBase<T, U, V> : FileLibrary<T, U>, IConfigurationProvider<T, V>
         where T : ConfigurationStateBase
         where U : FileStatePoco
-        where V : SimulationConfigurationBase
+        where V : SimulationConfigurationWithRoutine
     {
         /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
+        private IList<SimulatorConfig> _simulators;
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -50,6 +54,7 @@ namespace Cognite.Simulator.Utils
             base(SimulatorDataType.SimulationConfiguration, config, simulators, cdf, logger, downloadClient, store)
         {
             SimulationConfigurations = new Dictionary<string, V>();
+            _simulators = simulators;
         }
 
         /// <inheritdoc/>
@@ -80,7 +85,8 @@ namespace Cognite.Simulator.Utils
             var calcConfigs = SimulationConfigurations.Values
                 .Where(c => c.Simulator == simulator &&
                     c.ModelName == modelName &&
-                    c.CalculationName == calcName);
+                    c.CalculationName == calcName)
+                .OrderByDescending(c => c.CreatedTime);
             if (calcConfigs.Any())
             {
                 return calcConfigs.First();
@@ -120,7 +126,8 @@ namespace Cognite.Simulator.Utils
             var calcConfigs = SimulationConfigurations
                 .Where(c => c.Value.Simulator == simulator &&
                     c.Value.ModelName == modelName &&
-                    c.Value.CalculationName == calcName);
+                    c.Value.CalculationName == calcName)
+                .OrderByDescending(c => c.Value.CreatedTime);
             if (calcConfigs.Any())
             {
                 var id = calcConfigs.First().Key;
@@ -153,11 +160,23 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(config));
             }
-            var configsInCdf = await CdfFiles.FindConfigurationFiles(
-                config.Calculation,
-                state.DataSetId,
-                token).ConfigureAwait(false);
-            return configsInCdf.Any(v => v.ExternalId == state.Id);
+            // var configsInCdf = await CdfFiles.FindConfigurationFiles(
+            //     config.Calculation,
+            //     state.DataSetId,
+            //     token).ConfigureAwait(false);
+
+            // TODO: get routine revision by id
+            var routineRevisions = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
+                new CogniteSdk.Alpha.SimulatorRoutineRevisionQuery
+                {
+                    Filter = new CogniteSdk.Alpha.SimulatorRoutineRevisionFilter
+                    {
+                        RoutineExternalIds = new List<string> { config.CalculationName },
+                    }
+                },
+                token: token).ConfigureAwait(false);
+
+            return routineRevisions.Items.Any(v => v.Id == long.Parse(state.Id));
         }
 
         /// <inheritdoc/>
@@ -194,45 +213,166 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         protected override void ProcessDownloadedFiles(CancellationToken token)
         {
-            Task.Run(() => ReadConfigurations(), token).Wait(token);
+            Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
-        private void ReadConfigurations()
+        private async Task ReadConfigurations(CancellationToken token)
         {
-            var files = State.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.Deserialized).ToList();
-            foreach (var file in files)
-            {
-                try
-                {
-                    var json = JsonConvert.DeserializeObject<V>(
-                        System.IO.File.ReadAllText(file.FilePath),
-                        new JsonSerializerSettings
-                        {
-                            ContractResolver = new DefaultContractResolver
-                            {
-                                NamingStrategy = new CamelCaseNamingStrategy()
+            // throw new Exception("not implemented");
+
+            var routinesRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
+                new SimulatorRoutineQuery() {
+                    Filter = new SimulatorRoutineFilter() {}
+                },
+                token
+            ).ConfigureAwait(false);
+
+            var routinesMap = routinesRes.Items.ToDictionary(r => r.ExternalId, r => r);
+
+            var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
+                new SimulatorRoutineRevisionQuery() {
+                    Filter = new SimulatorRoutineRevisionFilter() {
+                        // TODO filter by created time, simulatorExternalIds, simulatorIntegrationExternalIds
+                        // CreatedTime = new CogniteSdk.TimeRange() {  Min = _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() + 1 },
+                    }
+                },
+                token
+            ).ConfigureAwait(false);
+
+            var simulators = _simulators.ToDictionary(s => s.Name, s => s);
+
+            // TODO: what do we do with the timerange now that we don't use FileLibrary?
+            // TODO: we need our own _libState
+            var routineRevisions = routineRevisionsRes.Items.Where(
+                r => simulators.ContainsKey(r.SimulatorExternalId)
+            ).ToList();
+
+            foreach (var routineRev in routineRevisions) {
+                if (!SimulationConfigurations.ContainsKey(routineRev.Id.ToString())) {
+                    if (routineRev.Script == null) {
+                        Logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
+                        continue;
+                    } else {
+                        var routineResource = routinesMap[routineRev.RoutineExternalId];
+                        // TODO: we should rather use the new type natively
+                        var simulationConfigurationWithRoutine = new SimulationConfigurationWithRoutine() {
+                            Simulator = simulators[routineRev.SimulatorExternalId].Name,
+                            ModelName = routineResource.ModelExternalId,
+                            CalculationName = routineRev.RoutineExternalId,
+                            CalculationType = "UserDefined",
+                            CalcTypeUserDefined = routineRev.RoutineExternalId,
+                            Connector = routineResource.SimulatorIntegrationExternalId,
+                            Schedule = new ScheduleConfiguration() {
+                                Enabled = routineRev.Configuration.Schedule.Enabled,
+                                Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
+                                Repeat = routineRev.Configuration.Schedule.Repeat
                             },
-                            Converters = new List<JsonConverter>()
-                            {
-                                new Newtonsoft.Json.Converters.StringEnumConverter()
-                            }
-                        });
-                    if (!SimulationConfigurations.ContainsKey(file.Id))
-                    {
-                        SimulationConfigurations.Add(file.Id, json);
+                            InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration() {
+                                Name = ic.Name,
+                                Type = ic.ReferenceId,
+                                Unit = ic.Unit,
+                                UnitType = ic.UnitType,
+                                Value = ic.Value,
+                                SaveTimeseriesExternalId = ic.SaveTimeseriesExternalId
+                            }),
+                            InputTimeSeries = routineRev.Configuration.InputTimeseries.Select(its => new InputTimeSeriesConfiguration() {
+                                Name = its.Name,
+                                Type = its.ReferenceId,
+                                Unit = its.Unit,
+                                UnitType = its.UnitType,
+                                SensorExternalId = its.SourceExternalId,
+                                AggregateType = its.Aggregate,
+                                SampleExternalId = its.SaveTimeseriesExternalId
+                            }),
+                            OutputTimeSeries = routineRev.Configuration.OutputTimeseries.Select(ots => new OutputTimeSeriesConfiguration() {
+                                Name = ots.Name,
+                                Type = ots.ReferenceId,
+                                Unit = ots.Unit,
+                                UnitType = ots.UnitType,
+                                ExternalId = ots.SaveTimeseriesExternalId
+                            }),
+                            DataSampling = new DataSamplingConfiguration() {
+                                ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
+                                SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
+                                Granularity = routineRev.Configuration.DataSampling.Granularity,
+                                ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
+                            },
+                            LogicalCheck = new LogicalCheckConfiguration() {
+                                Enabled = routineRev.Configuration.LogicalCheck.Enabled,
+                                ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
+                                AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
+                                Check = routineRev.Configuration.LogicalCheck.Operator,
+                                Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
+                            },
+                            SteadyStateDetection = new SteadyStateDetectionConfiguration() {
+                                Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
+                                ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
+                                AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
+                                MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
+                                VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
+                                SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
+                            },
+                            UserEmail = "",
+                            Routine = routineRev.Script.Select((s, i) => new CalculationProcedure() {
+                                Order = i,
+                                Steps = s.Steps.Select((step, j) => new CalculationProcedureStep() {
+                                    Step = j,
+                                    Type = step.StepType,
+                                    Arguments = step.Arguments
+                                })
+                            }),
+                            CreatedTime = routineRev.CreatedTime
+                        };
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V) simulationConfigurationWithRoutine); // TODO we cannot upcast here
+
+                        T rState = StateFromRoutineRevision(routineRev, routineResource);
+                        if (rState == null)
+                        {
+                            continue;
+                        }
+                        var revisionId = routineRev.Id.ToString();
+                        if (!State.ContainsKey(revisionId))
+                        {
+                            // If the revision does not exist locally, add it to the state store
+                            State.Add(revisionId, rState);
+                        }
                     }
-                    else
-                    {
-                        SimulationConfigurations[file.Id] = json;
-                    }
-                    file.Deserialized = true;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError("Could not parse simulation configuration for model {ModelName}: {Error}", file.ModelName, e.Message);
                 }
             }
+
+            // var files = State.Values
+            //     .Where(f => !string.IsNullOr Empty(f.FilePath) && !f.Deserialized).ToList();
+            // foreach (var file in files)
+            // {
+            //     try
+            //     {
+            //         var json = JsonConvert.DeserializeObject<V>(
+            //             System.IO.File.ReadAllText(file.FilePath),
+            //             new JsonSerializerSettings
+            //             {
+            //                 ContractResolver = new DefaultContractResolver
+            //                 {
+            //                     NamingStrategy = new CamelCaseNamingStrategy()
+            //                 },
+            //                 Converters = new List<JsonConverter>()
+            //                 {
+            //                     new Newtonsoft.Json.Converters.StringEnumConverter()
+            //                 }
+            //             });
+            //         if (!SimulationConfigurations.ContainsKey(file.Id))
+            //         {
+            //             SimulationConfigurations.Add(file.Id, json);
+            //         }
+            //         else
+            //         {
+            //             SimulationConfigurations[file.Id] = json;
+            //         }
+            //         file.Deserialized = true;
+            //     }
+            //     catch (Exception e)
+            //     {
+            //         Logger.LogError("Could not parse simulation configuration for model {ModelName}: {Error}", file.ModelName, e.Message);
+            //     }
         }
     }
 
@@ -337,6 +477,11 @@ namespace Cognite.Simulator.Utils
         /// Simulation routine
         /// </summary>
         public IEnumerable<CalculationProcedure> Routine { get; set; }
+
+        /// <summary>
+        /// Created time
+        /// </summary>
+        public long CreatedTime { get; set; }
     }
 
     /// <summary>

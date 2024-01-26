@@ -53,54 +53,54 @@ namespace Cognite.Simulator.Extensions
                 token).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Find all simulation configuration files stored in CDF that match the given
-        /// <paramref name="calculation"/> parameter.
-        /// </summary>
-        /// <param name="cdfFiles">CDF Files resource</param>
-        /// <param name="calculation">Simulator calculation</param>
-        /// <param name="dataset">Optional dataset containing the files</param>
-        /// <param name="token">Cancellation token</param>
-        public static async Task<IEnumerable<File>> FindConfigurationFiles(
-            this FilesResource cdfFiles,
-            SimulatorCalculation calculation,
-            long? dataset,
-            CancellationToken token
-            )
-        {
-            if (calculation == null)
-            {
-                throw new ArgumentNullException(nameof(calculation));
-            }
-            if (string.IsNullOrEmpty(calculation.Type))
-            {
-                throw new ArgumentException("Calculation should have a defined type", nameof(calculation));
-            }
-            if (calculation.Model == null || string.IsNullOrEmpty(calculation.Model.Name) || string.IsNullOrEmpty(calculation.Model.Simulator))
-            {
-                throw new ArgumentException("Calculation should have a model with valid name and simulator properties", nameof(calculation));
-            }
-            var metadata = new Dictionary<string, string>
-            {
-                { BaseMetadata.DataTypeKey, CalculationMetadata.DataType.MetadataValue() },
-                { ModelMetadata.NameKey, calculation.Model.Name },
-                { CalculationMetadata.TypeKey, calculation.Type }
-            };
-            if (!string.IsNullOrEmpty(calculation.Name))
-            {
-                metadata.Add(CalculationMetadata.NameKey, calculation.Name);
-            }
-            if (!string.IsNullOrEmpty(calculation.UserDefinedType))
-            {
-                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
-            }
-            return await FetchFilesFromCdf(
-                cdfFiles,
-                metadata,
-                new Dictionary<string, long?> { { calculation.Model.Simulator, dataset } },
-                null,
-                token).ConfigureAwait(false);
-        }
+        // /// <summary>
+        // /// Find all simulation configuration files stored in CDF that match the given
+        // /// <paramref name="calculation"/> parameter.
+        // /// </summary>
+        // /// <param name="cdfFiles">CDF Files resource</param>
+        // /// <param name="calculation">Simulator calculation</param>
+        // /// <param name="dataset">Optional dataset containing the files</param>
+        // /// <param name="token">Cancellation token</param>
+        // public static async Task<IEnumerable<File>> FindConfigurationFiles(
+        //     this FilesResource cdfFiles,
+        //     SimulatorCalculation calculation,
+        //     long? dataset,
+        //     CancellationToken token
+        //     )
+        // {
+        //     if (calculation == null)
+        //     {
+        //         throw new ArgumentNullException(nameof(calculation));
+        //     }
+        //     if (string.IsNullOrEmpty(calculation.Type))
+        //     {
+        //         throw new ArgumentException("Calculation should have a defined type", nameof(calculation));
+        //     }
+        //     if (calculation.Model == null || string.IsNullOrEmpty(calculation.Model.Name) || string.IsNullOrEmpty(calculation.Model.Simulator))
+        //     {
+        //         throw new ArgumentException("Calculation should have a model with valid name and simulator properties", nameof(calculation));
+        //     }
+        //     var metadata = new Dictionary<string, string>
+        //     {
+        //         { BaseMetadata.DataTypeKey, CalculationMetadata.DataType.MetadataValue() },
+        //         { ModelMetadata.NameKey, calculation.Model.Name },
+        //         { CalculationMetadata.TypeKey, calculation.Type }
+        //     };
+        //     if (!string.IsNullOrEmpty(calculation.Name))
+        //     {
+        //         metadata.Add(CalculationMetadata.NameKey, calculation.Name);
+        //     }
+        //     if (!string.IsNullOrEmpty(calculation.UserDefinedType))
+        //     {
+        //         metadata.Add(CalculationMetadata.UserDefinedTypeKey, calculation.UserDefinedType);
+        //     }
+        //     return await FetchFilesFromCdf(
+        //         cdfFiles,
+        //         metadata,
+        //         new Dictionary<string, long?> { { calculation.Model.Simulator, dataset } },
+        //         null,
+        //         token).ConfigureAwait(false);
+        // }
 
         private static async Task<IEnumerable<File>> FetchFilesFromCdf(
             this FilesResource cdfFiles,

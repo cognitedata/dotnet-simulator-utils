@@ -346,7 +346,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }, token);
         }
 
-        protected override TestFileState StateFromFile(CogniteSdk.File file)
+        protected override TestFileState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
         {
             throw new NotImplementedException();
         }
@@ -415,19 +415,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
-        protected override TestConfigurationState StateFromFile(CogniteSdk.File file)
+        protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
         {
-            return new TestConfigurationState(file.ExternalId)
-            {
-                CdfId = file.Id,
-                DataSetId = file.DataSetId,
-                CreatedTime = file.CreatedTime,
-                UpdatedTime = file.LastUpdatedTime,
-                ModelName = file.Metadata[ModelMetadata.NameKey],
-                Source = file.Source,
-                Deserialized = false
-            };
+            throw new NotImplementedException();
         }
+
+        // protected override TestConfigurationState StateFromFile(CogniteSdk.File file)
+        // {
+        //     return new TestConfigurationState(file.ExternalId)
+        //     {
+        //         CdfId = file.Id,
+        //         DataSetId = file.DataSetId,
+        //         CreatedTime = file.CreatedTime,
+        //         UpdatedTime = file.LastUpdatedTime,
+        //         ModelName = file.Metadata[ModelMetadata.NameKey],
+        //         Source = file.Source,
+        //         Deserialized = false
+        //     };
+        // }
 
         protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
         {
