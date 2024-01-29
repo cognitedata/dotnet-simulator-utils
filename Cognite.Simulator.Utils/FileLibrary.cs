@@ -293,26 +293,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Fetch the Files from CDF for the configured simulators and datasets.
-        /// Build a local state to keep track of what files exist and which ones have 
-        /// been downloaded.
-        /// </summary>
-        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
-        /// <param name="token">Cancellation token</param>
-        private async Task FindFiles(
-            bool onlyLatest,
-            CancellationToken token)
-        {
-            if (_resourceType == SimulatorDataType.ModelFile) {
-                // Use the simulator model revisions API
-                await FindFilesByRevisions(onlyLatest, token).ConfigureAwait(false);
-            } else {
-                await FindFilesByMetadata(onlyLatest, token).ConfigureAwait(false);
-            }
-            
-        }
-
-        /// <summary>
         /// Creates a list of the tasks performed by this library.
         /// These include searching and downloading files ans saving state.
         /// </summary>
@@ -362,7 +342,7 @@ namespace Cognite.Simulator.Utils
                     // Get the download URL for the file. Could fetch more than one per request, but the 
                     // URL expires after 30 seconds. Best to do one by one.
                     Logger.LogInformation("Downloading file: {Id}. Created on {CreatedTime}. Updated on {UpdatedTime}",
-                        file.Id,
+                        file.CdfId,
                         CogniteTime.FromUnixTimeMilliseconds(file.CreatedTime).ToISOString(),
                         CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
                     try
