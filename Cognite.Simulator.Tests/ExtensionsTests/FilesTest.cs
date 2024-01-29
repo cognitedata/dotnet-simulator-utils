@@ -47,24 +47,6 @@ namespace Cognite.Simulator.Tests
                 Assert.Equal("PROSPER", model.Metadata[BaseMetadata.SimulatorKey]);
                 Assert.Equal(ModelMetadata.DataType.MetadataValue(), model.Metadata[BaseMetadata.DataTypeKey]);
             }
-
-            // Assumes this resource exists in the CDF test project
-            var modelVersions = await files.FindModelVersions(
-                new SimulatorModel
-                {
-                    Simulator = "PROSPER",
-                    Name = "Connector Test Model",
-                },
-                null,
-                CancellationToken.None).ConfigureAwait(false);
-            Assert.NotNull(modelVersions);
-            Assert.NotEmpty(modelVersions);
-            foreach (var model in modelVersions)
-            {
-                Assert.Equal(ModelMetadata.DataType.MetadataValue(), model.Metadata[BaseMetadata.DataTypeKey]);
-                Assert.Equal("PROSPER", model.Metadata[BaseMetadata.SimulatorKey]);
-                Assert.Equal("Connector Test Model", model.Metadata[ModelMetadata.NameKey]);
-            }
         }
 
     }

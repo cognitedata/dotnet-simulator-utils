@@ -13,9 +13,12 @@ namespace Cognite.Simulator.Tests {
             var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                 new SimulatorIntegrationQuery
                 {
+                    Filter = new SimulatorIntegrationFilter() {
+                        simulatorExternalIds = new List<string> { "PROSPER" },
+                    }
                 }
             ).ConfigureAwait(false);
-            var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == "PROSPER");
+            var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName);
             if (existing == null) {
                 await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
                     new List<SimulatorIntegrationCreate>

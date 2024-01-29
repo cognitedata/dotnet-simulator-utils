@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             // Assumes this resource exists in the CDF test project
             var rows = await sequences.FindModelBoundaryConditions(
-                new SimulatorModel
+                new SimulatorModelInfo
                 {
                     Simulator = "PROSPER",
                     Name = "Connector Test Model",
@@ -55,7 +55,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var doubleValues = new List<double>() { 1.0, 2.0, 3.0, 4.0 };
             var stringValues = new List<string>() { "A", "B", "C", "D" };
 
-            var model = new SimulatorModel
+            var model = new SimulatorModelInfo
             {
                 Simulator = "TestSimulator",
                 Name = "Connector Test Model"
@@ -177,7 +177,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 { "logicalCheckEnabled", "False" }
             };
 
-            var model = new SimulatorModel
+            var model = new SimulatorModelInfo
             {
                 Simulator = "TestSimulator",
                 Name = "Connector Test Model"

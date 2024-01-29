@@ -2,6 +2,7 @@
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -39,20 +40,42 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 bool dirExists = Directory.Exists("./files");
                 Assert.True(dirExists, "Should have created a directory for the files");
 
+                var cdf = provider.GetRequiredService<CogniteDestination>();
+
+                // Precondition: verify that revisions exist in CDF
+                var revisions = await cdf.CogniteClient.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
+                    new SimulatorModelRevisionQuery
+                    {
+                        Filter = new SimulatorModelRevisionFilter
+                        {
+                            ModelExternalIds = new []{ "PROSPER-Connector_Test_Model" },
+                        },
+                    }).ConfigureAwait(false);
+
+                var revisionMap = revisions.Items.ToDictionary(r => r.ExternalId, r => r);
+
+                // PROSPER-Connector_Test_Model-1 should exist in CDF
+                Assert.Contains("PROSPER-Connector_Test_Model-1", revisionMap);
+                Assert.Contains("PROSPER-Connector_Test_Model-2", revisionMap);
+
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+
                 Assert.NotEmpty(lib.State);
                 var v1 = Assert.Contains(
-                    "PROSPER-Connector_Test_Model-1", // This file should exist in CDF
-                    (IReadOnlyDictionary<string, TestFileState>)lib.State);
+                    revisionMap["PROSPER-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
+                    libState);
                 Assert.Equal("PROSPER", v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
+                Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    "PROSPER-Connector_Test_Model-2", // This file should exist in CDF
-                    (IReadOnlyDictionary<string, TestFileState>)lib.State);
+                    revisionMap["PROSPER-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
+                    libState);
                 Assert.Equal("PROSPER", v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
+                Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
@@ -325,16 +348,32 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override TestFileState StateFromFile(CogniteSdk.File file)
         {
-            return new TestFileState(file.ExternalId)
+            throw new NotImplementedException();
+        }
+
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
+        {
+            if (modelRevision == null)
             {
-                CdfId = file.Id,
-                DataSetId = file.DataSetId,
-                CreatedTime = file.CreatedTime,
-                UpdatedTime = file.LastUpdatedTime,
-                ModelName = file.Metadata[ModelMetadata.NameKey],
-                Source = file.Source,
+                throw new ArgumentNullException(nameof(modelRevision));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
+            return new TestFileState(modelRevision.Id.ToString())
+            {
+                CdfId = modelRevision.FileId,
+                DataSetId = modelRevision.DataSetId,
+                CreatedTime = modelRevision.CreatedTime,
+                UpdatedTime = modelRevision.LastUpdatedTime,
+                ModelName = model.Name,
+                ModelExternalId = modelRevision.ModelExternalId,
+                Source = modelRevision.SimulatorExternalId,
                 Processed = false,
-                Version = int.Parse(file.Metadata[ModelMetadata.VersionKey])
+                Version = modelRevision.VersionNumber,
             };
         }
     }
@@ -388,6 +427,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Source = file.Source,
                 Deserialized = false
             };
+        }
+
+        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -48,6 +48,24 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private string _modelExternalId;
+        
+        /// <summary>
+        /// External ID of the model associated with this file. The model is
+        /// typically the object being simulated.
+        /// Each model can have multiple revisions, where each revision is stored in a CDF file.
+        /// </summary>
+        public string ModelExternalId
+        {
+            get => _modelExternalId;
+            set
+            {
+                if (value == _modelExternalId) return;
+                LastTimeModified = DateTime.UtcNow;
+                _modelExternalId = value;
+            }
+        }
+
         private string _source;
 
         private bool _isInDirectory;
@@ -232,6 +250,12 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("model-name")]
         public string ModelName { get; set; }
+
+        /// <summary>
+        /// External ID of the model associated with the file
+        /// </summary>
+        [StateStoreProperty("model-external-id")]
+        public string ModelExternalId { get; set; }
         
         /// <summary>
         /// Source of the file (simulator)

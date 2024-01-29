@@ -54,39 +54,6 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// Find all simulator model file versions stored in CDF that match the given
-        /// <paramref name="model"/> parameter.
-        /// All versions of the model are returned
-        /// </summary>
-        /// <param name="cdfFiles">CDF Files resource</param>
-        /// <param name="model">Simulator model</param>
-        /// <param name="dataset">Optional dataset containing the files</param>
-        /// <param name="token">Cancellation token</param>
-        public static async Task<IEnumerable<File>> FindModelVersions(
-            this FilesResource cdfFiles,
-            SimulatorModel model,
-            long? dataset,
-            CancellationToken token
-            )
-        {
-            if (model == null || string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Simulator))
-            {
-                throw new ArgumentException("Simulator model should have valid name and simulator properties", nameof(model));
-            }
-            var metadata = new Dictionary<string, string>
-            {
-                { BaseMetadata.DataTypeKey, ModelMetadata.DataType.MetadataValue()},
-                { ModelMetadata.NameKey, model.Name}
-            };
-            return await FetchFilesFromCdf(
-                cdfFiles,
-                metadata,
-                new Dictionary<string, long?> { { model.Simulator, dataset } },
-                null,
-                token).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Find all simulation configuration files stored in CDF that match the given
         /// <paramref name="calculation"/> parameter.
         /// </summary>
