@@ -185,7 +185,6 @@ namespace Cognite.Simulator.Utils
             var modelGroups = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
                 .GroupBy(f => new { f.Source, f.ModelName });
-            // TODO: mode away from using the model name as the key
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
@@ -218,7 +217,6 @@ namespace Cognite.Simulator.Utils
                 {
                     await Staging.UpdateEntry(revision.Id, (V) revision.ParsingInfo, token).ConfigureAwait(false);
                     
-                    // TODO: add more model revision statuses
                     var newStatus = revision.ParsingInfo.Status == ParsingStatus.success
                                 ? SimulatorModelRevisionStatus.success
                                 : revision.ParsingInfo.Status == ParsingStatus.failure
@@ -233,7 +231,6 @@ namespace Cognite.Simulator.Utils
                                 }
                         };
 
-                    // TODO add update by external id
                     await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
                 }
             }
