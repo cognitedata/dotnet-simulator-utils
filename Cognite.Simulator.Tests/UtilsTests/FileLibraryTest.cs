@@ -438,5 +438,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             throw new NotImplementedException();
         }
+
+        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
