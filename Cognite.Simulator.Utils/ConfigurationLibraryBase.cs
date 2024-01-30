@@ -71,6 +71,18 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
+        public V GetSimulationConfiguration(
+            string simulator,
+            string modelName,
+            string calcType) {
+            var calcConfigs = SimulationConfigurations.Values.Where(c => c.Simulator == simulator && c.ModelName == modelName && c.CalculationType == calcType);
+            if (calcConfigs.Any())
+            {
+                return calcConfigs.First();
+            }
+            return null;
+        }
+
         //@todo : Remove this function
         public V GetSimulationConfiguration(
             string simulator,
