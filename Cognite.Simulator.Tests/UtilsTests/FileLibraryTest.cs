@@ -440,6 +440,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
+        protected override SimulationConfigurationWithRoutine ToType(SimulationConfigurationWithRoutine routine) {
+            return routine;
+        }
+
         protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
         {
             return new TestConfigurationState(routineRevision.Id.ToString())

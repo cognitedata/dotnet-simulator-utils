@@ -100,6 +100,11 @@ namespace Cognite.Simulator.Utils
                 var configurations = _configLib.SimulationConfigurations;
                 foreach (var configuration in configurations)
                 {
+                    // @todo : Disabling Scheduler because
+                    // GetSimulationConfigurationState needs routinerevisionexternalid now
+                    // usage of GetSimulationConfigurationState with 3 params will no longer be supported
+                    continue;
+
                     var configObj = configuration.Value;
                     U configState;
                     //if (_config.UseSimulatorsApi) {

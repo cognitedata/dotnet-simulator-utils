@@ -11,10 +11,26 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class FileState : IExtractionState
     {
+
         /// <summary>
         /// File id. Typically CDF external id
         /// </summary>
         public string Id { get; protected set; }
+        
+        private string _externalId;
+        /// <summary>
+        /// External ID of the entity that is represented by this object.
+        /// </summary>
+        public string ExternalId
+        {
+            get => _externalId;
+            set
+            {
+                if (value == _externalId) return;
+                LastTimeModified = DateTime.UtcNow;
+                _externalId = value;
+            }
+        }
 
         /// <summary>
         /// Last time this state was modified
@@ -215,6 +231,7 @@ namespace Cognite.Simulator.Utils
             _cdfId = poco.CdfId;
             _updatedTime = poco.UpdatedTime;
             _isInDirectory = poco.IsInDirectory;
+            _externalId = poco.ExternalId;
         }
 
         /// <summary>
@@ -234,7 +251,8 @@ namespace Cognite.Simulator.Utils
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
                 UpdatedTime = UpdatedTime,
-                IsInDirectory = IsInDirectory
+                IsInDirectory = IsInDirectory,
+                ExternalId = ExternalId,
             };
         }
     }
@@ -245,6 +263,12 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class FileStatePoco : BaseStorableState
     {
+        /// <summary>
+        /// External Id of the entity represented by this object
+        /// </summary>
+        [StateStoreProperty("external-id")]
+        public string ExternalId { get; set; }
+
         /// <summary>
         /// Name of the model associated with the file
         /// </summary>
