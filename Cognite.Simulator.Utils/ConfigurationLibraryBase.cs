@@ -216,6 +216,8 @@ namespace Cognite.Simulator.Utils
             Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
+        protected abstract V ToType(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine);
+
         private async Task ReadConfigurations(CancellationToken token)
         {
             // throw new Exception("not implemented");
@@ -323,7 +325,8 @@ namespace Cognite.Simulator.Utils
                             }),
                             CreatedTime = routineRev.CreatedTime
                         };
-                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V) simulationConfigurationWithRoutine); // TODO we cannot upcast here
+                        V typedSimulationConfigurationWithRoutine = ToType(simulationConfigurationWithRoutine);
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V) typedSimulationConfigurationWithRoutine); // TODO we cannot upcast here
 
                         T rState = StateFromRoutineRevision(routineRev, routineResource);
                         if (rState == null)
@@ -375,6 +378,8 @@ namespace Cognite.Simulator.Utils
             //     }
         }
     }
+
+
 
     /// <summary>
     /// Interface for libraries that can provide configuration information
