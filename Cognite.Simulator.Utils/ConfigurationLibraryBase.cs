@@ -924,6 +924,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public SimulatorCalculation Calculation => new SimulatorCalculation
         {
+            ExternalId = ExternalId,
             Model = new SimulatorModelInfo
             {
                 Name = ModelName,
