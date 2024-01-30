@@ -63,10 +63,7 @@ namespace Cognite.Simulator.Utils
             var runsToCreate = simulationEvents.Select(e => {
                 var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
                 return new SimulationRunCreate(){
-                    // SimulatorName = e.Calculation.Model.Simulator,
-                    // ModelName = e.Calculation.Model.Name,
-                    RoutineName = e.Calculation.Name,
-
+                    RoutineExternalId = e.Calculation.ExternalId,
                     RunType = runType,
                 };
         }).ToList();
