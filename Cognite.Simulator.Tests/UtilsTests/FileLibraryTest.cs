@@ -207,31 +207,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             StateStoreConfig stateConfig = null;
 
-            var revisionWithInputConstants = SeedData.SimulatorRoutineRevisionWithInputConstants;
-
             try
             {
                 using var provider = services.BuildServiceProvider();
                 
                 // prepopulate routine in CDF
                 var cdf = provider.GetRequiredService<CogniteDestination>();
-                var routine = await cdf.CogniteClient.Alpha.Simulators.CreateSimulatorRoutinesAsync(
-                    new List<SimulatorRoutineCreateCommandItem>
-                    {
-                        new SimulatorRoutineCreateCommandItem
-                        {
-                            ExternalId = revisionWithInputConstants.RoutineExternalId,
-                            ModelExternalId = "PROSPER-Connector_Test_Model",
-                            SimulatorIntegrationExternalId = "integration-tests-connector",
-                            Name = "Simulation Runner Test With Constant Inputs",
-                        }
-                    }).ConfigureAwait(false);
-                var revisionRes = await cdf.CogniteClient.Alpha.Simulators.CreateSimulatorRoutineRevisionsAsync(
-                    new List<SimulatorRoutineRevisionCreate>
-                    {
-                        revisionWithInputConstants
-                    }).ConfigureAwait(false);
-                var revision = revisionRes.FirstOrDefault();
+                var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf.CogniteClient,
+                    SeedData.SimulatorRoutineCreateWithInputConstants,
+                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
@@ -399,6 +385,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
                 Version = modelRevision.VersionNumber,
+                ExternalId = modelRevision.ExternalId,
             };
         }
     }
@@ -455,7 +442,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelName = routine.ModelExternalId,
                 ModelExternalId = routine.ModelExternalId,
                 Source = routineRevision.SimulatorExternalId,
-                Deserialized = false
+                Deserialized = false,
+                ExternalId = routineRevision.ExternalId,
             };
         }
 

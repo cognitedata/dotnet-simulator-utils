@@ -1,9 +1,92 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Azure.Core;
+using CogniteSdk;
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Tests {
     public class SeedData {
+
+        public static async Task<SimulatorRoutine> GetOrCreateSimulatorRoutine(Client sdk, SimulatorRoutineCreateCommandItem routine) {
+            var routines = await sdk.Alpha.Simulators.ListSimulatorRoutinesAsync(
+                new SimulatorRoutineQuery {
+                    Filter = new SimulatorRoutineFilter {
+                        ModelExternalIds = new List<string> { routine.ModelExternalId },
+                    },
+                }).ConfigureAwait(false);
+
+            var routineRes = routines.Items.Where(r => r.ExternalId == routine.ExternalId);
+            if (routineRes.Count() > 0) {
+                return routineRes.First();
+            }
+
+            var res = await sdk.Alpha.Simulators.CreateSimulatorRoutinesAsync(
+                new List<SimulatorRoutineCreateCommandItem> { routine }).ConfigureAwait(false);
+
+            return res.First();
+        }
+            
+
+        public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate) {
+            var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
+
+            var routineRevisions = await sdk.Alpha.Simulators.ListSimulatorRoutineRevisionsAsync(
+                new SimulatorRoutineRevisionQuery {
+                    Filter = new SimulatorRoutineRevisionFilter {
+                        RoutineExternalIds = new List<string> { routine.ExternalId },
+                    },
+                }).ConfigureAwait(false);
+
+            var routineRevisionsFiltered = routineRevisions.Items.Where(r => r.ExternalId == revisionToCreate.ExternalId);
+            if (routineRevisionsFiltered.Count() > 0) {
+                return routineRevisionsFiltered.First();
+            }
+
+            var revisionRes = await sdk.Alpha.Simulators.CreateSimulatorRoutineRevisionsAsync(
+                new List<SimulatorRoutineRevisionCreate>
+                {
+                    revisionToCreate
+                }).ConfigureAwait(false);
+            return revisionRes.First();
+        }
+
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionCreateScheduled = new SimulatorRoutineRevisionCreate() {
+            Configuration = new SimulatorRoutineRevisionConfiguration() {
+                Schedule = new SimulatorRoutineRevisionSchedule() {
+                    Enabled = true,
+                    StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 10000,
+                    Repeat = "5s",
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling() {
+                    ValidationWindow = 1440,
+                    SamplingWindow = 60,
+                    Granularity = 1,
+                    ValidationEndOffset = "10m"
+                },
+                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck() {
+                    Enabled = false,
+                },
+                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection() {
+                    Enabled = false,
+                },
+                InputConstants = new List<InputConstants>(),
+                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
+                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
+            },
+            ExternalId = "Test Scheduled Routine - 2",
+            RoutineExternalId = $"Test Scheduled Routine - 1",
+            Script = new List<SimulatorRoutineRevisionStage>(),
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem() {
+            ExternalId = "Test Scheduled Routine - 1",
+            ModelExternalId = "PROSPER-Connector_Test_Model",
+            SimulatorIntegrationExternalId = "scheduler-test-connector",
+            Name = "Simulation Runner Scheduled Routine",
+        };
+
         public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithInputConstants = new SimulatorRoutineRevisionCreate() {
             Configuration = new SimulatorRoutineRevisionConfiguration() {
                 Schedule = new SimulatorRoutineRevisionSchedule() {
@@ -60,8 +143,8 @@ namespace Cognite.Simulator.Tests {
                 },
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
             },
-            ExternalId = $"IntegrationTests-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
-            RoutineExternalId = $"IntegrationTests-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+            ExternalId = "Test Routine with Input Constants",
+            RoutineExternalId = "Test Routine with Input Constants",
             // TODO: Rename type to SimulatorRoutineRevisionScriptStage
             Script = new List<SimulatorRoutineRevisionStage> () {
                 new SimulatorRoutineRevisionStage() {
@@ -87,6 +170,12 @@ namespace Cognite.Simulator.Tests {
                     },
                 },
             }
+        };
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithInputConstants = new SimulatorRoutineCreateCommandItem() {
+            ExternalId = SimulatorRoutineRevisionWithInputConstants.RoutineExternalId,
+            ModelExternalId = "PROSPER-Connector_Test_Model",
+            SimulatorIntegrationExternalId = "integration-tests-connector",
+            Name = "Simulation Runner Test With Constant Inputs",
         };
     }
 }

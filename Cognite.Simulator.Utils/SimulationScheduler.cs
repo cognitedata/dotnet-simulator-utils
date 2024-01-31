@@ -59,11 +59,11 @@ namespace Cognite.Simulator.Utils
             {
                 return Enumerable.Empty<SimulationRun>();
             }
-            
+
             var runsToCreate = simulationEvents.Select(e => {
                 var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
                 return new SimulationRunCreate(){
-                    RoutineExternalId = e.Calculation.ExternalId,
+                    RoutineExternalId = e.Calculation.Name,
                     RunType = runType,
                 };
         }).ToList();
@@ -104,8 +104,9 @@ namespace Cognite.Simulator.Utils
                     // continue;
 
                     var configObj = configuration.Value;
+
                     U configState = _configLib.GetSimulationConfigurationState(
-                        configObj.Calculation.ExternalId
+                        configObj.ExternalId
                     );
 
                     // Check if the configuration has a schedule enabled for this connector.
