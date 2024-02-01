@@ -10,6 +10,64 @@ namespace Cognite.Simulator.Tests
     public class SeedData
     {
 
+        public static async Task<SimulatorModel> GetOrCreateSimulatorModel(Client sdk, SimulatorModelCreate model)
+        {
+            var models = await sdk.Alpha.Simulators.ListSimulatorModelsAsync(
+                new SimulatorModelQuery
+                {
+                    Filter = new SimulatorModelFilter
+                    {
+                        SimulatorExternalIds = new List<string> { model.SimulatorExternalId },
+                    },
+                }).ConfigureAwait(false);
+
+            var modelRes = models.Items.Where(m => m.ExternalId == model.ExternalId);
+            if (modelRes.Count() > 0)
+            {
+                return modelRes.First();
+            }
+
+            var res = await sdk.Alpha.Simulators.CreateSimulatorModelsAsync(
+                new List<SimulatorModelCreate>
+                {
+                    model
+                }).ConfigureAwait(false);
+            return res.First();
+        }
+
+        public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevision(Client sdk, SimulatorModelCreate model, SimulatorModelRevisionCreate revision)
+        {
+            var modelRes = await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
+
+            var revisions = await sdk.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
+                new SimulatorModelRevisionQuery
+                {
+                    Filter = new SimulatorModelRevisionFilter
+                    {
+                        ModelExternalIds = new List<string> { modelRes.ExternalId },
+                    },
+                }).ConfigureAwait(false);
+
+            var revisionRes = revisions.Items.Where(r => r.ExternalId == revision.ExternalId);
+            if (revisionRes.Count() > 0)
+            {
+                return revisionRes.First();
+            }
+
+            var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
+                new List<SimulatorModelRevisionCreate>
+                {
+                    revision
+                }).ConfigureAwait(false);
+            return res.First();
+        }
+
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk) {
+            var rev1 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
+            var rev2 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
+            return new List<SimulatorModelRevision> { rev1, rev2 };
+        }
+
         public static async Task<SimulatorRoutine> GetOrCreateSimulatorRoutine(Client sdk, SimulatorRoutineCreateCommandItem routine)
         {
             var routines = await sdk.Alpha.Simulators.ListSimulatorRoutinesAsync(
@@ -36,6 +94,7 @@ namespace Cognite.Simulator.Tests
 
         public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
         {
+            await GetOrCreateSimulatorModelRevisions(sdk).ConfigureAwait(false);
             var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
 
             var routineRevisions = await sdk.Alpha.Simulators.ListSimulatorRoutineRevisionsAsync(
@@ -335,6 +394,31 @@ namespace Cognite.Simulator.Tests
             ModelExternalId = "PROSPER-Connector_Test_Model",
             SimulatorIntegrationExternalId = "integration-tests-connector",
             Name = "Simulation Runner Test",
+        };
+
+        public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
+        {
+            ExternalId = "PROSPER-Connector_Test_Model",
+            Name = "Connector Test Model",
+            Description = "PROSPER-Connector Test Model",
+            DataSetId = 7900866844615420,
+            SimulatorExternalId = "PROSPER",
+        };
+
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = new SimulatorModelRevisionCreate()
+        {
+            ExternalId = "PROSPER-Connector_Test_Model-1",
+            ModelExternalId = SimulatorModelCreate.ExternalId,
+            FileId = 2583813271697095,
+            Description = "integration test. can be deleted at any time. the test will recreate it.",
+        };
+
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = new SimulatorModelRevisionCreate()
+        {
+            ExternalId = "PROSPER-Connector_Test_Model-2",
+            ModelExternalId = SimulatorModelCreate.ExternalId,
+            FileId = 4435244413333137,
+            Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
     }
 }

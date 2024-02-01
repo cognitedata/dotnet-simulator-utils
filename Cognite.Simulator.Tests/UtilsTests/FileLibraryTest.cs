@@ -32,6 +32,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             try
             {
                 using var provider = services.BuildServiceProvider();
+
+                // prepopulate models in CDF
+                var cdf = provider.GetRequiredService<Client>();
+                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf).ConfigureAwait(false);
+                var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
+
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
 
@@ -40,24 +46,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 bool dirExists = Directory.Exists("./files");
                 Assert.True(dirExists, "Should have created a directory for the files");
-
-                var cdf = provider.GetRequiredService<CogniteDestination>();
-
-                // Precondition: verify that revisions exist in CDF
-                var revisions = await cdf.CogniteClient.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
-                    new SimulatorModelRevisionQuery
-                    {
-                        Filter = new SimulatorModelRevisionFilter
-                        {
-                            ModelExternalIds = new []{ "PROSPER-Connector_Test_Model" },
-                        },
-                    }).ConfigureAwait(false);
-
-                var revisionMap = revisions.Items.ToDictionary(r => r.ExternalId, r => r);
-
-                // PROSPER-Connector_Test_Model-1 should exist in CDF
-                Assert.Contains("PROSPER-Connector_Test_Model-1", revisionMap);
-                Assert.Contains("PROSPER-Connector_Test_Model-2", revisionMap);
 
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
