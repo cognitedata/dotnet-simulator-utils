@@ -5,19 +5,25 @@ using System.Threading.Tasks;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-namespace Cognite.Simulator.Tests {
-    public class SeedData {
+namespace Cognite.Simulator.Tests
+{
+    public class SeedData
+    {
 
-        public static async Task<SimulatorRoutine> GetOrCreateSimulatorRoutine(Client sdk, SimulatorRoutineCreateCommandItem routine) {
+        public static async Task<SimulatorRoutine> GetOrCreateSimulatorRoutine(Client sdk, SimulatorRoutineCreateCommandItem routine)
+        {
             var routines = await sdk.Alpha.Simulators.ListSimulatorRoutinesAsync(
-                new SimulatorRoutineQuery {
-                    Filter = new SimulatorRoutineFilter {
+                new SimulatorRoutineQuery
+                {
+                    Filter = new SimulatorRoutineFilter
+                    {
                         ModelExternalIds = new List<string> { routine.ModelExternalId },
                     },
                 }).ConfigureAwait(false);
 
             var routineRes = routines.Items.Where(r => r.ExternalId == routine.ExternalId);
-            if (routineRes.Count() > 0) {
+            if (routineRes.Count() > 0)
+            {
                 return routineRes.First();
             }
 
@@ -26,20 +32,24 @@ namespace Cognite.Simulator.Tests {
 
             return res.First();
         }
-            
 
-        public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate) {
+
+        public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
+        {
             var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
 
             var routineRevisions = await sdk.Alpha.Simulators.ListSimulatorRoutineRevisionsAsync(
-                new SimulatorRoutineRevisionQuery {
-                    Filter = new SimulatorRoutineRevisionFilter {
+                new SimulatorRoutineRevisionQuery
+                {
+                    Filter = new SimulatorRoutineRevisionFilter
+                    {
                         RoutineExternalIds = new List<string> { routine.ExternalId },
                     },
                 }).ConfigureAwait(false);
 
             var routineRevisionsFiltered = routineRevisions.Items.Where(r => r.ExternalId == revisionToCreate.ExternalId);
-            if (routineRevisionsFiltered.Count() > 0) {
+            if (routineRevisionsFiltered.Count() > 0)
+            {
                 return routineRevisionsFiltered.First();
             }
 
@@ -51,23 +61,29 @@ namespace Cognite.Simulator.Tests {
             return revisionRes.First();
         }
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionCreateScheduled = new SimulatorRoutineRevisionCreate() {
-            Configuration = new SimulatorRoutineRevisionConfiguration() {
-                Schedule = new SimulatorRoutineRevisionSchedule() {
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionCreateScheduled = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
                     Enabled = true,
                     StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 10000,
                     Repeat = "5s",
                 },
-                DataSampling = new SimulatorRoutineRevisionDataSampling() {
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
                     ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck() {
+                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                {
                     Enabled = false,
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection() {
+                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                {
                     Enabled = false,
                 },
                 InputConstants = new List<InputConstants>(),
@@ -79,32 +95,39 @@ namespace Cognite.Simulator.Tests {
             Script = new List<SimulatorRoutineRevisionStage>(),
         };
 
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem() {
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
+        {
             ExternalId = "Test Scheduled Routine - 1",
             ModelExternalId = "PROSPER-Connector_Test_Model",
             SimulatorIntegrationExternalId = "scheduler-test-connector",
             Name = "Simulation Runner Scheduled Routine",
         };
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithInputConstants = new SimulatorRoutineRevisionCreate() {
-            Configuration = new SimulatorRoutineRevisionConfiguration() {
-                Schedule = new SimulatorRoutineRevisionSchedule() {
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithInputConstants = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
                     Enabled = false,
                 },
-                DataSampling = new SimulatorRoutineRevisionDataSampling() {
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
                     ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck() {
+                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                {
                     Enabled = true,
                     TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
                     Aggregate = "stepInterpolation",
                     Operator = "eq",
                     Value = 1,
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection() {
+                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                {
                     Enabled = true,
                     TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
                     Aggregate = "average",
@@ -142,10 +165,9 @@ namespace Cognite.Simulator.Tests {
                 },
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
             },
-            ExternalId = "Test Routine with Input Constants",
+            ExternalId = "Test Routine with Input Constants - 1",
             RoutineExternalId = "Test Routine with Input Constants",
-            // TODO: Rename type to SimulatorRoutineRevisionScriptStage
-            Script = new List<SimulatorRoutineRevisionStage> () {
+            Script = new List<SimulatorRoutineRevisionStage>() {
                 new SimulatorRoutineRevisionStage() {
                     Order = 1,
                     Description = "Set simulation inputs",
@@ -168,9 +190,37 @@ namespace Cognite.Simulator.Tests {
                         },
                     },
                 },
-            }
+                new SimulatorRoutineRevisionStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "outputTimeSeries" },
+                                { "referenceId", "OT1" },
+                            },
+                        },
+                    },
+                },
+            },
         };
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithInputConstants = new SimulatorRoutineCreateCommandItem() {
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithInputConstants = new SimulatorRoutineCreateCommandItem()
+        {
             ExternalId = SimulatorRoutineRevisionWithInputConstants.RoutineExternalId,
             ModelExternalId = "PROSPER-Connector_Test_Model",
             SimulatorIntegrationExternalId = "integration-tests-connector",
