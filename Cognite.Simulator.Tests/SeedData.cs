@@ -226,5 +226,115 @@ namespace Cognite.Simulator.Tests
             SimulatorIntegrationExternalId = "integration-tests-connector",
             Name = "Simulation Runner Test With Constant Inputs",
         };
+
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevision = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    ValidationWindow = 1440,
+                    SamplingWindow = 60,
+                    Granularity = 1,
+                    ValidationEndOffset = "0s"
+                },
+                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                {
+                    Enabled = true,
+                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                    Aggregate = "stepInterpolation",
+                    Operator = "eq",
+                    Value = 1,
+                },
+                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                {
+                    Enabled = true,
+                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                    Aggregate = "average",
+                    MinSectionSize = 60,
+                    VarThreshold = 1.0,
+                    SlopeThreshold = -3.0,
+                },
+                InputConstants = new List<InputConstants>(),
+                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
+                    new SimulatorRoutineRevisionOutputTimeseries() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        Unit = "STB/MMscf",
+                        UnitType = "LiqRate/GasRate",
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                    },
+                },
+                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>() {
+                    new SimulatorRoutineRevisionInputTimeseries() {
+                        Name = "Input Test 1",
+                        ReferenceId = "IT1",
+                        Unit = "STB/MMscf",
+                        UnitType = "LiqRate/GasRate",
+                        Aggregate = "average",
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
+                        SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                    },
+                
+                },
+            },
+            ExternalId = "Test Routine with Input Constants - 1",
+            RoutineExternalId = "Test Routine with Input Constants",
+            Script = new List<SimulatorRoutineRevisionStage>() {
+                new SimulatorRoutineRevisionStage() {
+                    Order = 1,
+                    Description = "Set simulation inputs",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "inputTimeSeries" },
+                                { "referenceId", "IT1" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "outputTimeSeries" },
+                                { "referenceId", "OT1" },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreate = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevision.RoutineExternalId,
+            ModelExternalId = "PROSPER-Connector_Test_Model",
+            SimulatorIntegrationExternalId = "integration-tests-connector",
+            Name = "Simulation Runner Test",
+        };
     }
 }

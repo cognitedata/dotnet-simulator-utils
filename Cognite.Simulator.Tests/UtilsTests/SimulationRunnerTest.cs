@@ -36,9 +36,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private const long validationEndOverwrite = 1631304000000L;
 
         [Theory]
-        // [InlineData("Simulation Runner Test", "SRT", false)] TODO: add this test back
-        [InlineData("Simulation Runner Test With Constant Inputs", "SRTWCI", true)]
-        public async Task TestSimulationRunnerBase(String calculationName, String calcType, bool useConstInputs)
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestSimulationRunnerBase(bool useConstInputs)
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -66,11 +66,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
 
             // prepopulate routine in CDF
-            var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                cdf,
-                SeedData.SimulatorRoutineCreateWithInputConstants,
-                SeedData.SimulatorRoutineRevisionWithInputConstants
-            ).ConfigureAwait(false);
+            SimulatorRoutineRevision revision;
+
+            if (useConstInputs) {
+                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf,
+                    SeedData.SimulatorRoutineCreateWithInputConstants,
+                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                ).ConfigureAwait(false);
+            } else {
+                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf,
+                    SeedData.SimulatorRoutineCreate,
+                    SeedData.SimulatorRoutineRevision
+                ).ConfigureAwait(false);
+            }
+
             try
             {
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -98,18 +109,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var configObj = configLib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(configObj);
 
-                // print configObj OutputTimeSeries
-                foreach (var ts in configObj.OutputTimeSeries)
-                {
-                    Console.WriteLine("Output TS: " + ts.ExternalId + "" + ts.Name);
-                }
-
                 var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
                 tsToDelete.AddRange(outTsIds);
                 var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
 
-                if (useConstInputs) {
+                if (configObj.InputConstants != null) {
                     var inConstTsIds = configObj.InputConstants.Select(o => o.SaveTimeseriesExternalId).ToList();
                     tsToDelete.AddRange(inConstTsIds);
                     inTsIds.AddRange(inConstTsIds);
