@@ -126,9 +126,10 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
 
                 // @TODO : use api based filtering instead of doing this here
-                var runsResultWithoutLegacyRuns = runsResult.Items.Where(r => r.RoutineRevisionExternalId != null);
+                var connectorName = _connectorConfig.GetConnectorName();
+                var runsResultForCurrentConnector = runsResult.Items.Where(r => r.SimulatorIntegrationExternalId == connectorName);
 
-                result.AddRange(runsResultWithoutLegacyRuns);
+                result.AddRange(runsResultForCurrentConnector);
             }
             return result;
         }
