@@ -59,13 +59,11 @@ namespace Cognite.Simulator.Utils
             {
                 return Enumerable.Empty<SimulationRun>();
             }
-            
+
             var runsToCreate = simulationEvents.Select(e => {
                 var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
                 return new SimulationRunCreate(){
-                    SimulatorName = e.Calculation.Model.Simulator,
-                    ModelName = e.Calculation.Model.Name,
-                    RoutineName = e.Calculation.Name,
+                    RoutineExternalId = e.Calculation.Name,
                     RunType = runType,
                 };
         }).ToList();
@@ -100,27 +98,12 @@ namespace Cognite.Simulator.Utils
                 var configurations = _configLib.SimulationConfigurations;
                 foreach (var configuration in configurations)
                 {
-                    // @todo : Disabling Scheduler because
-                    // GetSimulationConfigurationState needs routinerevisionexternalid now
-                    // usage of GetSimulationConfigurationState with 3 params will no longer be supported
-                    continue;
-
                     var configObj = configuration.Value;
-                    U configState;
-                    //if (_config.UseSimulatorsApi) {
-                        configState = _configLib.GetSimulationConfigurationState(
-                            configObj.Calculation.Model.Simulator,
-                            configObj.Calculation.Model.Name,
-                            configObj.CalculationName
-                        );
-                    /*} else {
-                        configState = _configLib.GetSimulationConfigurationState(
-                            configObj.Calculation.Model.Simulator,
-                            configObj.Calculation.Model.Name,
-                            configObj.CalculationType,
-                            configObj.CalcTypeUserDefined)
-                        ;
-                    }*/
+
+                    U configState = _configLib.GetSimulationConfigurationState(
+                        configObj.ExternalId
+                    );
+
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
                         configObj.Connector != _config.GetConnectorName() ||

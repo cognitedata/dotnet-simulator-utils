@@ -47,8 +47,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="value">Value to set</param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void SetTimeSeriesInput(
-            InputTimeSeriesConfiguration inputConfig, 
-            double value, 
+            InputTimeSeriesConfiguration inputConfig,
+            double value,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="value">Value to set</param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void SetManualInput(
-            string value, 
+            string value,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="arguments">Extra arguments</param>
         /// <returns></returns>
         public abstract double GetTimeSeriesOutput(
-            OutputTimeSeriesConfiguration outputConfig, 
+            OutputTimeSeriesConfiguration outputConfig,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="command">Command to invoke, or <c>null</c></param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void RunCommand(
-            string command, 
+            string command,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -205,7 +205,8 @@ namespace Cognite.Simulator.Utils
             var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
-            switch(argType) {
+            switch (argType)
+            {
                 case "inputTimeSeries":
                     var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argRefId).ToList();
                     if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
@@ -224,7 +225,8 @@ namespace Cognite.Simulator.Utils
                     {
                         var inputManualValue = matchingInputManualValues.First();
                         extraArgs.Add("unit", inputManualValue.Unit);
-                        if (inputManualValue.UnitType != null) {
+                        if (inputManualValue.UnitType != null)
+                        {
                             extraArgs.Add("unitType", inputManualValue.UnitType);
                         }
                         // Set manual input
@@ -242,7 +244,7 @@ namespace Cognite.Simulator.Utils
                 default:
                     throw new SimulationException($"Set error: Invalid argument type {argType}");
             }
-        }    
+        }
     }
 
     /// <summary>
@@ -254,12 +256,12 @@ namespace Cognite.Simulator.Utils
         /// Which procedure failed
         /// </summary>
         public int Procedure { get; }
-        
+
         /// <summary>
         /// Which step failed
         /// </summary>
         public int Step { get; }
-        
+
         /// <summary>
         /// Original message coming from the simulator
         /// </summary>

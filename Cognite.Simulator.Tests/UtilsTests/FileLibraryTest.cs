@@ -126,6 +126,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
+        // TODO this used to have a test for IPR/VLP (predefined), but it was removed
+        // add it back once we support predefined calcs again
         [Fact]
         public async Task TestConfigurationLibrary()
         {
@@ -139,21 +141,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             try
             {
                 using var provider = services.BuildServiceProvider();
+
+                // prepopulate routine in CDF
+                var cdf = provider.GetRequiredService<CogniteDestination>();
+                var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf.CogniteClient,
+                    SeedData.SimulatorRoutineCreate,
+                    SeedData.SimulatorRoutineRevision
+                ).ConfigureAwait(false);
+
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
-
                 var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
-
-                bool dirExists = Directory.Exists("./configurations");
-                Assert.True(dirExists, "Should have created a directory for the files");
-
-                Assert.NotEmpty(lib.State);
-                var state = Assert.Contains(
-                    "PROSPER-SC-IPR_VLP-Connector_Test_Model", // This simulator configuration should exist in CDF
-                    (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                Assert.Equal("PROSPER", state.Source);
-                Assert.Equal("Connector Test Model", state.ModelName);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -164,32 +164,32 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                // Verify that the files were downloaded and processed
-                Assert.True(state.Deserialized);
-                Assert.False(string.IsNullOrEmpty(state.FilePath));
-                Assert.True(System.IO.File.Exists(state.FilePath));
+                Assert.NotEmpty(lib.State);
+               var state = Assert.Contains(
+                    revision.Id.ToString(), // This simulator configuration should exist in CDF
+                    (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
+                Assert.Equal("PROSPER", state.Source);
+                Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
 
-                var simConf = lib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "IPR/VLP", null);
+                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("IPR/VLP", simConf.CalculationType);
+                Assert.Equal("UserDefined", simConf.CalculationType);
                 foreach (var input in simConf.InputTimeSeries)
                 {
                     Assert.NotNull(input.Name);
                     Assert.NotNull(input.SensorExternalId);
                     Assert.Null(input.SampleExternalId);
                 }
-                var simConfState = lib.GetSimulationConfigurationState(
-                    "PROSPER", "Connector Test Model", "IPR/VLP", null);
+                var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
                 Assert.Equal(state, simConfState);
             }
             finally
             {
-                if (Directory.Exists("./configurations"))
-                {
-                    Directory.Delete("./configurations", true);
-                }
+                // if (Directory.Exists("./configurations"))
+                // {
+                //     Directory.Delete("./configurations", true);
+                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
@@ -207,31 +207,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             StateStoreConfig stateConfig = null;
 
-            var revisionWithInputConstants = SeedData.SimulatorRoutineRevisionWithInputConstants;
-
             try
             {
                 using var provider = services.BuildServiceProvider();
                 
                 // prepopulate routine in CDF
                 var cdf = provider.GetRequiredService<CogniteDestination>();
-                var routine = await cdf.CogniteClient.Alpha.Simulators.CreateSimulatorRoutinesAsync(
-                    new List<SimulatorRoutineCreateCommandItem>
-                    {
-                        new SimulatorRoutineCreateCommandItem
-                        {
-                            ExternalId = revisionWithInputConstants.RoutineExternalId,
-                            ModelExternalId = "PROSPER-Connector_Test_Model",
-                            SimulatorIntegrationExternalId = "integration-tests-connector",
-                            Name = "Simulation Runner Test With Constant Inputs",
-                        }
-                    }).ConfigureAwait(false);
-                var revisionRes = await cdf.CogniteClient.Alpha.Simulators.CreateSimulatorRoutineRevisionsAsync(
-                    new List<SimulatorRoutineRevisionCreate>
-                    {
-                        revisionWithInputConstants
-                    }).ConfigureAwait(false);
-                var revision = revisionRes.FirstOrDefault();
+                var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf.CogniteClient,
+                    SeedData.SimulatorRoutineCreateWithInputConstants,
+                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
@@ -259,17 +245,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal("PROSPER", state.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
-                // Verify that the files were downloaded and processed
-                // Assert.True(state.Deserialized);
-                // Assert.False(string.IsNullOrEmpty(state.FilePath));
-                // Assert.True(System.IO.File.Exists(state.FilePath));
 
-                var simConf = lib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "Simulation Runner Test With Constant Inputs");
+                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
                 Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("Simulation Runner Test With Constant Inputs", simConf.CalculationName);
-                Assert.Equal("SRTWCI", simConf.CalcTypeUserDefined);
+                Assert.Equal("Test Routine with Input Constants", simConf.CalculationName);
+                Assert.Equal("Test Routine with Input Constants", simConf.CalcTypeUserDefined);
                 
                 Assert.Empty(simConf.InputTimeSeries);
                 Assert.NotEmpty(simConf.InputConstants);
@@ -281,17 +262,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
 
-                var simConfState = lib.GetSimulationConfigurationState(
-                    "PROSPER", "Connector Test Model", "Simulation Runner Test With Constant Inputs");
+                var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
                 Assert.Equivalent(state, simConfState, true);
             }
             finally
             {
-                if (Directory.Exists("./configurations"))
-                {
-                    Directory.Delete("./configurations", true);
-                }
+                // if (Directory.Exists("./configurations"))
+                // {
+                //     Directory.Delete("./configurations", true);
+                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
@@ -399,6 +379,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
                 Version = modelRevision.VersionNumber,
+                ExternalId = modelRevision.ExternalId,
             };
         }
     }
@@ -455,7 +436,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelName = routine.ModelExternalId,
                 ModelExternalId = routine.ModelExternalId,
                 Source = routineRevision.SimulatorExternalId,
-                Deserialized = false
+                Deserialized = false,
+                ExternalId = routineRevision.ExternalId,
             };
         }
 
