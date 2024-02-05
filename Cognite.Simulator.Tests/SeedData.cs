@@ -145,13 +145,13 @@ namespace Cognite.Simulator.Tests
                 {
                     Enabled = false,
                 },
-                InputConstants = new List<InputConstants>(),
+                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
             },
             ExternalId = "Test Scheduled Routine - 2",
             RoutineExternalId = $"Test Scheduled Routine - 1",
-            Script = new List<SimulatorRoutineRevisionStage>(),
+            Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };
 
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
@@ -195,8 +195,8 @@ namespace Cognite.Simulator.Tests
                     SlopeThreshold = -3.0,
                 },
                 // TODO rename type to SimulatorRoutineRevisionInputConstant type
-                InputConstants = new List<InputConstants>() {
-                    new InputConstants() {
+                InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
+                    new SimulatorRoutineRevisionInputConstants() {
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
                         Value = "42",
                         Unit = "STB/MMscf",
@@ -204,7 +204,7 @@ namespace Cognite.Simulator.Tests
                         Name = "Input Constant 1",
                         ReferenceId = "IC1",
                     },
-                    new InputConstants() {
+                    new SimulatorRoutineRevisionInputConstants() {
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
                         Value = "100",
                         Unit = "STB/MMscf",
@@ -226,8 +226,8 @@ namespace Cognite.Simulator.Tests
             },
             ExternalId = "Test Routine with Input Constants - 1",
             RoutineExternalId = "Test Routine with Input Constants",
-            Script = new List<SimulatorRoutineRevisionStage>() {
-                new SimulatorRoutineRevisionStage() {
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
                     Description = "Set simulation inputs",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {
@@ -249,7 +249,7 @@ namespace Cognite.Simulator.Tests
                         },
                     },
                 },
-                new SimulatorRoutineRevisionStage() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 2,
                     Description = "Perform simulation",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {
@@ -262,7 +262,7 @@ namespace Cognite.Simulator.Tests
                         },
                     },
                 },
-                new SimulatorRoutineRevisionStage() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 3,
                     Description = "Get output time series",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {
@@ -318,7 +318,7 @@ namespace Cognite.Simulator.Tests
                     VarThreshold = 1.0,
                     SlopeThreshold = -3.0,
                 },
-                InputConstants = new List<InputConstants>(),
+                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
                     new SimulatorRoutineRevisionOutputTimeseries() {
                         Name = "Output Test 1",
@@ -343,8 +343,8 @@ namespace Cognite.Simulator.Tests
             },
             ExternalId = "Test Routine with Input Constants - 1",
             RoutineExternalId = "Test Routine with Input Constants",
-            Script = new List<SimulatorRoutineRevisionStage>() {
-                new SimulatorRoutineRevisionStage() {
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
                     Description = "Set simulation inputs",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {
@@ -358,7 +358,7 @@ namespace Cognite.Simulator.Tests
                         },
                     },
                 },
-                new SimulatorRoutineRevisionStage() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 2,
                     Description = "Perform simulation",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {
@@ -371,7 +371,7 @@ namespace Cognite.Simulator.Tests
                         },
                     },
                 },
-                new SimulatorRoutineRevisionStage() {
+                new SimulatorRoutineRevisionScriptStage() {
                     Order = 3,
                     Description = "Get output time series",
                     Steps = new List<SimulatorRoutineRevisionScriptStep>() {

@@ -183,11 +183,10 @@ namespace Cognite.Simulator.Utils
             bool onlyLatest,
             CancellationToken token)
         {
-            try
-            {
-                            long createdAfter = 
-                onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
-                    _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
+            try {
+                long createdAfter = 
+                    onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
+                        _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
                 var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
 
@@ -212,7 +211,7 @@ namespace Cognite.Simulator.Utils
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
                                 CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
-                                ModelExternalIds = modelExternalIds,  
+                                ModelExternalIds = modelExternalIds,
                             }
                         },
                         token
@@ -237,7 +236,6 @@ namespace Cognite.Simulator.Utils
             {
                 Logger.LogDebug("Failed to fetch model revisions from CDF: {Message}", e.Message);
             }
-
         }
 
         /// <summary>
