@@ -183,48 +183,56 @@ namespace Cognite.Simulator.Utils
             bool onlyLatest,
             CancellationToken token)
         {
-            long createdAfter = 
+            try
+            {
+                            long createdAfter = 
                 onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                     _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
-            var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
+                var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
 
-            var modelsRes = await CdfSimulatorResources
-                .ListSimulatorModelsAsync(new SimulatorModelQuery() {
-                    Filter = new SimulatorModelFilter() {
-                        SimulatorExternalIds = simulatorsExternalIds
-                    }
-                }, token).ConfigureAwait(false);
-
-            var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
-
-            var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
-
-            var modelRevisionsRes = await CdfSimulatorResources
-                .ListSimulatorModelRevisionsAsync(
-                    new SimulatorModelRevisionQuery() {
-                        Filter = new SimulatorModelRevisionFilter() {
-                            CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
-                            ModelExternalIds = modelExternalIds,  
+                var modelsRes = await CdfSimulatorResources
+                    .ListSimulatorModelsAsync(new SimulatorModelQuery() {
+                        Filter = new SimulatorModelFilter() {
+                            SimulatorExternalIds = simulatorsExternalIds
                         }
-                    },
-                    token
-                ).ConfigureAwait(false);
+                    }, token).ConfigureAwait(false);
 
-            foreach (var revision in modelRevisionsRes.Items) {
-                var model = modelsMap[revision.ModelExternalId];
-                T rState = StateFromModelRevision(revision, model);
-                if (rState == null)
-                {
-                    continue;
-                }
-                var revisionId = revision.Id.ToString();
-                if (!State.ContainsKey(revisionId))
-                {
-                    // If the revision does not exist locally, add it to the state store
-                    State.Add(revisionId, rState);
+                var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
+
+                var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
+
+                var modelRevisionsRes = await CdfSimulatorResources
+                    .ListSimulatorModelRevisionsAsync(
+                        new SimulatorModelRevisionQuery() {
+                            Filter = new SimulatorModelRevisionFilter() {
+                                CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
+                                ModelExternalIds = modelExternalIds,  
+                            }
+                        },
+                        token
+                    ).ConfigureAwait(false);
+
+                foreach (var revision in modelRevisionsRes.Items) {
+                    var model = modelsMap[revision.ModelExternalId];
+                    T rState = StateFromModelRevision(revision, model);
+                    if (rState == null)
+                    {
+                        continue;
+                    }
+                    var revisionId = revision.Id.ToString();
+                    if (!State.ContainsKey(revisionId))
+                    {
+                        // If the revision does not exist locally, add it to the state store
+                        State.Add(revisionId, rState);
+                    }
                 }
             }
+            catch (System.Exception e)
+            {
+                Logger.LogDebug("Failed to fetch model revisions from CDF: {Message}", e.Message);
+            }
+
         }
 
         // /// <summary>
