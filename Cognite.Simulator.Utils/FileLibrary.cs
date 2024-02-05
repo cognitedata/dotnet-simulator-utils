@@ -240,49 +240,6 @@ namespace Cognite.Simulator.Utils
 
         }
 
-        // /// <summary>
-        // /// Deprecated: based on files API.
-        // /// Used only for calculations now.
-        // /// </summary>
-        // private async Task FindFilesByMetadata(
-        //     bool onlyLatest,
-        //     CancellationToken token)
-        // {
-        //     DateTime? updatedAfter = null;
-        //     if (onlyLatest && !_libState.DestinationExtractedRange.IsEmpty)
-        //     {
-        //         updatedAfter = _libState.DestinationExtractedRange.Last;
-        //     }
-        //     var files = await CdfFiles.FindSimulatorFiles(
-        //         _resourceType,
-        //         _simulators.ToDictionary(s => s.Name, s => (long?)s.DataSetId),
-        //         updatedAfter,
-        //         token).ConfigureAwait(false);
-
-        //     foreach (var file in files)
-        //     {
-        //         T fState = StateFromFile(file);
-        //         if (fState == null)
-        //         {
-        //             continue;
-        //         }
-        //         if (!State.ContainsKey(file.ExternalId))
-        //         {
-        //             // If the file does not exist locally, add it to the state store
-        //             State.Add(file.ExternalId, fState);
-        //         }
-        //         else if (State[fState.Id].UpdatedTime < fState.UpdatedTime)
-        //         {
-        //             // If the file exists in the state store but was updated in CDF, use the new file instead
-        //             await _store.RemoveFileStates(
-        //                 _config.FilesTable,
-        //                 new List<FileState> { State[fState.Id] },
-        //                 token).ConfigureAwait(false);
-        //             State[fState.Id] = fState;
-        //         }
-        //     }
-        // }
-
         /// <summary>
         /// Fetch the Files from CDF for the configured simulators and datasets.
         /// Build a local state to keep track of what files exist and which ones have 
