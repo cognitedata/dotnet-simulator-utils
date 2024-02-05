@@ -202,6 +202,11 @@ namespace Cognite.Simulator.Utils
 
                 var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
 
+                if (modelExternalIds.Count == 0)
+                {
+                    return;
+                }
+
                 var modelRevisionsRes = await CdfSimulatorResources
                     .ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery() {
