@@ -206,10 +206,6 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(config));
             }
-            // var configsInCdf = await CdfFiles.FindConfigurationFiles(
-            //     config.Calculation,
-            //     state.DataSetId,
-            //     token).ConfigureAwait(false);
 
             // TODO: get routine revision by id
             var routineRevisions = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
