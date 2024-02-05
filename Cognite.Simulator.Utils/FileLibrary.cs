@@ -317,7 +317,7 @@ namespace Cognite.Simulator.Utils
                     {   
                         if (_resourceType != SimulatorDataType.ModelFile) {
                             continue; // TODO this is handled by routines now, we don't need to download files
-                            // TODO: this method shouldn't even run for routines (?)
+                            // TODO: make a simpler base class for routines (no file download, only local state, etc)
                         }
                         var fileId = new Identity(file.CdfId);
                         var response = await CdfFiles

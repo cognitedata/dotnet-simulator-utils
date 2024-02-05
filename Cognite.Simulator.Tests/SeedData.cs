@@ -194,7 +194,6 @@ namespace Cognite.Simulator.Tests
                     VarThreshold = 1.0,
                     SlopeThreshold = -3.0,
                 },
-                // TODO rename type to SimulatorRoutineRevisionInputConstant type
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
                     new SimulatorRoutineRevisionInputConstants() {
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
