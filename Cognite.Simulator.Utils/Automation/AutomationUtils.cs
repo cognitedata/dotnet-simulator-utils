@@ -54,7 +54,7 @@ namespace Cognite.Simulator.Utils.Automation
             }
             else
             {
-                throw new SimulatorConnectionException("Simulator integration only available on Windows");
+                // throw new SimulatorConnectionException("Simulator integration only available on Windows");
             }
 
             _logger.LogDebug("Connected to simulator instance");

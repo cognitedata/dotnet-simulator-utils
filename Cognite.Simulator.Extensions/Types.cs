@@ -28,6 +28,11 @@ namespace Cognite.Simulator.Extensions
     public class SimulatorCalculation
     {
         /// <summary>
+        /// Routine revision external id
+        /// </summary>
+        public string ExternalId { get; set; }
+
+        /// <summary>
         /// Calculation type (e.g. IPR/VLP)
         /// </summary>
         public string Type { get; set; }

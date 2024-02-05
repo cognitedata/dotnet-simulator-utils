@@ -47,8 +47,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="value">Value to set</param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void SetTimeSeriesInput(
-            InputTimeSeriesConfiguration inputConfig, 
-            double value, 
+            InputTimeSeriesConfiguration inputConfig,
+            double value,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="value">Value to set</param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void SetManualInput(
-            string value, 
+            string value,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="arguments">Extra arguments</param>
         /// <returns></returns>
         public abstract double GetTimeSeriesOutput(
-            OutputTimeSeriesConfiguration outputConfig, 
+            OutputTimeSeriesConfiguration outputConfig,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="command">Command to invoke, or <c>null</c></param>
         /// <param name="arguments">Extra arguments</param>
         public abstract void RunCommand(
-            string command, 
+            string command,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -153,11 +153,11 @@ namespace Cognite.Simulator.Utils
 
         private void ParseCommand(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("type", out string argType))
+            if (!arguments.TryGetValue("argumentType", out string argType))
             {
                 argType = null;
             }
-            var extraArgs = arguments.Where(s => s.Key != "type")
+            var extraArgs = arguments.Where(s => s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
             // Perform command
             RunCommand(argType, extraArgs);
@@ -165,21 +165,21 @@ namespace Cognite.Simulator.Utils
 
         private void ParseGet(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("type", out string argType))
+            if (!arguments.TryGetValue("argumentType", out string argType))
             {
                 throw new SimulationException($"Get error: Assignment type not defined");
             }
-            if (!arguments.TryGetValue("value", out string argValue))
+            if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
                 throw new SimulationException($"Get error: Output value not defined");
             }
-            var extraArgs = arguments.Where(s => s.Key != "type" && s.Key != "value")
+            var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
             
             if (argType == "outputTimeSeries")
             {
                 // Get the simulation result as a time series data point
-                var matchingOutputs = _config.OutputTimeSeries.Where(i => i.Type == argValue).ToList();
+                var matchingOutputs = _config.OutputTimeSeries.Where(i => i.Type == argRefId).ToList();
                 if (matchingOutputs.Any())
                 {
                     var output = matchingOutputs.First();
@@ -194,55 +194,57 @@ namespace Cognite.Simulator.Utils
 
         private void ParseSet(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("type", out string argType))
+            if (!arguments.TryGetValue("argumentType", out string argType))
             {
                 throw new SimulationException($"Set error: Assignment type not defined");
             }
-            if (!arguments.TryGetValue("value", out string argValue))
+            if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
                 throw new SimulationException($"Set error: Input value not defined");
             }
-            var extraArgs = arguments.Where(s => s.Key != "type" && s.Key != "value")
+            var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
-            switch(argType) {
+            switch (argType)
+            {
                 case "inputTimeSeries":
-                    var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argValue).ToList();
-                    if (matchingInputs.Any() && _inputData.ContainsKey(argValue))
+                    var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argRefId).ToList();
+                    if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
                     {
                         // Set input time series
-                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argValue], extraArgs);
+                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
                     }
                     else
                     {
-                        throw new SimulationException($"Set error: Input time series with key {argValue} not found");
+                        throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
                     }
                     break;
                 case "inputConstant":
-                    var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argValue).ToList();
-                    if (matchingInputManualValues.Any() && _inputData.ContainsKey(argValue))
+                    var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argRefId).ToList();
+                    if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
                     {
                         var inputManualValue = matchingInputManualValues.First();
                         extraArgs.Add("unit", inputManualValue.Unit);
-                        if (inputManualValue.UnitType != null) {
+                        if (inputManualValue.UnitType != null)
+                        {
                             extraArgs.Add("unitType", inputManualValue.UnitType);
                         }
                         // Set manual input
-                        SetManualInput(_inputData[argValue].ToString(), extraArgs);
+                        SetManualInput(_inputData[argRefId].ToString(), extraArgs);
                     }
                     else
                     {
-                        throw new SimulationException($"Set error: Manual value input with key {argValue} not found");
+                        throw new SimulationException($"Set error: Manual value input with key {argRefId} not found");
                     }
                     break;
                 case "manual":
                     // Set manual input (from inside the routine, legacy)
-                    SetManualInput(argValue, extraArgs);
+                    SetManualInput(argRefId, extraArgs);
                     break;
                 default:
                     throw new SimulationException($"Set error: Invalid argument type {argType}");
             }
-        }    
+        }
     }
 
     /// <summary>
@@ -254,12 +256,12 @@ namespace Cognite.Simulator.Utils
         /// Which procedure failed
         /// </summary>
         public int Procedure { get; }
-        
+
         /// <summary>
         /// Which step failed
         /// </summary>
         public int Step { get; }
-        
+
         /// <summary>
         /// Original message coming from the simulator
         /// </summary>

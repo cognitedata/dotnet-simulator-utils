@@ -39,11 +39,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             StateStoreConfig stateConfig = null;
 
             List<string> eventIds = new List<string>();
-            
+
             var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
+
+            /// prepopulate the routine revision
+            var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                cdf,
+                SeedData.SimulatorRoutineCreateScheduled,
+                SeedData.SimulatorRoutineRevisionCreateScheduled
+            ).ConfigureAwait(false);
 
             try
             {
@@ -64,10 +71,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(configLib.State);
                 var configState = Assert.Contains(
-                    "PROSPER-SC-UserDefined-SST-Connector_Test_Model",
+                    revision.Id.ToString(),
                     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
-                var configObj = configLib.GetSimulationConfiguration(
-                    "PROSPER", "Connector Test Model", "Simulation Scheduler Test");
+                var configObj = configLib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(configObj);
 
                 // Should have created at least one simulation event ready to run
@@ -76,17 +82,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Filter = new SimulationRunFilter
                         {
-                            ModelName = configObj.ModelName,
-                            RoutineName = configObj.CalculationName,
-                            SimulatorName = configObj.Simulator,
-                            Status = SimulationRunStatus.ready
-                        }
+                            // TODO: apply new filters
+                            Status = SimulationRunStatus.ready,
+                        },
+                        Sort = new List<SimulatorSortItem>
+                        {
+                            new SimulatorSortItem
+                            {
+                                Property = "createdTime",
+                                Order = SimulatorSortOrder.desc,
+                            }
+                        },
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
-                var latestEventsFiltered = simRuns.Items.Where(r => r.CreatedTime >= testStartTimeMillis && r.CreatedTime < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                var latestEventsFiltered = simRuns.Items.Where(
+                    r => r.CreatedTime >= testStartTimeMillis &&
+                    r.SimulatorIntegrationExternalId == "scheduler-test-connector" && r.ModelRevisionExternalId == "PROSPER-Connector_Test_Model-2"
+                );
                 Assert.NotEmpty(latestEventsFiltered);
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
             }

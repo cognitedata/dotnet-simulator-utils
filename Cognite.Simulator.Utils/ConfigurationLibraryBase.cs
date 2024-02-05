@@ -2,12 +2,15 @@
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,10 +29,11 @@ namespace Cognite.Simulator.Utils
     public abstract class ConfigurationLibraryBase<T, U, V> : FileLibrary<T, U>, IConfigurationProvider<T, V>
         where T : ConfigurationStateBase
         where U : FileStatePoco
-        where V : SimulationConfigurationBase
+        where V : SimulationConfigurationWithRoutine
     {
         /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
+        private IList<SimulatorConfig> _simulators;
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -41,29 +45,56 @@ namespace Cognite.Simulator.Utils
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
         public ConfigurationLibraryBase(
-            FileLibraryConfig config, 
-            IList<SimulatorConfig> simulators, 
-            CogniteDestination cdf, 
-            ILogger logger, 
-            FileDownloadClient downloadClient, 
-            IExtractionStateStore store = null) : 
+            FileLibraryConfig config,
+            IList<SimulatorConfig> simulators,
+            CogniteDestination cdf,
+            ILogger logger,
+            FileDownloadClient downloadClient,
+            IExtractionStateStore store = null) :
             base(SimulatorDataType.SimulationConfiguration, config, simulators, cdf, logger, downloadClient, store)
         {
             SimulationConfigurations = new Dictionary<string, V>();
+            _simulators = simulators;
         }
 
         /// <inheritdoc/>
+        /// 
+        public V GetSimulationConfiguration(
+            string routineRevisionExternalId
+            )
+        {
+            var calcConfigs = SimulationConfigurations.Values.Where(c => c.ExternalId == routineRevisionExternalId);
+            if (calcConfigs.Any())
+            {
+                return calcConfigs.First();
+            }
+            return null;
+        }
+
+        public V GetSimulationConfiguration(
+            string simulator,
+            string modelName,
+            string calcType) {
+            var calcConfigs = SimulationConfigurations.Values.Where(c => c.Simulator == simulator && c.ModelName == modelName && c.CalculationType == calcType);
+            if (calcConfigs.Any())
+            {
+                return calcConfigs.First();
+            }
+            return null;
+        }
+
+        //@todo : Remove this function
         public V GetSimulationConfiguration(
             string simulator,
             string modelName,
             string calcType,
             string calcTypeUserDefined)
         {
-            var calcConfigs = SimulationConfigurations.Values
-                .Where(c => c.Simulator == simulator &&
-                    c.ModelName == modelName &&
-                    c.CalculationType == calcType &&
-                    (string.IsNullOrEmpty(calcTypeUserDefined) || c.CalcTypeUserDefined == calcTypeUserDefined));
+            var calcConfigs = SimulationConfigurations.Values;
+            // .Where(c => c.Simulator == simulator );
+            // c.ModelName == modelName &&
+            // c.CalculationType == calcType &&
+            // (string.IsNullOrEmpty(calcTypeUserDefined) || c.CalcTypeUserDefined == calcTypeUserDefined));
             if (calcConfigs.Any())
             {
                 return calcConfigs.First();
@@ -71,23 +102,7 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        /// <inheritdoc/>
-        public V GetSimulationConfiguration(
-            string simulator,
-            string modelName,
-            string calcName)
-        {
-            var calcConfigs = SimulationConfigurations.Values
-                .Where(c => c.Simulator == simulator &&
-                    c.ModelName == modelName &&
-                    c.CalculationName == calcName);
-            if (calcConfigs.Any())
-            {
-                return calcConfigs.First();
-            }
-            return null;
-        }
-
+        //@todo : Remove this function
         /// <inheritdoc/>
         public T GetSimulationConfigurationState(
             string simulator,
@@ -112,15 +127,53 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <inheritdoc/>
+        /// 
+
+        public T GetSimulationConfigurationState(
+            string routineRevisionExternalId)
+        {
+            var calcConfigs = SimulationConfigurations
+                .Where(c => c.Value.ExternalId == routineRevisionExternalId);
+
+            if (calcConfigs.Any())
+            {
+                var id = calcConfigs.First().Key;
+                if (State.TryGetValue(id, out var configState))
+                {
+                    return configState;
+                }
+            }
+            return null;
+        }
+
+        //@todo : Remove this function
         public T GetSimulationConfigurationState(
             string simulator,
             string modelName,
             string calcName)
         {
+            
+            // var calcConfigs = SimulationConfigurations
+            //     .Where(c => c.Value.Simulator == simulator &&
+            //         c.Value.ModelName == modelName &&
+            //         c.Value.CalculationName == calcName)
+            //     .OrderByDescending(c => c.Value.CreatedTime);
+            // if (calcConfigs.Any())
+            // {
+            //     Console.WriteLine("At this point");
+            //     var id = calcConfigs.First().Key;
+            //     Console.Write("Got id = " + id);
+            //     if (State.TryGetValue(id, out var configState))
+            //     {
+            //         Console.Write("Returning state for id = " + id);
+            //         return configState;
+            //     }
+            // }
             var calcConfigs = SimulationConfigurations
-                .Where(c => c.Value.Simulator == simulator &&
-                    c.Value.ModelName == modelName &&
-                    c.Value.CalculationName == calcName);
+                // .Where(c => c.Value.Simulator == simulator)
+                //     c.Value.ModelName == modelName &&
+                //     c.Value.CalculationName == calcName)
+                .OrderByDescending(c => c.Value.CreatedTime);
             if (calcConfigs.Any())
             {
                 var id = calcConfigs.First().Key;
@@ -153,11 +206,19 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(config));
             }
-            var configsInCdf = await CdfFiles.FindConfigurationFiles(
-                config.Calculation,
-                state.DataSetId,
-                token).ConfigureAwait(false);
-            return configsInCdf.Any(v => v.ExternalId == state.Id);
+
+            // TODO: get routine revision by id
+            var routineRevisions = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
+                new CogniteSdk.Alpha.SimulatorRoutineRevisionQuery
+                {
+                    Filter = new CogniteSdk.Alpha.SimulatorRoutineRevisionFilter
+                    {
+                        RoutineExternalIds = new List<string> { config.CalculationName },
+                    }
+                },
+                token: token).ConfigureAwait(false);
+
+            return routineRevisions.Items.Any(v => v.Id == long.Parse(state.Id));
         }
 
         /// <inheritdoc/>
@@ -194,60 +255,206 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         protected override void ProcessDownloadedFiles(CancellationToken token)
         {
-            Task.Run(() => ReadConfigurations(), token).Wait(token);
+            Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
-        private void ReadConfigurations()
+        protected abstract V ToType(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine);
+
+        private async Task ReadConfigurations(CancellationToken token)
         {
-            var files = State.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.Deserialized).ToList();
-            foreach (var file in files)
-            {
-                try
+            // throw new Exception("not implemented");
+
+            var routinesRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
+                new SimulatorRoutineQuery()
                 {
-                    var json = JsonConvert.DeserializeObject<V>(
-                        System.IO.File.ReadAllText(file.FilePath),
-                        new JsonSerializerSettings
-                        {
-                            ContractResolver = new DefaultContractResolver
-                            {
-                                NamingStrategy = new CamelCaseNamingStrategy()
-                            },
-                            Converters = new List<JsonConverter>()
-                            {
-                                new Newtonsoft.Json.Converters.StringEnumConverter()
-                            }
-                        });
-                    if (!SimulationConfigurations.ContainsKey(file.Id))
+                    Filter = new SimulatorRoutineFilter() { }
+                },
+                token
+            ).ConfigureAwait(false);
+
+            var routinesMap = routinesRes.Items.ToDictionary(r => r.ExternalId, r => r);
+
+            var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
+                new SimulatorRoutineRevisionQuery()
+                {
+                    Filter = new SimulatorRoutineRevisionFilter()
                     {
-                        SimulationConfigurations.Add(file.Id, json);
+                        // TODO filter by created time, simulatorExternalIds, simulatorIntegrationExternalIds
+                        // CreatedTime = new CogniteSdk.TimeRange() {  Min = _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() + 1 },
+                    }
+                },
+                token
+            ).ConfigureAwait(false);
+
+            var simulators = _simulators.ToDictionary(s => s.Name, s => s);
+
+            // TODO: what do we do with the timerange now that we don't use FileLibrary?
+            // TODO: we need our own _libState
+            var routineRevisions = routineRevisionsRes.Items.Where(
+                r => simulators.ContainsKey(r.SimulatorExternalId)
+            ).ToList();
+
+            foreach (var routineRev in routineRevisions)
+            {
+                if (!SimulationConfigurations.ContainsKey(routineRev.Id.ToString()))
+                {
+                    if (routineRev.Script == null)
+                    {
+                        Logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
+                        continue;
                     }
                     else
                     {
-                        SimulationConfigurations[file.Id] = json;
+                        var routineResource = routinesMap[routineRev.RoutineExternalId];
+                        // TODO: we should rather use the new type natively
+                        var simulationConfigurationWithRoutine = new SimulationConfigurationWithRoutine()
+                        {
+                            ExternalId = routineRev.ExternalId,
+                            Simulator = simulators[routineRev.SimulatorExternalId].Name,
+                            ModelName = routineResource.ModelExternalId,
+                            CalculationName = routineRev.RoutineExternalId,
+                            CalculationType = "UserDefined",
+                            CalcTypeUserDefined = routineRev.RoutineExternalId,
+                            Connector = routineResource.SimulatorIntegrationExternalId,
+                            Schedule = new ScheduleConfiguration()
+                            {
+                                Enabled = routineRev.Configuration.Schedule.Enabled,
+                                Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
+                                Repeat = routineRev.Configuration.Schedule.Repeat
+                            },
+                            InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
+                            {
+                                Name = ic.Name,
+                                Type = ic.ReferenceId,
+                                Unit = ic.Unit,
+                                UnitType = ic.UnitType,
+                                Value = ic.Value,
+                                SaveTimeseriesExternalId = ic.SaveTimeseriesExternalId
+                            }),
+                            InputTimeSeries = routineRev.Configuration.InputTimeseries.Select(its => new InputTimeSeriesConfiguration()
+                            {
+                                Name = its.Name,
+                                Type = its.ReferenceId,
+                                Unit = its.Unit,
+                                UnitType = its.UnitType,
+                                SensorExternalId = its.SourceExternalId,
+                                AggregateType = its.Aggregate,
+                                SampleExternalId = its.SaveTimeseriesExternalId
+                            }),
+                            OutputTimeSeries = routineRev.Configuration.OutputTimeseries.Select(ots => new OutputTimeSeriesConfiguration()
+                            {
+                                Name = ots.Name,
+                                Type = ots.ReferenceId,
+                                Unit = ots.Unit,
+                                UnitType = ots.UnitType,
+                                ExternalId = ots.SaveTimeseriesExternalId
+                            }),
+                            DataSampling = new DataSamplingConfiguration()
+                            {
+                                ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
+                                SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
+                                Granularity = routineRev.Configuration.DataSampling.Granularity,
+                                ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
+                            },
+                            LogicalCheck = new LogicalCheckConfiguration()
+                            {
+                                Enabled = routineRev.Configuration.LogicalCheck.Enabled,
+                                ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
+                                AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
+                                Check = routineRev.Configuration.LogicalCheck.Operator,
+                                Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
+                            },
+                            SteadyStateDetection = new SteadyStateDetectionConfiguration()
+                            {
+                                Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
+                                ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
+                                AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
+                                MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
+                                VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
+                                SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
+                            },
+                            UserEmail = "",
+                            Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
+                            {
+                                Order = i,
+                                Steps = s.Steps.Select((step, j) => new CalculationProcedureStep()
+                                {
+                                    Step = j,
+                                    Type = step.StepType,
+                                    Arguments = step.Arguments
+                                })
+                            }),
+                            CreatedTime = routineRev.CreatedTime
+                        };
+                        V typedSimulationConfigurationWithRoutine = ToType(simulationConfigurationWithRoutine);
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V)typedSimulationConfigurationWithRoutine); // TODO we cannot upcast here
+
+                        T rState = StateFromRoutineRevision(routineRev, routineResource);
+                        if (rState == null)
+                        {
+                            continue;
+                        }
+                        var revisionId = routineRev.Id.ToString();
+                        if (!State.ContainsKey(revisionId))
+                        {
+                            // If the revision does not exist locally, add it to the state store
+                            State.Add(revisionId, rState);
+                        }
                     }
-                    file.Deserialized = true;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError("Could not parse simulation configuration for model {ModelName}: {Error}", file.ModelName, e.Message);
                 }
             }
+
+            // var files = State.Values
+            //     .Where(f => !string.IsNullOr Empty(f.FilePath) && !f.Deserialized).ToList();
+            // foreach (var file in files)
+            // {
+            //     try
+            //     {
+            //         var json = JsonConvert.DeserializeObject<V>(
+            //             System.IO.File.ReadAllText(file.FilePath),
+            //             new JsonSerializerSettings
+            //             {
+            //                 ContractResolver = new DefaultContractResolver
+            //                 {
+            //                     NamingStrategy = new CamelCaseNamingStrategy()
+            //                 },
+            //                 Converters = new List<JsonConverter>()
+            //                 {
+            //                     new Newtonsoft.Json.Converters.StringEnumConverter()
+            //                 }
+            //             });
+            //         if (!SimulationConfigurations.ContainsKey(file.Id))
+            //         {
+            //             SimulationConfigurations.Add(file.Id, json);
+            //         }
+            //         else
+            //         {
+            //             SimulationConfigurations[file.Id] = json;
+            //         }
+            //         file.Deserialized = true;
+            //     }
+            //     catch (Exception e)
+            //     {
+            //         Logger.LogError("Could not parse simulation configuration for model {ModelName}: {Error}", file.ModelName, e.Message);
+            //     }
         }
     }
+
+
 
     /// <summary>
     /// Interface for libraries that can provide configuration information
     /// </summary>
     /// <typeparam name="T">Configuration state type</typeparam>
     /// <typeparam name="V">Configuration object type</typeparam>
-    public interface IConfigurationProvider<T,V>
+    public interface IConfigurationProvider<T, V>
     {
         /// <summary>
         /// Dictionary of simulation configurations. The key is the file external ID
         /// </summary>
         Dictionary<string, V> SimulationConfigurations { get; }
 
+        //@todo : Remove this function
         /// <summary>
         /// Get the simulator configuration state object with the given parameters
         /// </summary>
@@ -263,6 +470,15 @@ namespace Cognite.Simulator.Utils
             string calcTypeUserDefined);
 
         /// <summary>
+        /// Get the simulator configuration state object with the given parameter
+        /// </summary>
+        /// <param name="routinerRevisionExternalId">Routine revision external id</param>
+        /// <returns>Simulation configuration state object</returns>
+        T GetSimulationConfigurationState(
+            string routineRevisionExternalId);
+        
+        //@todo : Remove this function
+        /// <summary>
         /// Get the simulator configuration state object with the given parameters
         /// </summary>
         /// <param name="simulator">Simulator name</param>
@@ -273,7 +489,16 @@ namespace Cognite.Simulator.Utils
             string simulator,
             string modelName,
             string calcName);
+    
+        /// <summary>
+        /// Get the simulation configuration object with the given property
+        /// </summary>
+        /// <param name="routinerRevisionExternalId">Simulator name</param>
+        /// <returns>Simulation configuration state object</returns>
+        V GetSimulationConfiguration(
+            string routinerRevisionExternalId);
 
+        //@todo : Remove this function
         /// <summary>
         /// Get the simulation configuration object with the given properties
         /// </summary>
@@ -286,6 +511,7 @@ namespace Cognite.Simulator.Utils
             string modelName,
             string calcName);
 
+        //@todo : Remove this function
         /// <summary>
         /// Get the simulation configuration object with the given properties
         /// </summary>
@@ -327,16 +553,21 @@ namespace Cognite.Simulator.Utils
         /// Simulation manual value inputs configuration
         /// </summary>
         public IEnumerable<InputConstantConfiguration> InputConstants { get; set; }
-        
+
         /// <summary>
         /// Times series that will hold simulation output data points
         /// </summary>
         public IEnumerable<OutputTimeSeriesConfiguration> OutputTimeSeries { get; set; }
-        
+
         /// <summary>
         /// Simulation routine
         /// </summary>
         public IEnumerable<CalculationProcedure> Routine { get; set; }
+
+        /// <summary>
+        /// Created time
+        /// </summary>
+        public long CreatedTime { get; set; }
     }
 
     /// <summary>
@@ -349,7 +580,7 @@ namespace Cognite.Simulator.Utils
         /// procedures
         /// </summary>
         public int Order { get; set; }
-        
+
         /// <summary>
         /// Steps contained in this procedure
         /// </summary>
@@ -365,19 +596,19 @@ namespace Cognite.Simulator.Utils
         /// Order in which to execute this step
         /// </summary>
         public int Step { get; set; }
-        
+
         /// <summary>
         /// Step type. When using <see cref="RoutineImplementationBase"/> as a base class for a routine,
         /// the valid types are <c>Get</c>, <c>Set</c> and <c>Command</c>
         /// </summary>
         public string Type { get; set; }
-        
+
         /// <summary>
         /// Dictionary containing any argument needed by specific simulator client to execute the step
         /// </summary>
         public Dictionary<string, string> Arguments { get; set; }
     }
-    
+
     /// <summary>
     /// Represents a configuration object for steady state simulations
     /// </summary>
@@ -387,17 +618,17 @@ namespace Cognite.Simulator.Utils
         /// Data sampling configuration
         /// </summary>
         public DataSamplingConfiguration DataSampling { get; set; }
-        
+
         /// <summary>
         /// Logical check configuration
         /// </summary>
         public LogicalCheckConfiguration LogicalCheck { get; set; }
-        
+
         /// <summary>
         /// Steady state detection configuration
         /// </summary>
         public SteadyStateDetectionConfiguration SteadyStateDetection { get; set; }
-        
+
         /// <summary>
         /// Simulation input time series configuration
         /// </summary>
@@ -511,17 +742,17 @@ namespace Cognite.Simulator.Utils
         /// Input name
         /// </summary>
         public string Name { get; set; }
-        
+
         /// <summary>
         /// Input type
         /// </summary>
         public string Type { get; set; }
-        
+
         /// <summary>
         /// Input unit (e.g. degC, BARg)
         /// </summary>
         public string Unit { get; set; }
-        
+
         /// <summary>
         /// Input unit type (e.g. Temperature, Pressure)
         /// </summary>
@@ -531,20 +762,20 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Output time series configuration
     /// </summary>
-    public class OutputTimeSeriesConfiguration :TimeSeriesConfiguration
+    public class OutputTimeSeriesConfiguration : TimeSeriesConfiguration
     {
         /// <summary>
         /// External id of the time series that will contain simulation output data points
         /// </summary>
         public string ExternalId { get; set; }
     }
-    
-    
+
+
     /// <summary>
     /// Input time series configuration
     /// </summary>
     public class InputTimeSeriesConfiguration : TimeSeriesConfiguration
-    {        
+    {
         /// <summary>
         /// External ID of the time series in CDF containing the input data points
         /// </summary>
@@ -566,12 +797,12 @@ namespace Cognite.Simulator.Utils
     /// Manually input the value into routine
     /// </summary>
     public class InputConstantConfiguration
-    {       
+    {
         /// <summary>
         /// Input name
         /// </summary>
         public string Name { get; set; }
-        
+
         /// <summary>
         /// Input type
         /// </summary>
@@ -581,7 +812,7 @@ namespace Cognite.Simulator.Utils
         /// Input unit (e.g. degC, BARg)
         /// </summary>
         public string Unit { get; set; }
-        
+
         /// <summary>
         /// Input unit type (e.g. Temperature, Pressure)
         /// </summary>
@@ -597,7 +828,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public string SaveTimeseriesExternalId { get; set; }
     }
-    
+
     /// <summary>
     /// Simulation schedule configuration
     /// </summary>
@@ -607,7 +838,7 @@ namespace Cognite.Simulator.Utils
         /// Whether or not to run on schedule
         /// </summary>
         public bool Enabled { get; set; }
-        
+
         /// <summary>
         /// Start time in milliseconds since Unix epoch
         /// </summary>
@@ -622,7 +853,7 @@ namespace Cognite.Simulator.Utils
         /// Start time as a <see cref="DateTime"/> object
         /// </summary>
         public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
-        
+
         /// <summary>
         /// Simulation frequency as a <see cref="TimeSpan"/> object
         /// </summary>
@@ -637,38 +868,43 @@ namespace Cognite.Simulator.Utils
     public class SimulationConfigurationBase
     {
         /// <summary>
+        /// External ID of the simulation configuration
+        /// </summary>
+        public string ExternalId { get; set; }
+
+        /// <summary>
         /// Simulator name
         /// </summary>
         public string Simulator { get; set; }
-        
+
         /// <summary>
         /// Model name
         /// </summary>
         public string ModelName { get; set; }
-        
+
         /// <summary>
         /// Calculation name
         /// </summary>
         public string CalculationName { get; set; }
-        
+
         /// <summary>
         /// Calculation type. Used to identify different types of calculations
         /// supported by a given simulator.
         /// </summary>
         public string CalculationType { get; set; }
-        
+
         /// <summary>
         /// User defined calculation type. User defined calculations will have
         /// <b>UserDefined</b> as <see cref="CalculationType"/>. This property
         /// provides a way of differentiating user defined calculations
         /// </summary>
         public string CalcTypeUserDefined { get; set; } = "";
-        
+
         /// <summary>
         /// Connector name
         /// </summary>
         public string Connector { get; set; }
-        
+
         /// <summary>
         /// Email of the user who created this configuration
         /// </summary>
@@ -684,6 +920,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public SimulatorCalculation Calculation => new SimulatorCalculation
         {
+            ExternalId = ExternalId,
             Model = new SimulatorModelInfo
             {
                 Name = ModelName,
@@ -758,7 +995,7 @@ namespace Cognite.Simulator.Utils
         public ConfigurationStateBase(string id) : base(id)
         {
         }
-        
+
         /// <summary>
         /// Data type of the file. For simulation configuration files, this is <see cref="SimulatorDataType.SimulationConfiguration"/> 
         /// </summary>
@@ -792,7 +1029,7 @@ namespace Cognite.Simulator.Utils
                 _lastRun = statePoco.LastRun;
             }
         }
-        
+
         /// <summary>
         /// Get the data object with the simulation configuration state properties to be persisted by
         /// the state store
@@ -833,7 +1070,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("run-data-sequence")]
         public string RunDataSequence { get; set; }
-        
+
         /// <summary>
         /// Index of the last row with data in the run configuration
         /// </summary>

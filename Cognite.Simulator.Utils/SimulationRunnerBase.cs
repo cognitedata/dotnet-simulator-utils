@@ -117,7 +117,7 @@ namespace Cognite.Simulator.Utils
                     Filter = new SimulationRunFilter()
                     {
                         SimulatorName = source.Key,
-                        Status = status
+                        Status = status,
                     }
                 };
 
@@ -125,7 +125,11 @@ namespace Cognite.Simulator.Utils
                     .ListSimulationRunsAsync(query, token)
                     .ConfigureAwait(false);
 
-                result.AddRange(runsResult.Items);
+                // @TODO : use api based filtering instead of doing this here
+                var connectorName = _connectorConfig.GetConnectorName();
+                var runsResultForCurrentConnector = runsResult.Items.Where(r => r.SimulatorIntegrationExternalId == connectorName);
+
+                result.AddRange(runsResultForCurrentConnector);
             }
             return result;
         }
@@ -332,18 +336,9 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
-            U calcState;
-            V calcConfig;
-            if (simEv.HasSimulationRun)
-            {
-                calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcTypeUserDefined);
-                calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcTypeUserDefined);
-            }
-            else
-            {
-                calcState = ConfigurationLibrary.GetSimulationConfigurationState(simulator, modelName, calcType, calcTypeUserDefined);
-                calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simulator, modelName, calcType, calcTypeUserDefined);
-            }
+            U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
+            V calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simEv.Run.RoutineRevisionExternalId);
+
             if (calcConfig == null || calcState == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
