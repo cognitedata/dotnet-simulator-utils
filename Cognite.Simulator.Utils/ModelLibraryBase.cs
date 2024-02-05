@@ -129,37 +129,46 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-            var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
-            if (localRevisions.Any())
+            try
             {
-                var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
-                    new SimulatorModelRevisionQuery
-                    {
-                        Filter = new SimulatorModelRevisionFilter
+                var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
+                if (localRevisions.Any())
+                {
+                    var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
+                        new SimulatorModelRevisionQuery
                         {
-                            ModelExternalIds = new List<string> { state.ModelExternalId }
-                        }
-                    }, token).ConfigureAwait(false);
-                
-                var revisionsInCdf = modelRevisionsInCdfRes.Items;
+                            Filter = new SimulatorModelRevisionFilter
+                            {
+                                ModelExternalIds = new List<string> { state.ModelExternalId }
+                            }
+                        }, token).ConfigureAwait(false);
+                    
+                    var revisionsInCdf = modelRevisionsInCdfRes.Items;
 
-                var statesToDelete = new List<T>();
-                foreach (var revision in localRevisions)
-                {
-                    if (!revisionsInCdf.Any(v => v.Id.ToString() == revision.Id))
+                    var statesToDelete = new List<T>();
+                    foreach (var revision in localRevisions)
                     {
-                        statesToDelete.Add(revision);
-                        State.Remove(revision.Id);
+                        if (!revisionsInCdf.Any(v => v.Id.ToString() == revision.Id))
+                        {
+                            statesToDelete.Add(revision);
+                            State.Remove(revision.Id);
+                        }
                     }
-                }
-                if (statesToDelete.Any())
-                {
-                    Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
-                        statesToDelete.Count,
-                        string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
-                    await RemoveStates(statesToDelete, token).ConfigureAwait(false);
-                }
+                    if (statesToDelete.Any())
+                    {
+                        Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
+                            statesToDelete.Count,
+                            string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
+                        await RemoveStates(statesToDelete, token).ConfigureAwait(false);
+                    }
+                }   
             }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Error verifying local model state: {Message}", e.Message);
+                return;
+            }
+            
         }
         
         /// <summary>
