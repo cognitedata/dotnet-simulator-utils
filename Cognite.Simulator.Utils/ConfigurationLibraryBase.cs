@@ -273,9 +273,9 @@ namespace Cognite.Simulator.Utils
                 {
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
-                        // TODO filter by created time, simulatorExternalIds, simulatorIntegrationExternalIds
+                        // TODO filter by created time, simulatorIntegrationExternalIds
                         // CreatedTime = new CogniteSdk.TimeRange() {  Min = _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() + 1 },
-                        //SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
+                        SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
                     }
                 },
                 token
