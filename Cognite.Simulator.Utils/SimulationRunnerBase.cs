@@ -104,34 +104,25 @@ namespace Cognite.Simulator.Utils
             SimulationRunStatus status,
             CancellationToken token)
         {
-            var result = new List<SimulationRun>();
             if (simulators == null || !simulators.Any())
             {
-                return result;
+                return new List<SimulationRun>();
             }
 
-            foreach (var source in simulators)
+            var query = new SimulationRunQuery()
             {
-                var query = new SimulationRunQuery()
+                Filter = new SimulationRunFilter()
                 {
-                    Filter = new SimulationRunFilter()
-                    {
-                        SimulatorName = source.Key,
-                        Status = status,
-                    }
-                };
+                    Status = status,
+                    SimulatorExternalIds = simulators.Keys.ToList(),
+                    SimulatorIntegrationExternalIds = new List<string>() { _connectorConfig.GetConnectorName() }
+                }
+            };
+            var runsResult = await _cdfSimulators
+                .ListSimulationRunsAsync(query, token)
+                .ConfigureAwait(false);
 
-                var runsResult = await _cdfSimulators
-                    .ListSimulationRunsAsync(query, token)
-                    .ConfigureAwait(false);
-
-                // @TODO : use api based filtering instead of doing this here
-                var connectorName = _connectorConfig.GetConnectorName();
-                var runsResultForCurrentConnector = runsResult.Items.Where(r => r.SimulatorIntegrationExternalId == connectorName);
-
-                result.AddRange(runsResultForCurrentConnector);
-            }
-            return result;
+            return runsResult.Items;
         }
 
         private async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(

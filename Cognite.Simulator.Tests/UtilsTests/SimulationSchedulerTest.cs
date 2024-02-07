@@ -82,8 +82,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Filter = new SimulationRunFilter
                         {
-                            // TODO: apply new filters
+                            SimulatorIntegrationExternalIds = new List<string> { "scheduler-test-connector" },
+                            SimulatorExternalIds = new List<string> { "PROSPER" },
                             Status = SimulationRunStatus.ready,
+                            ModelRevisionExternalIds = new List<string> { "PROSPER-Connector_Test_Model-2" },
                         },
                         Sort = new List<SimulatorSortItem>
                         {
@@ -93,14 +95,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
+                        Limit = 10,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
                 var latestEventsFiltered = simRuns.Items.Where(
-                    r => r.CreatedTime >= testStartTimeMillis &&
-                    r.SimulatorIntegrationExternalId == "scheduler-test-connector" && r.ModelRevisionExternalId == "PROSPER-Connector_Test_Model-2"
+                    r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
                 Assert.NotEmpty(latestEventsFiltered);
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);

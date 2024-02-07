@@ -207,18 +207,12 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(config));
             }
 
-            // TODO: get routine revision by id
-            var routineRevisions = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
-                new CogniteSdk.Alpha.SimulatorRoutineRevisionQuery
-                {
-                    Filter = new CogniteSdk.Alpha.SimulatorRoutineRevisionFilter
-                    {
-                        RoutineExternalIds = new List<string> { config.CalculationName },
-                    }
-                },
-                token: token).ConfigureAwait(false);
+            var routineRevision = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
+                new List<CogniteSdk.Identity> { new CogniteSdk.Identity(long.Parse(state.Id)) },
+                token
+            ).ConfigureAwait(false);
 
-            return routineRevisions.Items.Any(v => v.Id == long.Parse(state.Id));
+            return routineRevision != null;
         }
 
         /// <inheritdoc/>
@@ -279,8 +273,9 @@ namespace Cognite.Simulator.Utils
                 {
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
-                        // TODO filter by created time, simulatorExternalIds, simulatorIntegrationExternalIds
+                        // TODO filter by created time, simulatorIntegrationExternalIds
                         // CreatedTime = new CogniteSdk.TimeRange() {  Min = _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() + 1 },
+                        SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
                     }
                 },
                 token
