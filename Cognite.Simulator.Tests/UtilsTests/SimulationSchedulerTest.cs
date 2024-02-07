@@ -115,10 +115,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         .ConfigureAwait(false);
                 }
                 provider.Dispose(); // Dispose provider to also dispose managed services
-                if (Directory.Exists("./configurations"))
-                {
-                    Directory.Delete("./configurations", true);
-                }
+                // if (Directory.Exists("./configurations"))
+                // {
+                //     Directory.Delete("./configurations", true);
+                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
