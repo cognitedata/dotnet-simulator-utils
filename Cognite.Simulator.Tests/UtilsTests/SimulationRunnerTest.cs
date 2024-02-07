@@ -284,10 +284,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     Directory.Delete("./files", true);
                 }
-                if (Directory.Exists("./configurations"))
-                {
-                    Directory.Delete("./configurations", true);
-                }
+                // if (Directory.Exists("./configurations"))
+                // {
+                //     Directory.Delete("./configurations", true);
+                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);

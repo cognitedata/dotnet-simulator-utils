@@ -339,11 +339,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }, token);
         }
 
-        protected override TestFileState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
-        {
-            throw new NotImplementedException();
-        }
-
         protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
         {
             if (modelRevision == null)
@@ -385,12 +380,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 
             ILogger<ConfigurationLibraryTest> logger, 
-            FileDownloadClient downloadClient, 
             IExtractionStateStore store = null) : 
             base(
                 new FileLibraryConfig
                 {
-                    FilesDirectory = "./configurations",
+                    // FilesDirectory = "./configurations",
                     FilesTable = "ConfigurationFiles",
                     LibraryId = "ConfigurationState",
                     LibraryTable = "Library",
@@ -405,7 +399,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
-                cdf, logger, downloadClient, store)
+                cdf, logger, store)
         {
         }
 
@@ -427,25 +421,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Deserialized = false,
                 ExternalId = routineRevision.ExternalId,
             };
-        }
-
-        // protected override TestConfigurationState StateFromFile(CogniteSdk.File file)
-        // {
-        //     return new TestConfigurationState(file.ExternalId)
-        //     {
-        //         CdfId = file.Id,
-        //         DataSetId = file.DataSetId,
-        //         CreatedTime = file.CreatedTime,
-        //         UpdatedTime = file.LastUpdatedTime,
-        //         ModelName = file.Metadata[ModelMetadata.NameKey],
-        //         Source = file.Source,
-        //         Deserialized = false
-        //     };
-        // }
-
-        protected override TestConfigurationState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
-        {
-            throw new NotImplementedException();
         }
     }
 }

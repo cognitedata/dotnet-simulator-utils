@@ -160,13 +160,6 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Creates a state object of type <typeparamref name="T"/> from a
-        /// CDF file passed as parameter
-        /// </summary>
-        /// <returns>File state object</returns>
-        protected abstract T StateFromRoutineRevision(CogniteSdk.Alpha.SimulatorRoutineRevision routineRevision, CogniteSdk.Alpha.SimulatorRoutine routine);
-
-        /// <summary>
-        /// Creates a state object of type <typeparamref name="T"/> from a
         /// CDF Simulator model revision passed as parameter
         /// </summary>
         /// <param name="modelRevision">CDF Simulator model revision</param>
