@@ -173,7 +173,9 @@ namespace Cognite.Simulator.Utils
         /// Build a local state to keep track of what files exist and which ones have
         /// been downloaded.
         /// </summary>
-        private async Task FindFilesByRevisions(
+        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
+        /// <param name="token">Cancellation token</param>
+        private async Task FindFiles(
             bool onlyLatest,
             CancellationToken token)
         {
@@ -230,28 +232,6 @@ namespace Cognite.Simulator.Utils
             {
                 Logger.LogDebug("Failed to fetch model revisions from CDF: {Message}", e.Message);
             }
-        }
-
-        /// <summary>
-        /// Fetch the Files from CDF for the configured simulators and datasets.
-        /// Build a local state to keep track of what files exist and which ones have 
-        /// been downloaded.
-        /// </summary>
-        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
-        /// <param name="token">Cancellation token</param>
-        private async Task FindFiles(
-            bool onlyLatest,
-            CancellationToken token)
-        {
-            if (_resourceType == SimulatorDataType.ModelFile) {
-                // Use the simulator model revisions API
-                await FindFilesByRevisions(onlyLatest, token).ConfigureAwait(false);
-            } else {
-                
-                // throw new Exception("Only model files are supported");
-                // await FindFilesByMetadata(onlyLatest, token).ConfigureAwait(false);
-            }
-            
         }
 
         /// <summary>
