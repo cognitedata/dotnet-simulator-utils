@@ -29,6 +29,7 @@ namespace Cognite.Simulator.Utils
     {
         /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
+
         private IList<SimulatorConfig> _simulators;
         /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
@@ -352,11 +353,6 @@ namespace Cognite.Simulator.Utils
         /// Simulation routine
         /// </summary>
         public IEnumerable<CalculationProcedure> Routine { get; set; }
-
-        /// <summary>
-        /// Created time
-        /// </summary>
-        public long CreatedTime { get; set; }
     }
 
     /// <summary>
@@ -719,6 +715,11 @@ namespace Cognite.Simulator.Utils
             Type = CalculationType,
             UserDefinedType = CalcTypeUserDefined
         };
+
+        /// <summary>
+        /// Created time
+        /// </summary>
+        public long CreatedTime { get; set; }
     }
 
     /// <summary>
