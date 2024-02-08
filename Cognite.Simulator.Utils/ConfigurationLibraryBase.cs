@@ -19,16 +19,16 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
-    /// <typeparam name="V">Configuration object type. The contents of the JSON file are deserialized
+    /// <typeparam name="V">Configuration object type. The contents of the routine revision
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
-    public abstract class ConfigurationLibraryBase<T, U> : LocalLibrary<T, U>, IConfigurationProvider<T, SimulationConfigurationWithRoutine>
+    public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
         where T : ConfigurationStateBase
         where U : FileStatePoco
-        // where V : SimulationConfigurationWithRoutine
+        where V : SimulationConfigurationWithRoutine
     {
         /// <inheritdoc/>
-        public Dictionary<string, SimulationConfigurationWithRoutine> SimulationConfigurations { get; }
+        public Dictionary<string, V> SimulationConfigurations { get; }
         private IList<SimulatorConfig> _simulators;
         /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
@@ -50,14 +50,14 @@ namespace Cognite.Simulator.Utils
             base(config, logger, store)
         {
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            SimulationConfigurations = new Dictionary<string, SimulationConfigurationWithRoutine>();
+            SimulationConfigurations = new Dictionary<string, V>();
             _simulators = simulators;
         }
 
         /// <summary>
         /// Looks for the routine revision in the memory with the given external id
         /// </summary>
-        public SimulationConfigurationWithRoutine GetSimulationConfiguration(
+        public V GetSimulationConfiguration(
             string routineRevisionExternalId
             )
         {
@@ -90,7 +90,7 @@ namespace Cognite.Simulator.Utils
         /// <inheritdoc/>
         public async Task<bool> VerifyLocalConfigurationState(
             T state,
-            SimulationConfigurationWithRoutine config,
+            V config,
             CancellationToken token)
         {
             if (state == null)
@@ -131,6 +131,10 @@ namespace Cognite.Simulator.Utils
         protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
         {
             throw new NotImplementedException();
+        }
+
+        protected virtual V LocalConfigurationFromRoutine(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine) {
+            return (V) simulationConfigurationWithRoutine;
         }
 
         private async Task ReadConfigurations(CancellationToken token)
@@ -258,7 +262,8 @@ namespace Cognite.Simulator.Utils
                             }),
                             CreatedTime = routineRev.CreatedTime
                         };
-                        SimulationConfigurations.Add(routineRev.Id.ToString(), simulationConfigurationWithRoutine);
+                        var localConfigurationObject = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), localConfigurationObject);
 
                         T rState = StateFromRoutineRevision(routineRev, routineResource);
                         if (rState == null)
