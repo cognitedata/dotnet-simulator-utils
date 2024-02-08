@@ -375,7 +375,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithRoutine>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 
@@ -401,10 +401,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 },
                 cdf, logger, store)
         {
-        }
-
-        protected override SimulationConfigurationWithRoutine ToType(SimulationConfigurationWithRoutine routine) {
-            return routine;
         }
 
         protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)

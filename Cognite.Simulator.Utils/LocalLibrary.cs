@@ -1,27 +1,19 @@
 using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
-using CogniteSdk;
-using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a local file library. The library can be configured to fetch files
-    /// associated to a simulator and stored in a CDF dataset (see <seealso cref="SimulatorConfig"/>).
-    /// The files are stored locally at the folder specified in the library configuration (<seealso cref="FileLibraryConfig"/>).
-    /// Files are kept in sync with CDF, so that updates in the remote files are reflected on the local files.
+    /// Represents a local entity library.
+    /// Can be used to persist a list of remote entities locally together with
+    /// their state. Simpler version of the <see cref="FileLibrary{T, U}"/> class, that doesn't handle file download.
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
@@ -30,8 +22,8 @@ namespace Cognite.Simulator.Utils
         where U : FileStatePoco
     {
         /// <summary>
-        /// Dictionary holding the file states. The keys are the external ids of the
-        /// CDF files and the values are the state objects of type <typeparamref name="T"/>
+        /// Dictionary holding the entity states. The keys are the external ids of the
+        /// CDF resources and the values are the state objects of type <typeparamref name="T"/>
         /// </summary>
         public Dictionary<string, T> State { get; private set; }
 
@@ -42,14 +34,10 @@ namespace Cognite.Simulator.Utils
 
         // Other injected services
         private readonly FileLibraryConfig _config;
-        // private readonly IList<SimulatorConfig> _simulators;
         private readonly IExtractionStateStore _store;
-        // private readonly FileDownloadClient _downloadClient;
 
         // Internal objects
         private readonly BaseExtractionState _libState;
-        // private readonly SimulatorDataType _resourceType;
-        // private string _modelFolder;
 
         /// <summary>
         /// Creates a new instance of this library using the provided parameters.
@@ -71,7 +59,7 @@ namespace Cognite.Simulator.Utils
         }
         
         /// <summary>
-        /// Initializes the local file library. Creates the folder, find the files in CDF and restore state.
+        /// Initializes the local entity library. Finds entities in CDF and restores the state.
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
@@ -114,11 +102,11 @@ namespace Cognite.Simulator.Utils
                     }
                 }
             }
-            Logger.LogInformation("Local state store {Table} initiated. Tracking {Num} files", _config.FilesTable, State.Count);
+            Logger.LogInformation("Local state store {Table} initiated. Tracking {Num} entities", _config.FilesTable, State.Count);
         }
 
         /// <summary>
-        /// Remove the provided file states from the state store
+        /// Remove the provided entity states from the state store
         /// </summary>
         /// <param name="states">States to remove</param>
         /// <param name="token">Cancellation token</param>
@@ -132,14 +120,11 @@ namespace Cognite.Simulator.Utils
             }
             await _store.DeleteExtractionState(states, _config.FilesTable, token)
                 .ConfigureAwait(false);
-            // await _store
-            //     .RemoveFileStates(_config.FilesTable, states, token)
-            //     .ConfigureAwait(false);
         }
 
         /// <summary>
         /// Creates a list of the tasks performed by this library.
-        /// These include searching and downloading files ans saving state.
+        /// These include fetching the list of remote entities and saving state.
         /// </summary>
         /// <param name="token">Cancellation token</param>
         /// <returns>List of tasks</returns>
@@ -149,8 +134,8 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Save periodically the library state (first and last file creation timestamp) and the 
-        /// files state (path to the file stored locally)
+        /// Save periodically the library state (first and last entity creation timestamp) and the 
+        /// entity state
         /// </summary>
         /// <param name="token">Cancellation token</param>
         private async Task SaveStates(CancellationToken token)
@@ -168,8 +153,8 @@ namespace Cognite.Simulator.Utils
         }
 
          /// <summary>
-        /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
-        /// Files are saved with the internal CDF id as name
+        /// Periodically searches for entities CDF, in case new ones are found, store locally.
+        /// Entities are saved with the internal CDF id as name
         /// </summary>
         /// <param name="token">Cancellation token</param>
         private async Task FetchAndProcessRemoteState(CancellationToken token)
@@ -177,7 +162,7 @@ namespace Cognite.Simulator.Utils
             while (!token.IsCancellationRequested)
             {
                 string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
-                Logger.LogDebug("Updating file library. There are currently {Num} files. Extracted range: {TimeRange}",
+                Logger.LogDebug("Updating entity library. There are currently {Num} entities. Extracted range: {TimeRange}",
                     State.Count,
                     timeRange
                     );
@@ -203,9 +188,7 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Process files that have been downloaded. This method should open 
-        /// the file in a simulator, verify that it is valid, extract relevant data
-        /// and ingest it to CDF. 
+        /// Fetches entities from CDF
         /// </summary>
         /// <param name="token">Cancellation token</param>
         protected abstract void FetchRemoteState(CancellationToken token);

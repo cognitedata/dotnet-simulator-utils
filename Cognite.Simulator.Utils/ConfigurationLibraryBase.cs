@@ -13,23 +13,24 @@ using System.Threading.Tasks;
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a local configuration file library. This is a <see cref="FileLibrary{T, U}"/> that
-    /// fetches JSON simulation configuration files from CDF, save a local copy and parses the JSON
-    /// content as an object that can be used to drive simulations
+    /// Represents a local routine revision library.
+    /// It fetches all routine revisions from CDF and stores them in memory.
+    /// It also stores the state of the routine revisions (e.g. scheduling params) in a local state store (LocalLibrary).
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Configuration object type. The contents of the JSON file are deserialized
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
-    public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
+    public abstract class ConfigurationLibraryBase<T, U> : LocalLibrary<T, U>, IConfigurationProvider<T, SimulationConfigurationWithRoutine>
         where T : ConfigurationStateBase
         where U : FileStatePoco
-        where V : SimulationConfigurationWithRoutine
+        // where V : SimulationConfigurationWithRoutine
     {
         /// <inheritdoc/>
-        public Dictionary<string, V> SimulationConfigurations { get; }
+        public Dictionary<string, SimulationConfigurationWithRoutine> SimulationConfigurations { get; }
         private IList<SimulatorConfig> _simulators;
+        /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
 
         /// <summary>
@@ -39,7 +40,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulators">Dictionary of simulators</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
-        /// <param name="store">State store for models state</param>
+        /// <param name="store">State store for revisions state</param>
         public ConfigurationLibraryBase(
             FileLibraryConfig config,
             IList<SimulatorConfig> simulators,
@@ -49,13 +50,14 @@ namespace Cognite.Simulator.Utils
             base(config, logger, store)
         {
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            SimulationConfigurations = new Dictionary<string, V>();
+            SimulationConfigurations = new Dictionary<string, SimulationConfigurationWithRoutine>();
             _simulators = simulators;
         }
 
-        /// <inheritdoc/>
-        /// 
-        public V GetSimulationConfiguration(
+        /// <summary>
+        /// Looks for the routine revision in the memory with the given external id
+        /// </summary>
+        public SimulationConfigurationWithRoutine GetSimulationConfiguration(
             string routineRevisionExternalId
             )
         {
@@ -88,7 +90,7 @@ namespace Cognite.Simulator.Utils
         /// <inheritdoc/>
         public async Task<bool> VerifyLocalConfigurationState(
             T state,
-            V config,
+            SimulationConfigurationWithRoutine config,
             CancellationToken token)
         {
             if (state == null)
@@ -118,7 +120,7 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Process model files that have been downloaded
+        /// Fetch routine revisions from CDF and store them in memory
         /// </summary>
         /// <param name="token">Cancellation token</param>
         protected override void FetchRemoteState(CancellationToken token)
@@ -130,8 +132,6 @@ namespace Cognite.Simulator.Utils
         {
             throw new NotImplementedException();
         }
-
-        protected abstract V ToType(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine);
 
         private async Task ReadConfigurations(CancellationToken token)
         {
@@ -258,8 +258,7 @@ namespace Cognite.Simulator.Utils
                             }),
                             CreatedTime = routineRev.CreatedTime
                         };
-                        V typedSimulationConfigurationWithRoutine = ToType(simulationConfigurationWithRoutine);
-                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V)typedSimulationConfigurationWithRoutine); // TODO we cannot upcast here
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), simulationConfigurationWithRoutine);
 
                         T rState = StateFromRoutineRevision(routineRev, routineResource);
                         if (rState == null)
@@ -296,7 +295,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Get the simulator configuration state object with the given parameter
         /// </summary>
-        /// <param name="routinerRevisionExternalId">Routine revision external id</param>
+        /// <param name="routineRevisionExternalId">Routine revision external id</param>
         /// <returns>Simulation configuration state object</returns>
         T GetSimulationConfigurationState(
             string routineRevisionExternalId);
@@ -788,16 +787,6 @@ namespace Cognite.Simulator.Utils
         public override string GetDataType()
         {
             return SimulatorDataType.SimulationConfiguration.MetadataValue();
-        }
-
-        /// <summary>
-        /// Returns the file extension used to store the simulation configuration files locally. 
-        /// <b>json</b> by default
-        /// </summary>
-        /// <returns>File extension</returns>
-        public override string GetExtension()
-        {
-            return "json";
         }
 
         /// <summary>
