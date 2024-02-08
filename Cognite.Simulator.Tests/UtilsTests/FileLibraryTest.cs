@@ -174,10 +174,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                // if (Directory.Exists("./configurations"))
-                // {
-                //     Directory.Delete("./configurations", true);
-                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
@@ -256,10 +252,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                // if (Directory.Exists("./configurations"))
-                // {
-                //     Directory.Delete("./configurations", true);
-                // }
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
@@ -384,7 +376,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             base(
                 new FileLibraryConfig
                 {
-                    // FilesDirectory = "./configurations",
                     FilesTable = "ConfigurationFiles",
                     LibraryId = "ConfigurationState",
                     LibraryTable = "Library",

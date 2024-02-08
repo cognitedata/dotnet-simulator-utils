@@ -10,8 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,6 +105,9 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {
+            if (_resourceType != SimulatorDataType.ModelFile) {
+                throw new ArgumentException("Only model files are supported");
+            }
             Logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
             var dir = Directory.CreateDirectory(_modelFolder);
             _modelFolder = dir.FullName;
@@ -308,10 +309,6 @@ namespace Cognite.Simulator.Utils
                         CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
                     try
                     {   
-                        if (_resourceType != SimulatorDataType.ModelFile) {
-                            continue; // TODO this is handled by routines now, we don't need to download files
-                            // TODO: make a simpler base class for routines (no file download, only local state, etc)
-                        }
                         var fileId = new Identity(file.CdfId);
                         var response = await CdfFiles
                             .DownloadAsync(new[] { fileId }, token)
