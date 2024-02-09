@@ -2,38 +2,37 @@
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a local configuration file library. This is a <see cref="FileLibrary{T, U}"/> that
-    /// fetches JSON simulation configuration files from CDF, save a local copy and parses the JSON
-    /// content as an object that can be used to drive simulations
+    /// Represents a local routine revision library.
+    /// It fetches all routine revisions from CDF and stores them in memory.
+    /// It also stores the state of the routine revisions (e.g. scheduling params) in a local state store (LocalLibrary).
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
-    /// <typeparam name="V">Configuration object type. The contents of the JSON file are deserialized
+    /// <typeparam name="V">Configuration object type. The contents of the routine revision
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
-    public abstract class ConfigurationLibraryBase<T, U, V> : FileLibrary<T, U>, IConfigurationProvider<T, V>
+    public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
         where T : ConfigurationStateBase
         where U : FileStatePoco
         where V : SimulationConfigurationWithRoutine
     {
         /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
+
         private IList<SimulatorConfig> _simulators;
+        /// <inheritdoc/>
+        protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -42,23 +41,23 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulators">Dictionary of simulators</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
-        /// <param name="downloadClient">HTTP client to download files</param>
-        /// <param name="store">State store for models state</param>
+        /// <param name="store">State store for revisions state</param>
         public ConfigurationLibraryBase(
             FileLibraryConfig config,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ILogger logger,
-            FileDownloadClient downloadClient,
             IExtractionStateStore store = null) :
-            base(SimulatorDataType.SimulationConfiguration, config, simulators, cdf, logger, downloadClient, store)
+            base(config, logger, store)
         {
+            CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             SimulationConfigurations = new Dictionary<string, V>();
             _simulators = simulators;
         }
 
-        /// <inheritdoc/>
-        /// 
+        /// <summary>
+        /// Looks for the routine revision in the memory with the given external id
+        /// </summary>
         public V GetSimulationConfiguration(
             string routineRevisionExternalId
             )
@@ -71,64 +70,7 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        public V GetSimulationConfiguration(
-            string simulator,
-            string modelName,
-            string calcType) {
-            var calcConfigs = SimulationConfigurations.Values.Where(c => c.Simulator == simulator && c.ModelName == modelName && c.CalculationType == calcType);
-            if (calcConfigs.Any())
-            {
-                return calcConfigs.First();
-            }
-            return null;
-        }
-
-        //@todo : Remove this function
-        public V GetSimulationConfiguration(
-            string simulator,
-            string modelName,
-            string calcType,
-            string calcTypeUserDefined)
-        {
-            var calcConfigs = SimulationConfigurations.Values;
-            // .Where(c => c.Simulator == simulator );
-            // c.ModelName == modelName &&
-            // c.CalculationType == calcType &&
-            // (string.IsNullOrEmpty(calcTypeUserDefined) || c.CalcTypeUserDefined == calcTypeUserDefined));
-            if (calcConfigs.Any())
-            {
-                return calcConfigs.First();
-            }
-            return null;
-        }
-
-        //@todo : Remove this function
         /// <inheritdoc/>
-        public T GetSimulationConfigurationState(
-            string simulator,
-            string modelName,
-            string calcType,
-            string calcTypeUserDefined)
-        {
-            var calcConfigs = SimulationConfigurations
-                .Where(c => c.Value.Simulator == simulator &&
-                    c.Value.ModelName == modelName &&
-                    c.Value.CalculationType == calcType &&
-                    (string.IsNullOrEmpty(calcTypeUserDefined) || c.Value.CalcTypeUserDefined == calcTypeUserDefined));
-            if (calcConfigs.Any())
-            {
-                var id = calcConfigs.First().Key;
-                if (State.TryGetValue(id, out var configState))
-                {
-                    return configState;
-                }
-            }
-            return null;
-        }
-
-        /// <inheritdoc/>
-        /// 
-
         public T GetSimulationConfigurationState(
             string routineRevisionExternalId)
         {
@@ -146,75 +88,6 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        //@todo : Remove this function
-        public T GetSimulationConfigurationState(
-            string simulator,
-            string modelName,
-            string calcName)
-        {
-            
-            // var calcConfigs = SimulationConfigurations
-            //     .Where(c => c.Value.Simulator == simulator &&
-            //         c.Value.ModelName == modelName &&
-            //         c.Value.CalculationName == calcName)
-            //     .OrderByDescending(c => c.Value.CreatedTime);
-            // if (calcConfigs.Any())
-            // {
-            //     Console.WriteLine("At this point");
-            //     var id = calcConfigs.First().Key;
-            //     Console.Write("Got id = " + id);
-            //     if (State.TryGetValue(id, out var configState))
-            //     {
-            //         Console.Write("Returning state for id = " + id);
-            //         return configState;
-            //     }
-            // }
-            var calcConfigs = SimulationConfigurations
-                // .Where(c => c.Value.Simulator == simulator)
-                //     c.Value.ModelName == modelName &&
-                //     c.Value.CalculationName == calcName)
-                .OrderByDescending(c => c.Value.CreatedTime);
-            if (calcConfigs.Any())
-            {
-                var id = calcConfigs.First().Key;
-                if (State.TryGetValue(id, out var configState))
-                {
-                    return configState;
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Determines if the given configuration exists or not by trying to fetch it
-        /// from CDF. This method can be overridden to add extra verification steps
-        /// </summary>
-        /// <param name="state">Configuration state</param>
-        /// <param name="config">Configuration object</param>
-        /// <param name="token">Cancellation token</param>
-        /// <returns><c>true</c> if the configuration can be fetched from CDF, <c>false</c> otherwise</returns>
-        protected virtual async Task<bool> ConfigurationFileExistsInCdf(
-            T state,
-            V config,
-            CancellationToken token)
-        {
-            if (state == null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
-            if (config == null)
-            {
-                throw new ArgumentNullException(nameof(config));
-            }
-
-            var routineRevision = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
-                new List<CogniteSdk.Identity> { new CogniteSdk.Identity(long.Parse(state.Id)) },
-                token
-            ).ConfigureAwait(false);
-
-            return routineRevision != null;
-        }
-
         /// <inheritdoc/>
         public async Task<bool> VerifyLocalConfigurationState(
             T state,
@@ -229,11 +102,15 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(config));
             }
-            var exists = await ConfigurationFileExistsInCdf(state, config, token).ConfigureAwait(false);
-            if (exists)
+            var revisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
+                new List<CogniteSdk.Identity> { new CogniteSdk.Identity(long.Parse(state.Id)) },
+                token
+            ).ConfigureAwait(false);
+            if (revisionRes.Count() == 1)
             {
                 return true;
             }
+
             Logger.LogWarning("Removing {Model} - {Calc} calculation configuration, not found in CDF",
                 state.ModelName,
                 config.CalculationName);
@@ -244,20 +121,25 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Process model files that have been downloaded
+        /// Fetch routine revisions from CDF and store them in memory
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        protected override void ProcessDownloadedFiles(CancellationToken token)
+        protected override void FetchRemoteState(CancellationToken token)
         {
             Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
-        protected abstract V ToType(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine);
+        protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected virtual V LocalConfigurationFromRoutine(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine) {
+            return (V) simulationConfigurationWithRoutine;
+        }
 
         private async Task ReadConfigurations(CancellationToken token)
         {
-            // throw new Exception("not implemented");
-
             var routinesRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
                 new SimulatorRoutineQuery()
                 {
@@ -381,8 +263,8 @@ namespace Cognite.Simulator.Utils
                             }),
                             CreatedTime = routineRev.CreatedTime
                         };
-                        V typedSimulationConfigurationWithRoutine = ToType(simulationConfigurationWithRoutine);
-                        SimulationConfigurations.Add(routineRev.Id.ToString(), (V)typedSimulationConfigurationWithRoutine); // TODO we cannot upcast here
+                        var localConfigurationObject = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
+                        SimulationConfigurations.Add(routineRev.Id.ToString(), localConfigurationObject);
 
                         T rState = StateFromRoutineRevision(routineRev, routineResource);
                         if (rState == null)
@@ -399,39 +281,6 @@ namespace Cognite.Simulator.Utils
                 }
             }
 
-            // var files = State.Values
-            //     .Where(f => !string.IsNullOr Empty(f.FilePath) && !f.Deserialized).ToList();
-            // foreach (var file in files)
-            // {
-            //     try
-            //     {
-            //         var json = JsonConvert.DeserializeObject<V>(
-            //             System.IO.File.ReadAllText(file.FilePath),
-            //             new JsonSerializerSettings
-            //             {
-            //                 ContractResolver = new DefaultContractResolver
-            //                 {
-            //                     NamingStrategy = new CamelCaseNamingStrategy()
-            //                 },
-            //                 Converters = new List<JsonConverter>()
-            //                 {
-            //                     new Newtonsoft.Json.Converters.StringEnumConverter()
-            //                 }
-            //             });
-            //         if (!SimulationConfigurations.ContainsKey(file.Id))
-            //         {
-            //             SimulationConfigurations.Add(file.Id, json);
-            //         }
-            //         else
-            //         {
-            //             SimulationConfigurations[file.Id] = json;
-            //         }
-            //         file.Deserialized = true;
-            //     }
-            //     catch (Exception e)
-            //     {
-            //         Logger.LogError("Could not parse simulation configuration for model {ModelName}: {Error}", file.ModelName, e.Message);
-            //     }
         }
     }
 
@@ -449,41 +298,14 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         Dictionary<string, V> SimulationConfigurations { get; }
 
-        //@todo : Remove this function
-        /// <summary>
-        /// Get the simulator configuration state object with the given parameters
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <param name="calcType">Calculation type</param>
-        /// <param name="calcTypeUserDefined">User defined calculation type</param>
-        /// <returns>Simulation configuration state object</returns>
-        T GetSimulationConfigurationState(
-            string simulator,
-            string modelName,
-            string calcType,
-            string calcTypeUserDefined);
-
         /// <summary>
         /// Get the simulator configuration state object with the given parameter
         /// </summary>
-        /// <param name="routinerRevisionExternalId">Routine revision external id</param>
+        /// <param name="routineRevisionExternalId">Routine revision external id</param>
         /// <returns>Simulation configuration state object</returns>
         T GetSimulationConfigurationState(
             string routineRevisionExternalId);
         
-        //@todo : Remove this function
-        /// <summary>
-        /// Get the simulator configuration state object with the given parameters
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <param name="calcName">Calculation name</param>
-        /// <returns>Simulation configuration state object</returns>
-        T GetSimulationConfigurationState(
-            string simulator,
-            string modelName,
-            string calcName);
     
         /// <summary>
         /// Get the simulation configuration object with the given property
@@ -493,33 +315,6 @@ namespace Cognite.Simulator.Utils
         V GetSimulationConfiguration(
             string routinerRevisionExternalId);
 
-        //@todo : Remove this function
-        /// <summary>
-        /// Get the simulation configuration object with the given properties
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <param name="calcName">Calculation name</param>
-        /// <returns>Simulation configuration state object</returns>
-        V GetSimulationConfiguration(
-            string simulator,
-            string modelName,
-            string calcName);
-
-        //@todo : Remove this function
-        /// <summary>
-        /// Get the simulation configuration object with the given properties
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        /// <param name="calcType">Calculation type</param>
-        /// <param name="calcTypeUserDefined">User defined calculation type</param>
-        /// <returns>Simulation configuration object</returns>
-        V GetSimulationConfiguration(
-            string simulator,
-            string modelName,
-            string calcType,
-            string calcTypeUserDefined);
 
         /// <summary>
         /// Persists the configuration library state from memory to the store
@@ -558,11 +353,6 @@ namespace Cognite.Simulator.Utils
         /// Simulation routine
         /// </summary>
         public IEnumerable<CalculationProcedure> Routine { get; set; }
-
-        /// <summary>
-        /// Created time
-        /// </summary>
-        public long CreatedTime { get; set; }
     }
 
     /// <summary>
@@ -925,6 +715,11 @@ namespace Cognite.Simulator.Utils
             Type = CalculationType,
             UserDefinedType = CalcTypeUserDefined
         };
+
+        /// <summary>
+        /// Created time
+        /// </summary>
+        public long CreatedTime { get; set; }
     }
 
     /// <summary>
@@ -998,16 +793,6 @@ namespace Cognite.Simulator.Utils
         public override string GetDataType()
         {
             return SimulatorDataType.SimulationConfiguration.MetadataValue();
-        }
-
-        /// <summary>
-        /// Returns the file extension used to store the simulation configuration files locally. 
-        /// <b>json</b> by default
-        /// </summary>
-        /// <returns>File extension</returns>
-        public override string GetExtension()
-        {
-            return "json";
         }
 
         /// <summary>

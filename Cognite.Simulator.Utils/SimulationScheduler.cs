@@ -95,11 +95,11 @@ namespace Cognite.Simulator.Utils
             {
                 var now = DateTime.UtcNow;
                 var eventsToCreate = new List<SimulationEvent>();
-                var configurations = _configLib.SimulationConfigurations;
-                foreach (var configuration in configurations)
+                var configurations = _configLib.SimulationConfigurations.Values
+                    .GroupBy(c => c.CalculationName)
+                    .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
+                foreach (var configObj in configurations)
                 {
-                    var configObj = configuration.Value;
-
                     U configState = _configLib.GetSimulationConfigurationState(
                         configObj.ExternalId
                     );

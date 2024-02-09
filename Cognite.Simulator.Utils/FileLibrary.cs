@@ -10,8 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,6 +105,9 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {
+            if (_resourceType != SimulatorDataType.ModelFile) {
+                throw new ArgumentException("Only model files are supported");
+            }
             Logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
             var dir = Directory.CreateDirectory(_modelFolder);
             _modelFolder = dir.FullName;
@@ -160,13 +161,6 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Creates a state object of type <typeparamref name="T"/> from a
-        /// CDF file passed as parameter
-        /// </summary>
-        /// <returns>File state object</returns>
-        protected abstract T StateFromRoutineRevision(CogniteSdk.Alpha.SimulatorRoutineRevision routineRevision, CogniteSdk.Alpha.SimulatorRoutine routine);
-
-        /// <summary>
-        /// Creates a state object of type <typeparamref name="T"/> from a
         /// CDF Simulator model revision passed as parameter
         /// </summary>
         /// <param name="modelRevision">CDF Simulator model revision</param>
@@ -179,7 +173,9 @@ namespace Cognite.Simulator.Utils
         /// Build a local state to keep track of what files exist and which ones have
         /// been downloaded.
         /// </summary>
-        private async Task FindFilesByRevisions(
+        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
+        /// <param name="token">Cancellation token</param>
+        private async Task FindFiles(
             bool onlyLatest,
             CancellationToken token)
         {
@@ -239,28 +235,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Fetch the Files from CDF for the configured simulators and datasets.
-        /// Build a local state to keep track of what files exist and which ones have 
-        /// been downloaded.
-        /// </summary>
-        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
-        /// <param name="token">Cancellation token</param>
-        private async Task FindFiles(
-            bool onlyLatest,
-            CancellationToken token)
-        {
-            if (_resourceType == SimulatorDataType.ModelFile) {
-                // Use the simulator model revisions API
-                await FindFilesByRevisions(onlyLatest, token).ConfigureAwait(false);
-            } else {
-                
-                // throw new Exception("Only model files are supported");
-                // await FindFilesByMetadata(onlyLatest, token).ConfigureAwait(false);
-            }
-            
-        }
-
-        /// <summary>
         /// Creates a list of the tasks performed by this library.
         /// These include searching and downloading files ans saving state.
         /// </summary>
@@ -315,10 +289,6 @@ namespace Cognite.Simulator.Utils
                         CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
                     try
                     {   
-                        if (_resourceType != SimulatorDataType.ModelFile) {
-                            continue; // TODO this is handled by routines now, we don't need to download files
-                            // TODO: make a simpler base class for routines (no file download, only local state, etc)
-                        }
                         var fileId = new Identity(file.CdfId);
                         var response = await CdfFiles
                             .DownloadAsync(new[] { fileId }, token)
