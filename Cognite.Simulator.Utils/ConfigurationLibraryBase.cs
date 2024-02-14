@@ -61,6 +61,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         private async Task<(V, T)> TryReadRoutineRevisionFromCdf(string routineRevisionExternalId)
         {
+            Logger.LogInformation("Local routine revision {Id} not found, attempting to fetch from remote", routineRevisionExternalId);
             try {
                 var routineRevisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
                     new List<CogniteSdk.Identity> { new CogniteSdk.Identity(routineRevisionExternalId) }
