@@ -69,17 +69,7 @@ namespace Cognite.Simulator.Utils
                 var routineRevision = routineRevisionRes.FirstOrDefault();
                 if (routineRevision != null)
                 {
-                    var routineResourceRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
-                        new SimulatorRoutineQuery()
-                        {
-                            Filter = new SimulatorRoutineFilter() { ModelExternalIds = new List<string> { routineRevision.ModelExternalId } }
-                        }
-                    ).ConfigureAwait(false);
-                    var routineResource = routineResourceRes.Items.Where(r => r.ExternalId == routineRevision.ExternalId).FirstOrDefault();
-                    if (routineResource != null)
-                    {
-                        return ReadAndSaveRoutineRevision(routineRevision, routineResource);
-                    }
+                    return ReadAndSaveRoutineRevision(routineRevision);
                 }
             } catch (CogniteException e) {
                 Logger.LogError(e, "Cannot find routine revision {Id} on remote", routineRevisionExternalId);
@@ -167,7 +157,7 @@ namespace Cognite.Simulator.Utils
             Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
-        protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
+        protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
         {
             throw new NotImplementedException();
         }
@@ -176,7 +166,7 @@ namespace Cognite.Simulator.Utils
             return (V) simulationConfigurationWithRoutine;
         }
 
-        private (V, T) ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev, SimulatorRoutine routineResource) {
+        private (V, T) ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
             V localConfiguration = null;
             T rState = null;
             if (routineRev.Script == null)
@@ -191,11 +181,11 @@ namespace Cognite.Simulator.Utils
             {
                 ExternalId = routineRev.ExternalId,
                 Simulator = simulators[routineRev.SimulatorExternalId].Name,
-                ModelName = routineResource.ModelExternalId,
+                ModelName = routineRev.ModelExternalId,
                 CalculationName = routineRev.RoutineExternalId,
                 CalculationType = "UserDefined",
                 CalcTypeUserDefined = routineRev.RoutineExternalId,
-                Connector = routineResource.SimulatorIntegrationExternalId,
+                Connector = routineRev.SimulatorIntegrationExternalId,
                 Schedule = new ScheduleConfiguration()
                 {
                     Enabled = routineRev.Configuration.Schedule.Enabled,
@@ -269,7 +259,7 @@ namespace Cognite.Simulator.Utils
             localConfiguration = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
             SimulationConfigurations.Add(routineRev.Id.ToString(), localConfiguration);
 
-            rState = StateFromRoutineRevision(routineRev, routineResource);
+            rState = StateFromRoutineRevision(routineRev);
             if (rState != null)
             {   
                 var revisionId = routineRev.Id.ToString();
@@ -284,16 +274,6 @@ namespace Cognite.Simulator.Utils
 
         private async Task ReadConfigurations(CancellationToken token)
         {
-            var routinesRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
-                new SimulatorRoutineQuery()
-                {
-                    Filter = new SimulatorRoutineFilter() { }
-                },
-                token
-            ).ConfigureAwait(false);
-
-            var routinesMap = routinesRes.Items.ToDictionary(r => r.ExternalId, r => r);
-
             var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
                 new SimulatorRoutineRevisionQuery()
                 {
@@ -315,7 +295,7 @@ namespace Cognite.Simulator.Utils
             {
                 if (!SimulationConfigurations.ContainsKey(routineRev.Id.ToString()))
                 {
-                    ReadAndSaveRoutineRevision(routineRev, routinesMap[routineRev.RoutineExternalId]);
+                    ReadAndSaveRoutineRevision(routineRev);
                 }
             }
         }
