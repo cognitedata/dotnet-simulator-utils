@@ -56,6 +56,28 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Fetch routine revisions from CDF and store them in memory and state store
+        /// This method is used to populate the local routine library with the latest routine revisions "on demand", i.e. right upon simulation run
+        /// </summary>
+        private async Task<(V, T)> TryReadRoutineRevisionFromCdf(string routineRevisionExternalId)
+        {
+            Logger.LogInformation("Local routine revision {Id} not found, attempting to fetch from remote", routineRevisionExternalId);
+            try {
+                var routineRevisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
+                    new List<CogniteSdk.Identity> { new CogniteSdk.Identity(routineRevisionExternalId) }
+                ).ConfigureAwait(false);
+                var routineRevision = routineRevisionRes.FirstOrDefault();
+                if (routineRevision != null)
+                {
+                    return ReadAndSaveRoutineRevision(routineRevision);
+                }
+            } catch (CogniteException e) {
+                Logger.LogError(e, "Cannot find routine revision {Id} on remote", routineRevisionExternalId);
+            }
+            return (null, null);
+        }
+
+        /// <summary>
         /// Looks for the routine revision in the memory with the given external id
         /// </summary>
         public V GetSimulationConfiguration(
@@ -67,7 +89,10 @@ namespace Cognite.Simulator.Utils
             {
                 return calcConfigs.First();
             }
-            return null;
+
+            (V calcConfig, _) = TryReadRoutineRevisionFromCdf(routineRevisionExternalId).GetAwaiter().GetResult();
+
+            return calcConfig;
         }
 
         /// <inheritdoc/>
@@ -85,7 +110,10 @@ namespace Cognite.Simulator.Utils
                     return configState;
                 }
             }
-            return null;
+
+            (_, T newConfigState) = TryReadRoutineRevisionFromCdf(routineRevisionExternalId).GetAwaiter().GetResult();
+
+            return newConfigState;
         }
 
         /// <inheritdoc/>
@@ -129,7 +157,7 @@ namespace Cognite.Simulator.Utils
             Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
-        protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
+        protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
         {
             throw new NotImplementedException();
         }
@@ -138,18 +166,114 @@ namespace Cognite.Simulator.Utils
             return (V) simulationConfigurationWithRoutine;
         }
 
+        private (V, T) ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
+            V localConfiguration = null;
+            T rState = null;
+            if (routineRev.Script == null)
+            {
+                Logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
+                return (localConfiguration, rState);
+            }
+            
+            var simulators = _simulators.ToDictionary(s => s.Name, s => s);
+            // TODO: we should rather use the new type natively
+            var simulationConfigurationWithRoutine = new SimulationConfigurationWithRoutine()
+            {
+                ExternalId = routineRev.ExternalId,
+                Simulator = simulators[routineRev.SimulatorExternalId].Name,
+                ModelName = routineRev.ModelExternalId,
+                CalculationName = routineRev.RoutineExternalId,
+                CalculationType = "UserDefined",
+                CalcTypeUserDefined = routineRev.RoutineExternalId,
+                Connector = routineRev.SimulatorIntegrationExternalId,
+                Schedule = new ScheduleConfiguration()
+                {
+                    Enabled = routineRev.Configuration.Schedule.Enabled,
+                    Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
+                    Repeat = routineRev.Configuration.Schedule.Repeat
+                },
+                InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
+                {
+                    Name = ic.Name,
+                    Type = ic.ReferenceId,
+                    Unit = ic.Unit,
+                    UnitType = ic.UnitType,
+                    Value = ic.Value,
+                    SaveTimeseriesExternalId = ic.SaveTimeseriesExternalId
+                }),
+                InputTimeSeries = routineRev.Configuration.InputTimeseries.Select(its => new InputTimeSeriesConfiguration()
+                {
+                    Name = its.Name,
+                    Type = its.ReferenceId,
+                    Unit = its.Unit,
+                    UnitType = its.UnitType,
+                    SensorExternalId = its.SourceExternalId,
+                    AggregateType = its.Aggregate,
+                    SampleExternalId = its.SaveTimeseriesExternalId
+                }),
+                OutputTimeSeries = routineRev.Configuration.OutputTimeseries.Select(ots => new OutputTimeSeriesConfiguration()
+                {
+                    Name = ots.Name,
+                    Type = ots.ReferenceId,
+                    Unit = ots.Unit,
+                    UnitType = ots.UnitType,
+                    ExternalId = ots.SaveTimeseriesExternalId
+                }),
+                DataSampling = new DataSamplingConfiguration()
+                {
+                    ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
+                    SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
+                    Granularity = routineRev.Configuration.DataSampling.Granularity,
+                    ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
+                },
+                LogicalCheck = new LogicalCheckConfiguration()
+                {
+                    Enabled = routineRev.Configuration.LogicalCheck.Enabled,
+                    ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
+                    Check = routineRev.Configuration.LogicalCheck.Operator,
+                    Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
+                },
+                SteadyStateDetection = new SteadyStateDetectionConfiguration()
+                {
+                    Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
+                    ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
+                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
+                    VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
+                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
+                },
+                UserEmail = "",
+                Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
+                {
+                    Order = i,
+                    Steps = s.Steps.Select((step, j) => new CalculationProcedureStep()
+                    {
+                        Step = j,
+                        Type = step.StepType,
+                        Arguments = step.Arguments
+                    })
+                }),
+                CreatedTime = routineRev.CreatedTime
+            };
+            localConfiguration = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
+            SimulationConfigurations.Add(routineRev.Id.ToString(), localConfiguration);
+
+            rState = StateFromRoutineRevision(routineRev);
+            if (rState != null)
+            {   
+                var revisionId = routineRev.Id.ToString();
+                if (!State.ContainsKey(revisionId))
+                {
+                    // If the revision does not exist locally, add it to the state store
+                    State.Add(revisionId, rState);
+                }
+            }
+            return (localConfiguration, rState);
+        }
+
         private async Task ReadConfigurations(CancellationToken token)
         {
-            var routinesRes = await CdfSimulatorResources.ListSimulatorRoutinesAsync(
-                new SimulatorRoutineQuery()
-                {
-                    Filter = new SimulatorRoutineFilter() { }
-                },
-                token
-            ).ConfigureAwait(false);
-
-            var routinesMap = routinesRes.Items.ToDictionary(r => r.ExternalId, r => r);
-
             var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
                 new SimulatorRoutineRevisionQuery()
                 {
@@ -163,124 +287,17 @@ namespace Cognite.Simulator.Utils
                 token
             ).ConfigureAwait(false);
 
-            var simulators = _simulators.ToDictionary(s => s.Name, s => s);
-
             // TODO: what do we do with the timerange now that we don't use FileLibrary?
             // TODO: we need our own _libState
-            var routineRevisions = routineRevisionsRes.Items.Where(
-                r => simulators.ContainsKey(r.SimulatorExternalId)
-            ).ToList();
+            var routineRevisions = routineRevisionsRes.Items;
 
             foreach (var routineRev in routineRevisions)
             {
                 if (!SimulationConfigurations.ContainsKey(routineRev.Id.ToString()))
                 {
-                    if (routineRev.Script == null)
-                    {
-                        Logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
-                        continue;
-                    }
-                    else
-                    {
-                        var routineResource = routinesMap[routineRev.RoutineExternalId];
-                        // TODO: we should rather use the new type natively
-                        var simulationConfigurationWithRoutine = new SimulationConfigurationWithRoutine()
-                        {
-                            ExternalId = routineRev.ExternalId,
-                            Simulator = simulators[routineRev.SimulatorExternalId].Name,
-                            ModelName = routineResource.ModelExternalId,
-                            CalculationName = routineRev.RoutineExternalId,
-                            CalculationType = "UserDefined",
-                            CalcTypeUserDefined = routineRev.RoutineExternalId,
-                            Connector = routineResource.SimulatorIntegrationExternalId,
-                            Schedule = new ScheduleConfiguration()
-                            {
-                                Enabled = routineRev.Configuration.Schedule.Enabled,
-                                Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
-                                Repeat = routineRev.Configuration.Schedule.Repeat
-                            },
-                            InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
-                            {
-                                Name = ic.Name,
-                                Type = ic.ReferenceId,
-                                Unit = ic.Unit,
-                                UnitType = ic.UnitType,
-                                Value = ic.Value,
-                                SaveTimeseriesExternalId = ic.SaveTimeseriesExternalId
-                            }),
-                            InputTimeSeries = routineRev.Configuration.InputTimeseries.Select(its => new InputTimeSeriesConfiguration()
-                            {
-                                Name = its.Name,
-                                Type = its.ReferenceId,
-                                Unit = its.Unit,
-                                UnitType = its.UnitType,
-                                SensorExternalId = its.SourceExternalId,
-                                AggregateType = its.Aggregate,
-                                SampleExternalId = its.SaveTimeseriesExternalId
-                            }),
-                            OutputTimeSeries = routineRev.Configuration.OutputTimeseries.Select(ots => new OutputTimeSeriesConfiguration()
-                            {
-                                Name = ots.Name,
-                                Type = ots.ReferenceId,
-                                Unit = ots.Unit,
-                                UnitType = ots.UnitType,
-                                ExternalId = ots.SaveTimeseriesExternalId
-                            }),
-                            DataSampling = new DataSamplingConfiguration()
-                            {
-                                ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
-                                SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
-                                Granularity = routineRev.Configuration.DataSampling.Granularity,
-                                ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
-                            },
-                            LogicalCheck = new LogicalCheckConfiguration()
-                            {
-                                Enabled = routineRev.Configuration.LogicalCheck.Enabled,
-                                ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
-                                AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
-                                Check = routineRev.Configuration.LogicalCheck.Operator,
-                                Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
-                            },
-                            SteadyStateDetection = new SteadyStateDetectionConfiguration()
-                            {
-                                Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
-                                ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
-                                AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
-                                MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
-                                VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
-                                SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
-                            },
-                            UserEmail = "",
-                            Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
-                            {
-                                Order = i,
-                                Steps = s.Steps.Select((step, j) => new CalculationProcedureStep()
-                                {
-                                    Step = j,
-                                    Type = step.StepType,
-                                    Arguments = step.Arguments
-                                })
-                            }),
-                            CreatedTime = routineRev.CreatedTime
-                        };
-                        var localConfigurationObject = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
-                        SimulationConfigurations.Add(routineRev.Id.ToString(), localConfigurationObject);
-
-                        T rState = StateFromRoutineRevision(routineRev, routineResource);
-                        if (rState == null)
-                        {
-                            continue;
-                        }
-                        var revisionId = routineRev.Id.ToString();
-                        if (!State.ContainsKey(revisionId))
-                        {
-                            // If the revision does not exist locally, add it to the state store
-                            State.Add(revisionId, rState);
-                        }
-                    }
+                    ReadAndSaveRoutineRevision(routineRev);
                 }
             }
-
         }
     }
 

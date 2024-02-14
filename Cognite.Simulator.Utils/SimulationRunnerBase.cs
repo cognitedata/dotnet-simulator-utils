@@ -333,7 +333,7 @@ namespace Cognite.Simulator.Utils
             if (calcConfig == null || calcState == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
-                throw new SimulationException($"Could not find a simulation configuration for model: {modelName} calcType: {calcType} calcTypeUserDefined: {calcTypeUserDefined}");
+                throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
             }
 
             if (calcConfig.Connector != _connectorConfig.GetConnectorName())

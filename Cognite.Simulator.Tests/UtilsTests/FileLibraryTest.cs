@@ -394,7 +394,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
         }
 
-        protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision, SimulatorRoutine routine)
+        protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
         {
             return new TestConfigurationState(routineRevision.Id.ToString())
             {
@@ -402,8 +402,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 DataSetId = routineRevision.DataSetId,
                 CreatedTime = routineRevision.CreatedTime,
                 UpdatedTime = routineRevision.CreatedTime,
-                ModelName = routine.ModelExternalId,
-                ModelExternalId = routine.ModelExternalId,
+                ModelName = routineRevision.ModelExternalId,
+                ModelExternalId = routineRevision.ModelExternalId,
                 Source = routineRevision.SimulatorExternalId,
                 Deserialized = false,
                 ExternalId = routineRevision.ExternalId,
