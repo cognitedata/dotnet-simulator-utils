@@ -229,23 +229,11 @@ namespace Cognite.Simulator.Utils
                             }
                         }
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
-                        if (e.HasSimulationRun)
-                        {
-                            e.Run = await UpdateSimulationRunStatus(
-                                e.Run.Id,
-                                SimulationRunStatus.failure,
-                                ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
-                                token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            e.Event = await _cdfEvents.UpdateSimulationEventToFailure(
-                                e.Event.ExternalId,
-                                startTime,
-                                null,
-                                ex.Message.LimitUtf8ByteCount(Sanitation.EventMetadataMaxPerValue),
-                                token).ConfigureAwait(false);
-                        }
+                        e.Run = await UpdateSimulationRunStatus(
+                            e.Run.Id,
+                            SimulationRunStatus.failure,
+                            ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
+                            token).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -440,23 +428,11 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(configObj));
             }
 
-            if (simEv.HasSimulationRun)
-            {
-                simEv.Run = await UpdateSimulationRunStatus(
-                    simEv.Run.Id,
-                    SimulationRunStatus.running,
-                    null,
-                    token).ConfigureAwait(false);
-            }
-            else
-            {
-                simEv.Event = await _cdfEvents.UpdateSimulationEventToRunning(
-                    simEv.Event.ExternalId,
-                    startTime,
-                    metadata,
-                    modelState.Version,
-                    token).ConfigureAwait(false);
-            }
+            simEv.Run = await UpdateSimulationRunStatus(
+                simEv.Run.Id,
+                SimulationRunStatus.running,
+                null,
+                token).ConfigureAwait(false);
 
             SamplingRange samplingRange = null;
             var validationEnd = startTime;
@@ -527,24 +503,11 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
-             // Update event with success status
-            if (simEv.HasSimulationRun)
-            {
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
                     SimulationRunStatus.success,
                     "Calculation ran to completion",
                     token).ConfigureAwait(false);
-            }
-            else
-            {
-                simEv.Event = await _cdfEvents.UpdateSimulationEventToSuccess(
-                    simEv.Event.ExternalId,
-                    startTime,
-                    null,
-                    "Calculation ran to completion",
-                    token).ConfigureAwait(false);
-            }
 
             await EndSimulationRun(simEv, token).ConfigureAwait(false);
             
@@ -683,20 +646,11 @@ namespace Cognite.Simulator.Utils
                 return;
             }
 
-            Event simEvent;
-
-            if (simEv.HasSimulationRun)
+            var eventId = simEv.Run.EventId;
+            if (!eventId.HasValue)
             {
-                if (!simEv.Run.EventId.HasValue)
-                {
-                    _logger.LogDebug("Simulation run has no Event associated with it {Id}", simEv.Run.Id);
-                    return;
-                }
-                simEvent = await _cdfEvents.GetAsync(simEv.Run.EventId.Value, token).ConfigureAwait(false);
-            }
-            else
-            {
-                simEvent = simEv.Event;
+                _logger.LogDebug("Simulation run has no Event associated with it {Id}", simEv.Run.Id);
+                return;
             }
 
             // Determine what is the sequence id and the row number to start inserting data
@@ -747,7 +701,7 @@ namespace Cognite.Simulator.Utils
                     eventMetaData.Add("calcTime", calcTime);
                 }
                 await _cdfEvents.UpdateSimulationEvent(
-                    simEvent.ExternalId,
+                    eventId.Value,
                     eventStartTime,
                     eventMetaData,
                     token).ConfigureAwait(false);
