@@ -152,7 +152,7 @@ namespace Cognite.Simulator.Utils
                     {
                         await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
                     }
-                    catch (SimulationEventException ex)
+                    catch (CogniteException ex)
                     {
                         _logger.LogError("Failed to create simulation run events in CDF: {Errors}",
                                 string.Join(". ", ex.CogniteErrors.Select(e => e.Message)));
