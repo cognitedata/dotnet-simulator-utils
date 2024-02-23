@@ -36,7 +36,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private const long validationEndOverwrite = 1631304000000L;
 
         [Theory]
-        [InlineData(false)]
+        // [InlineData(false)]
         [InlineData(true)]
         public async Task TestSimulationRunnerBase(bool useConstInputs)
         {

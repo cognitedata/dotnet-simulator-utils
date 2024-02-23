@@ -1,5 +1,5 @@
 ﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.Logging;
+// using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;

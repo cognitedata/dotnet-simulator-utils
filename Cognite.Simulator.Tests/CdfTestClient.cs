@@ -1,5 +1,5 @@
 ﻿using Cognite.Extensions;
-using Cognite.Extractor.Logging;
+// using Cognite.Extractor.Logging;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
@@ -64,9 +64,9 @@ namespace Cognite.Simulator.Tests
                 }
             };
 
-            var loggerConfig = new LoggerConfig
+            var loggerConfig = new Extractor.Logging.LoggerConfig
             {
-                Console = new ConsoleConfig
+                Console = new Extractor.Logging.ConsoleConfig
                 {
                     Level = "debug"
                 }
