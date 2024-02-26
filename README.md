@@ -15,7 +15,7 @@ Utilities for developing simulator integrations within CDF. This contains extend
 
 To build a new connector based upon these utilities, just add a reference to this library in your project's csproj file:
 
-`<PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-alpha-021" />` (Locks to version 1.0.0-alpha-021)
+`dotnet add package Cognite.Simulator.Utils`
 
 [Latest version can be obtained from Nuget](https://www.nuget.org/packages/Cognite.Simulator.Utils/)
 
