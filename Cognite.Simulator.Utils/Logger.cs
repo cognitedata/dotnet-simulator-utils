@@ -70,7 +70,7 @@ namespace Cognite.Simulator.Utils
     public static class LoggingExtensions {
 
         // whenever we want to flush the log call Cognite.Simulator.Utils.LoggingExtensions.FlushScopedRemoteApiLogs()
-        public static void FlushScopedRemoteApiLogs()
+        public static void FlushScopedRemoteApiLogs(this Microsoft.Extensions.Logging.ILogger _)
         {
             SimulatorLoggingUtils.FlushScopedRemoteApiLogs();
         }

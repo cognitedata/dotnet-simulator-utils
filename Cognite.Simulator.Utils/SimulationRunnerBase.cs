@@ -8,6 +8,8 @@ using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
 using Microsoft.Extensions.Logging;
 // using Serilog;
+
+// using Serilog;
 // using Serilog.Core;
 using Serilog.Context;
 using System;
@@ -418,7 +420,7 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
-            using (LogContext.PushProperty("ScopeId", Guid.NewGuid())) {
+            using (LogContext.PushProperty("LogId", simEv.Run.LogId)) {
                 if (modelState == null)
                 {
                     throw new ArgumentNullException(nameof(modelState));
@@ -514,8 +516,8 @@ namespace Cognite.Simulator.Utils
                         token).ConfigureAwait(false);
 
                 await EndSimulationRun(simEv, token).ConfigureAwait(false);
+                _logger.FlushScopedRemoteApiLogs();
             }
-            
         }
 
         /// <summary>
