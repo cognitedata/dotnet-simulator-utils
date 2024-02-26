@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
-// using Serilog;
+using Serilog;
 // using Serilog.Core;
 // using Serilog.Events;
+using Serilog.Context;
 using Serilog.Extensions.Logging;
 using Cognite.Extractor.Logging;
+using Cognite.Extractor.Utils;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.File;
@@ -24,6 +26,7 @@ namespace Cognite.Simulator.Utils
     public static class SimulatorLoggingUtils 
     {
         static ILogEventSink sink = new ScopedRemoteApiSink("https://azure-dev.cognitedata.com");
+        static CogniteDestination cdfClient = null; 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {
@@ -33,6 +36,10 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        public static void setCogniteDestination(CogniteDestination cogniteDestination){
+            cdfClient = cogniteDestination;
+        }
+
         /// <summary>
         /// Create a default Serilog console logger and returns it.
         /// </summary>
@@ -40,8 +47,9 @@ namespace Cognite.Simulator.Utils
         public static Serilog.ILogger GetSerilogDefault() {
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
-                .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
+                .Enrich.FromLogContext()
                 .WriteTo.Sink(sink)
+                .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
                 .CreateLogger();
         }
 
@@ -54,11 +62,14 @@ namespace Cognite.Simulator.Utils
         {
             var logConfig = LoggingUtils.GetConfiguration(config);
             logConfig.WriteTo.Sink(sink);
+            logConfig.Enrich.With<UtcTimestampEnricher>();
+            logConfig.Enrich.FromLogContext();
             return logConfig.CreateLogger();
         }
 
         public static void FlushScopedRemoteApiLogs()
         {
+
             ((ScopedRemoteApiSink) sink).Flush();
         }
 
@@ -87,11 +98,14 @@ namespace Cognite.Simulator.Utils
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig)"/>,
         /// which creates logging configuration for file and console using
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false) {
+        public static async void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false) {
             // PRINT 1
             Console.WriteLine("here --------------------------- --- ------------------------------------------");
             
             buildLogger = buildLogger ?? SimulatorLoggingUtils.GetConfiguredLogger;
+            var serviceProvider = services.BuildServiceProvider();
+            SimulatorLoggingUtils.setCogniteDestination(serviceProvider.GetService<CogniteDestination>());
+
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton<Serilog.ILogger>(p => {
                 var config = p.GetService<LoggerConfig>();

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace Cognite.Simulator.Utils {
 
@@ -22,6 +23,13 @@ namespace Cognite.Simulator.Utils {
         public void Emit(LogEvent logEvent)
         {
             Console.WriteLine($"Emitting log: {logEvent.RenderMessage()}");
+            logEvent.Properties.TryGetValue("LogId", out var logId);
+            Console.WriteLine("LogID is: " + logId);
+            // PRINT ALL PROPERTIES
+            foreach (var prop in logEvent.Properties)
+            {
+                Console.WriteLine($"Property: {prop.Key} = {prop.Value}");
+            }
             // Customize the log data to send to the remote API
             var logData = new
             {

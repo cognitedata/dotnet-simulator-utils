@@ -420,6 +420,8 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
+            Console.WriteLine("simEv.Run.LogId");
+            Console.WriteLine(simEv.Run.LogId);
             using (LogContext.PushProperty("LogId", simEv.Run.LogId)) {
                 if (modelState == null)
                 {
@@ -499,24 +501,35 @@ namespace Cognite.Simulator.Utils
                         simEv,
                         validationEnd);
                 }
-                // Run the simulation
-                await RunSimulation(
-                    simEv,
-                    startTime,
-                    modelState,
-                    configState,
-                    configObj,
-                    samplingRange,
-                    token).ConfigureAwait(false);
 
-                    simEv.Run = await UpdateSimulationRunStatus(
+                    try
+                    {
+                     // Run the simulation
+                    await RunSimulation(
+                        simEv,
+                        startTime,
+                        modelState,
+                        configState,
+                        configObj,
+                        samplingRange,
+                        token).ConfigureAwait(false);
+
+                     simEv.Run = await UpdateSimulationRunStatus(
                         simEv.Run.Id,
                         SimulationRunStatus.success,
                         "Calculation ran to completion",
                         token).ConfigureAwait(false);
 
-                await EndSimulationRun(simEv, token).ConfigureAwait(false);
-                _logger.FlushScopedRemoteApiLogs();
+                    await EndSimulationRun(simEv, token).ConfigureAwait(false);
+                    
+                    }
+                    catch {
+                        Console.WriteLine("Error in RunSimulation");
+                    }
+                    finally
+                    {
+                        _logger.FlushScopedRemoteApiLogs();       
+                    }
             }
         }
 
