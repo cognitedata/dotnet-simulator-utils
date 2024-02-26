@@ -51,7 +51,9 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(List<string> logs)
         {
-            // use the Cognite Client here
+            // use the Cognite Client here instead
+            // group logs by log id and send to logs.updateAsync() for each unique log id
+            // keep in mind that logs.updateAsync() can only update 1000 logs at a time
             using (var httpClient = new HttpClient())
             {
                 Console.WriteLine($"Sending ALL LOGS ({logs.Count}) logs to {apiUrl}");
