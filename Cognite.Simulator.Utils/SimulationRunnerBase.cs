@@ -86,14 +86,17 @@ namespace Cognite.Simulator.Utils
             long runId,
             SimulationRunStatus status,
             string statusMessage,
-            CancellationToken token)
+            CancellationToken token,
+            long? simulationTime = null)
         {
+            _logger.LogDebug("Simulation time 92 {Time}", simulationTime);
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
                     Id = runId,
                     Status = status,
-                    StatusMessage = statusMessage
+                    StatusMessage = statusMessage,
+                    SimulationTime = simulationTime
                 }, token).ConfigureAwait(false);
 
             return res.Items.First();
@@ -229,11 +232,18 @@ namespace Cognite.Simulator.Utils
                             }
                         }
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
+                        long? simulationTime = null;
+                        if(e.RunConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
+                        {
+                            simulationTime = st;
+                        }
                         e.Run = await UpdateSimulationRunStatus(
                             e.Run.Id,
                             SimulationRunStatus.failure,
                             ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
-                            token).ConfigureAwait(false);
+                            token,
+                            simulationTime
+                            ).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -503,11 +513,19 @@ namespace Cognite.Simulator.Utils
                 samplingRange,
                 token).ConfigureAwait(false);
 
+                long? simulationTime = null;
+                if(simEv.RunConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
+                {
+                    simulationTime = st;
+                }
+
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
                     SimulationRunStatus.success,
                     "Calculation ran to completion",
-                    token).ConfigureAwait(false);
+                    token,
+                    simulationTime
+                ).ConfigureAwait(false);
 
             await EndSimulationRun(simEv, token).ConfigureAwait(false);
             
@@ -584,7 +602,7 @@ namespace Cognite.Simulator.Utils
             // Create a dictionary with the run details
             if (samplingRange != null)
             {
-                simEv.RunConfiguration.Add("calcTime", samplingRange.Midpoint.ToString());
+                simEv.RunConfiguration.Add("simulationTime", samplingRange.Midpoint.ToString());
             }
             simEv.RunConfiguration.Add("modelVersion", modelState.Version.ToString());
 
@@ -696,9 +714,9 @@ namespace Cognite.Simulator.Utils
                     { "runConfigurationRowStart", rowStart.ToString() },
                     { "runConfigurationRowEnd", configState.RunSequenceLastRow.ToString() }
                 };
-                if (simEv.RunConfiguration.TryGetValue("calcTime", out var calcTime))
+                if (simEv.RunConfiguration.TryGetValue("simulationTime", out var simulationTime))
                 {
-                    eventMetaData.Add("calcTime", calcTime);
+                    eventMetaData.Add("simulationTime", simulationTime);
                 }
                 await _cdfEvents.UpdateSimulationEvent(
                     eventId.Value,
