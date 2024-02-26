@@ -11,6 +11,7 @@ using Serilog.Extensions.Logging;
 using Cognite.Extractor.Logging;
 using Serilog.Core;
 using Serilog.Events;
+using Serilog.Sinks.File;
 
 namespace Cognite.Simulator.Utils
 {
@@ -22,6 +23,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulatorLoggingUtils 
     {
+        static ILogEventSink sink = new ScopedRemoteApiSink("https://azure-dev.cognitedata.com");
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {
@@ -39,7 +41,7 @@ namespace Cognite.Simulator.Utils
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
-                .WriteTo.Sink(new ScopedRemoteApiSink("https://azure-dev.cognitedata.com"))
+                .WriteTo.Sink(sink)
                 // TODO add sink here
                 .CreateLogger();
         }
@@ -55,6 +57,11 @@ namespace Cognite.Simulator.Utils
             return logConfig.CreateLogger();
         }
 
+        public static void FlushScopedRemoteApiLogs()
+        {
+            ((ScopedRemoteApiSink) sink).Flush();
+        }
+
     }
    
     /// <summary>
@@ -62,7 +69,11 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class LoggingExtensions {
 
-        
+        // whenever we want to flush the log call Cognite.Simulator.Utils.LoggingExtensions.FlushScopedRemoteApiLogs()
+        public static void FlushScopedRemoteApiLogs()
+        {
+            SimulatorLoggingUtils.FlushScopedRemoteApiLogs();
+        }
 
         /// <summary>
         /// Adds a configured Serilog logger as singletons of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and

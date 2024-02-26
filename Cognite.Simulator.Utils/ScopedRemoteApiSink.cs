@@ -21,6 +21,7 @@ namespace Cognite.Simulator.Utils {
 
         public void Emit(LogEvent logEvent)
         {
+            Console.WriteLine($"Emitting log: {logEvent.RenderMessage()}");
             // Customize the log data to send to the remote API
             var logData = new
             {
@@ -40,6 +41,7 @@ namespace Cognite.Simulator.Utils {
 
         public void Flush()
         {
+            Console.WriteLine($"Flushing {logBuffer.Count} logs to {apiUrl}");
             // Send the collected logs to the remote API
             SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
 
@@ -52,7 +54,7 @@ namespace Cognite.Simulator.Utils {
             // use the Cognite Client here
             using (var httpClient = new HttpClient())
             {
-                Console.WriteLine($"Sending {logs.Count} logs to {apiUrl}");
+                Console.WriteLine($"Sending ALL LOGS ({logs.Count}) logs to {apiUrl}");
                 // var content = new StringContent($"[{string.Join(",", logs)}]", Encoding.UTF8, "application/json");
                 // await httpClient.PostAsync(apiUrl, content);
             }
