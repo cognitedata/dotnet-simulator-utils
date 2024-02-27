@@ -86,14 +86,23 @@ namespace Cognite.Simulator.Utils
             long runId,
             SimulationRunStatus status,
             string statusMessage,
-            CancellationToken token)
+            CancellationToken token,
+            Dictionary<string, string> runConfiguration = null)
         {
+
+            long? simulationTime = null;
+            if(runConfiguration != null && runConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
+            {
+                simulationTime = st;
+            }
+
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
                     Id = runId,
                     Status = status,
-                    StatusMessage = statusMessage
+                    StatusMessage = statusMessage,
+                    SimulationTime = simulationTime
                 }, token).ConfigureAwait(false);
 
             return res.Items.First();
@@ -233,7 +242,9 @@ namespace Cognite.Simulator.Utils
                             e.Run.Id,
                             SimulationRunStatus.failure,
                             ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
-                            token).ConfigureAwait(false);
+                            token,
+                            e.RunConfiguration
+                            ).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -505,7 +516,9 @@ namespace Cognite.Simulator.Utils
                     simEv.Run.Id,
                     SimulationRunStatus.success,
                     "Calculation ran to completion",
-                    token).ConfigureAwait(false);
+                    token,
+                    simEv.RunConfiguration
+                ).ConfigureAwait(false);
 
             await EndSimulationRun(simEv, token).ConfigureAwait(false);
             
