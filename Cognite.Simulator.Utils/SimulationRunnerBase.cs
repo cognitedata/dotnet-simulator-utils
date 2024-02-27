@@ -87,9 +87,15 @@ namespace Cognite.Simulator.Utils
             SimulationRunStatus status,
             string statusMessage,
             CancellationToken token,
-            long? simulationTime = null)
+            Dictionary<string, string> runConfiguration = null)
         {
-            _logger.LogDebug("Simulation time 92 {Time}", simulationTime);
+
+            long? simulationTime = null;
+            if(runConfiguration != null && runConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
+            {
+                simulationTime = st;
+            }
+
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
@@ -232,17 +238,12 @@ namespace Cognite.Simulator.Utils
                             }
                         }
                         _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
-                        long? simulationTime = null;
-                        if(e.RunConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
-                        {
-                            simulationTime = st;
-                        }
                         e.Run = await UpdateSimulationRunStatus(
                             e.Run.Id,
                             SimulationRunStatus.failure,
                             ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
                             token,
-                            simulationTime
+                            e.RunConfiguration
                             ).ConfigureAwait(false);
                     }
                     finally
@@ -511,20 +512,14 @@ namespace Cognite.Simulator.Utils
                 configState,
                 configObj,
                 samplingRange,
-                token).ConfigureAwait(false);
-
-                long? simulationTime = null;
-                if(simEv.RunConfiguration.TryGetValue("simulationTime", out var simTime) && long.TryParse(simTime, out var st))
-                {
-                    simulationTime = st;
-                }
+                token).ConfigureAwait(false);    
 
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
                     SimulationRunStatus.success,
                     "Calculation ran to completion",
                     token,
-                    simulationTime
+                    simEv.RunConfiguration
                 ).ConfigureAwait(false);
 
             await EndSimulationRun(simEv, token).ConfigureAwait(false);
