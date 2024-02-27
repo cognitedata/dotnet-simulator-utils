@@ -714,10 +714,6 @@ namespace Cognite.Simulator.Utils
                     { "runConfigurationRowStart", rowStart.ToString() },
                     { "runConfigurationRowEnd", configState.RunSequenceLastRow.ToString() }
                 };
-                if (simEv.RunConfiguration.TryGetValue("simulationTime", out var simulationTime))
-                {
-                    eventMetaData.Add("simulationTime", simulationTime);
-                }
                 await _cdfEvents.UpdateSimulationEvent(
                     eventId.Value,
                     eventStartTime,
