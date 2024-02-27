@@ -488,8 +488,6 @@ namespace Cognite.Simulator.Utils
                 // Create the run configuration dictionary
                 BuildRunConfiguration(
                     samplingRange,
-                    modelState,
-                    configObj,
                     simEv,
                     validationEnd);
             }
@@ -544,8 +542,6 @@ namespace Cognite.Simulator.Utils
         /// Builds the run configuration dictionary to be stored in CDF as a sequence
         /// </summary>
         /// <param name="samplingRange">Selected simulation sampling range</param>
-        /// <param name="modelState">Model state object</param>
-        /// <param name="configObj">Configuration object</param>
         /// <param name="simEv">Simulation event</param>
         /// <param name="validationEnd">End of the validation period</param>
         /// <returns></returns>
@@ -553,8 +549,6 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="ConnectorException">Thrown when it is not possible to save the sequence</exception>
         protected virtual void BuildRunConfiguration(
             SamplingRange samplingRange,
-            T modelState,
-            V configObj,
             SimulationRunEvent simEv,
             DateTime validationEnd)
         {
@@ -562,75 +556,16 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(simEv));
             }
-            if (modelState == null)
-            {
-                throw new ArgumentNullException(nameof(modelState));
-            }
-            if (configObj == null)
-            {
-                throw new ArgumentNullException(nameof(configObj));
-            }
 
-            _logger.LogDebug("Storing run configuration in CDF");
-            if (simEv.HasSimulationRun)
-            {
-                simEv.RunConfiguration.Add("runId", simEv.Run.Id.ToString());
-            }
-            else
-            {
-                simEv.RunConfiguration.Add("runEventId", simEv.Event.ExternalId);
-            }
-
-            // Create a dictionary with the run details
-            if (samplingRange != null)
-            {
-                simEv.RunConfiguration.Add("calcTime", samplingRange.Midpoint.ToString());
-            }
-            simEv.RunConfiguration.Add("modelVersion", modelState.Version.ToString());
-
-            // Validation range details
-            simEv.RunConfiguration.Add("validationWindow", configObj.DataSampling.ValidationWindow.ToString());
             simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds().ToString());
             simEv.RunConfiguration.Add("validationEnd", validationEnd.ToUnixTimeMilliseconds().ToString());
-            simEv.RunConfiguration.Add("validationEndOffset", configObj.DataSampling.ValidationEndOffset);
 
-            // Sampling range details
-            simEv.RunConfiguration.Add("samplingWindow", configObj.DataSampling.SamplingWindow.ToString());
+            _logger.LogDebug("Storing run configuration in CDF");
+
             if (samplingRange != null)
             {
                 simEv.RunConfiguration.Add("samplingStart", samplingRange.Start.Value.ToString());
                 simEv.RunConfiguration.Add("samplingEnd", samplingRange.End.Value.ToString());
-            }
-            simEv.RunConfiguration.Add("samplingGranularity", configObj.DataSampling.Granularity.ToString());
-
-            // Logical check details
-            bool logicalCheckEnabled = configObj.LogicalCheck != null && configObj.LogicalCheck.Enabled;
-            simEv.RunConfiguration.Add("logicalCheckEnabled", logicalCheckEnabled.ToString());
-            if (logicalCheckEnabled)
-            {
-                simEv.RunConfiguration.Add("logicalCheckTimeSeries", configObj.LogicalCheck.ExternalId);
-                simEv.RunConfiguration.Add("logicalCheckSamplingMethod", configObj.LogicalCheck.AggregateType);
-                simEv.RunConfiguration.Add("logicalCheckOperation", configObj.LogicalCheck.Check);
-                simEv.RunConfiguration.Add("logicalCheckThresholdValue", configObj.LogicalCheck.Value.ToString());
-            }
-
-            // Steady state details
-            bool ssdEnabled = configObj.SteadyStateDetection != null && configObj.SteadyStateDetection.Enabled;
-            simEv.RunConfiguration.Add("ssdEnabled", ssdEnabled.ToString());
-            if (ssdEnabled)
-            {
-                simEv.RunConfiguration.Add("ssdTimeSeries", configObj.SteadyStateDetection.ExternalId);
-                simEv.RunConfiguration.Add("ssdSamplingMethod", configObj.SteadyStateDetection.AggregateType);
-                simEv.RunConfiguration.Add("ssdMinSectionSize", configObj.SteadyStateDetection.MinSectionSize.ToString());
-                simEv.RunConfiguration.Add("ssdVarThreshold", configObj.SteadyStateDetection.VarThreshold.ToString());
-                simEv.RunConfiguration.Add("ssdSlopeThreshold", configObj.SteadyStateDetection.SlopeThreshold.ToString());
-            }
-
-            // Input time series details
-            foreach (var input in configObj.InputTimeSeries)
-            {
-                simEv.RunConfiguration.Add($"inputTimeSeries{input.Type}", input.SensorExternalId);
-                simEv.RunConfiguration.Add($"inputSamplingMethod{input.Type}", input.AggregateType);
             }
         }
 
@@ -696,10 +631,6 @@ namespace Cognite.Simulator.Utils
                     { "runConfigurationRowStart", rowStart.ToString() },
                     { "runConfigurationRowEnd", configState.RunSequenceLastRow.ToString() }
                 };
-                if (simEv.RunConfiguration.TryGetValue("calcTime", out var calcTime))
-                {
-                    eventMetaData.Add("calcTime", calcTime);
-                }
                 await _cdfEvents.UpdateSimulationEvent(
                     eventId.Value,
                     eventStartTime,
