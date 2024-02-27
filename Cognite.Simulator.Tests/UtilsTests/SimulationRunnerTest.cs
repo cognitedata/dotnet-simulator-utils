@@ -160,6 +160,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(runUpdated);
                 eventId = runUpdated.First().EventId;
                 Assert.NotNull(eventId);
+                Assert.NotNull(runUpdated.First().SimulationTime);
 
                 var retryCount = 0;
                 Event? cdfEvent = null;
@@ -183,18 +184,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(cdfEvent);
                     
                 var eventMetadata = cdfEvent.Metadata;
-                Assert.True(eventMetadata.ContainsKey("calcTime"));
-                Assert.True(long.TryParse(eventMetadata["calcTime"], out var eventCalcTime));
-                Assert.True(eventCalcTime <= validationEndOverwrite);
+                Assert.True(eventMetadata.ContainsKey("simulationTime"));
+                Assert.True(long.TryParse(eventMetadata["simulationTime"], out var simulationTime));
+                Assert.True(simulationTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
+                Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
                     new DataPointsQuery
                     {
-                        Start = eventCalcTime.ToString(),
-                        End = (eventCalcTime + 1).ToString(),
+                        Start = simulationTime.ToString(),
+                        End = (simulationTime + 1).ToString(),
                         Items = outTs.Select(o => new DataPointsQueryItem
                         {
                             ExternalId = o.ExternalId
@@ -208,8 +210,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var inDps = await cdf.DataPoints.ListAsync(
                     new DataPointsQuery
                     {
-                        Start = eventCalcTime.ToString(),
-                        End = (eventCalcTime + 1).ToString(),
+                        Start = simulationTime.ToString(),
+                        End = (simulationTime + 1).ToString(),
                         Items = inTs.Select(i => new DataPointsQueryItem
                         {
                             ExternalId = i.ExternalId
@@ -243,8 +245,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.True(dictResult.ContainsKey("runId"));
                 Assert.Equal(runId.ToString(), dictResult["runId"]);
-                Assert.True(dictResult.ContainsKey("calcTime"));
-                Assert.Equal(eventCalcTime.ToString(), dictResult["calcTime"]);
+                Assert.True(dictResult.ContainsKey("simulationTime"));
+                Assert.Equal(simulationTime.ToString(), dictResult["simulationTime"]);
 
                 // Verify sampling start, end and calculation time values
                 Assert.True(dictResult.ContainsKey("samplingEnd"));
@@ -256,7 +258,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Min = long.Parse(dictResult["samplingStart"]),
                     Max = long.Parse(dictResult["samplingEnd"])
                 };
-                Assert.Equal(eventCalcTime, range.Midpoint);
+                Assert.Equal(simulationTime, range.Midpoint);
             }
             finally
             {
