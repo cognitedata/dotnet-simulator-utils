@@ -500,6 +500,7 @@ namespace Cognite.Simulator.Utils
                 BuildRunConfiguration(
                     samplingRange,
                     simEv,
+                    configObj,
                     validationEnd);
             }
             // Run the simulation
@@ -577,6 +578,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(configObj));
             }
 
+            simEv.RunConfiguration.Add("runId", simEv.Run.Id.ToString());
             simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds().ToString());
             simEv.RunConfiguration.Add("validationEnd", validationEnd.ToUnixTimeMilliseconds().ToString());
 
@@ -584,6 +586,7 @@ namespace Cognite.Simulator.Utils
 
             if (samplingRange != null)
             {
+                simEv.RunConfiguration.Add("simulationTime", samplingRange.Midpoint.ToString());
                 simEv.RunConfiguration.Add("samplingStart", samplingRange.Start.Value.ToString());
                 simEv.RunConfiguration.Add("samplingEnd", samplingRange.End.Value.ToString());
             }

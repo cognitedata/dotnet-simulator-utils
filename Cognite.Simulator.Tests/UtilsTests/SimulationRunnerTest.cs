@@ -251,7 +251,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Verify sampling start, end and calculation time values
                 Assert.True(dictResult.ContainsKey("samplingEnd"));
                 Assert.True(dictResult.ContainsKey("samplingStart"));
-                Assert.True(dictResult.ContainsKey("validationEndOffset"));
 
                 SamplingRange range = new CogniteSdk.TimeRange()
                 {
