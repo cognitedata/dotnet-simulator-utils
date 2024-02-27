@@ -543,6 +543,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="simEv">Simulation event</param>
+        /// <param name="configObj">Configuration object</param>
         /// <param name="validationEnd">End of the validation period</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are missing</exception>
@@ -550,11 +551,17 @@ namespace Cognite.Simulator.Utils
         protected virtual void BuildRunConfiguration(
             SamplingRange samplingRange,
             SimulationRunEvent simEv,
+            V configObj,
             DateTime validationEnd)
         {
             if (simEv == null)
             {
                 throw new ArgumentNullException(nameof(simEv));
+            }
+
+            if (configObj == null)
+            {
+                throw new ArgumentNullException(nameof(configObj));
             }
 
             simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds().ToString());
