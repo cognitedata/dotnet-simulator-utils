@@ -512,7 +512,7 @@ namespace Cognite.Simulator.Utils
                 configState,
                 configObj,
                 samplingRange,
-                token).ConfigureAwait(false);    
+                token).ConfigureAwait(false);
 
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
