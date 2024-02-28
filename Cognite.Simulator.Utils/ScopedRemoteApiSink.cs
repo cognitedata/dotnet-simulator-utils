@@ -7,66 +7,95 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Serilog;
+using Cognite.Extensions;
+using CogniteSdk.Types.Common;
+using Cognite.Extractor.Utils;
+using CogniteSdk;
+using Cognite.Extensions.DataModels.QueryBuilder;
+using CogniteSdk.Alpha;
+using System.Linq;
 
 namespace Cognite.Simulator.Utils {
 
+    /// <summary>
+    /// Represents a sink for emitting log events to a remote API.
+    /// </summary>
     public class ScopedRemoteApiSink : ILogEventSink
     {
-        private readonly string apiUrl;
-        private readonly List<string> logBuffer = new List<string>();
+        private readonly CogniteDestination cdfClient;
+        // private readonly CogniteDestination cdfClient;
+        // Buffer for storing log data
 
-        public ScopedRemoteApiSink(string apiUrl)
+        private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
+        /// </summary>
+        /// <param name="client">CDF Destination</param>
+        public ScopedRemoteApiSink(CogniteDestination client)
         {
-            this.apiUrl = apiUrl;
+            cdfClient = client;
         }
 
         public void Emit(LogEvent logEvent)
         {
             Console.WriteLine($"Emitting log: {logEvent.RenderMessage()}");
+            
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            Console.WriteLine("LogID is: " + logId);
-            // PRINT ALL PROPERTIES
-            foreach (var prop in logEvent.Properties)
-            {
-                Console.WriteLine($"Property: {prop.Key} = {prop.Value}");
+            if (logId != null){
+                long logIdLong = long.Parse(logId.ToString());
+                Console.WriteLine("LogID is: " + logId);
+                // Customize the log data to send to the remote API
+                var logData = new SimulatorLogDataEntry
+                {
+                    Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
+                    Severity = logEvent.Level.ToString(),
+                    Message = logEvent.RenderMessage(),
+                };
+
+                if(logBuffer.ContainsKey(logIdLong)){
+                    logBuffer[logIdLong].Add(logData);
+                } else {
+                    logBuffer.Add(logIdLong, new List<SimulatorLogDataEntry>(){logData});
+                }
+
+                // Store log data in the buffer
+                Console.WriteLine(logBuffer[logIdLong].Count);
             }
-            // Customize the log data to send to the remote API
-            var logData = new
-            {
-                Timestamp = logEvent.Timestamp,
-                Level = logEvent.Level,
-                Message = logEvent.RenderMessage(),
-                Properties = logEvent.Properties,
-                // Add more properties as needed
-            };
-
-            // Convert log data to JSON
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(logData);
-
-            // Store log data in the buffer
-            logBuffer.Add(json);
         }
 
+        /// <summary>
+        /// Flushes the collected logs to the remote API.
+        /// </summary>
         public void Flush()
         {
-            Console.WriteLine($"Flushing {logBuffer.Count} logs to {apiUrl}");
+            Console.WriteLine($"Flushing {logBuffer.Count} logs");
             // Send the collected logs to the remote API
+            Console.WriteLine(logBuffer.First());
             SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
 
             // Clear the log buffer
             logBuffer.Clear();
         }
 
-        private async Task SendToRemoteApi(List<string> logs)
+        private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            // use the Cognite Client here instead
-            // group logs by log id and send to logs.updateAsync() for each unique log id
-            // keep in mind that logs.updateAsync() can only update 1000 logs at a time
-            using (var httpClient = new HttpClient())
+            Console.WriteLine($"Sending ALL LOGS ({logs.Count}) to CDF");
+            foreach (var log in logs)
             {
-                Console.WriteLine($"Sending ALL LOGS ({logs.Count}) logs to {apiUrl}");
-                // var content = new StringContent($"[{string.Join(",", logs)}]", Encoding.UTF8, "application/json");
-                // await httpClient.PostAsync(apiUrl, content);
+                var simulatorLogUpdates = new List<SimulatorLogUpdate> {
+                    new SimulatorLogUpdate {
+                        Data = new UpdateEnumerable<SimulatorLogDataEntry>(log.Value)
+                    }
+                };
+                var simulatorLogUpdateItem = new SimulatorLogUpdateItem(log.Key) {
+                    Update = new SimulatorLogUpdate {
+                        Data = new UpdateEnumerable<SimulatorLogDataEntry>((IEnumerable<SimulatorLogDataEntry>)simulatorLogUpdates)
+                    }
+                };
+                _ = cdfClient.CogniteClient.Alpha.Simulators.UpdateSimulatorLogsAsync((IEnumerable<UpdateItem<SimulatorLogUpdate>>)simulatorLogUpdateItem);
+                // Convert log data to JSON
+                // var json = Newtonsoft.Json.JsonConvert.SerializeObject(logData);
             }
         }
     }

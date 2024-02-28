@@ -25,8 +25,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulatorLoggingUtils 
     {
-        static ILogEventSink sink = new ScopedRemoteApiSink("https://azure-dev.cognitedata.com");
-        static CogniteDestination cdfClient = null; 
+
+        static ILogEventSink sink;
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {
@@ -36,9 +36,10 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        public static void setCogniteDestination(CogniteDestination cogniteDestination){
-            cdfClient = cogniteDestination;
-        }
+        public static ILogEventSink ConfigureSink (CogniteDestination cdfClient){
+            sink = new ScopedRemoteApiSink(cdfClient);
+            return sink;
+        } 
 
         /// <summary>
         /// Create a default Serilog console logger and returns it.
@@ -101,10 +102,9 @@ namespace Cognite.Simulator.Utils
         public static async void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false) {
             // PRINT 1
             Console.WriteLine("here --------------------------- --- ------------------------------------------");
-            
-            buildLogger = buildLogger ?? SimulatorLoggingUtils.GetConfiguredLogger;
             var serviceProvider = services.BuildServiceProvider();
-            SimulatorLoggingUtils.setCogniteDestination(serviceProvider.GetService<CogniteDestination>());
+            var cogniteDestination = serviceProvider.GetService<CogniteDestination>();
+            SimulatorLoggingUtils.ConfigureSink(cogniteDestination);
 
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton<Serilog.ILogger>(p => {
@@ -115,7 +115,7 @@ namespace Cognite.Simulator.Utils
                     defLog.Warning("No Logging configuration found. Using default logger");
                     return defLog;
                 }
-                return buildLogger(config);
+                return SimulatorLoggingUtils.GetConfiguredLogger(config);
             });
             services.AddLogging(loggingBuilder => {
                 loggingBuilder.Services.AddSingleton<ILoggerProvider, SerilogLoggerProvider>(s => 

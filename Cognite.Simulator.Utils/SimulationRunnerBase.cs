@@ -523,8 +523,9 @@ namespace Cognite.Simulator.Utils
                     await EndSimulationRun(simEv, token).ConfigureAwait(false);
                     
                     }
-                    catch {
+                    catch (Exception ex){
                         Console.WriteLine("Error in RunSimulation");
+                        Console.WriteLine(ex);
                     }
                     finally
                     {
