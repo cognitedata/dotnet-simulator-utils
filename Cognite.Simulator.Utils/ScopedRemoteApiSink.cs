@@ -20,6 +20,7 @@ namespace Cognite.Simulator.Utils {
     /// <summary>
     /// Represents a sink for emitting log events to a remote API.
     /// </summary>
+    /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
         private readonly CogniteDestination cdfClient;
@@ -83,17 +84,15 @@ namespace Cognite.Simulator.Utils {
             Console.WriteLine($"Sending ALL LOGS ({logs.Count}) to CDF");
             foreach (var log in logs)
             {
-                var simulatorLogUpdates = new List<SimulatorLogUpdate> {
-                    new SimulatorLogUpdate {
-                        Data = new UpdateEnumerable<SimulatorLogDataEntry>(log.Value)
+                
+                var item = new SimulatorLogUpdateItem(log.Key){
+                    Update = new SimulatorLogUpdate{
+                        Data = new UpdateEnumerable<SimulatorLogDataEntry>(log.Value, null)
                     }
                 };
-                var simulatorLogUpdateItem = new SimulatorLogUpdateItem(log.Key) {
-                    Update = new SimulatorLogUpdate {
-                        Data = new UpdateEnumerable<SimulatorLogDataEntry>((IEnumerable<SimulatorLogDataEntry>)simulatorLogUpdates)
-                    }
-                };
-                _ = cdfClient.CogniteClient.Alpha.Simulators.UpdateSimulatorLogsAsync((IEnumerable<UpdateItem<SimulatorLogUpdate>>)simulatorLogUpdateItem);
+                await cdfClient.CogniteClient.Alpha.Simulators
+                    .UpdateSimulatorLogsAsync(new List<SimulatorLogUpdateItem> { item })
+                    .ConfigureAwait(false);
                 // Convert log data to JSON
                 // var json = Newtonsoft.Json.JsonConvert.SerializeObject(logData);
             }
