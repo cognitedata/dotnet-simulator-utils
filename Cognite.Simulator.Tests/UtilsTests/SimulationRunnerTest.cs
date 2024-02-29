@@ -58,7 +58,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             StateStoreConfig stateConfig = null;
 
             long? eventId = null;
-            string sequenceId = "";
             var tsToDelete = new List<string>();
 
             using var source = new CancellationTokenSource();
@@ -160,6 +159,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(runUpdated);
                 eventId = runUpdated.First().EventId;
                 Assert.NotNull(eventId);
+                Assert.NotNull(runUpdated.First().SimulationTime);
 
                 var retryCount = 0;
                 Event? cdfEvent = null;
@@ -183,18 +183,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(cdfEvent);
                     
                 var eventMetadata = cdfEvent.Metadata;
-                Assert.True(eventMetadata.ContainsKey("calcTime"));
-                Assert.True(long.TryParse(eventMetadata["calcTime"], out var eventCalcTime));
-                Assert.True(eventCalcTime <= validationEndOverwrite);
+                Assert.True(eventMetadata.ContainsKey("simulationTime"));
+                Assert.True(long.TryParse(eventMetadata["simulationTime"], out var simulationTime));
+                Assert.True(simulationTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
+                Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
                     new DataPointsQuery
                     {
-                        Start = eventCalcTime.ToString(),
-                        End = (eventCalcTime + 1).ToString(),
+                        Start = simulationTime.ToString(),
+                        End = (simulationTime + 1).ToString(),
                         Items = outTs.Select(o => new DataPointsQueryItem
                         {
                             ExternalId = o.ExternalId
@@ -208,8 +209,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var inDps = await cdf.DataPoints.ListAsync(
                     new DataPointsQuery
                     {
-                        Start = eventCalcTime.ToString(),
-                        End = (eventCalcTime + 1).ToString(),
+                        Start = simulationTime.ToString(),
+                        End = (simulationTime + 1).ToString(),
                         Items = inTs.Select(i => new DataPointsQueryItem
                         {
                             ExternalId = i.ExternalId
@@ -218,45 +219,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(inDps.Items.Any());
                 Assert.NotEmpty(SampleRoutine._inputs);
                 Assert.Contains(inDps.Items.First().NumericDatapoints.Datapoints.First().Value, SampleRoutine._inputs);
-
-                // ID of events already processed should be cached in the runner
-                // Assert.Contains(runner.AlreadyProcessed, e => e.Key == eventId.ToString());
-
-                // A sequence should have been created in CDF with the run configuration data
-                // and one with the simulation results (system curves).
-                Assert.True(eventMetadata.TryGetValue("runConfigurationSequence", out var runSequenceId));
-                Assert.True(eventMetadata.TryGetValue("runConfigurationRowStart", out var runSequenceRowStart));
-                Assert.True(eventMetadata.TryGetValue("runConfigurationRowEnd", out var runSequenceRowEnd));
-                sequenceId = runSequenceId;
-
-                // Verify a sequence was created in CDF with the run configuration
-                // Check sampling results
-                var data = await cdf.Sequences.ListRowsAsync(
-                    new SequenceRowQuery
-                    {
-                        ExternalId = runSequenceId,
-                        Start = long.Parse(runSequenceRowStart),
-                        End = long.Parse(runSequenceRowEnd) + 1
-                    },
-                    source.Token).ConfigureAwait(false);
-                var dictResult = ToRowDictionary(data);
-
-                Assert.True(dictResult.ContainsKey("runId"));
-                Assert.Equal(runId.ToString(), dictResult["runId"]);
-                Assert.True(dictResult.ContainsKey("calcTime"));
-                Assert.Equal(eventCalcTime.ToString(), dictResult["calcTime"]);
-
-                // Verify sampling start, end and calculation time values
-                Assert.True(dictResult.ContainsKey("samplingEnd"));
-                Assert.True(dictResult.ContainsKey("samplingStart"));
-                Assert.True(dictResult.ContainsKey("validationEndOffset"));
-
-                SamplingRange range = new CogniteSdk.TimeRange()
-                {
-                    Min = long.Parse(dictResult["samplingStart"]),
-                    Max = long.Parse(dictResult["samplingEnd"])
-                };
-                Assert.Equal(eventCalcTime, range.Midpoint);
             }
             finally
             {
@@ -265,11 +227,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                     await cdf.Events.DeleteAsync(
                         new List<long> { eventId.Value }, source.Token).ConfigureAwait(false);
-                }
-                if (!string.IsNullOrEmpty(sequenceId))
-                {
-                    await cdf.Sequences.DeleteAsync(
-                        new List<string> { sequenceId }, source.Token).ConfigureAwait(false);
                 }
                 if (tsToDelete.Any())
                 {

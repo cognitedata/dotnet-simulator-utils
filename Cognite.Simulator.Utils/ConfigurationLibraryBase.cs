@@ -744,8 +744,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ConfigurationStateBase : FileState
     {
-        private string _runDataSequence;
-        private long _runSequenceLastRow;
         private long? _lastRun;
 
         /// <summary>
@@ -759,34 +757,6 @@ namespace Cognite.Simulator.Utils
                 if (value == _lastRun) return;
                 LastTimeModified = DateTime.UtcNow;
                 _lastRun = value;
-            }
-        }
-
-        /// <summary>
-        /// External ID of the run configuration sequence in CDF
-        /// </summary>
-        public string RunDataSequence
-        {
-            get => _runDataSequence;
-            set
-            {
-                if (value == _runDataSequence) return;
-                LastTimeModified = DateTime.UtcNow;
-                _runDataSequence = value;
-            }
-        }
-
-        /// <summary>
-        /// Index of the last row in the run configuration sequence
-        /// </summary>
-        public long RunSequenceLastRow
-        {
-            get => _runSequenceLastRow;
-            set
-            {
-                if (value == _runSequenceLastRow) return;
-                LastTimeModified = DateTime.UtcNow;
-                _runSequenceLastRow = value;
             }
         }
 
@@ -821,8 +791,6 @@ namespace Cognite.Simulator.Utils
             base.Init(poco);
             if (poco is ConfigurationStateBasePoco statePoco)
             {
-                _runDataSequence = statePoco.RunDataSequence;
-                _runSequenceLastRow = statePoco.RunSequenceLastRow;
                 _lastRun = statePoco.LastRun;
             }
         }
@@ -843,8 +811,6 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
-                RunDataSequence = RunDataSequence,
-                RunSequenceLastRow = RunSequenceLastRow,
                 LastRun = LastRun,
             };
         }
@@ -861,17 +827,5 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("last-run")]
         public long? LastRun { get; set; }
-
-        /// <summary>
-        /// External ID of the sequence in CDF containing the run configuration
-        /// </summary>
-        [StateStoreProperty("run-data-sequence")]
-        public string RunDataSequence { get; set; }
-
-        /// <summary>
-        /// Index of the last row with data in the run configuration
-        /// </summary>
-        [StateStoreProperty("run-sequence-last-row")]
-        public long RunSequenceLastRow { get; set; }
     }
 }
