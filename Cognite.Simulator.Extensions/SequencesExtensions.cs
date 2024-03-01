@@ -18,53 +18,6 @@ namespace Cognite.Simulator.Extensions
     public static class SequencesExtensions
     {
         /// <summary>
-        /// For the specified <paramref name="model"/>, 
-        /// find the sequence rows with the mapping of the model boundary conditions to
-        /// time series external ids.
-        /// </summary>
-        /// <param name="sequences">CDF sequences resource</param>
-        /// <param name="model">Simulator model</param>
-        /// <param name="token">Cancellation token</param>
-        /// <returns>Sequence data (rows) containing the boundary conditions map</returns>
-        /// <exception cref="BoundaryConditionsMapNotFoundException">Thrown when a sequence containing
-        /// the boundary conditions map cannot be found</exception>
-        public static async Task<SequenceData> FindModelBoundaryConditions(
-            this SequencesResource sequences,
-            SimulatorModelInfo model,
-            CancellationToken token)
-        {
-            if (model == null || string.IsNullOrEmpty(model.Name) || string.IsNullOrEmpty(model.Simulator))
-            {
-                throw new ArgumentException("Simulator model should have valid name and simulator properties", nameof(model));
-            }
-            var bcSeqs = await sequences.ListAsync(new SequenceQuery
-            {
-                Filter = new SequenceFilter
-                {
-                    ExternalIdPrefix = $"{model.Simulator}-BC-",
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { ModelMetadata.NameKey, model.Name },
-                        { BaseMetadata.DataTypeKey, BoundaryConditionsMapMetadata.DataType.MetadataValue()}
-                    }
-                },
-            }, token).ConfigureAwait(false);
-            if (!bcSeqs.Items.Any())
-            {
-                // No boundary conditions map defined yet
-                throw new BoundaryConditionsMapNotFoundException(
-                    "Sequence mapping boundary conditions to time series not found in CDF");
-            }
-
-            var bcSeq = bcSeqs.Items.First();
-
-            return await sequences.ListRowsAsync(new SequenceRowQuery
-            {
-                ExternalId = bcSeq.ExternalId
-            }, token).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Store tabular simulation results as sequences
         /// </summary>
         /// <param name="sequences">CDF Sequence resource</param>
