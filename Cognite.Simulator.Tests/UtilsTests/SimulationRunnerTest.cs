@@ -6,7 +6,6 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
-using ExtensionsLogging = Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -191,11 +190,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Equal("success", eventStatus);
                 Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
 
-                // var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                //     new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+                var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
 
-                // var logData = logsRes.First().Data;
-                // Assert.NotEmpty(logData);
+                var logData = logsRes.First().Data;
+                Assert.NotEmpty(logData);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
@@ -334,7 +333,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            ExtensionsLogging.ILogger<SampleSimulationRunner> logger) :
+            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger) :
             base(config,
                 new List<SimulatorConfig>
                 {
