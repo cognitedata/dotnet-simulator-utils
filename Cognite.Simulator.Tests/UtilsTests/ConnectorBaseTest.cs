@@ -6,7 +6,7 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using ExtensionsLogging = Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -125,7 +125,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ILogger<TestConnector> logger,
+            ExtensionsLogging.ILogger<TestConnector> logger,
             RemoteConfigManager<BaseConfig> remoteConfigManager) :
             base(
                 cdf,

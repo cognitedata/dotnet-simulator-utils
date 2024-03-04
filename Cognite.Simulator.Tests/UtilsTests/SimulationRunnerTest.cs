@@ -6,7 +6,7 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using ExtensionsLogging = Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -334,7 +334,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            ILogger<SampleSimulationRunner> logger) :
+            ExtensionsLogging.ILogger<SampleSimulationRunner> logger) :
             base(config,
                 new List<SimulatorConfig>
                 {
