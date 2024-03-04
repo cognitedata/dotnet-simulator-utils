@@ -36,9 +36,6 @@ namespace Cognite.Simulator.Extensions
                 .ChunkBy(chunkSize)
                 .ToList();
 
-            Console.WriteLine("logsByChunks!!!");
-            Console.WriteLine(logsByChunks.Count);
-
             _logger.LogDebug("Updating time series. Number of time series: {Number}. Number of chunks: {Chunks}", items.Count, logsByChunks.Count);
             var generators = logsByChunks
                 .Select<IEnumerable<SimulatorLogDataEntry>, Func<Task>>(

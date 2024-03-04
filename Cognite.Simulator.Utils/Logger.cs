@@ -103,8 +103,6 @@ namespace Cognite.Simulator.Utils
         /// which creates logging configuration for file and console using
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
         public static async void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false) {
-            // PRINT 1
-            Console.WriteLine("here --------------------------- --- ------------------------------------------");
             var serviceProvider = services.BuildServiceProvider();
             var cogniteDestination = serviceProvider.GetService<CogniteDestination>();
             SimulatorLoggingUtils.ConfigureSink(cogniteDestination);

@@ -60,9 +60,6 @@ namespace Cognite.Simulator.Utils {
                 } else {
                     logBuffer.Add(logIdLong, new List<SimulatorLogDataEntry>(){logData});
                 }
-
-                // Store log data in the buffer
-                Console.WriteLine(logBuffer[logIdLong].Count);
             }
         }
 
@@ -73,7 +70,6 @@ namespace Cognite.Simulator.Utils {
         {
             Console.WriteLine($"Flushing {logBuffer.Count} logs");
             // Send the collected logs to the remote API
-            Console.WriteLine(logBuffer.First());
             SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
 
             // Clear the log buffer
@@ -82,8 +78,6 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            Console.WriteLine(logs.First().Key);
-            Console.WriteLine(logs.First().Value);
             Console.WriteLine($"Sending ALL LOGS ({logs.Values.Count}) to CDF");
             try
             {
