@@ -42,7 +42,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            LoggingExtensions.AddLogger(services);
+            services.AddLogger();
             services.AddHttpClient<FileDownloadClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
