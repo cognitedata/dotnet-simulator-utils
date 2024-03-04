@@ -29,8 +29,7 @@ namespace Cognite.Simulator.Extensions
         public static async Task<SimulatorsResource> UpdateLogsBatch(
             this SimulatorsResource cdfSimulators,
             long id,
-            List<SimulatorLogDataEntry> items,
-            CancellationToken token = default
+            List<SimulatorLogDataEntry> items
         ){
             var chunkSize = 5;
             var logsByChunks = items
@@ -63,7 +62,7 @@ namespace Cognite.Simulator.Extensions
                         _logger.LogDebug("{MethodName} completed {NumDone}/{TotalNum} tasks",
                             nameof(UpdateLogsBatch), ++taskNum, logsByChunks.Count);
                 },
-                token
+                CancellationToken.None
             ).ConfigureAwait(false);
 
             

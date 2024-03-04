@@ -26,7 +26,6 @@ namespace Cognite.Simulator.Utils {
     public class ScopedRemoteApiSink : ILogEventSink
     {
         private readonly CogniteDestination cdfClient;
-        private readonly CancellationTokenSource tokenSource;
         // Buffer for storing log data
 
         private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
@@ -35,10 +34,9 @@ namespace Cognite.Simulator.Utils {
         /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
         /// </summary>
         /// <param name="client">CDF Destination</param>
-        public ScopedRemoteApiSink(CogniteDestination client, CancellationTokenSource token)
+        public ScopedRemoteApiSink(CogniteDestination client)
         {
             cdfClient = client;
-            tokenSource = token;
         }
 
         public void Emit(LogEvent logEvent)
@@ -87,15 +85,13 @@ namespace Cognite.Simulator.Utils {
             Console.WriteLine(logs.First().Key);
             Console.WriteLine(logs.First().Value);
             Console.WriteLine($"Sending ALL LOGS ({logs.Values.Count}) to CDF");
-            Console.WriteLine(tokenSource.Token.ToString());
             try
             {
                 foreach (var log in logs)
                 {
                     await cdfClient.CogniteClient.Alpha.Simulators.UpdateLogsBatch(
                         log.Key,
-                        log.Value,
-                        tokenSource.Token
+                        log.Value
                     ).ConfigureAwait(false);
                 }
             }

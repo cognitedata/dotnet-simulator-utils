@@ -30,7 +30,6 @@ namespace Cognite.Simulator.Utils
     {
 
         static ILogEventSink sink;
-        static CancellationTokenSource tokenSource = new CancellationTokenSource();
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {
@@ -41,7 +40,7 @@ namespace Cognite.Simulator.Utils
         }
 
         public static ILogEventSink ConfigureSink (CogniteDestination cdfClient){
-            sink = new ScopedRemoteApiSink(cdfClient, tokenSource);
+            sink = new ScopedRemoteApiSink(cdfClient);
             return sink;
         } 
 
