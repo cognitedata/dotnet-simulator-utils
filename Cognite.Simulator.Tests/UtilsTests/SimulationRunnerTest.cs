@@ -190,6 +190,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Equal("success", eventStatus);
                 Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
 
+                // var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                //     new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+
+                // var logData = logsRes.First().Data;
+                // Assert.NotEmpty(logData);
+
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
                     new DataPointsQuery

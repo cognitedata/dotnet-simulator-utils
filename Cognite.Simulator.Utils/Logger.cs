@@ -15,6 +15,9 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.File;
 
+
+using System.Threading;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -27,6 +30,7 @@ namespace Cognite.Simulator.Utils
     {
 
         static ILogEventSink sink;
+        static CancellationTokenSource tokenSource = new CancellationTokenSource();
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {
@@ -37,7 +41,7 @@ namespace Cognite.Simulator.Utils
         }
 
         public static ILogEventSink ConfigureSink (CogniteDestination cdfClient){
-            sink = new ScopedRemoteApiSink(cdfClient);
+            sink = new ScopedRemoteApiSink(cdfClient, tokenSource);
             return sink;
         } 
 

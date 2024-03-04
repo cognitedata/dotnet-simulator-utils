@@ -8,12 +8,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Serilog;
 using Cognite.Extensions;
+using Cognite.Simulator.Extensions;
 using CogniteSdk.Types.Common;
 using Cognite.Extractor.Utils;
 using CogniteSdk;
 using Cognite.Extensions.DataModels.QueryBuilder;
 using CogniteSdk.Alpha;
 using System.Linq;
+using System.Threading;
 
 namespace Cognite.Simulator.Utils {
 
@@ -24,7 +26,7 @@ namespace Cognite.Simulator.Utils {
     public class ScopedRemoteApiSink : ILogEventSink
     {
         private readonly CogniteDestination cdfClient;
-        // private readonly CogniteDestination cdfClient;
+        private readonly CancellationTokenSource tokenSource;
         // Buffer for storing log data
 
         private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
@@ -33,9 +35,10 @@ namespace Cognite.Simulator.Utils {
         /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
         /// </summary>
         /// <param name="client">CDF Destination</param>
-        public ScopedRemoteApiSink(CogniteDestination client)
+        public ScopedRemoteApiSink(CogniteDestination client, CancellationTokenSource token)
         {
             cdfClient = client;
+            tokenSource = token;
         }
 
         public void Emit(LogEvent logEvent)
@@ -81,20 +84,24 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            Console.WriteLine($"Sending ALL LOGS ({logs.Count}) to CDF");
-            foreach (var log in logs)
+            Console.WriteLine(logs.First().Key);
+            Console.WriteLine(logs.First().Value);
+            Console.WriteLine($"Sending ALL LOGS ({logs.Values.Count}) to CDF");
+            Console.WriteLine(tokenSource.Token.ToString());
+            try
             {
-                
-                var item = new SimulatorLogUpdateItem(log.Key){
-                    Update = new SimulatorLogUpdate{
-                        Data = new UpdateEnumerable<SimulatorLogDataEntry>(log.Value, null)
-                    }
-                };
-                await cdfClient.CogniteClient.Alpha.Simulators
-                    .UpdateSimulatorLogsAsync(new List<SimulatorLogUpdateItem> { item })
-                    .ConfigureAwait(false);
-                // Convert log data to JSON
-                // var json = Newtonsoft.Json.JsonConvert.SerializeObject(logData);
+                foreach (var log in logs)
+                {
+                    await cdfClient.CogniteClient.Alpha.Simulators.UpdateLogsBatch(
+                        log.Key,
+                        log.Value,
+                        tokenSource.Token
+                    ).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send logs to CDF: {ex}");
             }
         }
     }
