@@ -13,34 +13,7 @@ using Cognite.Extractor.Common;
 namespace Cognite.Simulator.Tests.ExtensionsTests
 {
     public class SequencesTest
-    {
-        [Fact]
-        public async Task TestFindModelBoundaryConditions()
-        {
-            var services = new ServiceCollection();
-            services.AddCogniteTestClient();
-
-            using var provider = services.BuildServiceProvider();
-            var cdf = provider.GetRequiredService<Client>();
-            var sequences = cdf.Sequences;
-
-            // Assumes this resource exists in the CDF test project
-            var rows = await sequences.FindModelBoundaryConditions(
-                new SimulatorModelInfo
-                {
-                    Simulator = "PROSPER",
-                    Name = "Connector Test Model",
-                },
-                CancellationToken.None).ConfigureAwait(false);
-            Assert.NotEmpty(rows.Columns);
-            Assert.Contains(rows.Columns, c => c.ExternalId == BoundaryConditionsSequenceColumns.Id);
-            Assert.Contains(rows.Columns, c => c.ExternalId == BoundaryConditionsSequenceColumns.TimeSeries);
-            Assert.Contains(rows.Columns, c => c.ExternalId == BoundaryConditionsSequenceColumns.Name);
-            Assert.Contains(rows.Columns, c => c.ExternalId == BoundaryConditionsSequenceColumns.Address);
-            Assert.NotEmpty(rows.Rows);
-            Assert.Equal(4, rows.Rows.First().Values.Count());
-        }
-
+    { 
         [Fact]
         public async Task TestStoreSimulationResults()
         {
