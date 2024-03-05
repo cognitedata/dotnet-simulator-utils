@@ -41,12 +41,10 @@ namespace Cognite.Simulator.Utils {
 
         public void Emit(LogEvent logEvent)
         {
-            Console.WriteLine($"Emitting log: {logEvent.RenderMessage()}");
             
             logEvent.Properties.TryGetValue("LogId", out var logId);
             if (logId != null){
                 long logIdLong = long.Parse(logId.ToString());
-                Console.WriteLine("LogID is: " + logId);
                 // Customize the log data to send to the remote API
                 var logData = new SimulatorLogDataEntry
                 {
@@ -68,7 +66,6 @@ namespace Cognite.Simulator.Utils {
         /// </summary>
         public void Flush()
         {
-            Console.WriteLine($"Flushing {logBuffer.Count} logs");
             // Send the collected logs to the remote API
             SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
 
@@ -78,7 +75,6 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            Console.WriteLine($"Sending ALL LOGS ({logs.Values.Count}) to CDF");
             try
             {
                 foreach (var log in logs)
