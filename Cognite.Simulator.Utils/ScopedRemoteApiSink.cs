@@ -29,11 +29,15 @@ namespace Cognite.Simulator.Utils {
             cdfClient = client;
         }
 
+        /// <summary>
+        /// Store the log in the buffer to be sent to the remote API.
+        /// </summary>
+        /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
-            
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId != null){
+            if (logId != null)
+            {
                 long logIdLong = long.Parse(logId.ToString());
                 // Customize the log data to send to the remote API
                 var logData = new SimulatorLogDataEntry

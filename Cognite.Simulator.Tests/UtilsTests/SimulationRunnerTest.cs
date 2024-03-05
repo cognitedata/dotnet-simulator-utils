@@ -36,6 +36,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         [Theory]
         [InlineData(false)]
+        [InlineData(true)]
         public async Task TestSimulationRunnerBase(bool useConstInputs)
         {
             var services = new ServiceCollection();

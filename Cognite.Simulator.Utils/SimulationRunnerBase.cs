@@ -371,109 +371,109 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
-            try {
-                using (LogContext.PushProperty("LogId", simEv.Run.LogId)) {
+            using (LogContext.PushProperty("LogId", simEv.Run.LogId)) {
+                try {
 
-                    if (modelState == null)
+                if (modelState == null)
+                {
+                    throw new ArgumentNullException(nameof(modelState));
+                }
+                if (simEv == null)
+                {
+                    throw new ArgumentNullException(nameof(simEv));
+                }
+                if (configObj == null)
+                {
+                    throw new ArgumentNullException(nameof(configObj));
+                }
+
+                simEv.Run = await UpdateSimulationRunStatus(
+                    simEv.Run.Id,
+                    SimulationRunStatus.running,
+                    null,
+                    token).ConfigureAwait(false);
+
+                SamplingRange samplingRange = null;
+                var validationEnd = startTime;
+                try
+                {
+                    if (configObj.DataSampling == null)
                     {
-                        throw new ArgumentNullException(nameof(modelState));
+                        throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
                     }
-                    if (simEv == null)
+                    // Determine the validation end time
+                    if (simEv.Run.ValidationEndTime.HasValue)
                     {
-                        throw new ArgumentNullException(nameof(simEv));
+                        // If the event contains a validation end overwrite, use that instead of
+                        // the current time
+                        validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
                     }
-                    if (configObj == null)
+                    else
                     {
-                        throw new ArgumentNullException(nameof(configObj));
+                        // If the validation end time should be in the past, subtract the 
+                        // configured offset
+                        var offset = SimulationUtils.ConfigurationTimeStringToTimeSpan(
+                            configObj.DataSampling.ValidationEndOffset);
+                        validationEnd = startTime - offset;
                     }
+
+                    // Find the sampling configuration results
+                    samplingRange = await SimulationUtils.RunSteadyStateAndLogicalCheck(
+                        _cdfDataPoints,
+                        configObj,
+                        validationEnd,
+                        token).ConfigureAwait(false);
+
+                    _logger.LogInformation("Running calculation {Type} for model {ModelName}. Calculation time: {Time}",
+                        configObj.CalculationType,
+                        configObj.ModelName,
+                        CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
+                }
+                catch (SimulationException ex)
+                {
+                    _logger.LogError("Logical check or steady state detection failed: {Message}", ex.Message);
+                    throw;
+                }
+                finally
+                {
+                    // Create the run configuration dictionary
+                    BuildRunConfiguration(
+                        samplingRange,
+                        simEv,
+                        configObj,
+                        validationEnd);
+                }
+                
+                // Run the simulation
+                await RunSimulation(
+                    simEv,
+                    startTime,
+                    modelState,
+                    configState,
+                    configObj,
+                    samplingRange,
+                    token).ConfigureAwait(false);
 
                     simEv.Run = await UpdateSimulationRunStatus(
                         simEv.Run.Id,
-                        SimulationRunStatus.running,
-                        null,
-                        token).ConfigureAwait(false);
+                        SimulationRunStatus.success,
+                        "Calculation ran to completion",
+                        token,
+                        simEv.RunConfiguration
+                    ).ConfigureAwait(false);
 
-                    SamplingRange samplingRange = null;
-                    var validationEnd = startTime;
-                    try
-                    {
-                        if (configObj.DataSampling == null)
-                        {
-                            throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
-                        }
-                        // Determine the validation end time
-                        if (simEv.Run.ValidationEndTime.HasValue)
-                        {
-                            // If the event contains a validation end overwrite, use that instead of
-                            // the current time
-                            validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
-                        }
-                        else
-                        {
-                            // If the validation end time should be in the past, subtract the 
-                            // configured offset
-                            var offset = SimulationUtils.ConfigurationTimeStringToTimeSpan(
-                                configObj.DataSampling.ValidationEndOffset);
-                            validationEnd = startTime - offset;
-                        }
-
-                        // Find the sampling configuration results
-                        samplingRange = await SimulationUtils.RunSteadyStateAndLogicalCheck(
-                            _cdfDataPoints,
-                            configObj,
-                            validationEnd,
-                            token).ConfigureAwait(false);
-
-                        _logger.LogInformation("Running calculation {Type} for model {ModelName}. Calculation time: {Time}",
-                            configObj.CalculationType,
-                            configObj.ModelName,
-                            CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
-                    }
-                    catch (SimulationException ex)
-                    {
-                        _logger.LogError("Logical check or steady state detection failed: {Message}", ex.Message);
-                        throw;
-                    }
-                    finally
-                    {
-                        // Create the run configuration dictionary
-                        BuildRunConfiguration(
-                            samplingRange,
-                            simEv,
-                            configObj,
-                            validationEnd);
-                    }
-                    
-                    // Run the simulation
-                    await RunSimulation(
-                        simEv,
-                        startTime,
-                        modelState,
-                        configState,
-                        configObj,
-                        samplingRange,
-                        token).ConfigureAwait(false);
-
-                        simEv.Run = await UpdateSimulationRunStatus(
-                            simEv.Run.Id,
-                            SimulationRunStatus.success,
-                            "Calculation ran to completion",
-                            token,
-                            simEv.RunConfiguration
-                        ).ConfigureAwait(false);
-
-                    await EndSimulationRun(simEv, token).ConfigureAwait(false);
+                await EndSimulationRun(simEv, token).ConfigureAwait(false);
                     
             }
-        }
-        catch (Exception)
-        {
-            
-            throw;
-        }
-        finally
-        {
-            _logger.FlushScopedRemoteApiLogs();       
+            catch
+            {
+                
+                throw;
+            }
+            finally
+            {
+                _logger.FlushScopedRemoteApiLogs();       
+            }
         }
             
         }

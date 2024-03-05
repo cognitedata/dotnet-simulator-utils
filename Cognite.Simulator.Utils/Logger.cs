@@ -80,7 +80,9 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class LoggingExtensions {
 
-        // whenever we want to flush the log call Cognite.Simulator.Utils.LoggingExtensions.FlushScopedRemoteApiLogs()
+        /// <summary>
+        /// Flushes the stored logs.
+        /// </summary>
         public static void FlushScopedRemoteApiLogs(this Microsoft.Extensions.Logging.ILogger _)
         {
             SimulatorLoggingUtils.FlushScopedRemoteApiLogs();
@@ -98,15 +100,18 @@ namespace Cognite.Simulator.Utils
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig)"/>,
         /// which creates logging configuration for file and console using
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static async void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false) {
+        public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
+        {
             var serviceProvider = services.BuildServiceProvider();
             var cogniteDestination = serviceProvider.GetService<CogniteDestination>();
             SimulatorLoggingUtils.ConfigureSink(cogniteDestination);
 
             services.AddSingleton<LoggerTraceListener>();
-            services.AddSingleton<Serilog.ILogger>(p => {
+            services.AddSingleton<Serilog.ILogger>(p =>
+            {
                 var config = p.GetService<LoggerConfig>();
-                if (config == null || !alternativeLogger && (config.Console == null && config.File == null)) {
+                if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
+                {
                     // No logging configuration
                     var defLog = SimulatorLoggingUtils.GetSerilogDefault();
                     defLog.Warning("No Logging configuration found. Using default logger");
@@ -114,8 +119,9 @@ namespace Cognite.Simulator.Utils
                 }
                 return SimulatorLoggingUtils.GetConfiguredLogger(config);
             });
-            services.AddLogging(loggingBuilder => {
-                loggingBuilder.Services.AddSingleton<ILoggerProvider, SerilogLoggerProvider>(s => 
+            services.AddLogging(loggingBuilder =>
+            {
+                loggingBuilder.Services.AddSingleton<ILoggerProvider, SerilogLoggerProvider>(s =>
                 {
                     var logger = s.GetRequiredService<Serilog.ILogger>();
                     return new SerilogLoggerProvider(logger, true);
