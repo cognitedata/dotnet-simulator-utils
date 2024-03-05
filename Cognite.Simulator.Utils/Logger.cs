@@ -1,22 +1,12 @@
 using System;
-// using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-
-using Serilog;
-// using Serilog.Core;
-// using Serilog.Events;
-using Serilog.Context;
 using Serilog.Extensions.Logging;
 using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
 using Serilog.Core;
 using Serilog.Events;
-using Serilog.Sinks.File;
-
-
-using System.Threading;
 
 namespace Cognite.Simulator.Utils
 {
