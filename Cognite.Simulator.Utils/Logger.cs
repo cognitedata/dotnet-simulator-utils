@@ -76,6 +76,18 @@ namespace Cognite.Simulator.Utils
             ((ScopedRemoteApiSink) sink).Flush();
         }
 
+        /// <summary>
+        /// Create a default console logger and returns it.
+        /// </summary>
+        /// <returns>A <see cref="Microsoft.Extensions.Logging.ILogger"/> logger with default properties</returns>
+        public static Microsoft.Extensions.Logging.ILogger GetDefault() {
+            using (var loggerFactory = new LoggerFactory())
+            {
+                loggerFactory.AddSerilog(GetSerilogDefault(), true);
+                return loggerFactory.CreateLogger("default");
+            }
+        }
+
     }
    
     /// <summary>
