@@ -1,7 +1,5 @@
 ﻿using Cognite.Extractor.Common;
-// using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
@@ -9,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;

@@ -81,7 +81,7 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Adds a configured Serilog logger as singletons of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
+        /// Adds a configured Serilog logger as singleton of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
         /// <see cref="Serilog.ILogger"/> types to the <paramref name="services"/> collection.
         /// A configuration object of type <see cref="LoggerConfig"/> is required, and should have been added to the
         /// collection as well.

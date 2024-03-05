@@ -195,6 +195,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var logData = logsRes.First().Data;
                 Assert.NotEmpty(logData);
+                Assert.NotNull(logData.First().Message);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
