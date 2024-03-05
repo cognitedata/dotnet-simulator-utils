@@ -1,15 +1,12 @@
-using Cognite.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using CogniteSdk.Alpha;
 using Cognite.Extractor.Common;
 using CogniteSdk;
-using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
