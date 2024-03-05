@@ -35,6 +35,11 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
+            if (logEvent == null)
+            {
+                throw new ArgumentNullException(nameof(logEvent));
+            }
+
             logEvent.Properties.TryGetValue("LogId", out var logId);
             if (logId != null)
             {
