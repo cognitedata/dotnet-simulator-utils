@@ -67,6 +67,9 @@ namespace Cognite.Simulator.Utils
             return logConfig.CreateLogger();
         }
 
+        /// <summary>
+        /// Flushes the stored logs.
+        /// </summary>
         public static void FlushScopedRemoteApiLogs()
         {
 
