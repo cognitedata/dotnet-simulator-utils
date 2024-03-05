@@ -1,21 +1,11 @@
 using Serilog.Core;
 using Serilog.Events;
-using Serilog.Context;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Serilog;
-using Cognite.Extensions;
 using Cognite.Simulator.Extensions;
-using CogniteSdk.Types.Common;
 using Cognite.Extractor.Utils;
-using CogniteSdk;
-using Cognite.Extensions.DataModels.QueryBuilder;
 using CogniteSdk.Alpha;
-using System.Linq;
-using System.Threading;
 
 namespace Cognite.Simulator.Utils {
 
@@ -75,8 +65,7 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            try
-            {
+            try {
                 foreach (var log in logs)
                 {
                     await cdfClient.CogniteClient.Alpha.Simulators.UpdateLogsBatch(

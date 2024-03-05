@@ -29,10 +29,16 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        public static ILogEventSink ConfigureSink (CogniteDestination cdfClient){
+        /// <summary>
+        /// Configures the sink for logging using the Cognite Client.
+        /// </summary>
+        /// <param name="cdfClient">The CogniteDestination instance to use for logging.</param>
+        /// <returns>The configured sink.</returns>
+        public static ILogEventSink ConfigureSink(CogniteDestination cdfClient)
+        {
             sink = new ScopedRemoteApiSink(cdfClient);
             return sink;
-        } 
+        }
 
         /// <summary>
         /// Create a default Serilog console logger and returns it.
