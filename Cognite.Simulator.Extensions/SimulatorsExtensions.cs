@@ -13,22 +13,17 @@ using System.Threading.Tasks;
 namespace Cognite.Simulator.Extensions
 {
     /// <summary>
-    /// Class containing extensions to the CDF Events resource with utility methods
-    /// for simulator integrations
+    /// Class containing extensions to the CDF Simulators resource with utility methods
     /// </summary>
     public static class SimulatorsExtensions {
         private static ILogger _logger = new NullLogger<Client>();
 
-        internal static void SetLogger(ILogger logger)
-        {
-            _logger = logger;
-        }
         public static async Task<SimulatorsResource> UpdateLogsBatch(
             this SimulatorsResource cdfSimulators,
             long id,
             List<SimulatorLogDataEntry> items
         ){
-            var chunkSize = 5;
+            var chunkSize = 100;
             var logsByChunks = items
                 .ChunkBy(chunkSize)
                 .ToList();
