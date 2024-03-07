@@ -40,7 +40,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            // services.AddLogger();
             services.AddHttpClient<FileDownloadClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
@@ -205,7 +204,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
 
                 logData = logsRes.First().Data;
-                Assert.NotEmpty(logData);
                 Assert.NotNull(logData.First().Message);
 
                 // Check that the correct output was added as a data point

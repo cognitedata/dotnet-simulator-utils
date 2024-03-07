@@ -466,18 +466,7 @@ namespace Cognite.Simulator.Utils
                 await EndSimulationRun(simEv, token).ConfigureAwait(false);
                     
             }
-            catch
-            {
-                
-                throw;
-            }
-            finally
-            {
-                // _logger.FlushScopedRemoteApiLogs();       
-                _remoteApiSink.Flush(_cdfSimulators);
-            }
-        }
-            
+
         }
 
         /// <summary>
