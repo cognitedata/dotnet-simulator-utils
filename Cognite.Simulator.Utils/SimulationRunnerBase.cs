@@ -1,5 +1,4 @@
-﻿using Cognite.Extensions;
-using Cognite.Extractor.Common;
+﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
@@ -10,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,7 +35,6 @@ namespace Cognite.Simulator.Utils
         private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
-        private readonly ScopedRemoteApiSink _remoteApiSink;
 
         /// <summary>
         /// Library containing the simulator model files
@@ -67,9 +64,7 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary,
             IConfigurationProvider<U, V> configLibrary,
-            ILogger logger,
-            ScopedRemoteApiSink loggerRemoteSink
-            )
+            ILogger logger)
         {
             if (cdf == null)
             {
@@ -82,7 +77,6 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
-            _remoteApiSink = loggerRemoteSink;
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
         }

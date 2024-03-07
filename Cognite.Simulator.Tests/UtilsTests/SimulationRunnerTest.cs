@@ -359,7 +359,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 modelLibrary,
                 configLibrary,
                 client,
-                logger, sink)
+                logger,
+                sink)
         {
         }
 
