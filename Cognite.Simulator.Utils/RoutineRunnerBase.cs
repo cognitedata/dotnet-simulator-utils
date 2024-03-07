@@ -46,8 +46,10 @@ namespace Cognite.Simulator.Utils
             IModelProvider<T> modelLibrary, 
             IConfigurationProvider<U, V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
-            ILogger logger) : 
-            base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger)
+            ILogger logger,
+            ScopedRemoteApiSink remoteApiSink
+            ) : 
+            base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger, remoteApiSink)
         {
             _logger = logger;
             _cdf = cdf;

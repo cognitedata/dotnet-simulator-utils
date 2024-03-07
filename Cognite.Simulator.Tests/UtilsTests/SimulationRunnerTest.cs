@@ -334,7 +334,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger) :
+            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger,
+            ScopedRemoteApiSink sink) :
             base(config,
                 new List<SimulatorConfig>
                 {
@@ -348,7 +349,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 modelLibrary,
                 configLibrary,
                 client,
-                logger)
+                logger,
+                sink)
         {
         }
 

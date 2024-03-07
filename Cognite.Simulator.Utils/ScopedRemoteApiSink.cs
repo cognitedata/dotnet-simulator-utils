@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cognite.Simulator.Extensions;
 using Cognite.Extractor.Utils;
 using CogniteSdk.Alpha;
+using CogniteSdk.Resources.Alpha;
 
 namespace Cognite.Simulator.Utils {
 
@@ -15,7 +16,7 @@ namespace Cognite.Simulator.Utils {
     /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
-        private readonly CogniteDestination cdfClient;
+        // private readonly CogniteDestination cdfClient;
         // Buffer for storing log data
 
         private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
@@ -24,9 +25,9 @@ namespace Cognite.Simulator.Utils {
         /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
         /// </summary>
         /// <param name="client">CDF Destination</param>
-        public ScopedRemoteApiSink(CogniteDestination client)
+        public ScopedRemoteApiSink()
         {
-            cdfClient = client;
+            // cdfClient = client;
         }
 
         /// <summary>
@@ -63,21 +64,21 @@ namespace Cognite.Simulator.Utils {
         /// <summary>
         /// Flushes the collected logs to the remote API.
         /// </summary>
-        public void Flush()
+        public void Flush(SimulatorsResource client)
         {
             // Send the collected logs to the remote API
-            SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
+            SendToRemoteApi(client, logBuffer).Wait(); // Wait for the request to complete
 
             // Clear the log buffer
             logBuffer.Clear();
         }
 
-        private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
+        private async Task SendToRemoteApi(SimulatorsResource client, Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
             try {
                 foreach (var log in logs)
                 {
-                    await cdfClient.CogniteClient.Alpha.Simulators.UpdateLogsBatch(
+                    await client.UpdateLogsBatch(
                         log.Key,
                         log.Value
                     ).ConfigureAwait(false);
