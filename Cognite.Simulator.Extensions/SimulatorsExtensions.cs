@@ -22,8 +22,9 @@ namespace Cognite.Simulator.Extensions
         /// Updates the logs in chunks for a simulator resource.
         /// </summary>
         /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
-        /// <param name="id">The ID of the simulator.</param>
+        /// <param name="id">The ID of the simulator log.</param>
         /// <param name="items">The list of log data entries.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns>The updated SimulatorsResource instance.</returns>
         public static async Task<SimulatorsResource> UpdateLogsBatch(
             this SimulatorsResource cdfSimulators,
