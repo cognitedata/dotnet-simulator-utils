@@ -33,6 +33,11 @@ namespace Cognite.Simulator.Extensions
             CancellationToken token = default
         )
         {
+            if (items == null || items.Count == 0)
+            {
+                return;
+            }
+
             var chunkSize = 1000;
             var logsByChunks = items
                 .ChunkBy(chunkSize)
