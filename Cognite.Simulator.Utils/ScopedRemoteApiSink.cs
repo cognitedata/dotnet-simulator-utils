@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Cognite.Simulator.Extensions;
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
-using System.Collections.Concurrent;
-using System.Threading;
 
 namespace Cognite.Simulator.Utils {
 
@@ -17,8 +15,19 @@ namespace Cognite.Simulator.Utils {
     /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
+        // private readonly CogniteDestination cdfClient;
         // Buffer for storing log data
-        private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
+
+        private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
+        /// </summary>
+        /// <param name="client">CDF Destination</param>
+        public ScopedRemoteApiSink()
+        {
+            // cdfClient = client;
+        }
 
         /// <summary>
         /// Store the log in the buffer to be sent to the remote API.
@@ -58,17 +67,27 @@ namespace Cognite.Simulator.Utils {
         /// <summary>
         /// Flushes the logs to the remote API and clears the buffer.
         /// </summary>
-        /// <param name="token">Cancellation token</param>
-        /// <param name="client">Simulator resource client</param>
-        /// <returns></returns>
-        public async Task Flush(SimulatorsResource client, CancellationToken token)
+        public void Flush(SimulatorsResource client)
         {
-            await SendToRemoteApi(client, token).ConfigureAwait(false);
+            // Send the collected logs to the remote API
+            SendToRemoteApi(client, logBuffer).Wait(); // Wait for the request to complete
+
+            // Clear the log buffer
+            logBuffer.Clear();
         }
 
-        private async Task SendToRemoteApi(SimulatorsResource client, CancellationToken token)
+        private async Task SendToRemoteApi(SimulatorsResource client, Dictionary<long, List<SimulatorLogDataEntry>> logs)
         {
-            foreach (var log in logBuffer)
+            try {
+                foreach (var log in logs)
+                {
+                    await client.UpdateLogsBatch(
+                        log.Key,
+                        log.Value
+                    ).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
             {
                 try {
                     // to make sure we remove only the logs that were sent to the remote API

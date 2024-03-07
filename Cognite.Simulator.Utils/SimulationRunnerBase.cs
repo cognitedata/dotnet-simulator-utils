@@ -35,6 +35,7 @@ namespace Cognite.Simulator.Utils
         private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
+        private readonly ScopedRemoteApiSink _remoteApiSink;
 
         /// <summary>
         /// Library containing the simulator model files
@@ -64,7 +65,9 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary,
             IConfigurationProvider<U, V> configLibrary,
-            ILogger logger)
+            ILogger logger,
+            ScopedRemoteApiSink loggerRemoteSink
+            )
         {
             if (cdf == null)
             {
@@ -77,6 +80,7 @@ namespace Cognite.Simulator.Utils
             _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
+            _remoteApiSink = loggerRemoteSink;
             ModelLibrary = modelLibrary;
             ConfigurationLibrary = configLibrary;
         }
@@ -462,7 +466,18 @@ namespace Cognite.Simulator.Utils
                 await EndSimulationRun(simEv, token).ConfigureAwait(false);
                     
             }
-
+            catch
+            {
+                
+                throw;
+            }
+            finally
+            {
+                // _logger.FlushScopedRemoteApiLogs();       
+                _remoteApiSink.Flush(_cdfSimulators);
+            }
+        }
+            
         }
 
         /// <summary>

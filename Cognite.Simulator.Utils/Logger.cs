@@ -29,6 +29,17 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        // /// <summary>
+        // /// Configures the sink for logging using the Cognite Client.
+        // /// </summary>
+        // /// <param name="cdfClient">The CogniteDestination instance to use for logging.</param>
+        // /// <returns>The configured sink.</returns>
+        // public static ILogEventSink ConfigureSink(CogniteDestination cdfClient)
+        // {
+        //     sink = new ScopedRemoteApiSink(cdfClient);
+        //     return sink;
+        // }
+
         /// <summary>
         /// Create a default Serilog console logger and returns it.
         /// </summary>
@@ -37,6 +48,7 @@ namespace Cognite.Simulator.Utils
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .Enrich.FromLogContext()
+                // .WriteTo.Sink()
                 .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
                 .CreateLogger();
         }
@@ -50,11 +62,20 @@ namespace Cognite.Simulator.Utils
         public static Serilog.ILogger GetConfiguredLogger(LoggerConfig config, ILogEventSink logEventSink)
         {
             var logConfig = LoggingUtils.GetConfiguration(config);
-            logConfig.WriteTo.Sink(logEventSink);
+            // logConfig.WriteTo.Sink(logEventSink);
             logConfig.Enrich.With<UtcTimestampEnricher>();
             logConfig.Enrich.FromLogContext();
             return logConfig.CreateLogger();
         }
+
+        // /// <summary>
+        // /// Flushes the stored logs.
+        // /// </summary>
+        // public static void FlushScopedRemoteApiLogs()
+        // {
+
+        //     ((ScopedRemoteApiSink) sink).Flush();
+        // }
 
         /// <summary>
         /// Create a default console logger and returns it.
@@ -75,6 +96,14 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class LoggingExtensions {
 
+        // /// <summary>
+        // /// Flushes the stored logs.
+        // /// </summary>
+        // public static void FlushScopedRemoteApiLogs(this Microsoft.Extensions.Logging.ILogger _)
+        // {
+        //     SimulatorLoggingUtils.FlushScopedRemoteApiLogs();
+        // }
+
         /// <summary>
         /// Adds a configured Serilog logger as singleton of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
         /// <see cref="Serilog.ILogger"/> types to the <paramref name="services"/> collection.
@@ -90,6 +119,9 @@ namespace Cognite.Simulator.Utils
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
         public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
         {
+            // var serviceProvider = services.BuildServiceProvider();
+            // var cogniteDestination = serviceProvider.GetService<CogniteDestination>();
+            // SimulatorLoggingUtils.ConfigureSink(cogniteDestination);
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton<Serilog.ILogger>(p =>
