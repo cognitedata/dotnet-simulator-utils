@@ -41,6 +41,7 @@ namespace Cognite.Simulator.Utils
         private const int FIFTEEN_MIN = 9000;
 
         private readonly RemoteConfigManager<T> _remoteConfigManager;
+        private readonly ScopedRemoteApiSink _remoteApiSink;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -50,18 +51,21 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulators">List of simulator configurations</param>
         /// <param name="logger">Logger</param>
         /// <param name="remoteConfigManager"></param>
+        /// <param name="remoteSink">Remote API sink for the logger</param>
         public ConnectorBase(
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
             ILogger<ConnectorBase<T>> logger,
-            RemoteConfigManager<T> remoteConfigManager)
+            RemoteConfigManager<T> remoteConfigManager,
+            ScopedRemoteApiSink remoteSink)
         {
             Cdf = cdf;
             Simulators = simulators;
             Config = config;
             _simulatorIntegrationIds = new Dictionary<string, long>();
             _logger = logger;
+            _remoteApiSink = remoteSink;
             _config = config;
             _remoteConfigManager = remoteConfigManager;
         }
@@ -298,6 +302,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector heartbeat");
                 await UpdateSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
+                await _remoteApiSink.Flush(Cdf.CogniteClient.Alpha.Simulators, token).ConfigureAwait(false);
             }
         }
 
