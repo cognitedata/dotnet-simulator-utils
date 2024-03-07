@@ -48,7 +48,7 @@ namespace Cognite.Simulator.Utils
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .Enrich.FromLogContext()
-                // .WriteTo.Sink()
+                // .WriteTo.Sink(sink)
                 .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
                 .CreateLogger();
         }
@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Utils
         public static Serilog.ILogger GetConfiguredLogger(LoggerConfig config, ILogEventSink logEventSink)
         {
             var logConfig = LoggingUtils.GetConfiguration(config);
-            // logConfig.WriteTo.Sink(logEventSink);
+            logConfig.WriteTo.Sink(logEventSink);
             logConfig.Enrich.With<UtcTimestampEnricher>();
             logConfig.Enrich.FromLogContext();
             return logConfig.CreateLogger();
