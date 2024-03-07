@@ -1,7 +1,5 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
@@ -344,8 +342,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger,
-            ScopedRemoteApiSink sink) :
+            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
+        ) :
             base(config,
                 new List<SimulatorConfig>
                 {
@@ -359,8 +357,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 modelLibrary,
                 configLibrary,
                 client,
-                logger,
-                sink)
+                logger)
         {
         }
 
