@@ -40,6 +40,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            // services.AddLogger();
             services.AddHttpClient<FileDownloadClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
@@ -360,8 +361,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 modelLibrary,
                 configLibrary,
                 client,
-                logger,
-                sink)
+                logger, sink)
         {
             _logger = logger;
         }
