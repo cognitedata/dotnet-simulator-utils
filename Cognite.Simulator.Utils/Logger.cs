@@ -90,9 +90,6 @@ namespace Cognite.Simulator.Utils
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
         public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
         {
-            // var serviceProvider = services.BuildServiceProvider();
-            // var cogniteDestination = serviceProvider.GetService<CogniteDestination>();
-            // SimulatorLoggingUtils.ConfigureSink(cogniteDestination);
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton<Serilog.ILogger>(p =>
