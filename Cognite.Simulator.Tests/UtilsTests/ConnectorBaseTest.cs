@@ -27,7 +27,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var simulatorName = $"TestSim {timestamp}";
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddLogger();
             services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
             services.AddSingleton<BaseConfig>();
             services.AddTransient<TestConnector>();
@@ -113,16 +112,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
     internal class TestConnector : ConnectorBase<BaseConfig>
     {
         private readonly ExtractionPipeline _pipeline;
-        private readonly RemoteConfigManager<BaseConfig> _remoteConfigManager;
         private readonly SimulatorConfig _config;
-
 
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
             Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
-            RemoteConfigManager<BaseConfig> remoteConfigManager) :
+            RemoteConfigManager<BaseConfig> remoteConfigManager,
+            ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,
                 new ConnectorConfig
@@ -135,11 +133,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     config
                 },
                 logger,
-                remoteConfigManager)
+                remoteConfigManager,
+                remoteSink)
         {
             _pipeline = pipeline;
             _config = config;
-            _remoteConfigManager = remoteConfigManager;
         }
 
         public override string GetConnectorVersion()

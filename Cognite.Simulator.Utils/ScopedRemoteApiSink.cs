@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cognite.Simulator.Extensions;
-using Cognite.Extractor.Utils;
 using CogniteSdk.Alpha;
+using CogniteSdk.Resources.Alpha;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Cognite.Simulator.Utils {
 
@@ -15,19 +17,8 @@ namespace Cognite.Simulator.Utils {
     /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
-        private readonly CogniteDestination cdfClient;
         // Buffer for storing log data
-
-        private readonly Dictionary<long, List<SimulatorLogDataEntry>> logBuffer = new Dictionary<long, List<SimulatorLogDataEntry>>();
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScopedRemoteApiSink"/> class.
-        /// </summary>
-        /// <param name="client">CDF Destination</param>
-        public ScopedRemoteApiSink(CogniteDestination client)
-        {
-            cdfClient = client;
-        }
+        private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
 
         /// <summary>
         /// Store the log in the buffer to be sent to the remote API.
@@ -38,6 +29,11 @@ namespace Cognite.Simulator.Utils {
             if (logEvent == null)
             {
                 throw new ArgumentNullException(nameof(logEvent));
+            }
+
+            if (logEvent.Level < LogEventLevel.Warning)
+            {
+                return;
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
@@ -52,40 +48,43 @@ namespace Cognite.Simulator.Utils {
                     Message = logEvent.RenderMessage(),
                 };
 
-                if(logBuffer.ContainsKey(logIdLong)){
-                    logBuffer[logIdLong].Add(logData);
-                } else {
-                    logBuffer.Add(logIdLong, new List<SimulatorLogDataEntry>(){logData});
-                }
+                logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+                    oldValue.Add(logData);
+                    return oldValue;
+                });
             }
         }
 
         /// <summary>
-        /// Flushes the collected logs to the remote API.
+        /// Flushes the logs to the remote API and clears the buffer.
         /// </summary>
-        public void Flush()
+        /// <param name="token">Cancellation token</param>
+        /// <param name="client">Simulator resource client</param>
+        /// <returns></returns>
+        public async Task Flush(SimulatorsResource client, CancellationToken token)
         {
-            // Send the collected logs to the remote API
-            SendToRemoteApi(logBuffer).Wait(); // Wait for the request to complete
-
-            // Clear the log buffer
-            logBuffer.Clear();
+            await SendToRemoteApi(client, token).ConfigureAwait(false);
         }
 
-        private async Task SendToRemoteApi(Dictionary<long, List<SimulatorLogDataEntry>> logs)
+        private async Task SendToRemoteApi(SimulatorsResource client, CancellationToken token)
         {
-            try {
-                foreach (var log in logs)
-                {
-                    await cdfClient.CogniteClient.Alpha.Simulators.UpdateLogsBatch(
-                        log.Key,
-                        log.Value
-                    ).ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex)
+            foreach (var log in logBuffer)
             {
-                Console.WriteLine($"Failed to send logs to CDF: {ex}");
+                try {
+                    // to make sure we remove only the logs that were sent to the remote API
+                    if (logBuffer.TryRemove(log.Key, out var logData))
+                    {
+                        await client.UpdateLogsBatch(
+                            log.Key,
+                            logData,
+                            token
+                        ).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to send logs to CDF: {ex}");
+                }
             }
         }
     }

@@ -1,5 +1,4 @@
-﻿using Cognite.Extensions;
-using Cognite.Extractor.Common;
+﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
@@ -10,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -371,8 +369,7 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
-            using (LogContext.PushProperty("LogId", simEv.Run.LogId)) {
-                try {
+            using (LogContext.PushProperty("LogId", simEv?.Run.LogId)) {
 
                 if (modelState == null)
                 {
@@ -465,17 +462,7 @@ namespace Cognite.Simulator.Utils
                 await EndSimulationRun(simEv, token).ConfigureAwait(false);
                     
             }
-            catch
-            {
-                
-                throw;
-            }
-            finally
-            {
-                _logger.FlushScopedRemoteApiLogs();       
-            }
-        }
-            
+
         }
 
         /// <summary>
