@@ -1,7 +1,5 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
@@ -88,6 +86,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var modelLib = provider.GetRequiredService<ModeLibraryTest>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 var runner = provider.GetRequiredService<SampleSimulationRunner>();
+                var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
                 // Run model and configuration libraries to fetch the test model and
                 // test simulation configuration from CDF
@@ -189,6 +188,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
                 Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
+
+                var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+
+                // this test is not running the full connector runtime
+                // so logs are not being automatically sent to CDF
+                var logData = logsRes.First().Data;
+                Assert.Empty(logData);
+
+                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
+
+                // check logs again after flushing
+                logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+
+                logData = logsRes.First().Data;
+                Assert.NotNull(logData.First().Message);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
@@ -320,6 +336,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
+        private ILogger<SampleSimulationRunner> _logger;
 
         public SampleSimulationRunner(
             CogniteDestination cdf,
@@ -327,7 +344,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            ILogger<SampleSimulationRunner> logger) :
+            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
+        ) :
             base(config,
                 new List<SimulatorConfig>
                 {
@@ -343,12 +361,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 client,
                 logger)
         {
+            _logger = logger;
         }
 
         protected override async Task EndSimulationRun(SimulationRunEvent simEv,
             CancellationToken token)
         {
-
+            _logger.LogWarning("A warning to test remote logging. No actions needed, not a real connector");
         }
 
         protected override void InitSimulationEventMetadata(

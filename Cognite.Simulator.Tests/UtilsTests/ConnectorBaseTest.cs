@@ -1,16 +1,12 @@
 ﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.Logging;
 using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -31,7 +27,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var simulatorName = $"TestSim {timestamp}";
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddLogger();
             services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
             services.AddSingleton<BaseConfig>();
             services.AddTransient<TestConnector>();
@@ -117,16 +112,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
     internal class TestConnector : ConnectorBase<BaseConfig>
     {
         private readonly ExtractionPipeline _pipeline;
-        private readonly RemoteConfigManager<BaseConfig> _remoteConfigManager;
         private readonly SimulatorConfig _config;
-
 
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
             SimulatorConfig config,
-            ILogger<TestConnector> logger,
-            RemoteConfigManager<BaseConfig> remoteConfigManager) :
+            Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
+            RemoteConfigManager<BaseConfig> remoteConfigManager,
+            ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,
                 new ConnectorConfig
@@ -139,11 +133,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     config
                 },
                 logger,
-                remoteConfigManager)
+                remoteConfigManager,
+                remoteSink)
         {
             _pipeline = pipeline;
             _config = config;
-            _remoteConfigManager = remoteConfigManager;
         }
 
         public override string GetConnectorVersion()
