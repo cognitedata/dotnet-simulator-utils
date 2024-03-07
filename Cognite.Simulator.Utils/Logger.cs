@@ -29,17 +29,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        // /// <summary>
-        // /// Configures the sink for logging using the Cognite Client.
-        // /// </summary>
-        // /// <param name="cdfClient">The CogniteDestination instance to use for logging.</param>
-        // /// <returns>The configured sink.</returns>
-        // public static ILogEventSink ConfigureSink(CogniteDestination cdfClient)
-        // {
-        //     sink = new ScopedRemoteApiSink(cdfClient);
-        //     return sink;
-        // }
-
         /// <summary>
         /// Create a default Serilog console logger and returns it.
         /// </summary>
@@ -48,7 +37,6 @@ namespace Cognite.Simulator.Utils
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .Enrich.FromLogContext()
-                // .WriteTo.Sink(sink)
                 .WriteTo.Console(LogEventLevel.Information, LoggingUtils.LogTemplate)
                 .CreateLogger();
         }
@@ -68,15 +56,6 @@ namespace Cognite.Simulator.Utils
             return logConfig.CreateLogger();
         }
 
-        // /// <summary>
-        // /// Flushes the stored logs.
-        // /// </summary>
-        // public static void FlushScopedRemoteApiLogs()
-        // {
-
-        //     ((ScopedRemoteApiSink) sink).Flush();
-        // }
-
         /// <summary>
         /// Create a default console logger and returns it.
         /// </summary>
@@ -95,14 +74,6 @@ namespace Cognite.Simulator.Utils
     /// Extension utilities for logging
     /// </summary>
     public static class LoggingExtensions {
-
-        // /// <summary>
-        // /// Flushes the stored logs.
-        // /// </summary>
-        // public static void FlushScopedRemoteApiLogs(this Microsoft.Extensions.Logging.ILogger _)
-        // {
-        //     SimulatorLoggingUtils.FlushScopedRemoteApiLogs();
-        // }
 
         /// <summary>
         /// Adds a configured Serilog logger as singleton of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
