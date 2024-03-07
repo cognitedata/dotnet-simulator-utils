@@ -33,38 +33,40 @@ namespace Cognite.Simulator.Extensions
             CancellationToken token = default
         )
         {
-            var chunkSize = 1000;
-            var logsByChunks = items
-                .ChunkBy(chunkSize)
-                .ToList();
+            if(items != null){
+                var chunkSize = 1000;
+                var logsByChunks = items
+                    .ChunkBy(chunkSize)
+                    .ToList();
 
-            _logger.LogDebug("Updating logs. Number of log entries: {Number}. Number of chunks: {Chunks}", items.Count, logsByChunks.Count);
-            var generators = logsByChunks
-                .Select<IEnumerable<SimulatorLogDataEntry>, Func<Task>>(
-                (chunk, idx) => async () => {
+                _logger.LogDebug("Updating logs. Number of log entries: {Number}. Number of chunks: {Chunks}", items.Count, logsByChunks.Count);
+                var generators = logsByChunks
+                    .Select<IEnumerable<SimulatorLogDataEntry>, Func<Task>>(
+                    (chunk, idx) => async () => {
 
-                    var item = new SimulatorLogUpdateItem(id)
-                    {
-                        Update = new SimulatorLogUpdate
+                        var item = new SimulatorLogUpdateItem(id)
                         {
-                            Data = new UpdateEnumerable<SimulatorLogDataEntry>(chunk, null)
-                        }
-                    };
-                    await cdfSimulators
-                        .UpdateSimulatorLogsAsync(new List<SimulatorLogUpdateItem> { item }, token)
-                        .ConfigureAwait(false);
-                });
+                            Update = new SimulatorLogUpdate
+                            {
+                                Data = new UpdateEnumerable<SimulatorLogDataEntry>(chunk, null)
+                            }
+                        };
+                        await cdfSimulators
+                            .UpdateSimulatorLogsAsync(new List<SimulatorLogUpdateItem> { item }, token)
+                            .ConfigureAwait(false);
+                    });
 
-            int taskNum = 0;
-            await generators.RunThrottled(
-                1,
-                (_) => {
-                    if (logsByChunks.Count > 1)
-                        _logger.LogDebug("{MethodName} completed {NumDone}/{TotalNum} tasks",
-                            nameof(UpdateLogsBatch), ++taskNum, logsByChunks.Count);
-                },
-                CancellationToken.None
-            ).ConfigureAwait(false);
+                int taskNum = 0;
+                await generators.RunThrottled(
+                    1,
+                    (_) => {
+                        if (logsByChunks.Count > 1)
+                            _logger.LogDebug("{MethodName} completed {NumDone}/{TotalNum} tasks",
+                                nameof(UpdateLogsBatch), ++taskNum, logsByChunks.Count);
+                    },
+                    CancellationToken.None
+                ).ConfigureAwait(false);
+            }
         }
     }
 }
