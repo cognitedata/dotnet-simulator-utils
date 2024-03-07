@@ -31,6 +31,11 @@ namespace Cognite.Simulator.Utils {
                 throw new ArgumentNullException(nameof(logEvent));
             }
 
+            if (logEvent.Level < LogEventLevel.Warning)
+            {
+                return;
+            }
+
             logEvent.Properties.TryGetValue("LogId", out var logId);
             if (logId != null)
             {

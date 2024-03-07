@@ -4,6 +4,7 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -203,6 +204,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
 
                 logData = logsRes.First().Data;
+                Assert.NotEmpty(logData);
                 Assert.NotNull(logData.First().Message);
 
                 // Check that the correct output was added as a data point
@@ -335,6 +337,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
+        private ILogger<SampleSimulationRunner> _logger;
 
         public SampleSimulationRunner(
             CogniteDestination cdf,
@@ -359,12 +362,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 client,
                 logger)
         {
+            _logger = logger;
         }
 
         protected override async Task EndSimulationRun(SimulationRunEvent simEv,
             CancellationToken token)
         {
-
+            _logger.LogWarning("A warning to test remote logging. No actions needed, not a real connector");
         }
 
         protected override void InitSimulationEventMetadata(
