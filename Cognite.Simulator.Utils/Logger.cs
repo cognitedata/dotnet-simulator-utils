@@ -19,7 +19,6 @@ namespace Cognite.Simulator.Utils
     public static class SimulatorLoggingUtils 
     {
 
-        static ILogEventSink sink;
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
         class UtcTimestampEnricher : ILogEventEnricher {

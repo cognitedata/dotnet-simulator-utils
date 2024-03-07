@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Extensions
         /// <param name="items">The list of log data entries.</param>
         /// <param name="token">The cancellation token.</param>
         /// <returns>The updated SimulatorsResource instance.</returns>
-        public static async Task<SimulatorsResource> UpdateLogsBatch(
+        public static async Task UpdateLogsBatch(
             this SimulatorsResource cdfSimulators,
             long id,
             List<SimulatorLogDataEntry> items,
@@ -65,9 +65,6 @@ namespace Cognite.Simulator.Extensions
                 },
                 CancellationToken.None
             ).ConfigureAwait(false);
-
-
-            return null;
         }
     }
 }
