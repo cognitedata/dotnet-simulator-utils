@@ -189,7 +189,7 @@ namespace Cognite.Simulator.Utils
                 {
                     var simulator = Simulators[index];
 
-                    // First simulator does not need a suffix (currently used for Simconnect only)
+                    // If there are more than one, we add the Simulator name as a prefix
                     if (index > 0)
                     {
                         connectorName = $"{simulator.Name}-{GetConnectorName()}";
