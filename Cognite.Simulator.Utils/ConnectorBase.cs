@@ -185,43 +185,50 @@ namespace Cognite.Simulator.Utils
                     token).ConfigureAwait(false);
                 var integrations = integrationRes.Items;
                 var connectorName = GetConnectorName();
-                foreach (var simulator in Simulators)
+                for (var index = 0; index < Simulators.Count; index++)
                 {
-                    var simulatorName = simulator.Name;
+                    var simulator = Simulators[index];
+
+                    // First simulator does not need a suffix (currently used for Simconnect only)
+                    if (index > 0)
+                    {
+                        connectorName = $"{simulator.Name}-{GetConnectorName()}";
+                    }
+                    
                     var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulator.Name);
                     if (existing == null)
                     {
-                        _logger.LogInformation("Creating new simulator integration for {Simulator}", simulatorName);
+                        _logger.LogInformation("Creating new simulator integration for {Simulator}", simulator.Name);
                         var existingSimulators = await Cdf.CogniteClient.Alpha.Simulators.ListAsync(
                             new SimulatorQuery (),
                             token).ConfigureAwait(false);
-                        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorName);
+                        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulator.Name);
 
                         if (existingSimulator == null)
                         {
-                            _logger.LogWarning("Simulator {Simulator} not found in CDF", simulatorName);
-                            throw new ConnectorException($"Simulator {simulatorName} not found in CDF");
+                            _logger.LogWarning("Simulator {Simulator} not found in CDF", simulator.Name);
+                            throw new ConnectorException($"Simulator {simulator.Name} not found in CDF");
                         }
 
                         var integrationToCreate = new SimulatorIntegrationCreate
                         {
                             ExternalId = connectorName,
-                            SimulatorExternalId = simulatorName,
+                            SimulatorExternalId = simulator.Name,
                             DataSetId = simulator.DataSetId,
                             ConnectorVersion = GetConnectorVersion() ?? "N/A",
-                            SimulatorVersion = GetSimulatorVersion(simulatorName) ?? "N/A",
+                            SimulatorVersion = GetSimulatorVersion(simulator.Name) ?? "N/A",
                             RunApiEnabled = ApiEnabled()
                         };
 
                         var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
                             integrationToCreate
                         }, token).ConfigureAwait(false);
-                        _simulatorIntegrationIds[simulatorName] = res.First().Id;
+                        _simulatorIntegrationIds[simulator.Name] = res.First().Id;
                     }
                     else
                     {
-                        _logger.LogInformation("Found existing simulator integration for {Simulator}", simulatorName);
-                        _simulatorIntegrationIds[simulatorName] = existing.Id;
+                        _logger.LogInformation("Found existing simulator integration for {Simulator}", simulator.Name);
+                        _simulatorIntegrationIds[simulator.Name] = existing.Id;
                     }
                 }
             }
