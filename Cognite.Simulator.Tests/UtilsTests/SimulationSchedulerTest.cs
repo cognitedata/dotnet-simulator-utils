@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddHttpClient<FileDownloadClient>();
+            services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton(new ConnectorConfig
             {
@@ -44,17 +44,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
+            var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
 
             /// prepopulate the routine revision
             var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                 cdf,
+                FileStorageClient,
                 SeedData.SimulatorRoutineCreateScheduled,
                 SeedData.SimulatorRoutineRevisionCreateScheduled
             ).ConfigureAwait(false);
 
             try
             {
-                await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();

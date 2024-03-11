@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddHttpClient<FileDownloadClient>();
+            services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
             StateStoreConfig stateConfig = null;
@@ -35,7 +35,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // prepopulate models in CDF
                 var cdf = provider.GetRequiredService<Client>();
-                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf).ConfigureAwait(false);
+                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -71,7 +72,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(15)); // should be enough time to download the file from CDF and parse it
                 var modelLibTasks = lib.GetRunTasks(linkedToken);
                 await modelLibTasks
                     .RunAll(linkedTokenSource)
@@ -121,7 +122,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddHttpClient<FileDownloadClient>();
+            services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ConfigurationLibraryTest>();
 
             StateStoreConfig stateConfig = null;
@@ -132,8 +133,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // prepopulate routine in CDF
                 var cdf = provider.GetRequiredService<CogniteDestination>();
+                var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
+                    FileStorageClient,
                     SeedData.SimulatorRoutineCreate,
                     SeedData.SimulatorRoutineRevision
                 ).ConfigureAwait(false);
@@ -166,7 +169,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     Assert.NotNull(input.Name);
                     Assert.NotNull(input.SensorExternalId);
-                    Assert.Null(input.SampleExternalId);
+                    Assert.NotNull(input.SampleExternalId);
                 }
                 var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
@@ -186,7 +189,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddHttpClient<FileDownloadClient>();
+            services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ConfigurationLibraryTest>();
 
             StateStoreConfig stateConfig = null;
@@ -197,8 +200,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 // prepopulate routine in CDF
                 var cdf = provider.GetRequiredService<CogniteDestination>();
+                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                await TestHelpers.SimulateProsperRunningAsync(cdf.CogniteClient, "integration-tests-connector").ConfigureAwait(false);
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
+                    fileStorageClient,
                     SeedData.SimulatorRoutineCreateWithInputConstants,
                     SeedData.SimulatorRoutineRevisionWithInputConstants
                 ).ConfigureAwait(false);
@@ -288,7 +294,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public ModeLibraryTest(
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
-            FileDownloadClient downloadClient,
+            FileStorageClient downloadClient,
             StagingArea<ModelParsingInfo> staging,
             IExtractionStateStore store = null) :
             base(

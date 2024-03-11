@@ -20,7 +20,7 @@ namespace Cognite.Simulator.Tests
 
     internal static class CdfTestClient
     {
-        internal const long TestDataset = 7900866844615420;
+        internal const long TestDataset = 8148496886298377;
         private static int _configIdx;
         private static string? _statePath;
 
