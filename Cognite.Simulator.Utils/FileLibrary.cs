@@ -293,19 +293,35 @@ namespace Cognite.Simulator.Utils
                         var response = await CdfFiles
                             .DownloadAsync(new[] { fileId }, token)
                             .ConfigureAwait(false);
+
+                    
+
                         if (response.Any() && response.First().DownloadUrl != null)
                         {
                             var uri = response.First().DownloadUrl;
+
+                            var cdfFile = await CdfFiles
+                            .GetAsync(file.CdfId, token)
+                            .ConfigureAwait(false);
+
+                            var fileExtension = file.GetExtension();
+
+                            // if file name ends in an extension, use that extension
+                            if (cdfFile.Name.Contains("."))
+                            {
+                                var parts = cdfFile.Name.Split('.');
+                                fileExtension = parts[parts.Length - 1];
+                            }
 
                             var filename = "";    
                                                  
                             if (file.GetExtension() == "json")
                             {
-                                filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
+                                filename = Path.Combine(_modelFolder, $"{file.CdfId}.{fileExtension}");
                             } else {
                                 var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
                                 CreateDirectoryIfNotExists(storageFolder);
-                                filename = Path.Combine(  storageFolder, $"{file.CdfId}.{file.GetExtension()}");
+                                filename = Path.Combine(  storageFolder, $"{file.CdfId}.{fileExtension}");
                                 file.IsInDirectory = true;
                             }
 
