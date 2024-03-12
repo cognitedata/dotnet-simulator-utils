@@ -1,9 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Linq;
 using System.Threading.Tasks;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+using Com.Cognite.V1.Timeseries.Proto;
+
+using Cognite.Simulator.Tests.DataProcessingTests;
+using Cognite.Simulator.Utils;
 
 namespace Cognite.Simulator.Tests
 {
@@ -35,6 +42,57 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
+        public static FileCreate SimpleModelFileCreate = new FileCreate() {
+            Name = "simulator-integration-tests-model",
+            ExternalId = "simulator-integration-tests-model",
+            DataSetId = 8148496886298377,
+        };
+
+        public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
+            Name = "simulator-integration-tests-model-2",
+            ExternalId = "simulator-integration-tests-model-2",
+            DataSetId = 8148496886298377,
+        };
+
+        public static async Task<CogniteSdk.File> GetOrCreateFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file)
+        {
+            if (sdk == null)
+            {
+                throw new Exception("Client is required for file");
+            }
+            if (fileStorageClient == null)
+            {
+                throw new Exception("FileStorageClient is required for file");
+            }
+            if (file == null)
+            {
+                throw new Exception("File is required for file");
+            }
+
+            var filesRes = await sdk.Files.RetrieveAsync(
+                new List<string> { file.ExternalId }, true).ConfigureAwait(false);
+
+            if (filesRes.Count() > 0)
+            {
+                return filesRes.First();
+            }
+
+            var res = await sdk.Files.UploadAsync(file).ConfigureAwait(false);
+
+            if (res == null || res.UploadUrl == null)
+            {
+                throw new Exception("Failed to upload file");
+            }
+
+            var uploadUrl = res.UploadUrl;
+
+            using (var fileStream = new StreamContent(new MemoryStream())) {
+                await fileStorageClient.UploadFileAsync(uploadUrl, fileStream).ConfigureAwait(false);
+            }
+
+            return res;
+        }
+
         public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevision(Client sdk, SimulatorModelCreate model, SimulatorModelRevisionCreate revision)
         {
             var modelRes = await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
@@ -62,7 +120,13 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
-        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk) {
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient) {
+            var modelFile = await GetOrCreateFile(sdk, fileStorageClient, SimpleModelFileCreate).ConfigureAwait(false);
+            var modelFile2 = await GetOrCreateFile(sdk, fileStorageClient, SimpleModelFileCreate2).ConfigureAwait(false);
+
+            SimulatorModelRevisionCreateV1.FileId = modelFile.Id;
+            SimulatorModelRevisionCreateV2.FileId = modelFile2.Id;
+
             var rev1 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
             var rev2 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
             return new List<SimulatorModelRevision> { rev1, rev2 };
@@ -91,10 +155,64 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
-
-        public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
+        public static TimeSeriesCreate OnOffValuesTimeSeries = new TimeSeriesCreate()
         {
-            await GetOrCreateSimulatorModelRevisions(sdk).ConfigureAwait(false);
+            ExternalId = "SimConnect-IntegrationTests-OnOffValues",
+            Name = "On/Off Values",
+            DataSetId = 8148496886298377,
+        };
+
+        public static TimeSeriesCreate SsdSensorDataTimeSeries = new TimeSeriesCreate()
+        {
+            ExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+            Name = "SSD Sensor Data",
+            DataSetId = 8148496886298377,
+        };
+
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
+        {
+            var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
+                new List<string>() { timeSeries.ExternalId }, true
+            ).ConfigureAwait(false);
+
+            if (timeSeriesRes.Count() > 0)
+            {
+                return timeSeriesRes.First();
+            }
+
+            var res = await sdk.TimeSeries.CreateAsync(
+                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+
+            var dataPoints = new NumericDatapoints();
+
+            for (int i = 0; i < timestamps.Length; i++)
+            {
+                dataPoints.Datapoints.Add(new NumericDatapoint
+                {
+                    Timestamp = timestamps[i],
+                    Value = values[i],
+                });
+            }
+
+            var points = new DataPointInsertionRequest();
+            points.Items.Add(new DataPointInsertionItem
+            {
+                ExternalId = timeSeries.ExternalId,
+                NumericDatapoints = dataPoints,
+            });
+
+            await sdk.DataPoints.CreateAsync(points).ConfigureAwait(false);
+
+            return res.First();
+        }
+
+
+        public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, FileStorageClient fileStorageClient, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
+        {
+            var testValues = new TestValues();
+            await GetOrCreateTimeSeries(sdk, OnOffValuesTimeSeries, testValues.TimeLogic, testValues.DataLogic).ConfigureAwait(false);
+            await GetOrCreateTimeSeries(sdk, SsdSensorDataTimeSeries, testValues.TimeSsd, testValues.DataSsd).ConfigureAwait(false);
+            await GetOrCreateSimulatorModelRevisions(sdk, fileStorageClient).ConfigureAwait(false);
             var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
 
             var routineRevisions = await sdk.Alpha.Simulators.ListSimulatorRoutineRevisionsAsync(
@@ -340,8 +458,8 @@ namespace Cognite.Simulator.Tests
                 
                 },
             },
-            ExternalId = "Test Routine with Input Constants - 1",
-            RoutineExternalId = "Test Routine with Input Constants",
+            ExternalId = "Test Routine with Input Timeseries - 1",
+            RoutineExternalId = "Test Routine with Input Timeseries",
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -400,7 +518,7 @@ namespace Cognite.Simulator.Tests
             ExternalId = "PROSPER-Connector_Test_Model",
             Name = "Connector Test Model",
             Description = "PROSPER-Connector Test Model",
-            DataSetId = 7900866844615420,
+            DataSetId = 8148496886298377,
             SimulatorExternalId = "PROSPER",
         };
 
@@ -408,7 +526,6 @@ namespace Cognite.Simulator.Tests
         {
             ExternalId = "PROSPER-Connector_Test_Model-1",
             ModelExternalId = SimulatorModelCreate.ExternalId,
-            FileId = 2583813271697095,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
 
@@ -416,7 +533,6 @@ namespace Cognite.Simulator.Tests
         {
             ExternalId = "PROSPER-Connector_Test_Model-2",
             ModelExternalId = SimulatorModelCreate.ExternalId,
-            FileId = 4435244413333137,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
     }

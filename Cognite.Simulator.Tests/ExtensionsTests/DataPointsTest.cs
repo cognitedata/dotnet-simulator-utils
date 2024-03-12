@@ -57,8 +57,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             // that it contains data points in this time range
             CogniteSdk.TimeRange range = new()
             {
-                Min = 1632571875265,
-                Max = 1632615015265
+                Min = 1631294940000,
+                Max = 1631296740000
             };
             
             // Test max aggregation. A single data point should be returned
