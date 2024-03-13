@@ -58,7 +58,7 @@ namespace Cognite.Simulator.Utils
         private readonly FileLibraryConfig _config;
         private readonly IList<SimulatorConfig> _simulators;
         private readonly IExtractionStateStore _store;
-        private readonly FileDownloadClient _downloadClient;
+        private readonly FileStorageClient _downloadClient;
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -82,7 +82,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ILogger logger,
-            FileDownloadClient downloadClient,
+            FileStorageClient downloadClient,
             IExtractionStateStore store = null)
         {
             _config = config;
