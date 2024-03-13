@@ -40,7 +40,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddHttpClient<FileDownloadClient>();
+            services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
             services.AddSingleton<ConfigurationLibraryTest>();
@@ -61,6 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
+            var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
 
             // prepopulate routine in CDF
             SimulatorRoutineRevision revision;
@@ -68,12 +69,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             if (useConstInputs) {
                 revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf,
+                    FileStorageClient,
                     SeedData.SimulatorRoutineCreateWithInputConstants,
                     SeedData.SimulatorRoutineRevisionWithInputConstants
                 ).ConfigureAwait(false);
             } else {
                 revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf,
+                    FileStorageClient,
                     SeedData.SimulatorRoutineCreate,
                     SeedData.SimulatorRoutineRevision
                 ).ConfigureAwait(false);

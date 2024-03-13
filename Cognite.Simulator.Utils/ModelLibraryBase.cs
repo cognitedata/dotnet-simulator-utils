@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using CogniteSdk.Alpha;
+using Cognite.Extensions;
 
 namespace Cognite.Simulator.Utils
 {
@@ -47,7 +48,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf, 
             ILogger logger, 
-            FileDownloadClient downloadClient,
+            FileStorageClient downloadClient,
             StagingArea<V> staging,
             IExtractionStateStore store = null) : 
             base(SimulatorDataType.ModelFile, config, simulators, cdf, logger, downloadClient, store)
@@ -96,7 +97,7 @@ namespace Cognite.Simulator.Utils
                 .OrderByDescending(f => f.Version);
             var otherModelVersionsMap = modelVersionsAll
                 .Where(f => f.ModelName != modelName)
-                .ToDictionary(f => f.FilePath, f => true);
+                .ToDictionarySafe(f => f.FilePath, f => true);
             var latestVersion = currentModelVersions.FirstOrDefault();
             var modelVersionsToDelete = currentModelVersions.Skip(1);
             foreach (var version in modelVersionsToDelete)
