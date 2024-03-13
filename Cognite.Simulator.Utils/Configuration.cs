@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Cognite.Extractor.Logging;
+using Serilog.Events;
 
 namespace Cognite.Simulator.Utils
 {
@@ -21,6 +23,12 @@ namespace Cognite.Simulator.Utils
         /// written to this data set
         /// </summary>
         public long DataSetId { get; set; }
+    }
+
+    public class SimulatorLoggingConfig
+    {
+        public LogEventLevel Level { get; set; } = LogEventLevel.Information;
+        public bool Enabled { get; set; } = true;
     }
 
     /// <summary>
@@ -65,7 +73,7 @@ namespace Cognite.Simulator.Utils
     /// connector properties such as name and intervals for status report and
     /// for fetching events
     /// </summary>
-    public class ConnectorConfig
+    public class ConnectorConfig 
     {
         /// <summary>
         /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
@@ -141,6 +149,8 @@ namespace Cognite.Simulator.Utils
             }
             return $"{NamePrefix}{Environment.MachineName}";
         }
+
+        public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
     }
 
     /// <summary>

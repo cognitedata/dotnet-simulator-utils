@@ -8,6 +8,10 @@ using Cognite.Extractor.Utils;
 using Serilog.Core;
 using Serilog.Events;
 
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Utils;
+using Google.Protobuf.WellKnownTypes;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -87,7 +91,7 @@ namespace Cognite.Simulator.Utils
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
+        public static void AddLogger(this IServiceCollection services, SimulatorLoggingConfig apiLogger = null, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
         {
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
@@ -95,6 +99,7 @@ namespace Cognite.Simulator.Utils
             {
                 var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink>();
                 var config = p.GetService<LoggerConfig>();
+                remoteApiSink.SetConfig(apiLogger);
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
                     // No logging configuration
