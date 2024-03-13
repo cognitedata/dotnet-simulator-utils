@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Utils
 
     public class SimulatorLoggingConfig
     {
-        public LogEventLevel Level { get; set; } = LogEventLevel.Information;
+        public LogEventLevel Level { get; set; } = LogEventLevel.Warning;
         public bool Enabled { get; set; } = true;
     }
 
