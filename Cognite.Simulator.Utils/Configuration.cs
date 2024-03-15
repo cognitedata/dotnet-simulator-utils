@@ -25,9 +25,20 @@ namespace Cognite.Simulator.Utils
         public long DataSetId { get; set; }
     }
 
+    /// <summary>
+    /// Represents the simulator logging configuration.
+    /// This sets the minimum logging level and whether logging is enabled or not.
+    /// </summary>
     public class SimulatorLoggingConfig
     {
+        /// <summary>
+        /// Gets or sets the minimum log event level.
+        /// </summary>
         public LogEventLevel Level { get; set; } = LogEventLevel.Warning;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether logging to the API is enabled.
+        /// </summary>
         public bool Enabled { get; set; } = true;
     }
 
