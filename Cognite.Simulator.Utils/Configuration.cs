@@ -152,15 +152,9 @@ namespace Cognite.Simulator.Utils
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
-        public string GetConnectorName()
-        {
-            if (!AddMachineNameSuffix)
-            {
-                return NamePrefix;
-            }
-            return $"{NamePrefix}{Environment.MachineName}";
-        }
-
+        /// <summary>
+        /// Configuration for the simulator API logger.
+        /// </summary>
         public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
     }
 
