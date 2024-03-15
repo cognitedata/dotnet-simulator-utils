@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Cognite.Extractor.Logging;
+using Serilog.Events;
 
 namespace Cognite.Simulator.Utils
 {
@@ -21,6 +23,23 @@ namespace Cognite.Simulator.Utils
         /// written to this data set
         /// </summary>
         public long DataSetId { get; set; }
+    }
+
+    /// <summary>
+    /// Represents the simulator logging configuration.
+    /// This sets the minimum logging level and whether logging is enabled or not.
+    /// </summary>
+    public class SimulatorLoggingConfig
+    {
+        /// <summary>
+        /// Gets or sets the minimum log event level.
+        /// </summary>
+        public LogEventLevel Level { get; set; } = LogEventLevel.Warning;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether logging to the API is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
     }
 
     /// <summary>
@@ -65,7 +84,7 @@ namespace Cognite.Simulator.Utils
     /// connector properties such as name and intervals for status report and
     /// for fetching events
     /// </summary>
-    public class ConnectorConfig
+    public class ConnectorConfig 
     {
         /// <summary>
         /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
@@ -141,6 +160,11 @@ namespace Cognite.Simulator.Utils
             }
             return $"{NamePrefix}{Environment.MachineName}";
         }
+
+        /// <summary>
+        /// Configuration for the simulator API logger.
+        /// </summary>
+        public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
     }
 
     /// <summary>

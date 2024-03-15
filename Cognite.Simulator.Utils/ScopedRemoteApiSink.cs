@@ -17,6 +17,7 @@ namespace Cognite.Simulator.Utils {
     /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
+        private SimulatorLoggingConfig apiLoggerConfig;
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
 
@@ -26,12 +27,17 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
+            if(apiLoggerConfig == null || !apiLoggerConfig.Enabled)
+            {
+                return;
+            }
+            
             if (logEvent == null)
             {
                 throw new ArgumentNullException(nameof(logEvent));
             }
 
-            if (logEvent.Level < LogEventLevel.Warning)
+            if (logEvent.Level < apiLoggerConfig.Level)
             {
                 return;
             }
@@ -52,6 +58,22 @@ namespace Cognite.Simulator.Utils {
                     oldValue.Add(logData);
                     return oldValue;
                 });
+            }
+        }
+
+        /// <summary>
+        /// Sets the configuration for the remote API.
+        /// </summary>
+        /// <param name="config">This configuration sets the minimum log level to report to the APi and wether the remote logging is enabled or not.</param>
+        public void SetConfig(SimulatorLoggingConfig config)
+        {
+            if(config == null){
+                apiLoggerConfig = new SimulatorLoggingConfig{
+                    Level = LogEventLevel.Information,
+                    Enabled = true
+                };
+            } else {
+                apiLoggerConfig = config;
             }
         }
 

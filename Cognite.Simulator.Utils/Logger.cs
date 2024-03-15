@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 using Cognite.Extractor.Logging;
-using Cognite.Extractor.Utils;
 using Serilog.Core;
 using Serilog.Events;
 
@@ -82,12 +81,13 @@ namespace Cognite.Simulator.Utils
         /// collection as well.
         /// </summary>
         /// <param name="services">The service collection</param>
+        /// <param name="apiLoggerConfig">Sets the logger configuration, minimum log level and if it is enabled or not.</param>
         /// <param name="buildLogger">Method to build the logger.
         /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
         /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static void AddLogger(this IServiceCollection services, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
+        public static void AddLogger(this IServiceCollection services, SimulatorLoggingConfig apiLoggerConfig = null, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
         {
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
@@ -95,6 +95,7 @@ namespace Cognite.Simulator.Utils
             {
                 var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink>();
                 var config = p.GetService<LoggerConfig>();
+                remoteApiSink.SetConfig(apiLoggerConfig);
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
                     // No logging configuration
