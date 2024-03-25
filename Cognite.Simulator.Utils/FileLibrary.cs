@@ -207,7 +207,6 @@ namespace Cognite.Simulator.Utils
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
                                 CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
-                                ModelExternalIds = modelExternalIds,
                             }
                         },
                         token

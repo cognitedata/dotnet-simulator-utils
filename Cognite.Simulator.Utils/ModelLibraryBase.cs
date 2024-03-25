@@ -138,10 +138,7 @@ namespace Cognite.Simulator.Utils
                     var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery
                         {
-                            Filter = new SimulatorModelRevisionFilter
-                            {
-                                ModelExternalIds = new List<string> { state.ModelExternalId }
-                            }
+                            Filter = new SimulatorModelRevisionFilter()
                         }, token).ConfigureAwait(false);
                     
                     var revisionsInCdf = modelRevisionsInCdfRes.Items;
