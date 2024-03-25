@@ -135,16 +135,13 @@ namespace Cognite.Simulator.Utils
                 var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
                 if (localRevisions.Any())
                 {
-                    var modelRevisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
+                    var modelRevisionsInCdfAllRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery
                         {
-                            Filter = new SimulatorModelRevisionFilter
-                            {
-                                ModelExternalIds = new List<string> { state.ModelExternalId }
-                            }
+                            Filter = new SimulatorModelRevisionFilter()
                         }, token).ConfigureAwait(false);
                     
-                    var revisionsInCdf = modelRevisionsInCdfRes.Items;
+                    var revisionsInCdf = modelRevisionsInCdfAllRes.Items.Where(v => v.SimulatorExternalId == state.Source);
 
                     var statesToDelete = new List<T>();
                     foreach (var revision in localRevisions)
