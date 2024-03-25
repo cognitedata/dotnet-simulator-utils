@@ -202,7 +202,7 @@ namespace Cognite.Simulator.Utils
                     return;
                 }
 
-                var modelRevisionsRes = await CdfSimulatorResources
+                var modelRevisionsAllRes = await CdfSimulatorResources
                     .ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
@@ -211,8 +211,11 @@ namespace Cognite.Simulator.Utils
                         },
                         token
                     ).ConfigureAwait(false);
+                var modelRevisionsRes = modelRevisionsAllRes.Items
+                    .Where(r => modelExternalIds.Contains(r.ModelExternalId))
+                    .ToList();
 
-                foreach (var revision in modelRevisionsRes.Items) {
+                foreach (var revision in modelRevisionsRes) {
                     var model = modelsMap[revision.ModelExternalId];
                     T rState = StateFromModelRevision(revision, model);
                     if (rState == null)
