@@ -670,81 +670,87 @@ namespace Cognite.Simulator.Utils
     }
 
 
-    /// <summary>
-    /// Base class for simulation configuration objects. This object should be
-    /// used to deserialize the contents of a configuration file in CDF
-    /// </summary>
-    public class SimulationConfigurationBase
-    {
-        /// <summary>
-        /// External ID of the simulation configuration
-        /// </summary>
-        public string ExternalId { get; set; }
+    // /// <summary>
+    // /// Base class for simulation configuration objects. This object should be
+    // /// used to deserialize the contents of a configuration file in CDF
+    // /// </summary>
+    // public class SimulationConfigurationBase
+    // {
+    //     /// <summary>
+    //     /// External ID of the simulation configuration
+    //     /// </summary>
+    //     public string ExternalId { get; set; }
 
-        /// <summary>
-        /// Simulator name
-        /// </summary>
-        public string Simulator { get; set; }
+    //     /// <summary>
+    //     /// Simulator name
+    //     /// </summary>
+    //     public string Simulator { get; set; }
 
-        /// <summary>
-        /// Model name
-        /// </summary>
-        public string ModelName { get; set; }
+    //     /// <summary>
+    //     /// Model name
+    //     /// </summary>
+    //     public string ModelName { get; set; }
 
-        /// <summary>
-        /// Calculation name
-        /// </summary>
-        public string CalculationName { get; set; }
+    //     /// <summary>
+    //     /// Routine external id
+    //     /// </summary>
+    //     public string RoutineExternalId { get; set; }
 
-        /// <summary>
-        /// Calculation type. Used to identify different types of calculations
-        /// supported by a given simulator.
-        /// </summary>
-        public string CalculationType { get; set; }
+    //     // /// <summary>
+    //     // /// Calculation name
+    //     // /// </summary>
+    //     // public string CalculationName { get; set; }
 
-        /// <summary>
-        /// User defined calculation type. User defined calculations will have
-        /// <b>UserDefined</b> as <see cref="CalculationType"/>. This property
-        /// provides a way of differentiating user defined calculations
-        /// </summary>
-        public string CalcTypeUserDefined { get; set; } = "";
+    //     // /// <summary>
+    //     // /// Calculation type. Used to identify different types of calculations
+    //     // /// supported by a given simulator.
+    //     // /// </summary>
+    //     // public string CalculationType { get; set; }
 
-        /// <summary>
-        /// Connector name
-        /// </summary>
-        public string Connector { get; set; }
+    //     // /// <summary>
+    //     // /// User defined calculation type. User defined calculations will have
+    //     // /// <b>UserDefined</b> as <see cref="CalculationType"/>. This property
+    //     // /// provides a way of differentiating user defined calculations
+    //     // /// </summary>
+    //     // public string CalcTypeUserDefined { get; set; } = "";
 
-        /// <summary>
-        /// Email of the user who created this configuration
-        /// </summary>
-        public string UserEmail { get; set; } = "";
+    //     /// <summary>
+    //     /// Connector name
+    //     /// </summary>
+    //     public string Connector { get; set; }
 
-        /// <summary>
-        /// Simulation schedule configuration
-        /// </summary>
-        public ScheduleConfiguration Schedule { get; set; }
+    //     /// <summary>
+    //     /// Email of the user who created this configuration
+    //     /// </summary>
+    //     public string UserEmail { get; set; } = "";
 
-        /// <summary>
-        /// Calculation object crated from this configuration
-        /// </summary>
-        public SimulatorCalculation Calculation => new SimulatorCalculation
-        {
-            ExternalId = ExternalId,
-            Model = new SimulatorModelInfo
-            {
-                Name = ModelName,
-                Simulator = Simulator
-            },
-            Name = CalculationName,
-            Type = CalculationType,
-            UserDefinedType = CalcTypeUserDefined
-        };
+    //     /// <summary>
+    //     /// Simulation schedule configuration
+    //     /// </summary>
+    //     public ScheduleConfiguration Schedule { get; set; }
 
-        /// <summary>
-        /// Created time
-        /// </summary>
-        public long CreatedTime { get; set; }
-    }
+    //     /// <summary>
+    //     /// Calculation object crated from this configuration
+    //     /// </summary>
+    //     public SimulatorRoutineRevisionInfo Calculation => new SimulatorRoutineRevisionInfo
+    //     {
+    //         ExternalId = ExternalId,
+    //         Model = new SimulatorModelInfo
+    //         {
+    //             Name = ModelName,
+    //             Simulator = Simulator
+    //         },
+    //         RoutineExternalId = RoutineExternalId,
+    //         // Name = CalculationName,
+    //         // Type = CalculationType,
+    //         // UserDefinedType = CalcTypeUserDefined
+    //     };
+
+    //     /// <summary>
+    //     /// Created time
+    //     /// </summary>
+    //     public long CreatedTime { get; set; }
+    // }
 
     /// <summary>
     /// This base class represents the state of a simulation configuration file

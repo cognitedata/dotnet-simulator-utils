@@ -236,7 +236,7 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogError(error.Message);
                                 }
                             }
-                            _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
+                            _logger.LogError("Calculation run failed with error: {Message}", ex);
                             e.Run = await UpdateSimulationRunStatus(
                                 runId,
                                 SimulationRunStatus.failure,
@@ -359,7 +359,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
         /// <param name="configState">Configuration state object</param>
-        /// <param name="configObj">Configuration object</param>
+        /// <param name="routineRevision">Routine revision object</param>
         /// <param name="metadata">Metadata to add to the event</param>
         /// <param name="token">Cancellation token</param>
         protected virtual async Task InitSimulationRun(
@@ -367,7 +367,7 @@ namespace Cognite.Simulator.Utils
             DateTime startTime,
             T modelState,
             U configState,
-            V configObj,
+            V routineRevision,
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
@@ -380,9 +380,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(simEv));
             }
-            if (configObj == null)
+            if (routineRevision == null)
             {
-                throw new ArgumentNullException(nameof(configObj));
+                throw new ArgumentNullException(nameof(routineRevision));
             }
 
             simEv.Run = await UpdateSimulationRunStatus(
@@ -393,11 +393,12 @@ namespace Cognite.Simulator.Utils
 
             SamplingRange samplingRange = null;
             var validationEnd = startTime;
+            var configObj = routineRevision.Configuration;
             try
             {
-                if (configObj.Configuration.DataSampling == null)
+                if (configObj.DataSampling == null)
                 {
-                    throw new SimulationException($"Data sampling configuration for {configObj.ExternalId} missing");
+                    throw new SimulationException($"Data sampling configuration for {routineRevision.ExternalId} missing");
                 }
                 // Determine the validation end time
                 if (simEv.Run.ValidationEndTime.HasValue)
@@ -411,21 +412,21 @@ namespace Cognite.Simulator.Utils
                     // If the validation end time should be in the past, subtract the 
                     // configured offset
                     var offset = SimulationUtils.ConfigurationTimeStringToTimeSpan(
-                        configObj.Configuration.DataSampling.ValidationEndOffset);
+                        configObj.DataSampling.ValidationEndOffset);
                     validationEnd = startTime - offset;
                 }
 
                 // Find the sampling configuration results
-                // samplingRange = await SimulationUtils.RunSteadyStateAndLogicalCheck(
-                //     _cdfDataPoints,
-                //     configObj,
-                //     validationEnd,
-                //     token).ConfigureAwait(false);
+                samplingRange = await SimulationUtils.RunSteadyStateAndLogicalCheck(
+                    _cdfDataPoints,
+                    configObj,
+                    validationEnd,
+                    token).ConfigureAwait(false);
 
-                // _logger.LogInformation("Running calculation {Type} for model {ModelName}. Calculation time: {Time}",
-                //     configObj.CalculationType,
-                //     configObj.ModelName,
-                //     CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
+                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Calculation time: {Time}",
+                    routineRevision.ExternalId,
+                    routineRevision.ModelExternalId,
+                    CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
             }
             catch (SimulationException ex)
             {
@@ -446,7 +447,7 @@ namespace Cognite.Simulator.Utils
                 startTime,
                 modelState,
                 configState,
-                configObj,
+                routineRevision,
                 samplingRange,
                 token).ConfigureAwait(false);
 
@@ -501,7 +502,7 @@ namespace Cognite.Simulator.Utils
         protected virtual void BuildRunConfiguration(
             SamplingRange samplingRange,
             SimulationRunEvent simEv,
-            V configObj,
+            SimulatorRoutineRevisionConfiguration configObj,
             DateTime validationEnd)
         {
             if (simEv == null)
@@ -514,7 +515,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(configObj));
             }
 
-            simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.Configuration.DataSampling.ValidationWindow).ToUnixTimeMilliseconds());
+            simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds());
             simEv.RunConfiguration.Add("validationEnd", validationEnd.ToUnixTimeMilliseconds());
 
             if (samplingRange != null)

@@ -111,7 +111,17 @@ namespace Cognite.Simulator.Utils
                 {
                     var simInput = new SimulationInput
                     {
-                        // Calculation = configObj.RoutineExternalId, TODO
+                        RoutineRevisionInfo = new SimulatorRoutineRevisionInfo()
+                        {
+                            ExternalId = routineRevision.ExternalId,
+                            Model = new SimulatorModelInfo
+                            {
+                                ExternalId = modelState.ModelExternalId,
+                                Name = modelState.ModelName,
+                                Simulator = routineRevision.SimulatorExternalId,
+                            },
+                            RoutineExternalId = routineRevision.RoutineExternalId,
+                        },
                         ReferenceId = inputValue.ReferenceId,
                         Name = inputValue.Name,
                         Unit = inputValue.Unit.Name,
@@ -142,6 +152,7 @@ namespace Cognite.Simulator.Utils
                             { 
                                 new Datapoint(samplingRange.Midpoint, inputConstValue) 
                             });
+
                     }
                 }
             }
@@ -151,13 +162,13 @@ namespace Cognite.Simulator.Utils
             {
                 var dps = await _cdf.CogniteClient.DataPoints.GetSample(
                     inputTs.SourceExternalId,
-                    "average".ToDataPointAggregate(),//inputTs.AggregateType.ToDataPointAggregate(), TODO fix sdk type
+                    inputTs.Aggregate.ToDataPointAggregate(),
                     configObj.DataSampling.Granularity,
                     samplingRange,
                     token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
                     configObj.DataSampling.Granularity,
-                    "average".ToDataPointAggregate()); //inputTs.AggregateType.ToDataPointAggregate()); TODO
+                    inputTs.Aggregate.ToDataPointAggregate());
                 if (inputDps.Count == 0)
                 {
                     throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
@@ -169,7 +180,17 @@ namespace Cognite.Simulator.Utils
                 inputData[inputTs.ReferenceId] = averageValue;
                 var simInput = new SimulationInput
                 {
-                    // Calculation = configObj.Calculation, TODO
+                    RoutineRevisionInfo = new SimulatorRoutineRevisionInfo
+                    {
+                        ExternalId = routineRevision.ExternalId,
+                        Model = new SimulatorModelInfo
+                        {
+                            ExternalId = modelState.ModelExternalId,
+                            Name = modelState.ModelName,
+                            Simulator = routineRevision.SimulatorExternalId,
+                        },
+                        RoutineExternalId = routineRevision.RoutineExternalId
+                    },
                     Name = inputTs.Name,
                     ReferenceId = inputTs.ReferenceId,
                     Unit = inputTs.Unit.Name,
@@ -197,13 +218,24 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Saving simulation results as time series");
-            foreach (var output in configObj.Outputs.Where(o => o.SaveTimeseriesExternalId != null))
+            foreach (var output in configObj.Outputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)))
             {
                 if (results.ContainsKey(output.ReferenceId))
                 {
                     var outputTs = new SimulationOutput
                     {
-                        // Calculation = configObj.Calculation, TODO, why?
+                        RoutineRevisionInfo = new SimulatorRoutineRevisionInfo
+                        {
+                            ExternalId = routineRevision.ExternalId,
+                            Model = new SimulatorModelInfo
+                            {
+                                ExternalId = modelState.ModelExternalId,
+                                Name = modelState.ModelName,
+                                Simulator = routineRevision.SimulatorExternalId,
+                            },
+                            RoutineExternalId = routineRevision.RoutineExternalId
+                        },
+                        SaveTimeseriesExternalId = output.SaveTimeseriesExternalId,
                         Name = output.Name,
                         ReferenceId = output.ReferenceId,
                         Unit = output.Unit.Name,
@@ -220,6 +252,7 @@ namespace Cognite.Simulator.Utils
                         { 
                             new Datapoint(samplingRange.Midpoint, results[output.ReferenceId]) 
                         });
+
                 }
             }
             try

@@ -111,17 +111,20 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Name = "Connector Test Model",
                 Simulator = "TestSimulator"
             };
-            var calculation = new SimulatorCalculation
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo
             {
                 Model = model,
-                Name = "Test Calculation",
-                Type = "UserDefined",
-                UserDefinedType = "TestCalc"
+                // RoutineName = "Test Calculation",
+                ExternalId = "TestCalc - 1",
+                RoutineExternalId = "TestCalc",
+                // Name = "Test Calculation",
+                // Type = "UserDefined",
+                // UserDefinedType = "TestCalc"
             };
 
             var inA = new SimulationInput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Input A",
                 ReferenceId = "THP",
                 Unit = "BARg",
@@ -133,7 +136,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             };
             var inB = new SimulationInput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Input B",
                 ReferenceId = "THT",
                 Unit = "DegC",
@@ -152,7 +155,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var outA = new SimulationOutput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Output A",
                 ReferenceId = "GasRate",
                 Unit = "MMscf/day",

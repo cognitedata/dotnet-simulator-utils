@@ -20,12 +20,16 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Model external id
+        /// </summary>
+        public string ExternalId { get; set; }
     }
 
     /// <summary>
-    /// Represents a simulator calculation file
+    /// Represents a simulator routine short info 
     /// </summary>
-    public class SimulatorCalculation
+    public class SimulatorRoutineRevisionInfo
     {
         /// <summary>
         /// Routine revision external id
@@ -33,19 +37,24 @@ namespace Cognite.Simulator.Extensions
         public string ExternalId { get; set; }
 
         /// <summary>
-        /// Calculation type (e.g. IPR/VLP)
+        /// Routine external id
         /// </summary>
-        public string Type { get; set; }
+        public string RoutineExternalId { get; set; }
 
-        /// <summary>
-        /// Calculation name (e.g. Rate by Nodal Analysis)
-        /// </summary>
-        public string Name { get; set; }
+        // /// <summary>
+        // /// Calculation type (e.g. IPR/VLP)
+        // /// </summary>
+        // public string Type { get; set; }
 
-        /// <summary>
-        /// Calculation type - user defined (e.g. CustomIprVlp)
-        /// </summary>
-        public string UserDefinedType { get; set; }
+        // /// <summary>
+        // /// Routine name (e.g. Rate by Nodal Analysis)
+        // /// </summary>
+        // public string RoutineName { get; set; }
+
+        // /// <summary>
+        // /// Calculation type - user defined (e.g. CustomIprVlp)
+        // /// </summary>
+        // public string UserDefinedType { get; set; }
 
         /// <summary>
         /// Simulator model associated with this calculation
@@ -69,9 +78,9 @@ namespace Cognite.Simulator.Extensions
         public string Name { get; set; }
 
         /// <summary>
-        /// Calculation that produced these tabular results
+        /// Routine that produced these tabular results
         /// </summary>
-        public SimulatorCalculation Calculation { get; set; }
+        public SimulatorRoutineRevisionInfo RoutineRevisionInfo { get; set; }
 
         /// <summary>
         /// Columns with simulation results. The dictionary key
@@ -264,10 +273,10 @@ namespace Cognite.Simulator.Extensions
         //     : ExternalIdOverwrite;
 
         internal override string TimeSeriesName =>
-            $"{Name} - INPUT - {Calculation.GetCalcNameForNames()} - {Calculation.Model.GetModelNameForNames()}";
+            $"{Name} - INPUT - {RoutineRevisionInfo.GetCalcNameForNames()} - {RoutineRevisionInfo.Model.GetModelNameForNames()}";
 
         internal override string TimeSeriesDescription =>
-            $"Input sampled for {Calculation.Name} - {Calculation.Model.Name}";
+            $"Input sampled for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
     }
 
     /// <summary>
@@ -283,10 +292,10 @@ namespace Cognite.Simulator.Extensions
         //     : ExternalIdOverwrite;
 
         internal override string TimeSeriesName => 
-            $"{Name} - OUTPUT - {Calculation.GetCalcNameForNames()} - {Calculation.Model.GetModelNameForNames()}";
+            $"{Name} - OUTPUT - {RoutineRevisionInfo.GetCalcNameForNames()} - {RoutineRevisionInfo.Model.GetModelNameForNames()}";
 
         internal override string TimeSeriesDescription =>
-            $"Calculation result for {Calculation.Name} - {Calculation.Model.Name}";
+            $"Calculation result for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
     }
 
     /// <summary>
@@ -304,7 +313,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Calculation associated with this variable
         /// </summary>
-        public SimulatorCalculation Calculation { get; set; }
+        public SimulatorRoutineRevisionInfo RoutineRevisionInfo { get; set; }
 
         /// <summary>
         /// Unique identifier in a given routine

@@ -190,7 +190,7 @@ namespace Cognite.Simulator.Extensions
             var tsToCreate = new Dictionary<string, TimeSeriesCreate>();
             foreach (var simTs in simTimeSeries.Where(t => !String.IsNullOrEmpty(t.SaveTimeseriesExternalId)))
             {
-                var tsCreate = GetTimeSeriesCreatePrototype(simTs.SaveTimeseriesExternalId, dataType, simTs.Calculation, dataSetId);
+                var tsCreate = GetTimeSeriesCreatePrototype(simTs.SaveTimeseriesExternalId, dataType, simTs.RoutineRevisionInfo, dataSetId);
                 tsCreate.Name = simTs.TimeSeriesName;
                 tsCreate.Description = simTs.TimeSeriesDescription;
                 tsCreate.Unit = simTs.Unit;
@@ -225,7 +225,7 @@ namespace Cognite.Simulator.Extensions
         private static TimeSeriesCreate GetTimeSeriesCreatePrototype(
             string externalId,
             SimulatorDataType dataType,
-            SimulatorCalculation calc,
+            SimulatorRoutineRevisionInfo routineRev,
             long? dataSet,
             bool isStep = false)
         {
@@ -233,7 +233,7 @@ namespace Cognite.Simulator.Extensions
             {
                 ExternalId = externalId,
                 IsStep = isStep,
-                Metadata = calc.GetCommonMetadata(dataType)
+                Metadata = routineRev.GetCommonMetadata(dataType)
             };
             if (dataSet.HasValue)
             {

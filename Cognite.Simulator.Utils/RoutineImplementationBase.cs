@@ -11,7 +11,7 @@ namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// Base implementation for simulation routines.
-    /// This class parses routines of type <see cref="SimulationConfigurationWithRoutine"/>
+    /// This class parses routines of type <see cref="SimulatorRoutineRevision" />
     /// and calls the abstract methods that executes each step type.
     /// </summary>
     public abstract class RoutineImplementationBase
@@ -42,17 +42,17 @@ namespace Cognite.Simulator.Utils
             _inputData = inputData;
         }
 
-        // /// <summary>
-        // /// Implements a step that sets the value sampled from a time series
-        // /// as input to a simulation
-        // /// </summary>
-        // /// <param name="inputConfig">Time series input configuration</param>
-        // /// <param name="value">Value to set</param>
-        // /// <param name="arguments">Extra arguments</param>
-        // public abstract void SetTimeSeriesInput(
-        //     InputTimeSeriesConfiguration inputConfig,
-        //     double value,
-        //     Dictionary<string, string> arguments);
+        /// <summary>
+        /// Implements a step that sets the value sampled from a time series
+        /// as input to a simulation
+        /// </summary>
+        /// <param name="inputConfig">Time series input configuration</param>
+        /// <param name="value">Value to set</param>
+        /// <param name="arguments">Extra arguments</param>
+        public abstract void SetTimeSeriesInput(
+            SimulatorRoutineRevisionInput inputConfig,
+            double value,
+            Dictionary<string, string> arguments);
 
         /// <summary>
         /// Implements a step that sets a manual value as input to a simulation
@@ -63,16 +63,16 @@ namespace Cognite.Simulator.Utils
             string value,
             Dictionary<string, string> arguments);
 
-        // /// <summary>
-        // /// Gets a numeric simulation result that should be saved
-        // /// as a time series
-        // /// </summary>
-        // /// <param name="outputConfig">Output time series configuration</param>
-        // /// <param name="arguments">Extra arguments</param>
-        // /// <returns></returns>
-        // public abstract double GetTimeSeriesOutput(
-        //     OutputTimeSeriesConfiguration outputConfig,
-        //     Dictionary<string, string> arguments);
+        /// <summary>
+        /// Gets a numeric simulation result that should be saved
+        /// as a time series
+        /// </summary>
+        /// <param name="outputConfig">Output time series configuration</param>
+        /// <param name="arguments">Extra arguments</param>
+        /// <returns></returns>
+        public abstract double GetTimeSeriesOutput(
+            SimulatorRoutineRevisionOutput outputConfig,
+            Dictionary<string, string> arguments);
 
         /// <summary>
         /// Invoke the given command on the simulator using the provided arguments.
@@ -100,7 +100,7 @@ namespace Cognite.Simulator.Utils
             // }
             if (_script == null || !_script.Any())
             {
-                throw new SimulationException("Missing calculation routine");
+                throw new SimulationException("Missing routine script");
             }
 
             var orderedRoutine = _script.OrderBy(p => p.Order).ToList();
@@ -179,16 +179,16 @@ namespace Cognite.Simulator.Utils
             var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
             
-            if (argType == "outputTimeSeries")
-            {
-                // Get the simulation result as a time series data point
-                // var matchingOutputs = _config.OutputTimeSeries.Where(i => i.Type == argRefId).ToList();
-                // if (matchingOutputs.Any())
-                // {
-                //     var output = matchingOutputs.First();
-                //     _simulationResults[output.Type] = GetTimeSeriesOutput(output, extraArgs);
-                // }
-            }
+            var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
+            if (matchingOutputs.Any())
+                {
+                    var output = matchingOutputs.First();
+                    if (argType == "outputTimeSeries")
+                    {
+                        // Get the simulation result as a time series data point
+                        _simulationResults[output.ReferenceId] = GetTimeSeriesOutput(output, extraArgs);
+                    }
+                }
             else
             {
                 throw new SimulationException($"Get error: Invalid output type {argType}");
@@ -211,39 +211,42 @@ namespace Cognite.Simulator.Utils
             switch (argType)
             {
                 case "inputTimeSeries":
-                    // var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argRefId).ToList();
-                    // if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
-                    // {
-                    //     // Set input time series
-                    //     SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
-                    // }
-                    // else
-                    // {
-                    //     throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
-                    // }
+                    var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId && i.IsTimeSeries).ToList();
+                    if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
+                    {
+                        // Set input time series
+                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+                    }
+                    else
+                    {
+                        throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
+                    }
                     break;
                 case "inputConstant":
-                    var matchingInputManualValues = _config.InputConstants.Where(i => i.ReferenceId == argRefId).ToList();
+                    var matchingInputManualValues = _config.Inputs.Where(i => i.ReferenceId == argRefId && i.IsConstant).ToList();
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
                     {
                         var inputManualValue = matchingInputManualValues.First();
-                        extraArgs.Add("unit", inputManualValue.Unit);
-                        if (inputManualValue.UnitType != null)
+                        if (inputManualValue.Unit != null)
                         {
-                            extraArgs.Add("unitType", inputManualValue.UnitType);
+                            extraArgs.Add("unit", inputManualValue.Unit.Name);
+                            if (inputManualValue.Unit.Type != null)
+                            {
+                                extraArgs.Add("unitType", inputManualValue.Unit.Type);
+                            }
                         }
                         // Set manual input
                         SetManualInput(_inputData[argRefId].ToString(), extraArgs);
                     }
                     else
                     {
-                        throw new SimulationException($"Set error: Manual value input with key {argRefId} not found");
+                        throw new SimulationException($"Set error: Constant value input with key {argRefId} not found");
                     }
                     break;
-                case "manual":
-                    // Set manual input (from inside the routine, legacy)
-                    SetManualInput(argRefId, extraArgs);
-                    break;
+                // case "manual":
+                //     // Set manual input (from inside the routine, legacy)
+                //     SetManualInput(argRefId, extraArgs);
+                //     break;
                 default:
                     throw new SimulationException($"Set error: Invalid argument type {argType}");
             }

@@ -115,7 +115,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        // TODO: remove this when we switch fully to extended Inputs/Outputs
         [Fact]
         public async Task TestConfigurationLibrary()
         {
@@ -136,8 +135,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
-                    SeedData.SimulatorRoutineCreate,
-                    SeedData.SimulatorRoutineRevision
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -163,7 +162,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("Test Routine with Input Timeseries", simConf.RoutineExternalId);
+                Assert.Equal("Simulation Runner Test With TS and Extended IO", simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
                 {
                     Assert.True(input.IsTimeSeries);
