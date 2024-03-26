@@ -112,7 +112,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Variable type metadata key
         /// </summary>
-        public const string VariableTypeKey = "variableType";
+        public const string VariableTypeKey = "referenceId";
 
         /// <summary>
         /// Variable name metadata key
@@ -151,7 +151,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// simulation input variable type metadata key
         /// </summary>
-        public const string VariableTypeKey = VariableMetadata.VariableTypeKey;
+        public const string VariableRefIdKey = VariableMetadata.VariableTypeKey;
 
         /// <summary>
         /// Simulation input variable name metadata key

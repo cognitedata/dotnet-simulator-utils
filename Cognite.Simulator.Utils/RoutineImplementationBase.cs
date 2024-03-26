@@ -1,4 +1,5 @@
 using Cognite.Simulator.Utils;
+using CogniteSdk.Alpha;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,41 +16,43 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public abstract class RoutineImplementationBase
     {
-        private readonly IEnumerable<CalculationProcedure> _routine;
-        private readonly SimulationConfigurationWithRoutine _config;
+        // private readonly IEnumerable<CalculationProcedure> _routine;
+        private readonly IEnumerable<SimulatorRoutineRevisionScriptStage> _script;
+        private readonly SimulatorRoutineRevisionConfiguration _config;
         private readonly Dictionary<string, double> _inputData;
         private readonly Dictionary<string, double> _simulationResults;
 
         /// <summary>
-        /// Creates a new simulation routine with the given configuration
+        /// Creates a new simulation routine with the given routine revision
         /// </summary>
-        /// <param name="config">Simulation configuration object</param>
+        /// <param name="routineRevision">Routine revision object</param>
         /// <param name="inputData">Data to use as input</param>
         public RoutineImplementationBase(
-            SimulationConfigurationWithRoutine config,
+            SimulatorRoutineRevision routineRevision,
             Dictionary<string, double> inputData)
         {
-            if (config == null)
+            if (routineRevision == null)
             {
-                throw new ArgumentNullException(nameof(config));
+                throw new ArgumentNullException(nameof(routineRevision));
             }
-            _routine = config.Routine;
-            _config = config;
+            // _routine = config.Routine; // TODO
+            _script = routineRevision.Script;
+            _config = routineRevision.Configuration;
             _simulationResults = new Dictionary<string, double>();
             _inputData = inputData;
         }
 
-        /// <summary>
-        /// Implements a step that sets the value sampled from a time series
-        /// as input to a simulation
-        /// </summary>
-        /// <param name="inputConfig">Time series input configuration</param>
-        /// <param name="value">Value to set</param>
-        /// <param name="arguments">Extra arguments</param>
-        public abstract void SetTimeSeriesInput(
-            InputTimeSeriesConfiguration inputConfig,
-            double value,
-            Dictionary<string, string> arguments);
+        // /// <summary>
+        // /// Implements a step that sets the value sampled from a time series
+        // /// as input to a simulation
+        // /// </summary>
+        // /// <param name="inputConfig">Time series input configuration</param>
+        // /// <param name="value">Value to set</param>
+        // /// <param name="arguments">Extra arguments</param>
+        // public abstract void SetTimeSeriesInput(
+        //     InputTimeSeriesConfiguration inputConfig,
+        //     double value,
+        //     Dictionary<string, string> arguments);
 
         /// <summary>
         /// Implements a step that sets a manual value as input to a simulation
@@ -60,16 +63,16 @@ namespace Cognite.Simulator.Utils
             string value,
             Dictionary<string, string> arguments);
 
-        /// <summary>
-        /// Gets a numeric simulation result that should be saved
-        /// as a time series
-        /// </summary>
-        /// <param name="outputConfig">Output time series configuration</param>
-        /// <param name="arguments">Extra arguments</param>
-        /// <returns></returns>
-        public abstract double GetTimeSeriesOutput(
-            OutputTimeSeriesConfiguration outputConfig,
-            Dictionary<string, string> arguments);
+        // /// <summary>
+        // /// Gets a numeric simulation result that should be saved
+        // /// as a time series
+        // /// </summary>
+        // /// <param name="outputConfig">Output time series configuration</param>
+        // /// <param name="arguments">Extra arguments</param>
+        // /// <returns></returns>
+        // public abstract double GetTimeSeriesOutput(
+        //     OutputTimeSeriesConfiguration outputConfig,
+        //     Dictionary<string, string> arguments);
 
         /// <summary>
         /// Invoke the given command on the simulator using the provided arguments.
@@ -91,40 +94,40 @@ namespace Cognite.Simulator.Utils
         public virtual Dictionary<string, double> PerformSimulation()
         {
             _simulationResults.Clear();
-            if (_config.CalculationType != "UserDefined")
-            {
-                throw new SimulationException($"Calculation type not supported: {_config.CalculationType}");
-            }
-            if (_routine == null || !_routine.Any())
+            // if (_config.CalculationType != "UserDefined")
+            // {
+            //     throw new SimulationException($"Calculation type not supported: {_config.CalculationType}");
+            // }
+            if (_script == null || !_script.Any())
             {
                 throw new SimulationException("Missing calculation routine");
             }
 
-            var orderedRoutine = _routine.OrderBy(p => p.Order).ToList();
+            var orderedRoutine = _script.OrderBy(p => p.Order).ToList();
 
-            foreach (var procedure in orderedRoutine)
+            foreach (var stage in orderedRoutine)
             {
                 try
                 {
-                    ParseProcedure(procedure);
+                    ParseScriptStage(stage);
                 }
                 catch (SimulationRoutineException e)
                 {
-                    throw new SimulationRoutineException(e.OriginalMessage, procedure.Order, e.Step);
+                    throw new SimulationRoutineException(e.OriginalMessage, stage.Order, e.StepNumber);
                 }
 
             }
             return _simulationResults;
         }
 
-        private void ParseProcedure(CalculationProcedure procedure)
+        private void ParseScriptStage(SimulatorRoutineRevisionScriptStage stage)
         {
-            var orderedSteps = procedure.Steps.OrderBy(s => s.Step).ToList();
+            var orderedSteps = stage.Steps.OrderBy(s => s.Order).ToList();
             foreach (var step in orderedSteps)
             {
                 try
                 {
-                    switch (step.Type)
+                    switch (step.StepType)
                     {
                         case "Command":
                             {
@@ -141,12 +144,12 @@ namespace Cognite.Simulator.Utils
                                 ParseGet(step.Arguments);
                                 break;
                             }
-                            throw new SimulationRoutineException($"Invalid procedure step: {step.Type}", step: step.Step);
+                            throw new SimulationRoutineException($"Invalid procedure step: {step.StepType}", stepNumber: step.Order);
                     };
                 }
                 catch (Exception e) when (e is SimulationException)
                 {
-                    throw new SimulationRoutineException(e.Message, step: step.Step);
+                    throw new SimulationRoutineException(e.Message, stepNumber: step.Order);
                 }
             }
         }
@@ -179,12 +182,12 @@ namespace Cognite.Simulator.Utils
             if (argType == "outputTimeSeries")
             {
                 // Get the simulation result as a time series data point
-                var matchingOutputs = _config.OutputTimeSeries.Where(i => i.Type == argRefId).ToList();
-                if (matchingOutputs.Any())
-                {
-                    var output = matchingOutputs.First();
-                    _simulationResults[output.Type] = GetTimeSeriesOutput(output, extraArgs);
-                }
+                // var matchingOutputs = _config.OutputTimeSeries.Where(i => i.Type == argRefId).ToList();
+                // if (matchingOutputs.Any())
+                // {
+                //     var output = matchingOutputs.First();
+                //     _simulationResults[output.Type] = GetTimeSeriesOutput(output, extraArgs);
+                // }
             }
             else
             {
@@ -208,19 +211,19 @@ namespace Cognite.Simulator.Utils
             switch (argType)
             {
                 case "inputTimeSeries":
-                    var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argRefId).ToList();
-                    if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
-                    {
-                        // Set input time series
-                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
-                    }
-                    else
-                    {
-                        throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
-                    }
+                    // var matchingInputs = _config.InputTimeSeries.Where(i => i.Type == argRefId).ToList();
+                    // if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
+                    // {
+                    //     // Set input time series
+                    //     SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+                    // }
+                    // else
+                    // {
+                    //     throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
+                    // }
                     break;
                 case "inputConstant":
-                    var matchingInputManualValues = _config.InputConstants.Where(i => i.Type == argRefId).ToList();
+                    var matchingInputManualValues = _config.InputConstants.Where(i => i.ReferenceId == argRefId).ToList();
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
                     {
                         var inputManualValue = matchingInputManualValues.First();
@@ -253,14 +256,14 @@ namespace Cognite.Simulator.Utils
     public class SimulationRoutineException : SimulationException
     {
         /// <summary>
-        /// Which procedure failed
+        /// Which stage failed
         /// </summary>
-        public int Procedure { get; }
+        public int StageNumber { get; }
 
         /// <summary>
         /// Which step failed
         /// </summary>
-        public int Step { get; }
+        public int StepNumber { get; }
 
         /// <summary>
         /// Original message coming from the simulator
@@ -271,13 +274,13 @@ namespace Cognite.Simulator.Utils
         /// Creates a new exception with the provided parameters
         /// </summary>
         /// <param name="message">Simulator error message</param>
-        /// <param name="procedure">Procedure number</param>
-        /// <param name="step">Step number</param>
-        public SimulationRoutineException(string message, int procedure = 0, int step = 0)
-            : base($"{procedure}.{step}: {message}")
+        /// <param name="stageNumber">Stage number</param>
+        /// <param name="stepNumber">Step number</param>
+        public SimulationRoutineException(string message, int stageNumber = 0, int stepNumber = 0)
+            : base($"{stageNumber}.{stepNumber}: {message}")
         {
-            Procedure = procedure;
-            Step = step;
+            StageNumber = stageNumber;
+            StepNumber = stepNumber;
             OriginalMessage = message;
         }
     }

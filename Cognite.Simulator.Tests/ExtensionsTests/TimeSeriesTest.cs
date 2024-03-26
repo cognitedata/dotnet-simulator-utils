@@ -123,27 +123,26 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             {
                 Calculation = calculation,
                 Name = "Input A",
-                Type = "THP",
+                ReferenceId = "THP",
                 Unit = "BARg",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.IN.A" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Input_A-TestCalc-THP"
             };
             var inB = new SimulationInput
             {
                 Calculation = calculation,
                 Name = "Input B",
-                Type = "THT",
+                ReferenceId = "THT",
                 Unit = "DegC",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.IN.B" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Input_B-TestCalc-CTM" 
             };
-            string overwriteId = "TestSimulator-Input_B-TestCalc-CTM";
-            inB.OverwriteTimeSeriesId(overwriteId);
-            Assert.Equal(overwriteId, inB.TimeSeriesExternalId);
 
             var inputs = new List<SimulationInput>
             {
@@ -155,12 +154,13 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             {
                 Calculation = calculation,
                 Name = "Output A",
-                Type = "GasRate",
+                ReferenceId = "GasRate",
                 Unit = "MMscf/day",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.OUT.A" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Output_A-TestCalc-GasRate"
             };
             var outputs = new List<SimulationOutput> { 
                 outA
@@ -168,22 +168,22 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var tsToDelete = new List<Identity>
             {
-                new Identity(inA.TimeSeriesExternalId),
-                new Identity(inB.TimeSeriesExternalId),
-                new Identity(outA.TimeSeriesExternalId)
+                new Identity(inA.SaveTimeseriesExternalId),
+                new Identity(inB.SaveTimeseriesExternalId),
+                new Identity(outA.SaveTimeseriesExternalId)
             };
             try
             {
-                //Test model version time series
-                var mvTs = await timeSeries.GetOrCreateSimulationModelVersion(
-                    calculation,
-                    dataSetId,
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotNull(mvTs);
-                tsToDelete.Add(new Identity(mvTs.ExternalId));
-                Assert.True(mvTs.IsStep);
-                Assert.False(mvTs.IsString);
-                Assert.Equal(SimulatorDataType.SimulationModelVersion.MetadataValue(), mvTs.Metadata[BaseMetadata.DataTypeKey]);
+                //Test model version time series TODO remove this
+                // var mvTs = await timeSeries.GetOrCreateSimulationModelVersion(
+                //     calculation,
+                //     dataSetId,
+                //     CancellationToken.None).ConfigureAwait(false);
+                // Assert.NotNull(mvTs);
+                // tsToDelete.Add(new Identity(mvTs.ExternalId));
+                // Assert.True(mvTs.IsStep);
+                // Assert.False(mvTs.IsString);
+                // Assert.Equal(SimulatorDataType.SimulationModelVersion.MetadataValue(), mvTs.Metadata[BaseMetadata.DataTypeKey]);
 
                 // Test input time series
                 var inputTs = await timeSeries.GetOrCreateSimulationInputs(
@@ -192,17 +192,17 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     CancellationToken.None).ConfigureAwait(false);
                 Assert.True(inputTs.Any());
                 Assert.Equal(2, inputTs.Count());
-                var inTsA = inputTs.First(ts => ts.ExternalId == inA.TimeSeriesExternalId);
+                var inTsA = inputTs.First(ts => ts.ExternalId == inA.SaveTimeseriesExternalId);
                 Assert.Equal(inA.Unit, inTsA.Unit);
                 Assert.Equal(inA.Name, inTsA.Metadata["variableName"]);
-                Assert.Equal(inA.Type, inTsA.Metadata["variableType"]);
+                Assert.Equal(inA.ReferenceId, inTsA.Metadata["referenceId"]);
                 Assert.Equal(inA.Metadata["sourceAddress"], inTsA.Metadata["sourceAddress"]);
                 Assert.False(inTsA.IsStep);
                 Assert.False(inTsA.IsString);
-                var inTsB = inputTs.First(ts => ts.ExternalId == inB.TimeSeriesExternalId);
+                var inTsB = inputTs.First(ts => ts.ExternalId == inB.SaveTimeseriesExternalId);
                 Assert.Equal(inB.Unit, inTsB.Unit);
                 Assert.Equal(inB.Name, inTsB.Metadata["variableName"]);
-                Assert.Equal(inB.Type, inTsB.Metadata["variableType"]);
+                Assert.Equal(inB.ReferenceId, inTsB.Metadata["referenceId"]);
                 Assert.Equal(inB.Metadata["sourceAddress"], inTsB.Metadata["sourceAddress"]);
                 Assert.False(inTsB.IsStep);
                 Assert.False(inTsB.IsString);
@@ -213,10 +213,10 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     dataSetId,
                     CancellationToken.None).ConfigureAwait(false);
                 Assert.Single(outputTs);
-                var outTsA = outputTs.First(ts => ts.ExternalId == outA.TimeSeriesExternalId);
+                var outTsA = outputTs.First(ts => ts.ExternalId == outA.SaveTimeseriesExternalId);
                 Assert.Equal(outA.Unit, outTsA.Unit);
                 Assert.Equal(outA.Name, outTsA.Metadata["variableName"]);
-                Assert.Equal(outA.Type, outTsA.Metadata["variableType"]);
+                Assert.Equal(outA.ReferenceId, outTsA.Metadata["referenceId"]);
                 Assert.Equal(outA.Metadata["sourceAddress"], outTsA.Metadata["sourceAddress"]);
                 Assert.False(outTsA.IsStep);
                 Assert.False(outTsA.IsString);

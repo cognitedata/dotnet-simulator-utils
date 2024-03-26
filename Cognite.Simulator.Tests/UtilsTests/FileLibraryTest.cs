@@ -115,8 +115,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        // TODO this used to have a test for IPR/VLP (predefined), but it was removed
-        // add it back once we support predefined calcs again
+        // TODO: remove this when we switch fully to extended Inputs/Outputs
         [Fact]
         public async Task TestConfigurationLibrary()
         {
@@ -164,12 +163,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                foreach (var input in simConf.InputTimeSeries)
+                Assert.Equal("Test Routine with Input Timeseries", simConf.RoutineExternalId);
+                foreach (var input in simConf.Configuration.Inputs)
                 {
+                    Assert.True(input.IsTimeSeries);
                     Assert.NotNull(input.Name);
-                    Assert.NotNull(input.SensorExternalId);
-                    Assert.NotNull(input.SampleExternalId);
+                    Assert.NotNull(input.SourceExternalId);
+                    Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
                 var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
@@ -185,7 +185,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestConfigurationLibraryWithConstInputs()
+        public async Task TestConfigurationLibraryWithExtendedIO()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -205,8 +205,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     fileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithInputConstants,
-                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -214,10 +214,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
-
-                // TODO: don't create the folder anymore
-                // bool dirExists = Directory.Exists("./configurations");
-                // Assert.True(dirExists, "Should have created a directory for the files");
 
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -236,18 +232,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Equal("PROSPER", state.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
 
-                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
+                var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("Test Routine with Input Constants", simConf.CalculationName);
-                Assert.Equal("Test Routine with Input Constants", simConf.CalcTypeUserDefined);
+
+                Assert.Equal("Test Routine with extended IO", routineRevision.RoutineExternalId);
+                Assert.Equal("Test Routine with extended IO - 1", routineRevision.ExternalId);
                 
-                Assert.Empty(simConf.InputTimeSeries);
-                Assert.NotEmpty(simConf.InputConstants);
-                foreach (var input in simConf.InputConstants)
+                Assert.NotEmpty(simConf.Inputs);
+                foreach (var input in simConf.Inputs)
                 {
                     Assert.NotNull(input.Value);
-                    Assert.NotNull(input.Type);
+                    Assert.NotNull(input.ReferenceId);
+                    Assert.True(input.IsConstant);
                     Assert.NotNull(input.Name);
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
@@ -373,7 +370,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithRoutine>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulatorRoutineRevision>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 
