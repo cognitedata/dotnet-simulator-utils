@@ -2,6 +2,7 @@
 using Cognite.Extractor.Common;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
 using System;
 using System.Collections.Generic;
@@ -103,7 +104,7 @@ namespace Cognite.Simulator.Utils
         /// <returns></returns>
         public static async Task<TimeRange> RunSteadyStateAndLogicalCheck(
             DataPointsResource dataPoints,
-            SimulationConfigurationWithDataSampling config,
+            SimulatorRoutineRevisionConfiguration config,
             DateTime validationEnd,
             CancellationToken token)
         {
@@ -123,14 +124,14 @@ namespace Cognite.Simulator.Utils
             if (config.LogicalCheck != null && config.LogicalCheck.Enabled)
             {
                 var dps = await dataPoints.GetSample(
-                    config.LogicalCheck.ExternalId,
-                    config.LogicalCheck.AggregateType.ToDataPointAggregate(),
+                    config.LogicalCheck.TimeseriesExternalId,
+                    config.LogicalCheck.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
                     config.DataSampling.Granularity,
-                    config.LogicalCheck.AggregateType.ToDataPointAggregate());
+                    config.LogicalCheck.Aggregate.ToDataPointAggregate());
                 validationDps = LogicalCheckInternal(validationDps, validationRange, config.LogicalCheck, config.DataSampling);
             }
 
@@ -139,8 +140,8 @@ namespace Cognite.Simulator.Utils
             if (config.SteadyStateDetection != null && config.SteadyStateDetection.Enabled)
             {
                 var ssDps = await dataPoints.GetSample(
-                    config.SteadyStateDetection.ExternalId,
-                    config.SteadyStateDetection.AggregateType.ToDataPointAggregate(),
+                    config.SteadyStateDetection.TimeseriesExternalId,
+                    config.SteadyStateDetection.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
@@ -148,10 +149,10 @@ namespace Cognite.Simulator.Utils
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
                         config.DataSampling.Granularity,
-                        config.SteadyStateDetection.AggregateType.ToDataPointAggregate()),
-                    config.SteadyStateDetection.MinSectionSize,
-                    config.SteadyStateDetection.VarThreshold,
-                    config.SteadyStateDetection.SlopeThreshold);
+                        config.SteadyStateDetection.Aggregate.ToDataPointAggregate()),
+                    config.SteadyStateDetection.MinSectionSize ?? 0, // TODO what are the defaults?
+                    config.SteadyStateDetection.VarThreshold ?? 0,
+                    config.SteadyStateDetection.SlopeThreshold ?? 0);
             }
 
             TimeSeriesData feasibleTimestamps;
@@ -189,14 +190,14 @@ namespace Cognite.Simulator.Utils
             };
         }
 
-        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, LogicalCheckConfiguration lcConfig, DataSamplingConfiguration sampling)
+        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, SimulatorRoutineRevisionLogicalCheck lcConfig, SimulatorRoutineRevisionDataSampling sampling)
         {
-            if (!Enum.TryParse(lcConfig.Check, true, out DataSampling.LogicOperator op))
+            if (!Enum.TryParse(lcConfig.Operator, true, out DataSampling.LogicOperator op))
             {
-                throw new ArgumentException($"Logical check operator not recognized: {lcConfig.Check}", nameof(lcConfig));
+                throw new ArgumentException($"Logical check operator not recognized: {lcConfig.Operator}", nameof(lcConfig));
             }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value, op, validationRange.Max);
+            return DataSampling.LogicalCheck(ts, lcConfig.Value ?? 0, op, validationRange.Max); // todo defaults
         }
 
         /// <summary>

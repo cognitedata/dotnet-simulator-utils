@@ -126,7 +126,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class SampleSimulationScheduler :
-        SimulationSchedulerBase<TestConfigurationState, SimulationConfigurationWithRoutine>
+        SimulationSchedulerBase<TestConfigurationState, SimulatorRoutineRevision>
     {
         public SampleSimulationScheduler(
             ConfigurationLibraryTest configLib, 

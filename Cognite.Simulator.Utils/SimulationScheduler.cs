@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class SimulationSchedulerBase<U, V> 
         where U : ConfigurationStateBase
-        where V : SimulationConfigurationWithDataSampling
+        where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _config;
         private readonly IConfigurationProvider<U, V> _configLib;
@@ -51,23 +51,23 @@ namespace Cognite.Simulator.Utils
             _config = config;
         }
 
-        private async Task<IEnumerable<SimulationRun>> CreateSimulationEventReadyToRun(
-            IEnumerable<SimulationEvent> simulationEvents,
+        private async Task CreateSimulationRunsReadyToRun(
+            IEnumerable<SimulationRunCreate> runsToCreate,
             CancellationToken token)
         {
-            if (simulationEvents == null || !simulationEvents.Any())
+            if (runsToCreate == null || !runsToCreate.Any())
             {
-                return Enumerable.Empty<SimulationRun>();
+                return;// Enumerable.Empty<SimulationRun>();
             }
 
-            var runsToCreate = simulationEvents.Select(e => {
-                var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
-                return new SimulationRunCreate(){
-                    RoutineExternalId = e.Calculation.Name,
-                    RunType = runType,
-                };
-        }).ToList();
-            List<SimulationRun> runs = new List<SimulationRun>();
+        //     var runsToCreate = simulationEvents.Select(e => {
+        //         var runType = e.RunType == "scheduled" ? SimulationRunType.scheduled : e.RunType == "manual" ? SimulationRunType.manual : SimulationRunType.external;
+        //         return new SimulationRunCreate(){
+        //             RoutineExternalId = e.Calculation.Name,
+        //             RunType = runType,
+        //         };
+        // }).ToList();
+            // List<SimulationRun> runs = new List<SimulationRun>();
 
             foreach (SimulationRunCreate runToCreate in runsToCreate)
             {
@@ -75,10 +75,10 @@ namespace Cognite.Simulator.Utils
                     items: new List<SimulationRunCreate> { runToCreate },
                     token: token
                 ).ConfigureAwait(false);
-                runs.AddRange(run);
+                // runs.AddRange(run);
             }
 
-            return runs;
+            // return runs;
         }
 
 
@@ -94,9 +94,9 @@ namespace Cognite.Simulator.Utils
             while (!token.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;
-                var eventsToCreate = new List<SimulationEvent>();
+                var eventsToCreate = new List<SimulationRunCreate>();
                 var configurations = _configLib.SimulationConfigurations.Values
-                    .GroupBy(c => c.CalculationName)
+                    .GroupBy(c => c.RoutineExternalId)
                     .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
                 foreach (var configObj in configurations)
                 {
@@ -106,18 +106,19 @@ namespace Cognite.Simulator.Utils
 
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
-                        configObj.Connector != _config.GetConnectorName() ||
-                        configObj.Schedule == null ||
-                        configObj.Schedule.Enabled == false)
+                        configObj.SimulatorIntegrationExternalId != _config.GetConnectorName() ||
+                        configObj.Configuration.Schedule == null ||
+                        configObj.Configuration.Schedule.Enabled == false)
                     {
                         continue;
                     }
-                    var repeat = configObj.Schedule.RepeatTimeSpan; // frequency of simulations
+                    var repeat = SimulationUtils.ConfigurationTimeStringToTimeSpan(configObj.Configuration.Schedule.Repeat); // frequency of simulations
 
                     // Retrieve the last run time saved in the calculation state, or use the start date
                     // if no run was saved in the state
+                    var startDateTime = CogniteTime.FromUnixTimeMilliseconds(configObj.Configuration.Schedule.StartTime.Value); // TODO what's the default value if not set?
                     var lastRun = configState.LastRun.HasValue ?
-                        CogniteTime.FromUnixTimeMilliseconds(configState.LastRun.Value) : configObj.Schedule.StartDate - repeat;
+                        CogniteTime.FromUnixTimeMilliseconds(configState.LastRun.Value) : startDateTime - repeat;
                     var nextRun = lastRun;
 
                     // Determine if it is time to trigger the calculation. The calculation is triggered
@@ -135,44 +136,46 @@ namespace Cognite.Simulator.Utils
                                 break;
                             }
                             _logger.LogInformation("Scheduled simulation ready to run: {CalcName} - {CalcModel}",
-                                configObj.CalculationName,
-                                configObj.ModelName);
+                                configObj.RoutineExternalId,
+                                configObj.ModelExternalId);
 
                             configState.LastRun = nextRun.ToUnixTimeMilliseconds(); // store state
-                            var runEvent = CreateRunEvent(configState, configObj); // create CDF event body
+                            // var runEvent = CreateRunEvent(configState, configObj); // create CDF event body
+                            var runEvent = new SimulationRunCreate
+                            {
+                                RoutineExternalId = configObj.RoutineExternalId,
+                                RunType = SimulationRunType.scheduled
+                            };
                             eventsToCreate.Add(runEvent);
                             break;
                         }
                     }
                 }
-                // create events related to all scheduled runs in this iteration.
-                if (eventsToCreate.Any())
+                // create runs related to all scheduled routines in this iteration.
+                try
                 {
-                    try
-                    {
-                        await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
-                    }
-                    catch (CogniteException ex)
-                    {
-                        _logger.LogError("Failed to create simulation run events in CDF: {Errors}",
-                                string.Join(". ", ex.CogniteErrors.Select(e => e.Message)));
-                    }
-
+                    await CreateSimulationRunsReadyToRun(eventsToCreate, token).ConfigureAwait(false);
+                }
+                catch (CogniteException ex)
+                {
+                    _logger.LogError("Failed to create simulation run events in CDF: {Errors}",
+                            string.Join(". ", ex.CogniteErrors.Select(e => e.Message)));
                 }
                 await Task.Delay(interval, token).ConfigureAwait(false);
             }
         }
-        private SimulationEvent CreateRunEvent(U calcState, V calcConfig)
-        {
-            return new SimulationEvent
-            {
-                Calculation = calcConfig.Calculation,
-                Connector = _config.GetConnectorName(),
-                CalculationId = calcState.Id,
-                DataSetId = calcState.DataSetId,
-                RunType = "scheduled",
-                UserEmail = calcConfig.UserEmail
-            };
-        }
+        // private SimulationRunCreate CreateRunEvent(U calcState, V calcConfig)
+        // {
+        //     // return new SimulationEvent
+        //     // {
+        //     //     Calculation = calcConfig.RoutineExternalId,
+        //     //     Connector = _config.GetConnectorName(),
+        //     //     CalculationId = calcState.Id,
+        //     //     DataSetId = calcState.DataSetId,
+        //     //     RunType = "scheduled",
+        //     //     UserEmail = calcConfig.UserEmail
+        //     // };
+        //     return 
+        // }
     }
 }

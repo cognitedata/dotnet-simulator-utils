@@ -280,7 +280,7 @@ namespace Cognite.Simulator.Tests
             Name = "Simulation Runner Scheduled Routine",
         };
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithInputConstants = new SimulatorRoutineRevisionCreate()
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithExtendedIO = new SimulatorRoutineRevisionCreate()
         {
             Configuration = new SimulatorRoutineRevisionConfiguration()
             {
@@ -312,37 +312,45 @@ namespace Cognite.Simulator.Tests
                     VarThreshold = 1.0,
                     SlopeThreshold = -3.0,
                 },
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
-                    new SimulatorRoutineRevisionInputConstants() {
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
-                        Value = "42",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 1",
                         ReferenceId = "IC1",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Value = SimulatorValue.Create(42),
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
                     },
-                    new SimulatorRoutineRevisionInputConstants() {
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
-                        Value = "100",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 2",
                         ReferenceId = "IC2",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Value = SimulatorValue.Create(100),
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
                     },
                 },
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
-                    new SimulatorRoutineRevisionOutputTimeseries() {
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 1",
                         ReferenceId = "OT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
                 },
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
             },
-            ExternalId = "Test Routine with Input Constants - 1",
-            RoutineExternalId = "Test Routine with Input Constants",
+            ExternalId = "Test Routine with extended IO - 1",
+            RoutineExternalId = "Test Routine with extended IO",
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -395,15 +403,16 @@ namespace Cognite.Simulator.Tests
                 },
             },
         };
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithInputConstants = new SimulatorRoutineCreateCommandItem()
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = SimulatorRoutineRevisionWithInputConstants.RoutineExternalId,
+            ExternalId = SimulatorRoutineRevisionWithExtendedIO.RoutineExternalId,
             ModelExternalId = "PROSPER-Connector_Test_Model",
             SimulatorIntegrationExternalId = "integration-tests-connector",
-            Name = "Simulation Runner Test With Constant Inputs",
+            Name = "Simulation Runner Test With Extended IO",
         };
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevision = new SimulatorRoutineRevisionCreate()
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithTsAndExtendedIO = new SimulatorRoutineRevisionCreate()
         {
             Configuration = new SimulatorRoutineRevisionConfiguration()
             {
@@ -435,31 +444,34 @@ namespace Cognite.Simulator.Tests
                     VarThreshold = 1.0,
                     SlopeThreshold = -3.0,
                 },
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
-                    new SimulatorRoutineRevisionOutputTimeseries() {
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 1",
                         ReferenceId = "OT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
                 },
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>() {
-                    new SimulatorRoutineRevisionInputTimeseries() {
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Test 1",
                         ReferenceId = "IT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         Aggregate = "average",
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
                         SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
                     },
-                
                 },
             },
-            ExternalId = "Test Routine with Input Timeseries - 1",
-            RoutineExternalId = "Test Routine with Input Timeseries",
+            ExternalId = "Test Routine with Input TS and extended IO - 1",
+            RoutineExternalId = "Test Routine with Input TS and extended IO",
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -505,12 +517,12 @@ namespace Cognite.Simulator.Tests
             },
         };
 
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreate = new SimulatorRoutineCreateCommandItem()
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithTsAndExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = SimulatorRoutineRevision.RoutineExternalId,
+            ExternalId = SimulatorRoutineRevisionWithTsAndExtendedIO.RoutineExternalId,
             ModelExternalId = "PROSPER-Connector_Test_Model",
             SimulatorIntegrationExternalId = "integration-tests-connector",
-            Name = "Simulation Runner Test",
+            Name = "Simulation Runner Test With TS and Extended IO",
         };
 
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()

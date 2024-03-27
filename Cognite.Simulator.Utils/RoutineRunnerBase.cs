@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extensions;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Simulation runner for simulation configurations of type <see cref="SimulationConfigurationWithRoutine"/>
+    /// Simulation runner for simulation routine revision of type <see cref="SimulatorRoutineRevision"/>
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="U">Type of simulation configuration state objects</typeparam>
@@ -19,7 +21,7 @@ namespace Cognite.Simulator.Utils
     public abstract class RoutineRunnerBase<T, U, V> : SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
         where U : ConfigurationStateBase
-        where V : SimulationConfigurationWithRoutine
+        where V : SimulatorRoutineRevision
     {
         private readonly CogniteDestination _cdf;
         private readonly ILogger _logger;
@@ -61,7 +63,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state</param>
         /// <param name="configState">Configuration state</param>
-        /// <param name="configObj">Configuration object</param>
+        /// <param name="routineRevision">Routine revision object</param>
         /// <param name="samplingRange">Input sampling range</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="ArgumentNullException">When one of the arguments is missing</exception>
@@ -72,7 +74,7 @@ namespace Cognite.Simulator.Utils
             DateTime startTime, 
             T modelState, 
             U configState, 
-            V configObj, 
+            V routineRevision, 
             SamplingRange samplingRange, 
             CancellationToken token)
         {
@@ -80,9 +82,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-            if (configObj == null)
+            if (routineRevision == null)
             {
-                throw new ArgumentNullException(nameof(configObj));
+                throw new ArgumentNullException(nameof(routineRevision));
             }
             if (samplingRange == null)
             {
@@ -95,132 +97,162 @@ namespace Cognite.Simulator.Utils
             _logger.LogInformation("Started running simulation event {ID}", e.Run.Id.ToString());
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
-            var inputData = new Dictionary<string, double>();
+            var inputData = new Dictionary<string, SimulatorValueItem>();
 
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
             IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo()
+                {
+                    ExternalId = routineRevision.ExternalId,
+                    Model = new SimulatorModelInfo
+                    {
+                        ExternalId = modelState.ModelExternalId,
+                        Name = modelState.ModelName,
+                        Simulator = routineRevision.SimulatorExternalId,
+                    },
+                    RoutineExternalId = routineRevision.RoutineExternalId,
+                };
+
+            var configObj = routineRevision.Configuration;
 
             // Collect manual inputs, to run simulations and to store as time series and data points
-            if (configObj.InputConstants != null) {
-                foreach (var inputValue in configObj.InputConstants)
+            if (configObj.Inputs != null) {
+                foreach (var inputValue in configObj.Inputs.Where(i => i.IsConstant))
                 {
                     var simInput = new SimulationInput
                     {
-                        Calculation = configObj.Calculation,
-                        Type = inputValue.Type,
+                        RoutineRevisionInfo = routineRevisionInfo,
+                        ReferenceId = inputValue.ReferenceId,
                         Name = inputValue.Name,
-                        Unit = inputValue.Unit,
+                        Unit = inputValue.Unit.Name,
+                        SaveTimeseriesExternalId = inputValue.SaveTimeseriesExternalId
                     };
 
-                    // If the manual input is to be saved with an external ID different than the
-                    // auto-generated one
-                    if (!string.IsNullOrEmpty(inputValue.SaveTimeseriesExternalId))
-                    {
-                        simInput.OverwriteTimeSeriesId(inputValue.SaveTimeseriesExternalId);
-                    }
-
+                    // // If the manual input is to be saved with an external ID different than the
+                    // // auto-generated one
+                    // // TODO: this should be optional now
+                    // if (!string.IsNullOrEmpty(inputValue.SaveTimeseriesExternalId))
+                    // {
+                    //     simInput.OverwriteTimeSeriesId(inputValue.SaveTimeseriesExternalId);
+                    // }
                     
-                    if (!double.TryParse(inputValue.Value, out var inputConstValue))
+                    if (inputValue.Value.Type != SimulatorValueType.DOUBLE)
                     {
                         throw new SimulationException($"Could not parse input constant {inputValue.Name} with value {inputValue.Value}. Only double precision values are supported.");
                     }
+                    var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
 
-                    inputData[inputValue.Type] = inputConstValue;
-                    inputTsToCreate.Add(simInput);
-                    dpsToCreate.Add(
-                        new Identity(simInput.TimeSeriesExternalId),
-                        new List<Datapoint> 
-                        { 
-                            new Datapoint(samplingRange.Midpoint, inputConstValue) 
-                        });
+                    // TODO we are not reading overridden values from the new endpoint yet
+                    inputData[inputValue.ReferenceId] = new SimulatorValueItem()  // TODO we should read this from the new endpoint instead
+                    {
+                        Value = inputValue.Value,
+                        Unit = inputValue.Unit,
+                        Overridden = false,
+                        ValueType = inputValue.Value.Type,
+                        ReferenceId = inputValue.ReferenceId,
+                        TimeseriesExternalId = inputValue.SaveTimeseriesExternalId,
+                    };
+
+                    if (simInput.ShouldSaveToTimeSeries) {
+
+                        inputTsToCreate.Add(simInput);
+                        dpsToCreate.Add(
+                            new Identity(simInput.SaveTimeseriesExternalId),
+                            new List<Datapoint> 
+                            { 
+                                new Datapoint(samplingRange.Midpoint, inputConstValue) 
+                            });
+
+                    }
                 }
             }
 
             // Collect sampled inputs, to run simulations and to store as time series and data points
-            foreach (var inputTs in configObj.InputTimeSeries)
+            foreach (var inputTs in configObj.Inputs.Where(i => i.IsTimeSeries))
             {
                 var dps = await _cdf.CogniteClient.DataPoints.GetSample(
-                    inputTs.SensorExternalId,
-                    inputTs.AggregateType.ToDataPointAggregate(),
+                    inputTs.SourceExternalId,
+                    inputTs.Aggregate.ToDataPointAggregate(),
                     configObj.DataSampling.Granularity,
                     samplingRange,
                     token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
                     configObj.DataSampling.Granularity,
-                    inputTs.AggregateType.ToDataPointAggregate());
+                    inputTs.Aggregate.ToDataPointAggregate());
                 if (inputDps.Count == 0)
                 {
-                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SensorExternalId}");
+                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
                 }
 
                 // This assumes the unit specified in the configuration is the same as the time series unit
                 // No unit conversion is made
                 var averageValue = inputDps.GetAverage();
-                inputData[inputTs.Type] = averageValue;
+                inputData[inputTs.ReferenceId] = new SimulatorValueItem()
+                {
+                    Value = new SimulatorValue.Double(averageValue),
+                    Unit = inputTs.Unit,
+                    Overridden = false,
+                    ReferenceId = inputTs.ReferenceId,
+                    TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                    ValueType = SimulatorValueType.DOUBLE,
+                };
                 var simInput = new SimulationInput
                 {
-                    Calculation = configObj.Calculation,
+                    RoutineRevisionInfo = routineRevisionInfo,
                     Name = inputTs.Name,
-                    Type = inputTs.Type,
-                    Unit = inputTs.Unit,
+                    ReferenceId = inputTs.ReferenceId,
+                    Unit = inputTs.Unit.Name,
+                    SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
-                // If the sampled input is to be saved with an external ID different than the
-                // auto-generated one
-                if (!string.IsNullOrEmpty(inputTs.SampleExternalId))
-                {
-                    simInput.OverwriteTimeSeriesId(inputTs.SampleExternalId);
-                }
+                if (simInput.ShouldSaveToTimeSeries) {
 
-                inputTsToCreate.Add(simInput);
-                dpsToCreate.Add(
-                    new Identity(simInput.TimeSeriesExternalId),
-                    new List<Datapoint> 
-                    { 
-                        new Datapoint(samplingRange.Midpoint, averageValue) 
-                    });
+                    inputTsToCreate.Add(simInput);
+                    dpsToCreate.Add(
+                        new Identity(simInput.SaveTimeseriesExternalId),
+                        new List<Datapoint> 
+                        { 
+                            new Datapoint(samplingRange.Midpoint, averageValue) 
+                        });
+                }
             }
             var results = await SimulatorClient
-                .RunSimulation(modelState, configObj, inputData)
+                .RunSimulation(modelState, routineRevision, inputData)
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Saving simulation results as time series");
-            foreach (var output in configObj.OutputTimeSeries)
+            foreach (var output in configObj.Outputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)))
             {
-                if (results.ContainsKey(output.Type))
+                if (results.ContainsKey(output.ReferenceId))
                 {
                     var outputTs = new SimulationOutput
                     {
-                        Calculation = configObj.Calculation,
+                        RoutineRevisionInfo = routineRevisionInfo,
+                        SaveTimeseriesExternalId = output.SaveTimeseriesExternalId,
                         Name = output.Name,
-                        Type = output.Type,
-                        Unit = output.Unit,
+                        ReferenceId = output.ReferenceId,
+                        Unit = output.Unit.Name,
                     };
-                    if (!string.IsNullOrEmpty(output.ExternalId))
-                    {
-                        outputTs.OverwriteTimeSeriesId(output.ExternalId);
-                    }
+
                     outputTsToCreate.Add(outputTs);
 
+                    var valueItem = results[output.ReferenceId];
+                    if (valueItem.Value.Type != SimulatorValueType.DOUBLE)
+                    {
+                        _logger.LogWarning($"Could persist value for {output.ReferenceId}. Only double precision values are supported.");
+                        continue;
+                    }
                     dpsToCreate.Add(
-                        new Identity(outputTs.TimeSeriesExternalId),
+                        new Identity(outputTs.SaveTimeseriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingRange.Midpoint, results[output.Type]) 
+                            new Datapoint(samplingRange.Midpoint, (valueItem.Value as SimulatorValue.Double).Value) 
                         });
                 }
             }
             try
             {
-                //Store model version time series
-                var mvts = await timeSeries
-                    .GetOrCreateSimulationModelVersion(configObj.Calculation, modelState.DataSetId, token)
-                    .ConfigureAwait(false);
-                dpsToCreate.Add(
-                    new Identity(mvts.ExternalId),
-                    new List<Datapoint> { new Datapoint(samplingRange.Midpoint, modelState.Version) });
-                
                 // Store input time series
                 await timeSeries
                     .GetOrCreateSimulationInputs(inputTsToCreate, modelState.DataSetId, token)
@@ -263,7 +295,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of the simulation configuration object</typeparam>
     public interface ISimulatorClient<T, V> 
         where T : ModelStateBase
-        where V : SimulationConfigurationWithRoutine
+        where V : SimulatorRoutineRevision
     {
         /// <summary>
         /// Run a simulation by executing the routine passed as parameter with
@@ -273,9 +305,9 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulationConfiguration">Simulation configuration object</param>
         /// <param name="inputData">Input data</param>
         /// <returns></returns>
-        Task<Dictionary<string, double>> RunSimulation(
+        Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             T modelState, 
             V simulationConfiguration, 
-            Dictionary<string, double> inputData);
+            Dictionary<string, SimulatorValueItem> inputData);
     } 
 }
