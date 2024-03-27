@@ -253,7 +253,6 @@ namespace Cognite.Simulator.Tests
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
                 LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
                 {
@@ -293,7 +292,6 @@ namespace Cognite.Simulator.Tests
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
                 LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
                 {
@@ -416,7 +414,6 @@ namespace Cognite.Simulator.Tests
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "0s"
                 },
                 LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
                 {

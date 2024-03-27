@@ -224,7 +224,6 @@ namespace Cognite.Simulator.Utils
                     ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
                     SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
                     Granularity = routineRev.Configuration.DataSampling.Granularity,
-                    ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
                 },
                 LogicalCheck = new LogicalCheckConfiguration()
                 {
@@ -457,12 +456,6 @@ namespace Cognite.Simulator.Utils
         /// Sampling granularity in minutes
         /// </summary>
         public int Granularity { get; set; }
-
-        /// <summary>
-        /// The validation window can be moved to the past by setting
-        /// this offset. The format it <c>number(w|d|h|m|s)</c>
-        /// </summary>
-        public string ValidationEndOffset { get; set; } = "0s";
     }
 
     /// <summary>
