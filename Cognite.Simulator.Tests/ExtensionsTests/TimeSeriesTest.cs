@@ -69,14 +69,14 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(bc1.DataSetId, bc1Ts.DataSetId);
                 Assert.Equal(bc1.Unit, bc1Ts.Unit);
                 Assert.Equal(bc1.Name, bc1Ts.Metadata["variableName"]);
-                Assert.Equal(bc1.Key, bc1Ts.Metadata["variableType"]);
+                Assert.Equal(bc1.Key, bc1Ts.Metadata["referenceId"]);
                 Assert.True(bc1Ts.IsStep);
                 Assert.False(bc1Ts.IsString);
                 var bc2Ts = result.Where(ts => ts.ExternalId == bc2Id).First();
                 Assert.Equal(bc2.DataSetId, bc2Ts.DataSetId);
                 Assert.Equal(bc2.Unit, bc2Ts.Unit);
                 Assert.Equal(bc2.Name, bc2Ts.Metadata["variableName"]);
-                Assert.Equal(bc2.Key, bc2Ts.Metadata["variableType"]);
+                Assert.Equal(bc2.Key, bc2Ts.Metadata["referenceId"]);
                 Assert.True(bc2Ts.IsStep);
                 Assert.False(bc2Ts.IsString);
             }
@@ -114,12 +114,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var routineRevisionInfo = new SimulatorRoutineRevisionInfo
             {
                 Model = model,
-                // RoutineName = "Test Calculation",
                 ExternalId = "TestCalc - 1",
                 RoutineExternalId = "TestCalc",
-                // Name = "Test Calculation",
-                // Type = "UserDefined",
-                // UserDefinedType = "TestCalc"
             };
 
             var inA = new SimulationInput
@@ -177,17 +173,6 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             };
             try
             {
-                //Test model version time series TODO remove this
-                // var mvTs = await timeSeries.GetOrCreateSimulationModelVersion(
-                //     calculation,
-                //     dataSetId,
-                //     CancellationToken.None).ConfigureAwait(false);
-                // Assert.NotNull(mvTs);
-                // tsToDelete.Add(new Identity(mvTs.ExternalId));
-                // Assert.True(mvTs.IsStep);
-                // Assert.False(mvTs.IsString);
-                // Assert.Equal(SimulatorDataType.SimulationModelVersion.MetadataValue(), mvTs.Metadata[BaseMetadata.DataTypeKey]);
-
                 // Test input time series
                 var inputTs = await timeSeries.GetOrCreateSimulationInputs(
                     inputs,

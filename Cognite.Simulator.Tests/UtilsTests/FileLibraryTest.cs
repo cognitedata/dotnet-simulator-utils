@@ -162,7 +162,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("Simulation Runner Test With TS and Extended IO", simConf.RoutineExternalId);
+                Assert.Equal("Test Routine with Input TS and extended IO", simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
                 {
                     Assert.True(input.IsTimeSeries);
