@@ -97,7 +97,7 @@ namespace Cognite.Simulator.Utils
             _logger.LogInformation("Started running simulation event {ID}", e.Run.Id.ToString());
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
-            var inputData = new Dictionary<string, double>();
+            var inputData = new Dictionary<string, SimulatorValueItem>();
 
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
@@ -143,7 +143,16 @@ namespace Cognite.Simulator.Utils
                     }
                     var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
 
-                    inputData[inputValue.ReferenceId] = inputConstValue;
+                    // TODO we are not reading overridden values from the new endpoint yet
+                    inputData[inputValue.ReferenceId] = new SimulatorValueItem()  // TODO we should read this from the new endpoint instead
+                    {
+                        Value = inputValue.Value,
+                        Unit = inputValue.Unit,
+                        Overridden = false,
+                        ValueType = inputValue.Value.Type,
+                        ReferenceId = inputValue.ReferenceId,
+                        TimeseriesExternalId = inputValue.SaveTimeseriesExternalId,
+                    };
 
                     if (simInput.ShouldSaveToTimeSeries) {
 
@@ -179,7 +188,15 @@ namespace Cognite.Simulator.Utils
                 // This assumes the unit specified in the configuration is the same as the time series unit
                 // No unit conversion is made
                 var averageValue = inputDps.GetAverage();
-                inputData[inputTs.ReferenceId] = averageValue;
+                inputData[inputTs.ReferenceId] = new SimulatorValueItem()
+                {
+                    Value = new SimulatorValue.Double(averageValue),
+                    Unit = inputTs.Unit,
+                    Overridden = false,
+                    ReferenceId = inputTs.ReferenceId,
+                    TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                    ValueType = SimulatorValueType.DOUBLE,
+                };
                 var simInput = new SimulationInput
                 {
                     RoutineRevisionInfo = routineRevisionInfo,
@@ -220,11 +237,17 @@ namespace Cognite.Simulator.Utils
 
                     outputTsToCreate.Add(outputTs);
 
+                    var valueItem = results[output.ReferenceId];
+                    if (valueItem.Value.Type != SimulatorValueType.DOUBLE)
+                    {
+                        _logger.LogWarning($"Could persist value for {output.ReferenceId}. Only double precision values are supported.");
+                        continue;
+                    }
                     dpsToCreate.Add(
                         new Identity(outputTs.SaveTimeseriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingRange.Midpoint, results[output.ReferenceId]) 
+                            new Datapoint(samplingRange.Midpoint, (valueItem.Value as SimulatorValue.Double).Value) 
                         });
                 }
             }
@@ -282,9 +305,9 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulationConfiguration">Simulation configuration object</param>
         /// <param name="inputData">Input data</param>
         /// <returns></returns>
-        Task<Dictionary<string, double>> RunSimulation(
+        Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             T modelState, 
             V simulationConfiguration, 
-            Dictionary<string, double> inputData);
+            Dictionary<string, SimulatorValueItem> inputData);
     } 
 }

@@ -16,11 +16,10 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public abstract class RoutineImplementationBase
     {
-        // private readonly IEnumerable<CalculationProcedure> _routine;
         private readonly IEnumerable<SimulatorRoutineRevisionScriptStage> _script;
         private readonly SimulatorRoutineRevisionConfiguration _config;
-        private readonly Dictionary<string, double> _inputData;
-        private readonly Dictionary<string, double> _simulationResults;
+        private readonly Dictionary<string, SimulatorValueItem> _inputData;
+        private readonly Dictionary<string, SimulatorValueItem> _simulationResults;
 
         /// <summary>
         /// Creates a new simulation routine with the given routine revision
@@ -29,38 +28,27 @@ namespace Cognite.Simulator.Utils
         /// <param name="inputData">Data to use as input</param>
         public RoutineImplementationBase(
             SimulatorRoutineRevision routineRevision,
-            Dictionary<string, double> inputData)
+            Dictionary<string, SimulatorValueItem> inputData)
         {
             if (routineRevision == null)
             {
                 throw new ArgumentNullException(nameof(routineRevision));
             }
-            // _routine = config.Routine; // TODO
             _script = routineRevision.Script;
             _config = routineRevision.Configuration;
-            _simulationResults = new Dictionary<string, double>();
+            _simulationResults = new Dictionary<string, SimulatorValueItem>();
             _inputData = inputData;
         }
 
         /// <summary>
-        /// Implements a step that sets the value sampled from a time series
-        /// as input to a simulation
+        /// Implements a step that sets the value of an input to a simulation
         /// </summary>
-        /// <param name="inputConfig">Time series input configuration</param>
-        /// <param name="value">Value to set</param>
+        /// <param name="inputConfig">Input configuration</param>
+        /// <param name="input">Input value</param>
         /// <param name="arguments">Extra arguments</param>
-        public abstract void SetTimeSeriesInput(
+        public abstract void SetInput(
             SimulatorRoutineRevisionInput inputConfig,
-            double value,
-            Dictionary<string, string> arguments);
-
-        /// <summary>
-        /// Implements a step that sets a manual value as input to a simulation
-        /// </summary>
-        /// <param name="value">Value to set</param>
-        /// <param name="arguments">Extra arguments</param>
-        public abstract void SetManualInput(
-            string value,
+            SimulatorValueItem input,
             Dictionary<string, string> arguments);
 
         /// <summary>
@@ -70,7 +58,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="outputConfig">Output time series configuration</param>
         /// <param name="arguments">Extra arguments</param>
         /// <returns></returns>
-        public abstract double GetTimeSeriesOutput(
+        public abstract SimulatorValueItem GetOutput(
             SimulatorRoutineRevisionOutput outputConfig,
             Dictionary<string, string> arguments);
 
@@ -91,7 +79,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>Simulation results</returns>
         /// <exception cref="SimulationException">When the simulation configuration is invalid</exception>
         /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
-        public virtual Dictionary<string, double> PerformSimulation()
+        public virtual Dictionary<string, SimulatorValueItem> PerformSimulation()
         {
             _simulationResults.Clear();
             // if (_config.CalculationType != "UserDefined")
@@ -186,7 +174,7 @@ namespace Cognite.Simulator.Utils
                     if (argType == "outputTimeSeries")
                     {
                         // Get the simulation result as a time series data point
-                        _simulationResults[output.ReferenceId] = GetTimeSeriesOutput(output, extraArgs);
+                        _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
                     }
                 }
             else
@@ -215,7 +203,7 @@ namespace Cognite.Simulator.Utils
                     if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
                     {
                         // Set input time series
-                        SetTimeSeriesInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+                        SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
                     }
                     else
                     {
@@ -227,26 +215,25 @@ namespace Cognite.Simulator.Utils
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
                     {
                         var inputManualValue = matchingInputManualValues.First();
-                        if (inputManualValue.Unit != null)
-                        {
-                            extraArgs.Add("unit", inputManualValue.Unit.Name);
-                            if (inputManualValue.Unit.Type != null)
-                            {
-                                extraArgs.Add("unitType", inputManualValue.Unit.Type);
-                            }
-                        }
-                        // Set manual input
-                        SetManualInput(_inputData[argRefId].ToString(), extraArgs);
+                        // if (inputManualValue.Unit != null)
+                        // {
+                        //     extraArgs.Add("unit", inputManualValue.Unit.Name);
+                        //     if (inputManualValue.Unit.Type != null)
+                        //     {
+                        //         extraArgs.Add("unitType", inputManualValue.Unit.Type);
+                        //     }
+                        // } TODO: this is a part of the SimulatorRoutineRevisionInput now, do we need to add it to the extraArgs?
+                        // Set constant input
+
+                        // TODO we have to read overrides as well, not just reading this from the routine
+
+                        SetInput(inputManualValue, _inputData[argRefId], extraArgs);
                     }
                     else
                     {
                         throw new SimulationException($"Set error: Constant value input with key {argRefId} not found");
                     }
                     break;
-                // case "manual":
-                //     // Set manual input (from inside the routine, legacy)
-                //     SetManualInput(argRefId, extraArgs);
-                //     break;
                 default:
                     throw new SimulationException($"Set error: Invalid argument type {argType}");
             }

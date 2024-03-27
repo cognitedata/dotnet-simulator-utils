@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -278,14 +277,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public static List<double> _inputs;
         public static double? _output;
-        public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, double> inputData)
+        public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, SimulatorValueItem> inputData)
             :base(config, inputData)
         {
             _inputs = new List<double>();
             _output = null;
         }
         
-        public override double GetTimeSeriesOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
         {
             if (outputConfig == null)
             {
@@ -295,7 +294,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 throw new ArgumentException("Output value type must be double");
             }
-            return _output.Value;
+            return new SimulatorValueItem() {
+                Value = new SimulatorValue.Double(_output.Value),
+                Overridden = false,
+                ReferenceId = outputConfig.ReferenceId,
+                TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
+                Unit = outputConfig.Unit,
+                ValueType = outputConfig.ValueType
+            };
         }
 
         public override void RunCommand(string command, Dictionary<string, string> arguments)
@@ -310,23 +316,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        public override void SetManualInput(string value, Dictionary<string, string> arguments)
+        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
         {
-            _inputs.Add(double.Parse(value));
-        }
-
-        public override void SetTimeSeriesInput(SimulatorRoutineRevisionInput inputConfig, double value, Dictionary<string, string> arguments)
-        {
-            _inputs.Add(value);
+            _inputs.Add((input.Value as SimulatorValue.Double).Value);
         }
     }
 
     public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
-        public Task<Dictionary<string, double>> RunSimulation(
+        public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             TestFileState modelState, 
             SimulatorRoutineRevision simulationConfiguration, 
-            Dictionary<string, double> inputData)
+            Dictionary<string, SimulatorValueItem> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData);
             return Task.FromResult(routine.PerformSimulation());
