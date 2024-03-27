@@ -102,6 +102,17 @@ namespace Cognite.Simulator.Utils
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
             IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo()
+                {
+                    ExternalId = routineRevision.ExternalId,
+                    Model = new SimulatorModelInfo
+                    {
+                        ExternalId = modelState.ModelExternalId,
+                        Name = modelState.ModelName,
+                        Simulator = routineRevision.SimulatorExternalId,
+                    },
+                    RoutineExternalId = routineRevision.RoutineExternalId,
+                };
 
             var configObj = routineRevision.Configuration;
 
@@ -111,17 +122,7 @@ namespace Cognite.Simulator.Utils
                 {
                     var simInput = new SimulationInput
                     {
-                        RoutineRevisionInfo = new SimulatorRoutineRevisionInfo()
-                        {
-                            ExternalId = routineRevision.ExternalId,
-                            Model = new SimulatorModelInfo
-                            {
-                                ExternalId = modelState.ModelExternalId,
-                                Name = modelState.ModelName,
-                                Simulator = routineRevision.SimulatorExternalId,
-                            },
-                            RoutineExternalId = routineRevision.RoutineExternalId,
-                        },
+                        RoutineRevisionInfo = routineRevisionInfo,
                         ReferenceId = inputValue.ReferenceId,
                         Name = inputValue.Name,
                         Unit = inputValue.Unit.Name,
@@ -144,7 +145,8 @@ namespace Cognite.Simulator.Utils
 
                     inputData[inputValue.ReferenceId] = inputConstValue;
 
-                    if (!String.IsNullOrEmpty(simInput.SaveTimeseriesExternalId)) {
+                    if (simInput.ShouldSaveToTimeSeries) {
+
                         inputTsToCreate.Add(simInput);
                         dpsToCreate.Add(
                             new Identity(simInput.SaveTimeseriesExternalId),
@@ -180,30 +182,15 @@ namespace Cognite.Simulator.Utils
                 inputData[inputTs.ReferenceId] = averageValue;
                 var simInput = new SimulationInput
                 {
-                    RoutineRevisionInfo = new SimulatorRoutineRevisionInfo
-                    {
-                        ExternalId = routineRevision.ExternalId,
-                        Model = new SimulatorModelInfo
-                        {
-                            ExternalId = modelState.ModelExternalId,
-                            Name = modelState.ModelName,
-                            Simulator = routineRevision.SimulatorExternalId,
-                        },
-                        RoutineExternalId = routineRevision.RoutineExternalId
-                    },
+                    RoutineRevisionInfo = routineRevisionInfo,
                     Name = inputTs.Name,
                     ReferenceId = inputTs.ReferenceId,
                     Unit = inputTs.Unit.Name,
+                    SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
-                // // If the sampled input is to be saved with an external ID different than the
-                // // auto-generated one
-                // if (!string.IsNullOrEmpty(inputTs.SaveTimeseriesExternalId))
-                // {
-                //     simInput.OverwriteTimeSeriesId(inputTs.SaveTimeseriesExternalId);
-                // }
+                if (simInput.ShouldSaveToTimeSeries) {
 
-                if (!String.IsNullOrEmpty(simInput.SaveTimeseriesExternalId)) {
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.SaveTimeseriesExternalId),
@@ -218,32 +205,19 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Saving simulation results as time series");
-            foreach (var output in configObj.Outputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)))
+            foreach (var output in configObj.Outputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)))
             {
                 if (results.ContainsKey(output.ReferenceId))
                 {
                     var outputTs = new SimulationOutput
                     {
-                        RoutineRevisionInfo = new SimulatorRoutineRevisionInfo
-                        {
-                            ExternalId = routineRevision.ExternalId,
-                            Model = new SimulatorModelInfo
-                            {
-                                ExternalId = modelState.ModelExternalId,
-                                Name = modelState.ModelName,
-                                Simulator = routineRevision.SimulatorExternalId,
-                            },
-                            RoutineExternalId = routineRevision.RoutineExternalId
-                        },
+                        RoutineRevisionInfo = routineRevisionInfo,
                         SaveTimeseriesExternalId = output.SaveTimeseriesExternalId,
                         Name = output.Name,
                         ReferenceId = output.ReferenceId,
                         Unit = output.Unit.Name,
                     };
-                    // if (!string.IsNullOrEmpty(output.SaveTimeseriesExternalId))
-                    // {
-                    //     outputTs.Sa(output.SaveTimeseriesExternalId); // TODO this should be optional
-                    // }
+
                     outputTsToCreate.Add(outputTs);
 
                     dpsToCreate.Add(
@@ -252,19 +226,10 @@ namespace Cognite.Simulator.Utils
                         { 
                             new Datapoint(samplingRange.Midpoint, results[output.ReferenceId]) 
                         });
-
                 }
             }
             try
             {
-                //Store model version time series TODO remove this
-                // var mvts = await timeSeries
-                //     .GetOrCreateSimulationModelVersion(configObj.RoutineExternalId, modelState.DataSetId, token)
-                //     .ConfigureAwait(false);
-                // dpsToCreate.Add(
-                //     new Identity(mvts.ExternalId),
-                //     new List<Datapoint> { new Datapoint(samplingRange.Midpoint, modelState.Version) });
-                
                 // Store input time series
                 await timeSeries
                     .GetOrCreateSimulationInputs(inputTsToCreate, modelState.DataSetId, token)

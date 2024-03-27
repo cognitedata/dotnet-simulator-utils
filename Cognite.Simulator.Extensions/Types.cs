@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -24,6 +22,14 @@ namespace Cognite.Simulator.Extensions
         /// Model external id
         /// </summary>
         public string ExternalId { get; set; }
+
+        /// <summary>
+        /// Model name with special characters replaced
+        /// </summary>
+        public string NameWithSafeChars
+        {
+            get { return Name.ReplaceSlashAndBackslash("_"); }
+        }
     }
 
     /// <summary>
@@ -60,6 +66,16 @@ namespace Cognite.Simulator.Extensions
         /// Simulator model associated with this calculation
         /// </summary>
         public SimulatorModelInfo Model { get; set; }
+
+        /// <summary>
+        /// Routine external id with special characters replaced
+        /// </summary>
+        public string RoutineExternalIdSafeChars
+        {
+            get {
+                return RoutineExternalId.ReplaceSlashAndBackslash("_");
+            }
+        }
     }
 
     /// <summary>
@@ -273,10 +289,19 @@ namespace Cognite.Simulator.Extensions
         //     : ExternalIdOverwrite;
 
         internal override string TimeSeriesName =>
-            $"{Name} - INPUT - {RoutineRevisionInfo.GetCalcNameForNames()} - {RoutineRevisionInfo.Model.GetModelNameForNames()}";
+            $"{Name} - INPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.NameWithSafeChars}";
 
         internal override string TimeSeriesDescription =>
             $"Input sampled for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
+
+        /// <summary>
+        /// Indicates if the time series should be saved back to CDF
+        /// </summary>
+        public bool ShouldSaveToTimeSeries {
+            get {
+                return !string.IsNullOrEmpty(SaveTimeseriesExternalId);
+            }
+        }
     }
 
     /// <summary>
@@ -292,10 +317,10 @@ namespace Cognite.Simulator.Extensions
         //     : ExternalIdOverwrite;
 
         internal override string TimeSeriesName => 
-            $"{Name} - OUTPUT - {RoutineRevisionInfo.GetCalcNameForNames()} - {RoutineRevisionInfo.Model.GetModelNameForNames()}";
+            $"{Name} - OUTPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.NameWithSafeChars}";
 
         internal override string TimeSeriesDescription =>
-            $"Calculation result for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
+            $"Simulation result for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
     }
 
     /// <summary>

@@ -51,39 +51,6 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
-        internal static string GetModelNameForIds(this SimulatorModelInfo model)
-        {
-            return model.Name.ReplaceSpecialCharacters("_");
-        }
-
-        internal static string GetModelNameForNames(this SimulatorModelInfo model)
-        {
-            return model.Name.ReplaceSlashAndBackslash("_");
-        }
-
-        // internal static string GetCalcTypeForIds(this SimulatorCalculation calc)
-        // {
-        //     if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-        //     {
-        //         return calc.UserDefinedType.ReplaceSpecialCharacters("_");
-        //     }
-        //     return calc.Type.ReplaceSpecialCharacters("_");
-        // }
-        
-        // internal static string GetCalcTypeForNames(this SimulatorRoutineRevisionInfo calc)
-        // {
-        //     // if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-        //     // {
-        //     //     return $"{calc.Type.ReplaceSlashAndBackslash("_")}-{calc.UserDefinedType.ReplaceSlashAndBackslash("_")}";
-        //     // }
-        //     return calc..ReplaceSlashAndBackslash("_");
-        // }
-
-        internal static string GetCalcNameForNames(this SimulatorRoutineRevisionInfo calc)
-        {
-            return calc.RoutineExternalId.ReplaceSlashAndBackslash("_");
-        }
-
         internal static Dictionary<string, string> GetCommonMetadata(
             this SimulatorRoutineRevisionInfo calc,
             SimulatorDataType dataType)
