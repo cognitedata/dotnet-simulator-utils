@@ -209,9 +209,6 @@ namespace Cognite.Simulator.Utils
                     bool skipped = false;
 
                     var connectorIdList = new List<string>();
-                    foreach (var simulator in simulators)
-                    {
-                    }
                     foreach (var simulator in simulators.Select((value, i) => new { i, value }))
                     {
                         var value = simulator.value;
