@@ -222,8 +222,7 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, calcState, calcObj) = ValidateEventMetadata(e);
-
+                            (modelState, calcState, calcObj) = ValidateEventMetadata(e, connectorIdList);
                             if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.Connector) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
@@ -285,7 +284,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv)
+        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv, List<string> integrations)
         {
             string modelName = simEv.Run.ModelName;
             string simulator = simEv.Run.SimulatorName;
@@ -307,7 +306,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
             }
 
-            if (calcConfig.Connector != _connectorConfig.GetConnectorName())
+            if (!integrations.Contains(calcConfig.Connector))
             {
                 return (model, null, null);
             }
