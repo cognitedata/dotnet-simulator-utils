@@ -117,13 +117,27 @@ namespace Cognite.Simulator.Utils
                 return new List<SimulationRun>();
             }
 
+            var connectorName = _connectorConfig.GetConnectorName();
+            var listOfIntegrations = new List<string>(){};
+            for (var index = 0; index < Simulators.Count; index++)
+            {
+                var simulator = Simulators[index];
+
+                // If there are more than one, we add the Simulator name as a prefix
+                if (index > 0)
+                {
+                    connectorName = $"{simulator.Name}-{GetConnectorName()}";
+                }
+                listOfIntegrations.Add(connectorName);
+            }
+
             var query = new SimulationRunQuery()
             {
                 Filter = new SimulationRunFilter()
                 {
                     Status = status,
                     SimulatorExternalIds = simulators.Keys.ToList(),
-                    SimulatorIntegrationExternalIds = new List<string>() { _connectorConfig.GetConnectorName() }
+                    SimulatorIntegrationExternalIds = listOfIntegrations
                 }
             };
             var runsResult = await _cdfSimulators
