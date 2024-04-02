@@ -136,7 +136,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 config,
                 configLib, 
                 logger,
-                config.Simulators,
+                null,
                 cdf)
         {
         }
