@@ -211,7 +211,15 @@ namespace Cognite.Simulator.Utils
                     var connectorIdList = new List<string>();
                     foreach (var simulator in simulators)
                     {
-                        connectorIdList.Add($"{simulator.Key}-{_connectorConfig.GetConnectorName()}");
+                    }
+                    foreach (var simulator in simulators.Select((value, i) => new { i, value }))
+                    {
+                        var value = simulator.value;
+                        if (simulator.i > 0){
+                            connectorIdList.Add($"{value.Key}-{_connectorConfig.GetConnectorName()}");
+                        } else {
+                            connectorIdList.Add(_connectorConfig.GetConnectorName());
+                        }
                     }
 
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
