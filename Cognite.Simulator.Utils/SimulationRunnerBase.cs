@@ -208,12 +208,18 @@ namespace Cognite.Simulator.Utils
                     V calcObj = null;
                     bool skipped = false;
 
+                    var connectorIdList = new List<string>();
+                    foreach (var simulator in simulators)
+                    {
+                        connectorIdList.Add($"{simulator.Key}-{_connectorConfig.GetConnectorName()}");
+                    }
+
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
                             (modelState, calcState, calcObj) = ValidateEventMetadata(e);
 
-                            if (calcState == null || calcObj == null || calcObj.Connector != _connectorConfig.GetConnectorName())
+                            if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.Connector) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
