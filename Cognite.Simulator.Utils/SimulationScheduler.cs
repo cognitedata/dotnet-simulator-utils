@@ -104,7 +104,7 @@ namespace Cognite.Simulator.Utils
                     }
                 }
             } else {
-                connectorIdList.Add(_config.GetConnectorName())
+                connectorIdList.Add(_config.GetConnectorName());
             }
             
             while (!token.IsCancellationRequested)
