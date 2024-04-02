@@ -93,11 +93,11 @@ namespace Cognite.Simulator.Utils
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
             var connectorIdList = new List<string>();
-            foreach (var simulator in simulators.Select((value, i) => new { i, value }))
+            foreach (var simulator in _simulators.Select((value, i) => new { i, value }))
             {
                 var value = simulator.value;
                 if (simulator.i > 0){
-                    connectorIdList.Add($"{value.Key}-{_config.GetConnectorName()}");
+                    connectorIdList.Add($"{value.Name}-{_config.GetConnectorName()}");
                 } else {
                     connectorIdList.Add(_config.GetConnectorName());
                 }
