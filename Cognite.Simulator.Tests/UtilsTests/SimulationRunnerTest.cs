@@ -130,7 +130,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         {
                             RoutineExternalId = configObj.CalculationName,
                             RunType = SimulationRunType.external,
-                            ValidationEndTime = validationEndOverwrite
+                            StartTime = validationEndOverwrite
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
