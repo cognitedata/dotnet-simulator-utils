@@ -119,14 +119,13 @@ namespace Cognite.Simulator.Utils
 
             var connectorName = _connectorConfig.GetConnectorName();
             var listOfIntegrations = new List<string>(){};
-            for (var index = 0; index < Simulators.Count; index++)
+            for (var index = 0; index < simulators.Count; index++)
             {
-                var simulator = Simulators[index];
-
+                var simulator = simulators.ElementAt(index);
                 // If there are more than one, we add the Simulator name as a prefix
                 if (index > 0)
                 {
-                    connectorName = $"{simulator.Name}-{GetConnectorName()}";
+                    connectorName = $"{simulator.Key}-{_connectorConfig.GetConnectorName()}";
                 }
                 listOfIntegrations.Add(connectorName);
             }
