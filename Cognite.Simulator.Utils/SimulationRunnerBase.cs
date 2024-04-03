@@ -118,17 +118,7 @@ namespace Cognite.Simulator.Utils
             }
 
             var connectorName = _connectorConfig.GetConnectorName();
-            var listOfIntegrations = new List<string>(){};
-            for (var index = 0; index < simulators.Count; index++)
-            {
-                var simulator = simulators.ElementAt(index);
-                // If there are more than one, we add the Simulator name as a prefix
-                if (index > 0)
-                {
-                    connectorName = $"{simulator.Key}-{_connectorConfig.GetConnectorName()}";
-                }
-                listOfIntegrations.Add(connectorName);
-            }
+            var listOfIntegrations = CommonUtils.ConnectorsToExternalIds(simulators, connectorName);
 
             var query = new SimulationRunQuery()
             {
@@ -208,16 +198,7 @@ namespace Cognite.Simulator.Utils
                     V calcObj = null;
                     bool skipped = false;
 
-                    var connectorIdList = new List<string>();
-                    foreach (var simulator in simulators.Select((value, i) => new { i, value }))
-                    {
-                        var value = simulator.value;
-                        if (simulator.i > 0){
-                            connectorIdList.Add($"{value.Key}-{_connectorConfig.GetConnectorName()}");
-                        } else {
-                            connectorIdList.Add(_connectorConfig.GetConnectorName());
-                        }
-                    }
+                    var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
 
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
