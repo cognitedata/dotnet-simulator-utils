@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Simulator.Utils;
 
 namespace Cognite.Simulator.Utils
 {
@@ -30,8 +31,7 @@ namespace Cognite.Simulator.Utils
         private readonly IConfigurationProvider<U, V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
-
-
+        private readonly IList<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
         /// </summary>
@@ -43,10 +43,12 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig config,
             IConfigurationProvider<U, V> configLib,
             ILogger logger,
+            IList<SimulatorConfig> simulators,
             CogniteDestination cdf)
         {
             _configLib = configLib;
             _logger = logger;
+            _simulators = simulators;
             _cdf = cdf;
             _config = config;
         }
@@ -91,6 +93,10 @@ namespace Cognite.Simulator.Utils
         {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
+            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
+            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
+           
+            
             while (!token.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;
@@ -106,7 +112,7 @@ namespace Cognite.Simulator.Utils
 
                     // Check if the configuration has a schedule enabled for this connector.
                     if (configState == null ||
-                        configObj.Connector != _config.GetConnectorName() ||
+                        !connectorIdList.Contains(configObj.Connector) ||
                         configObj.Schedule == null ||
                         configObj.Schedule.Enabled == false)
                     {

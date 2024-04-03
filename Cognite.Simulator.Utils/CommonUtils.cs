@@ -52,6 +52,31 @@ namespace Cognite.Simulator.Utils
                 throw ex;
             }
         }
+
+        /// <summary>
+        /// Function to convert list of connectors to externalIds
+        /// </summary>
+        /// <param name="simulators">object of simulator connectors</param>
+        /// <param name="baseConnectorName">the base connector name to which prefix will be appended</param>
+        public static List<string> ConnectorsToExternalIds(Dictionary<string, long> simulators, string baseConnectorName)
+        {
+            var connectorIdList = new List<string>();
+            if (simulators != null) {
+                foreach (var simulator in simulators.Select((value, i) => new { i, value }))
+                {
+                    var value = simulator.value;
+                    if (simulator.i > 0){
+                        connectorIdList.Add($"{value.Key}-{baseConnectorName}");
+                    } else {
+                        connectorIdList.Add(baseConnectorName);
+                    }
+                }
+            } else {
+                connectorIdList.Add(baseConnectorName);
+            }
+            return connectorIdList;
+        }
+        
     }
 
     /// <summary>
