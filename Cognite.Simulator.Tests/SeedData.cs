@@ -245,24 +245,16 @@ namespace Cognite.Simulator.Tests
                 Schedule = new SimulatorRoutineRevisionSchedule()
                 {
                     Enabled = true,
-                    StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 10000,
-                    Repeat = "5s",
+                    Cron = "*/5 * * * * *",
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
-                {
-                    Enabled = false,
-                },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
-                {
-                    Enabled = false,
-                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
@@ -295,22 +287,28 @@ namespace Cognite.Simulator.Tests
                     Granularity = 1,
                     ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
-                    Aggregate = "stepInterpolation",
-                    Operator = "eq",
-                    Value = 1,
+                    new SimulatorRoutineRevisionLogicalCheck
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        Aggregate = "stepInterpolation",
+                        Operator = "eq",
+                        Value = 1
+                    }
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
-                    Aggregate = "average",
-                    MinSectionSize = 60,
-                    VarThreshold = 1.0,
-                    SlopeThreshold = -3.0,
+                    new SimulatorRoutineRevisionSteadyStateDetection
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        Aggregate = "average",
+                        MinSectionSize = 60,
+                        VarThreshold = 1.0,
+                        SlopeThreshold = -3.0,
+                    }
                 },
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
                     new SimulatorRoutineRevisionInputConstants() {
@@ -418,22 +416,27 @@ namespace Cognite.Simulator.Tests
                     Granularity = 1,
                     ValidationEndOffset = "0s"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
-                    Aggregate = "stepInterpolation",
-                    Operator = "eq",
-                    Value = 1,
+                    new SimulatorRoutineRevisionLogicalCheck {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        Aggregate = "stepInterpolation",
+                        Operator = "eq",
+                        Value = 1,
+                    }
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
-                    Aggregate = "average",
-                    MinSectionSize = 60,
-                    VarThreshold = 1.0,
-                    SlopeThreshold = -3.0,
+                    new SimulatorRoutineRevisionSteadyStateDetection 
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        Aggregate = "average",
+                        MinSectionSize = 60,
+                        VarThreshold = 1.0,
+                        SlopeThreshold = -3.0,
+                    }
                 },
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
