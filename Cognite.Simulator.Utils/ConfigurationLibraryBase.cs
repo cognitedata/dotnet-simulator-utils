@@ -190,7 +190,7 @@ namespace Cognite.Simulator.Utils
                 {
                     Enabled = routineRev.Configuration.Schedule.Enabled,
                     Start = 0, // TODO what's the default value here?
-                    Repeat = routineRev.Configuration.Schedule.Cron
+                    Repeat = routineRev.Configuration.Schedule.CronExpression
                 },
                 InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
                 {
