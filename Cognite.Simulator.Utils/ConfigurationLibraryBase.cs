@@ -234,7 +234,7 @@ namespace Cognite.Simulator.Utils
                     Check = routineRev.Configuration.LogicalCheck[0].Operator,
                     Value = routineRev.Configuration.LogicalCheck[0].Value ?? 0 // TODO what's the default value here?
                 } : null,
-                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Length > 0 ?new SteadyStateDetectionConfiguration()
+                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Length > 0 ? new SteadyStateDetectionConfiguration()
                 {
                     Enabled = routineRev.Configuration.SteadyStateDetection[0].Enabled,
                     ExternalId = routineRev.Configuration.SteadyStateDetection[0].TimeseriesExternalId,
