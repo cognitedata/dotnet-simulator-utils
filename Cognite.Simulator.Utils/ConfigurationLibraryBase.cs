@@ -233,13 +233,7 @@ namespace Cognite.Simulator.Utils
                     AggregateType = routineRev.Configuration.LogicalCheck[0].Aggregate,
                     Check = routineRev.Configuration.LogicalCheck[0].Operator,
                     Value = routineRev.Configuration.LogicalCheck[0].Value ?? 0 // TODO what's the default value here?
-                } : new LogicalCheckConfiguration(){
-                    Enabled = false,
-                    ExternalId = "",
-                    AggregateType = "",
-                    Check = "",
-                    Value = 0
-                },
+                } : null,
                 SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Length > 0 ?new SteadyStateDetectionConfiguration()
                 {
                     Enabled = routineRev.Configuration.SteadyStateDetection[0].Enabled,
@@ -248,15 +242,7 @@ namespace Cognite.Simulator.Utils
                     MinSectionSize = routineRev.Configuration.SteadyStateDetection[0].MinSectionSize ?? 0, // TODO what's the default value here?
                     VarThreshold = routineRev.Configuration.SteadyStateDetection[0].VarThreshold ?? 0, // TODO what's the default value here?
                     SlopeThreshold = routineRev.Configuration.SteadyStateDetection[0].SlopeThreshold ?? 0 // TODO what's the default value here?
-                } : new SteadyStateDetectionConfiguration()
-                {
-                    Enabled = false,
-                    ExternalId = "",
-                    AggregateType = "",
-                    MinSectionSize = 0,
-                    VarThreshold = 0,
-                    SlopeThreshold = 0
-                },
+                } : null,
                 UserEmail = "",
                 Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
                 {
