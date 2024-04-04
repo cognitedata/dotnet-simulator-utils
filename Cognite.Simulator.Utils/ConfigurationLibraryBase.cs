@@ -189,8 +189,8 @@ namespace Cognite.Simulator.Utils
                 Schedule = new ScheduleConfiguration()
                 {
                     Enabled = routineRev.Configuration.Schedule.Enabled,
-                    Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
-                    Repeat = routineRev.Configuration.Schedule.Repeat
+                    Start = 0, // TODO what's the default value here?
+                    Repeat = routineRev.Configuration.Schedule.Cron
                 },
                 InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
                 {
@@ -226,22 +226,36 @@ namespace Cognite.Simulator.Utils
                     Granularity = routineRev.Configuration.DataSampling.Granularity,
                     ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
                 },
-                LogicalCheck = new LogicalCheckConfiguration()
+                LogicalCheck = routineRev.Configuration.LogicalCheck.Length > 0 ? new LogicalCheckConfiguration()
                 {
-                    Enabled = routineRev.Configuration.LogicalCheck.Enabled,
-                    ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
-                    Check = routineRev.Configuration.LogicalCheck.Operator,
-                    Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
+                    Enabled = routineRev.Configuration.LogicalCheck[0].Enabled,
+                    ExternalId = routineRev.Configuration.LogicalCheck[0].TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.LogicalCheck[0].Aggregate,
+                    Check = routineRev.Configuration.LogicalCheck[0].Operator,
+                    Value = routineRev.Configuration.LogicalCheck[0].Value ?? 0 // TODO what's the default value here?
+                } : new LogicalCheckConfiguration(){
+                    Enabled = false,
+                    ExternalId = "",
+                    AggregateType = "",
+                    Check = "",
+                    Value = 0
                 },
-                SteadyStateDetection = new SteadyStateDetectionConfiguration()
+                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Length > 0 ?new SteadyStateDetectionConfiguration()
                 {
-                    Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
-                    ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
-                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
-                    VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
-                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
+                    Enabled = routineRev.Configuration.SteadyStateDetection[0].Enabled,
+                    ExternalId = routineRev.Configuration.SteadyStateDetection[0].TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.SteadyStateDetection[0].Aggregate,
+                    MinSectionSize = routineRev.Configuration.SteadyStateDetection[0].MinSectionSize ?? 0, // TODO what's the default value here?
+                    VarThreshold = routineRev.Configuration.SteadyStateDetection[0].VarThreshold ?? 0, // TODO what's the default value here?
+                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection[0].SlopeThreshold ?? 0 // TODO what's the default value here?
+                } : new SteadyStateDetectionConfiguration()
+                {
+                    Enabled = false,
+                    ExternalId = "",
+                    AggregateType = "",
+                    MinSectionSize = 0,
+                    VarThreshold = 0,
+                    SlopeThreshold = 0
                 },
                 UserEmail = "",
                 Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
