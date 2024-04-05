@@ -245,7 +245,7 @@ namespace Cognite.Simulator.Tests
                 Schedule = new SimulatorRoutineRevisionSchedule()
                 {
                     Enabled = true,
-                    Cron = "*/5 * * * * *",
+                    CronExpression = "*/5 * * * * *",
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
@@ -285,7 +285,6 @@ namespace Cognite.Simulator.Tests
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {
@@ -414,7 +413,6 @@ namespace Cognite.Simulator.Tests
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "0s"
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {

@@ -224,24 +224,23 @@ namespace Cognite.Simulator.Utils
                     ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
                     SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
                     Granularity = routineRev.Configuration.DataSampling.Granularity,
-                    ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
                 },
-                LogicalCheck = routineRev.Configuration.LogicalCheck.Length > 0 ? new LogicalCheckConfiguration()
+                LogicalCheck = routineRev.Configuration.LogicalCheck.Count() > 0 ? new LogicalCheckConfiguration()
                 {
-                    Enabled = routineRev.Configuration.LogicalCheck[0].Enabled,
-                    ExternalId = routineRev.Configuration.LogicalCheck[0].TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.LogicalCheck[0].Aggregate,
-                    Check = routineRev.Configuration.LogicalCheck[0].Operator,
-                    Value = routineRev.Configuration.LogicalCheck[0].Value ?? 0 // TODO what's the default value here?
+                    Enabled = routineRev.Configuration.LogicalCheck.ElementAt(0).Enabled,
+                    ExternalId = routineRev.Configuration.LogicalCheck.ElementAt(0).TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.LogicalCheck.ElementAt(0).Aggregate,
+                    Check = routineRev.Configuration.LogicalCheck.ElementAt(0).Operator,
+                    Value = routineRev.Configuration.LogicalCheck.ElementAt(0).Value ?? 0 // TODO what's the default value here?
                 } : null,
-                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Length > 0 ? new SteadyStateDetectionConfiguration()
+                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Count() > 0 ? new SteadyStateDetectionConfiguration()
                 {
-                    Enabled = routineRev.Configuration.SteadyStateDetection[0].Enabled,
-                    ExternalId = routineRev.Configuration.SteadyStateDetection[0].TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.SteadyStateDetection[0].Aggregate,
-                    MinSectionSize = routineRev.Configuration.SteadyStateDetection[0].MinSectionSize ?? 0, // TODO what's the default value here?
-                    VarThreshold = routineRev.Configuration.SteadyStateDetection[0].VarThreshold ?? 0, // TODO what's the default value here?
-                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection[0].SlopeThreshold ?? 0 // TODO what's the default value here?
+                    Enabled = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Enabled,
+                    ExternalId = routineRev.Configuration.SteadyStateDetection.ElementAt(0).TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Aggregate,
+                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.ElementAt(0).MinSectionSize ?? 0, // TODO what's the default value here?
+                    VarThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).VarThreshold ?? 0, // TODO what's the default value here?
+                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).SlopeThreshold ?? 0 // TODO what's the default value here?
                 } : null,
                 UserEmail = "",
                 Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
@@ -457,12 +456,6 @@ namespace Cognite.Simulator.Utils
         /// Sampling granularity in minutes
         /// </summary>
         public int Granularity { get; set; }
-
-        /// <summary>
-        /// The validation window can be moved to the past by setting
-        /// this offset. The format it <c>number(w|d|h|m|s)</c>
-        /// </summary>
-        public string ValidationEndOffset { get; set; } = "0s";
     }
 
     /// <summary>

@@ -412,11 +412,7 @@ namespace Cognite.Simulator.Utils
                 }
                 else
                 {
-                    // If the validation end time should be in the past, subtract the 
-                    // configured offset
-                    var offset = SimulationUtils.ConfigurationTimeStringToTimeSpan(
-                        configObj.DataSampling.ValidationEndOffset);
-                    validationEnd = startTime - offset;
+                    validationEnd = startTime;
                 }
 
                 // Find the sampling configuration results
