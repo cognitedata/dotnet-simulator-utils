@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
         {
             // @TODO fix this 
             // this is a temporary change and will be fixed by luis's pr
-            var cronWrapper = new CronTimeSpanWrapper(true, true, "s", "1")
+            var cronWrapper = new CronTimeSpanWrapper(false, true, "s", "1")
             {
                 RawValue = time
             };
