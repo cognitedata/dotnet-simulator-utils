@@ -245,7 +245,7 @@ namespace Cognite.Simulator.Tests
                 Schedule = new SimulatorRoutineRevisionSchedule()
                 {
                     Enabled = true,
-                    CronExpression = "*/5 * * * * *",
+                    CronExpression = "*/5 * * * *",
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
@@ -259,7 +259,7 @@ namespace Cognite.Simulator.Tests
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
             },
-            ExternalId = "Test Scheduled Routine - 2",
+            ExternalId = "Test Scheduled Routine - 3",
             RoutineExternalId = $"Test Scheduled Routine - 1",
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };

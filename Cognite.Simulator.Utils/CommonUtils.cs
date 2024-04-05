@@ -98,31 +98,6 @@ namespace Cognite.Simulator.Utils
                 RawValue = time
             };
             return cronWrapper.Value;
-            // var repeatRegex = Regex.Match(
-            //     time,
-            //     @"((?<weeks>\d+)w)|((?<days>\d+)d)|((?<hours>\d+)h)|((?<minutes>\d+)m)|((?<seconds>\d+)s)", RegexOptions.Compiled);
-            // if (repeatRegex.Groups["weeks"].Success)
-            // {
-            //     var hours = int.Parse(repeatRegex.Groups["weeks"].Value) * 168;
-            //     return TimeSpan.FromHours(hours);
-            // }
-            // if (repeatRegex.Groups["days"].Success)
-            // {
-            //     return TimeSpan.FromDays(int.Parse(repeatRegex.Groups["days"].Value));
-            // }
-            // if (repeatRegex.Groups["hours"].Success)
-            // {
-            //     return TimeSpan.FromHours(int.Parse(repeatRegex.Groups["hours"].Value));
-            // }
-            // if (repeatRegex.Groups["minutes"].Success)
-            // {
-            //     return TimeSpan.FromMinutes(int.Parse(repeatRegex.Groups["minutes"].Value));
-            // }
-            // if (repeatRegex.Groups["seconds"].Success)
-            // {
-            //     return TimeSpan.FromSeconds(int.Parse(repeatRegex.Groups["seconds"].Value));
-            // }
-            // throw new ArgumentException("Cannot parse provided string to a TimeSpan", nameof(time));
         }
 
         /// <summary>

@@ -55,6 +55,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 SeedData.SimulatorRoutineRevisionCreateScheduled
             ).ConfigureAwait(false);
 
+            // this helps diagnose issues where the above function is giving an old revision
+            Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
 
