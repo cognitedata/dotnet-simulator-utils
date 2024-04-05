@@ -93,13 +93,11 @@ namespace Cognite.Simulator.Utils
         {
             // @TODO fix this 
             // this is a temporary change and will be fixed by luis's pr
-            TimeSpanWrapper timeSpanWrapper = new TimeSpanWrapper(false, "s", "0")
+            var cronWrapper = new CronTimeSpanWrapper(true, true, "s", "1")
             {
                 RawValue = time
             };
-            return timeSpanWrapper.Value;
-
-
+            return cronWrapper.Value;
             // var repeatRegex = Regex.Match(
             //     time,
             //     @"((?<weeks>\d+)w)|((?<days>\d+)d)|((?<hours>\d+)h)|((?<minutes>\d+)m)|((?<seconds>\d+)s)", RegexOptions.Compiled);
