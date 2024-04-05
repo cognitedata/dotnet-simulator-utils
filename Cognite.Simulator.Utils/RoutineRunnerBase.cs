@@ -56,6 +56,21 @@ namespace Cognite.Simulator.Utils
             SimulatorClient = simulatorClient;
         }
 
+        private async Task<Dictionary<string, SimulatorValueItem>> LoadSimulationInputOverrides(long runId, CancellationToken token) {
+            var inputDataOverrides = new Dictionary<string, SimulatorValueItem>();
+
+            var dataRes = await _cdf.CogniteClient.Alpha.Simulators.ListSimulationRunsDataAsync(
+                new List<long> { runId },
+                token: token).ConfigureAwait(false);
+            var dataResItem = dataRes.FirstOrDefault();
+            if (dataResItem != null && dataResItem.Inputs != null)
+            {
+                inputDataOverrides = dataResItem.Inputs.ToDictionarySafe(i => i.ReferenceId, i => i);
+            }
+
+            return inputDataOverrides;
+        }
+
         /// <summary>
         /// Run the given simulation event by parsing and executing the simulation routine associated with it
         /// </summary>
@@ -98,6 +113,7 @@ namespace Cognite.Simulator.Utils
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
             var inputData = new Dictionary<string, SimulatorValueItem>();
+            var inputDataOverrides = await LoadSimulationInputOverrides(e.Run.Id, token).ConfigureAwait(false);
 
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
@@ -118,41 +134,29 @@ namespace Cognite.Simulator.Utils
 
             // Collect manual inputs, to run simulations and to store as time series and data points
             if (configObj.Inputs != null) {
-                foreach (var inputValue in configObj.Inputs.Where(i => i.IsConstant))
+                foreach (var originalInput in configObj.Inputs.Where(i => i.IsConstant))
                 {
+                    // constant values should be read directly from the run data as they may be overridden per run
+                    if (!inputDataOverrides.TryGetValue(originalInput.ReferenceId, out var inputValue)) {
+                        throw new SimulationException($"Could not find input value for {originalInput.Name} ({originalInput.ReferenceId}).");
+                    }
+                    
                     var simInput = new SimulationInput
                     {
                         RoutineRevisionInfo = routineRevisionInfo,
                         ReferenceId = inputValue.ReferenceId,
-                        Name = inputValue.Name,
+                        Name = originalInput.Name,
                         Unit = inputValue.Unit.Name,
-                        SaveTimeseriesExternalId = inputValue.SaveTimeseriesExternalId
+                        SaveTimeseriesExternalId = originalInput.SaveTimeseriesExternalId
                     };
-
-                    // // If the manual input is to be saved with an external ID different than the
-                    // // auto-generated one
-                    // // TODO: this should be optional now
-                    // if (!string.IsNullOrEmpty(inputValue.SaveTimeseriesExternalId))
-                    // {
-                    //     simInput.OverwriteTimeSeriesId(inputValue.SaveTimeseriesExternalId);
-                    // }
                     
                     if (inputValue.Value.Type != SimulatorValueType.DOUBLE)
                     {
-                        throw new SimulationException($"Could not parse input constant {inputValue.Name} with value {inputValue.Value}. Only double precision values are supported.");
+                        throw new SimulationException($"Could not parse input constant {originalInput.Name} with value {inputValue.Value}. Only double precision values are supported.");
                     }
                     var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
 
-                    // TODO we are not reading overridden values from the new endpoint yet
-                    inputData[inputValue.ReferenceId] = new SimulatorValueItem()  // TODO we should read this from the new endpoint instead
-                    {
-                        Value = inputValue.Value,
-                        Unit = inputValue.Unit,
-                        Overridden = false,
-                        ValueType = inputValue.Value.Type,
-                        ReferenceId = inputValue.ReferenceId,
-                        TimeseriesExternalId = inputValue.SaveTimeseriesExternalId,
-                    };
+                    inputData[inputValue.ReferenceId] = inputValue;
 
                     if (simInput.ShouldSaveToTimeSeries) {
 
