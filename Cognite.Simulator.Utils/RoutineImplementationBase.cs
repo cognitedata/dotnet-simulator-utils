@@ -224,9 +224,6 @@ namespace Cognite.Simulator.Utils
                         //     }
                         // } TODO: this is a part of the SimulatorRoutineRevisionInput now, do we need to add it to the extraArgs?
                         // Set constant input
-
-                        // TODO we have to read overrides as well, not just reading this from the routine
-
                         SetInput(inputManualValue, _inputData[argRefId], extraArgs);
                     }
                     else

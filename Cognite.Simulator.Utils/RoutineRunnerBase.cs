@@ -195,7 +195,9 @@ namespace Cognite.Simulator.Utils
                 inputData[inputTs.ReferenceId] = new SimulatorValueItem()
                 {
                     Value = new SimulatorValue.Double(averageValue),
-                    Unit = inputTs.Unit,
+                    Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
+                        Name = inputTs.Unit.Name
+                    } : null,
                     Overridden = false,
                     ReferenceId = inputTs.ReferenceId,
                     TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
@@ -211,7 +213,6 @@ namespace Cognite.Simulator.Utils
                 };
 
                 if (simInput.ShouldSaveToTimeSeries) {
-
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.SaveTimeseriesExternalId),
@@ -257,6 +258,16 @@ namespace Cognite.Simulator.Utils
             }
             try
             {
+                // saving the inputs/outputs back to the simulation run
+                await _cdf.CogniteClient.Alpha.Simulators.SimulationRunCallbackAsync(
+                    new SimulationRunCallbackItem()
+                    {
+                        Id = e.Run.Id,
+                        Status = SimulationRunStatus.running,
+                        Inputs = inputData.Values,
+                        Outputs = results.Values,
+                    }, token).ConfigureAwait(false);
+
                 // Store input time series
                 await timeSeries
                     .GetOrCreateSimulationInputs(inputTsToCreate, modelState.DataSetId, token)

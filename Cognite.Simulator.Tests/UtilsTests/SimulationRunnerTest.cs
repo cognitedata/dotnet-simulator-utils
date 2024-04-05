@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -30,13 +31,48 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationRunnerTest
     {
+
+        public static IEnumerable<object[]> InputParams => 
+            new List<object[]>
+            {
+                // 1. timeseries inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
+                    new List<SimulationInputOverride>(),
+                    2037.478183282069
+                },
+                // 2. constant inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                    new List<SimulationInputOverride>(),
+                    142
+                },
+                // 3. constant inputs with override
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                    new List<SimulationInputOverride> {
+                        new SimulationInputOverride {
+                            ReferenceId = "IC1",
+                            Value = new SimulatorValue.Double(-42),
+                        },
+                    },
+                    58
+                }
+            };
+
         private const long validationEndOverwrite = 1631304000000L;
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task TestSimulationRunnerBase(bool useConstInputs)
-        {
+        [MemberData(nameof(InputParams))]
+        public async Task TestSimulationRunnerBase(
+            SimulatorRoutineCreateCommandItem createRoutineItem, 
+            SimulatorRoutineRevisionCreate createRevisionItem,
+            IEnumerable<SimulationInputOverride> inputOverrides,
+            double result
+        ) {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
@@ -63,23 +99,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
 
             // prepopulate routine in CDF
-            SimulatorRoutineRevision revision;
-
-            if (useConstInputs) {
-                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf,
-                    FileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithExtendedIO
-                ).ConfigureAwait(false);
-            } else {
-                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf,
-                    FileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
-                ).ConfigureAwait(false);
-            }
+            SimulatorRoutineRevision revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                cdf,
+                FileStorageClient,
+                createRoutineItem,
+                createRevisionItem
+            ).ConfigureAwait(false);
 
             try
             {
@@ -133,7 +158,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         {
                             RoutineExternalId = routineRevision.RoutineExternalId,
                             RunType = SimulationRunType.external,
-                            ValidationEndTime = validationEndOverwrite
+                            ValidationEndTime = validationEndOverwrite,
+                            Inputs = inputOverrides.Any() ? inputOverrides : null
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
@@ -212,6 +238,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 logData = logsRes.First().Data;
                 Assert.NotNull(logData.First().Message);
+
+                // check inputs/outputs from the /runs/data/list endpoint
+                var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(
+                    new List<long> { runId }, source.Token).ConfigureAwait(false);
+                Assert.NotEmpty(runDataRes);
+                var inputs = runDataRes.First().Inputs;
+                Assert.NotEmpty(inputs);
+                foreach (var input in inputs)
+                {
+                    Assert.Contains(input.ReferenceId, configObj.Inputs.Select(i => i.ReferenceId));
+                    if (input.TimeseriesExternalId != null)
+                    {
+                        Assert.Contains(input.TimeseriesExternalId, inTsIds);
+                    }
+                    if (inputOverrides.Any(i => i.ReferenceId == input.ReferenceId)) {
+                        Assert.True(input.Overridden);
+                        var inputValue = input.Value as SimulatorValue.Double;
+                        var inputOverride = inputOverrides.First(i => i.ReferenceId == input.ReferenceId).Value as SimulatorValue.Double;
+                        Assert.Equal(inputValue?.Value, inputOverride?.Value);
+                    } else {
+                        Assert.NotEqual(input.Overridden, true);
+                    }
+                }
+
+                Assert.NotEmpty(runDataRes);
+                Assert.NotEmpty(runDataRes.First().Outputs);
+                var resultValue = ((SimulatorValue.Double) runDataRes.First().Outputs.First().Value).Value;
+                Assert.Equal(resultValue, result);
 
                 // Check that the correct output was added as a data point
                 var outDps = await cdf.DataPoints.ListAsync(
@@ -296,10 +350,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             return new SimulatorValueItem() {
                 Value = new SimulatorValue.Double(_output.Value),
-                Overridden = false,
                 ReferenceId = outputConfig.ReferenceId,
                 TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
-                Unit = outputConfig.Unit,
+                Unit = outputConfig.Unit != null ? new SimulatorValueUnit() {
+                    Name = outputConfig.Unit.Name,
+                } : null,
                 ValueType = outputConfig.ValueType
             };
         }
