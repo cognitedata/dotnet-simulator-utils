@@ -84,21 +84,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulationUtils
     {
-        /// <summary>
-        /// Parses strings in the format <c>number(w|d|h|m|s)</c> to a <see cref="TimeSpan"/>
-        /// object
-        /// </summary>
-        /// <param name="time">Time string</param>
-        public static TimeSpan ConfigurationTimeStringToTimeSpan(string time)
-        {
-            // @TODO fix this 
-            // this is a temporary change and will be fixed by luis's pr
-            var cronWrapper = new CronTimeSpanWrapper(false, true, "s", "1")
-            {
-                RawValue = time
-            };
-            return cronWrapper.Value;
-        }
 
         /// <summary>
         /// Run logical check and steady state detection based on a simulation configuration. 

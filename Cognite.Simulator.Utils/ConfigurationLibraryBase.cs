@@ -648,11 +648,6 @@ namespace Cognite.Simulator.Utils
         /// Start time as a <see cref="DateTime"/> object
         /// </summary>
         public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
-
-        /// <summary>
-        /// Simulation frequency as a <see cref="TimeSpan"/> object
-        /// </summary>
-        public TimeSpan RepeatTimeSpan => SimulationUtils.ConfigurationTimeStringToTimeSpan(Repeat);
     }
 
 
