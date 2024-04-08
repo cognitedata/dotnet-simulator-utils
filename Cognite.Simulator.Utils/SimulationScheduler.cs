@@ -289,14 +289,6 @@ namespace Cognite.Simulator.Utils
         }
         private SimulationEvent CreateRunEvent(U calcState, V calcConfig)
         {
-            // print the SimulationEvent object
-            _logger.LogInformation($"Calculation : {calcConfig.Calculation}");
-            _logger.LogInformation($"Connector : {_config.GetConnectorName()}");
-            _logger.LogInformation($"Calculation Id : {calcState.Id}");
-            _logger.LogInformation($"DataSet Id : {calcState.DataSetId}");
-            _logger.LogInformation($"Run Type : scheduled");
-            _logger.LogInformation($"User Email : {calcConfig.UserEmail}");
-            _logger.LogInformation($"Simulator : {calcConfig.Calculation.Model.Simulator}");
             return new SimulationEvent
             {
                 Calculation = calcConfig.Calculation,
