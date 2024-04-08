@@ -14,7 +14,7 @@ namespace Cognite.Simulator.Tests {
                 new SimulatorIntegrationQuery
                 {
                     Filter = new SimulatorIntegrationFilter() {
-                        simulatorExternalIds = new List<string> { "PROSPER" },
+                        simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                     }
                 }
             ).ConfigureAwait(false);
@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Tests {
                         new SimulatorIntegrationCreate
                         {
                             ExternalId = connectorName,
-                            SimulatorExternalId = "PROSPER",
+                            SimulatorExternalId = SeedData.TestSimulatorExternalId,
                             DataSetId = CdfTestClient.TestDataset,
                             Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
                             ConnectorVersion = "N/A",

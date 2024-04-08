@@ -22,13 +22,44 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">The type of simulation configuration with data sampling.</typeparam>
     public class ScheduledJob<U, V> where U : ConfigurationStateBase where V : SimulationConfigurationWithDataSampling
     {
+        /// <summary>
+        /// The schedule for the job.
+        /// </summary>        
         public CrontabSchedule Schedule { get; set; }
+
+        /// <summary>
+        /// The Task of the scheduled job.
+        /// </summary>
         public Task Task { get; set; }
+
+        /// <summary>
+        /// The calculation name
+        /// </summary>
         public string CalculationName { get; set; }
+
+        /// <summary>
+        /// The token source for the job, will be used to cancel it.
+        /// </summary>
         public CancellationTokenSource TokenSource { get; set; }
+
+        /// <summary>
+        /// Whether the job was started on the scheduler or not.
+        /// </summary>
         public bool Scheduled { get; set; }
+
+        /// <summary>
+        /// The time the job was created.
+        /// </summary>
         public long CreatedTime { get; set; }
+
+        /// <summary>
+        /// The configuration state.
+        /// </summary>
         public U ConfigState { get; set; }
+
+        /// <summary>
+        /// The calculation configuration.
+        /// </summary>
         public V Config { get; set; }
     }
     /// <summary>
@@ -153,6 +184,7 @@ namespace Cognite.Simulator.Utils
                                     continue;   
                                 }
                                 // Create new job
+                                // */5 * * * * =>
                                 var schedule = CrontabSchedule.Parse(config.Schedule.Repeat);
                                 var newJob = new ScheduledJob<U, V>
                                 {
@@ -182,8 +214,7 @@ namespace Cognite.Simulator.Utils
                         {
                             continue;
                         }
-                        Console.WriteLine($"Scheduling job for: {kvp.Key}");
-                        tasks.Add(RunJob(kvp.Value, _config.GetConnectorName(), token));
+                        tasks.Add(RunJob(kvp.Value, token));
                         kvp.Value.Scheduled = true;
                     }
                     if (tasks.Count != 0)
@@ -200,9 +231,8 @@ namespace Cognite.Simulator.Utils
         /// Runs a scheduled job.
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
-        /// <param name="connectorName"></param>
         /// <param name="mainToken">The cancellation token.</param>
-        public async Task RunJob(ScheduledJob<U,V> job, string connectorName, CancellationToken mainToken)
+        public async Task RunJob(ScheduledJob<U,V> job, CancellationToken mainToken)
         {
             if (job == null)
             {
@@ -211,14 +241,15 @@ namespace Cognite.Simulator.Utils
             }
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
+                _logger.LogDebug("Running scheduler");
                 var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
                 var delay = nextOccurrence - DateTime.Now;
                 // Retrieve the last run time saved in the calculation state, or use the start date
                 // if no run was saved in the state
-                if (job.ConfigState.LastRun.HasValue ) {
-                    var lastRun = CogniteTime.FromUnixTimeMilliseconds(job.ConfigState.LastRun.Value) ;
+                // if (job.ConfigState.LastRun.HasValue ) {
+                //     var lastRun = CogniteTime.FromUnixTimeMilliseconds(job.ConfigState.LastRun.Value) ;
                     
-                }
+                // }
                 if (delay.TotalMilliseconds > 0)
                 {
                     bool calcExists = await _configLib

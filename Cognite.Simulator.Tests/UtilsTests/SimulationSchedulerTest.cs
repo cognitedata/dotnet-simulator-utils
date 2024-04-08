@@ -45,7 +45,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
-            await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
+            
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+
+            // await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
+            await TestHelpers.SimulateProsperRunningAsync(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
             var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
@@ -86,10 +90,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Filter = new SimulationRunFilter
                         {
-                            SimulatorIntegrationExternalIds = new List<string> { "scheduler-test-connector" },
-                            SimulatorExternalIds = new List<string> { "PROSPER" },
+                            SimulatorIntegrationExternalIds = new List<string> { SeedData.TestIntegrationExternalId },
+                            SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                             Status = SimulationRunStatus.ready,
-                            ModelRevisionExternalIds = new List<string> { "PROSPER-Connector_Test_Model-2" },
+                            ModelRevisionExternalIds = new List<string> { "PETEX-Connector_Test_Model" },
                         },
                         Sort = new List<SimulatorSortItem>
                         {
@@ -123,6 +127,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
     }
