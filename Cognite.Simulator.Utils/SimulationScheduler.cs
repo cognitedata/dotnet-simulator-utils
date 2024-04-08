@@ -244,12 +244,6 @@ namespace Cognite.Simulator.Utils
             {
                 var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
                 var delay = nextOccurrence - DateTime.Now;
-                // Retrieve the last run time saved in the calculation state, or use the start date
-                // if no run was saved in the state
-                // if (job.ConfigState.LastRun.HasValue ) {
-                //     var lastRun = CogniteTime.FromUnixTimeMilliseconds(job.ConfigState.LastRun.Value) ;
-                    
-                // }
                 if (delay.TotalMilliseconds > 0)
                 {
                     bool calcExists = await _configLib

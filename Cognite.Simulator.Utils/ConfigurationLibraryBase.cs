@@ -6,6 +6,7 @@ using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -732,21 +733,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ConfigurationStateBase : FileState
     {
-        private long? _lastRun;
-
-        /// <summary>
-        /// Timestamp of the last time a simulation was ran using this configuration
-        /// </summary>
-        public long? LastRun
-        {
-            get => _lastRun;
-            set
-            {
-                if (value == _lastRun) return;
-                LastTimeModified = DateTime.UtcNow;
-                _lastRun = value;
-            }
-        }
 
         /// <summary>
         /// Indicates if the JSON content of the file has been deserialized
@@ -777,10 +763,6 @@ namespace Cognite.Simulator.Utils
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
-            if (poco is ConfigurationStateBasePoco statePoco)
-            {
-                _lastRun = statePoco.LastRun;
-            }
         }
 
         /// <summary>
@@ -790,7 +772,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>File data object</returns>
         public override FileStatePoco GetPoco()
         {
-            return new ConfigurationStateBasePoco
+            return new FileStatePoco
             {
                 Id = Id,
                 ModelName = ModelName,
@@ -799,21 +781,7 @@ namespace Cognite.Simulator.Utils
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
-                LastRun = LastRun,
             };
         }
-    }
-
-    /// <summary>
-    /// Data object that contains the simulation configuration state properties to be persisted
-    /// by the state store. These properties are restored to the state on initialization
-    /// </summary>
-    public class ConfigurationStateBasePoco : FileStatePoco
-    {
-        /// <summary>
-        /// Timestamp of the last simulation run
-        /// </summary>
-        [StateStoreProperty("last-run")]
-        public long? LastRun { get; set; }
     }
 }
