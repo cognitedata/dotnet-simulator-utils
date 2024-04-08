@@ -150,12 +150,13 @@ namespace Cognite.Simulator.Utils
                     var configurations = _configLib.SimulationConfigurations.Values
                         .GroupBy(c => c.CalculationName)
                         .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
+                    
                     foreach (var config in configurations)
                     {
                         U configState = _configLib.GetSimulationConfigurationState(
                             config.ExternalId
                         );
-                        
+
                         // Check if the configuration has a schedule for this connector.
                         if (configState == null ||
                             !connectorIdList.Contains(config.Connector) ||
@@ -241,7 +242,6 @@ namespace Cognite.Simulator.Utils
             }
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
-                _logger.LogDebug("Running scheduler");
                 var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
                 var delay = nextOccurrence - DateTime.Now;
                 // Retrieve the last run time saved in the calculation state, or use the start date
@@ -284,10 +284,19 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
+            _logger.LogInformation("Starting simulation scheduler");
             await RunCron(token);
         }
         private SimulationEvent CreateRunEvent(U calcState, V calcConfig)
         {
+            // print the SimulationEvent object
+            _logger.LogInformation($"Calculation : {calcConfig.Calculation}");
+            _logger.LogInformation($"Connector : {_config.GetConnectorName()}");
+            _logger.LogInformation($"Calculation Id : {calcState.Id}");
+            _logger.LogInformation($"DataSet Id : {calcState.DataSetId}");
+            _logger.LogInformation($"Run Type : scheduled");
+            _logger.LogInformation($"User Email : {calcConfig.UserEmail}");
+            _logger.LogInformation($"Simulator : {calcConfig.Calculation.Model.Simulator}");
             return new SimulationEvent
             {
                 Calculation = calcConfig.Calculation,

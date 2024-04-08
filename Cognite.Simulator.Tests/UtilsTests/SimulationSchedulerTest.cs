@@ -29,7 +29,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton(new ConnectorConfig
             {
-                NamePrefix = "scheduler-test-connector",
+                NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
                 UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             SimulatorIntegrationExternalIds = new List<string> { SeedData.TestIntegrationExternalId },
                             SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                             Status = SimulationRunStatus.ready,
-                            ModelRevisionExternalIds = new List<string> { "PETEX-Connector_Test_Model" },
+                            // ModelRevisionExternalIds = new List<string> { "PETEX-Connector_Test_Model" },
                         },
                         Sort = new List<SimulatorSortItem>
                         {
@@ -106,6 +106,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         Limit = 10,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
+
+                var firstEvent = simRuns.Items.First();
+
+                Assert.Equal("PETEX-Connector_Test_Model" , firstEvent.ModelExternalId);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
