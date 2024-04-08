@@ -112,44 +112,44 @@ namespace Cognite.Simulator.Utils
                     {
                         continue;
                     }
-                    var repeat = SimulationUtils.ConfigurationTimeStringToTimeSpan(configObj.Configuration.Schedule.Repeat); // frequency of simulations
+                    // var repeat = SimulationUtils.ConfigurationTimeStringToTimeSpan(configObj.Configuration.Schedule.Repeat); // frequency of simulations
 
                     // Retrieve the last run time saved in the calculation state, or use the start date
-                    // if no run was saved in the state
-                    var startDateTime = CogniteTime.FromUnixTimeMilliseconds(configObj.Configuration.Schedule.StartTime.Value); // TODO what's the default value if not set?
-                    var lastRun = configState.LastRun.HasValue ?
-                        CogniteTime.FromUnixTimeMilliseconds(configState.LastRun.Value) : startDateTime - repeat;
-                    var nextRun = lastRun;
+                    // // if no run was saved in the state
+                    // var startDateTime = CogniteTime.FromUnixTimeMilliseconds(configObj.Configuration.Schedule.StartTime.Value); // TODO what's the default value if not set?
+                    // var lastRun = configState.LastRun.HasValue ?
+                    //     CogniteTime.FromUnixTimeMilliseconds(configState.LastRun.Value) : startDateTime - repeat;
+                    // var nextRun = lastRun;
 
-                    // Determine if it is time to trigger the calculation. The calculation is triggered
-                    // if the deadline has passed, given the tolerance set 
-                    while (nextRun + repeat <= now)
-                    {
-                        nextRun += repeat;
-                        if (now >= nextRun && now <= (nextRun + tolerance))
-                        {
-                            bool calcExists = await _configLib
-                                .VerifyLocalConfigurationState(configState, configObj, token)
-                                .ConfigureAwait(false);
-                            if (!calcExists)
-                            {
-                                break;
-                            }
-                            _logger.LogInformation("Scheduled simulation ready to run: {CalcName} - {CalcModel}",
-                                configObj.RoutineExternalId,
-                                configObj.ModelExternalId);
+                    // // Determine if it is time to trigger the calculation. The calculation is triggered
+                    // // if the deadline has passed, given the tolerance set 
+                    // while (nextRun + repeat <= now)
+                    // {
+                    //     nextRun += repeat;
+                    //     if (now >= nextRun && now <= (nextRun + tolerance))
+                    //     {
+                    //         bool calcExists = await _configLib
+                    //             .VerifyLocalConfigurationState(configState, configObj, token)
+                    //             .ConfigureAwait(false);
+                    //         if (!calcExists)
+                    //         {
+                    //             break;
+                    //         }
+                    //         _logger.LogInformation("Scheduled simulation ready to run: {CalcName} - {CalcModel}",
+                    //             configObj.RoutineExternalId,
+                    //             configObj.ModelExternalId);
 
-                            configState.LastRun = nextRun.ToUnixTimeMilliseconds(); // store state
-                            // var runEvent = CreateRunEvent(configState, configObj); // create CDF event body
-                            var runEvent = new SimulationRunCreate
-                            {
-                                RoutineExternalId = configObj.RoutineExternalId,
-                                RunType = SimulationRunType.scheduled
-                            };
-                            eventsToCreate.Add(runEvent);
-                            break;
-                        }
-                    }
+                    //         configState.LastRun = nextRun.ToUnixTimeMilliseconds(); // store state
+                    //         // var runEvent = CreateRunEvent(configState, configObj); // create CDF event body
+                    //         var runEvent = new SimulationRunCreate
+                    //         {
+                    //             RoutineExternalId = configObj.RoutineExternalId,
+                    //             RunType = SimulationRunType.scheduled
+                    //         };
+                    //         eventsToCreate.Add(runEvent);
+                    //         break;
+                    //     }
+                    // }
                 }
                 // create runs related to all scheduled routines in this iteration.
                 try

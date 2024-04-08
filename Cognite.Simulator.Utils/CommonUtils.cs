@@ -121,27 +121,29 @@ namespace Cognite.Simulator.Utils
 
             // Check for sensor status, if enabled
             TimeSeriesData validationDps = null;
-            if (config.LogicalCheck != null && config.LogicalCheck.Enabled)
+            var logicalCheck = config.LogicalCheck.FirstOrDefault();
+            if (logicalCheck != null && logicalCheck.Enabled)
             {
                 var dps = await dataPoints.GetSample(
-                    config.LogicalCheck.TimeseriesExternalId,
-                    config.LogicalCheck.Aggregate.ToDataPointAggregate(),
+                    logicalCheck.TimeseriesExternalId,
+                    logicalCheck.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
                     config.DataSampling.Granularity,
-                    config.LogicalCheck.Aggregate.ToDataPointAggregate());
-                validationDps = LogicalCheckInternal(validationDps, validationRange, config.LogicalCheck, config.DataSampling);
+                    logicalCheck.Aggregate.ToDataPointAggregate());
+                validationDps = LogicalCheckInternal(validationDps, validationRange, logicalCheck, config.DataSampling);
             }
 
             // Check for steady state, if enabled
             TimeSeriesData ssdMap = null;
-            if (config.SteadyStateDetection != null && config.SteadyStateDetection.Enabled)
+            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
+            if (steadyStateDetection != null && steadyStateDetection.Enabled)
             {
                 var ssDps = await dataPoints.GetSample(
-                    config.SteadyStateDetection.TimeseriesExternalId,
-                    config.SteadyStateDetection.Aggregate.ToDataPointAggregate(),
+                    steadyStateDetection.TimeseriesExternalId,
+                    steadyStateDetection.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
@@ -149,10 +151,10 @@ namespace Cognite.Simulator.Utils
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
                         config.DataSampling.Granularity,
-                        config.SteadyStateDetection.Aggregate.ToDataPointAggregate()),
-                    config.SteadyStateDetection.MinSectionSize ?? 0, // TODO what are the defaults?
-                    config.SteadyStateDetection.VarThreshold ?? 0,
-                    config.SteadyStateDetection.SlopeThreshold ?? 0);
+                        steadyStateDetection.Aggregate.ToDataPointAggregate()),
+                    steadyStateDetection.MinSectionSize ?? 0, // TODO what are the defaults?
+                    steadyStateDetection.VarThreshold ?? 0,
+                    steadyStateDetection.SlopeThreshold ?? 0);
             }
 
             TimeSeriesData feasibleTimestamps;

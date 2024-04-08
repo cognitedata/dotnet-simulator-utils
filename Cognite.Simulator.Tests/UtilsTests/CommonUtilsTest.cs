@@ -4,6 +4,8 @@ using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -45,8 +47,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var dataPoints = cdf.DataPoints;
 
             var config = NewRoutineConfig();
-            config.LogicalCheck.Enabled = runLogicCheck;
-            config.SteadyStateDetection.Enabled = runSsdCheck;
+            config.LogicalCheck.First().Enabled = runLogicCheck;
+            config.SteadyStateDetection.First().Enabled = runSsdCheck;
 
             var result = await SimulationUtils.RunSteadyStateAndLogicalCheck(
                 dataPoints,
@@ -74,22 +76,28 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SamplingWindow = 60,
                     ValidationWindow = 1200
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
-                    Aggregate = "stepInterpolation",
-                    Operator = "eq",
-                    Value = 1.0
+                    new SimulatorRoutineRevisionLogicalCheck
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        Aggregate = "stepInterpolation",
+                        Operator = "eq",
+                        Value = 1.0
+                    }
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
-                    Aggregate = "average",
-                    MinSectionSize = 60,
-                    VarThreshold = 1.0,
-                    SlopeThreshold = -3.0
+                    new SimulatorRoutineRevisionSteadyStateDetection
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        Aggregate = "average",
+                        MinSectionSize = 60,
+                        VarThreshold = 1.0,
+                        SlopeThreshold = -3.0
+                    }
                 }
             };
         }
