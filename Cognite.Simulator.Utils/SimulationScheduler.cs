@@ -9,9 +9,28 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Simulator.Utils;
+using NCrontab;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Cognite.Simulator.Utils
 {
+
+    /// <summary>
+    /// Represents a scheduled job for simulation.
+    /// </summary>
+    /// <typeparam name="U">The type of configuration state.</typeparam>
+    /// <typeparam name="V">The type of simulation configuration with data sampling.</typeparam>
+    public class ScheduledJob<U, V> where U : ConfigurationStateBase where V : SimulationConfigurationWithDataSampling
+    {
+        public CrontabSchedule Schedule { get; set; }
+        public Task Task { get; set; }
+        public string CalculationName { get; set; }
+        public CancellationTokenSource TokenSource { get; set; }
+        public bool Scheduled { get; set; }
+        public long CreatedTime { get; set; }
+        public U ConfigState { get; set; }
+        public V Config { get; set; }
+    }
     /// <summary>
     /// This class implements a basic simulation scheduler. It runs a loop on a configurable interval.
     /// Each iteration, it checks the schedules for all configurations and determine if the simulation
@@ -38,6 +57,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="config">Connector configuration</param>
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
+        /// <param name="simulators">List of simulators</param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
@@ -83,6 +103,154 @@ namespace Cognite.Simulator.Utils
             return runs;
         }
 
+        public async Task RunCron(CancellationToken token) {
+            var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
+            Dictionary<string,ScheduledJob<U,V>> scheduledJobs = new Dictionary<string, ScheduledJob<U,V>>();
+            var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
+            
+            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
+            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
+            
+            await Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    // Check for new schedules
+                    var configurations = _configLib.SimulationConfigurations.Values
+                        .GroupBy(c => c.CalculationName)
+                        .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
+                    foreach (var config in configurations)
+                    {
+                        U configState = _configLib.GetSimulationConfigurationState(
+                            config.ExternalId
+                        );
+                        
+                        // Check if the configuration has a schedule for this connector.
+                        if (configState == null ||
+                            !connectorIdList.Contains(config.Connector) ||
+                            config.Schedule == null )
+                        {
+                            continue;
+                        }
+
+                        // Check if the job already exists and if it should be cancelled due 
+                        // to a new configuration on the API
+                        if (scheduledJobs.TryGetValue(config.CalculationName, out var job))
+                        {
+                            if (config.CreatedTime > job.CreatedTime && job.TokenSource != null && !job.TokenSource.Token.IsCancellationRequested)
+                            {
+                                _logger.LogDebug($"Cancelling job for Calculation : {config.CalculationName} due to new configuration detected.");
+                                job.TokenSource.Cancel();
+                                scheduledJobs.Remove(config.CalculationName);
+                            }
+                        }
+
+                        if ( !scheduledJobs.TryGetValue(config.CalculationName, out var existingJob)) {
+                            try
+                            {
+                                if (config.Schedule.Enabled == false)
+                                {
+                                    continue;   
+                                }
+                                // Create new job
+                                var schedule = CrontabSchedule.Parse(config.Schedule.Repeat);
+                                var newJob = new ScheduledJob<U, V>
+                                {
+                                    Schedule = schedule ,
+                                    CalculationName = config.CalculationName,
+                                    TokenSource = new CancellationTokenSource(),
+                                    CreatedTime = config.CreatedTime,
+                                    ConfigState = configState,
+                                    Config = config
+
+                                };
+                                _logger.LogDebug("Created new job for schedule: {0} with id {1}", config.Schedule.Repeat, config.ExternalId);
+                                scheduledJobs.Add(config.CalculationName, newJob);
+                            }
+                            catch (Exception e)
+                            {
+                               _logger.LogError($"Exception while scheduling job for Calculation : {job.CalculationName} Error: {e.Message}. Skipping.");
+                            }
+                        }
+                    }
+
+                    // Schedule new jobs
+                    List<Task> tasks = new List<Task>();
+                    foreach (var kvp in scheduledJobs)
+                    {
+                        if (kvp.Value.Scheduled)
+                        {
+                            continue;
+                        }
+                        Console.WriteLine($"Scheduling job for: {kvp.Key}");
+                        tasks.Add(RunJob(kvp.Value, _config.GetConnectorName(), tolerance, token ));
+                        kvp.Value.Scheduled = true;
+                    }
+                    if (tasks.Count != 0)
+                    {
+                        Task.WhenAll(tasks);
+                    } 
+                    // Wait for 10 seconds before checking again
+                    await Task.Delay(interval);
+                }
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Runs a scheduled job.
+        /// </summary>
+        /// <param name="job">The scheduled job to run.</param>
+        /// <param name="connectorName"></param>
+        /// <param name="mainToken">The cancellation token.</param>
+        public async Task RunJob(ScheduledJob<U,V> job, string connectorName, TimeSpan tolerance, CancellationToken mainToken)
+        {
+            if (job == null)
+            {
+                _logger.LogError($"Scheduled Job is null. Exiting.");
+                return;
+            }
+            
+            while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
+            {
+                var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
+                var delay = nextOccurrence - DateTime.Now;
+
+                // Determine if it is time to trigger the calculation. The calculation is triggered
+                // if the deadline has passed, given the tolerance set 
+                if (job.ConfigState.LastRun.HasValue ) {
+                    var lastRun = CogniteTime.FromUnixTimeMilliseconds(job.ConfigState.LastRun.Value) ;
+                    if (DateTime.Now - lastRun > tolerance) {
+                        continue;
+                    }
+                }
+                
+                if (delay.TotalMilliseconds > 0)
+                {
+                    bool calcExists = await _configLib
+                        .VerifyLocalConfigurationState(job.ConfigState, job.Config, mainToken)
+                        .ConfigureAwait(false);
+                    if (!calcExists)
+                    {
+                        _logger.LogDebug($"Job not found for calculation name: {job.CalculationName} breaking out of loop");
+                        break;
+                    }
+                    var runEvent = CreateRunEvent(job.ConfigState, job.Config);
+                    job.ConfigState.LastRun = DateTime.Now.ToUnixTimeMilliseconds();
+                    await CreateSimulationEventReadyToRun(new List<SimulationEvent> { runEvent }, job.TokenSource.Token).ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
+                        _logger.LogDebug($"Job executed at: {DateTime.Now} for calculation: {job.CalculationName}");
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _logger.LogDebug($"Job cancelled for calculation: {job.CalculationName} breaking out of loop");
+                        break;
+                    }
+                }
+            }
+        }
+
 
         /// <summary>
         /// Starts the scheduler loop. For the existing simulation configuration files,
@@ -91,82 +259,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
-            var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
-            var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
-            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
-            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
-           
-            
-            while (!token.IsCancellationRequested)
-            {
-                var now = DateTime.UtcNow;
-                var eventsToCreate = new List<SimulationEvent>();
-                var configurations = _configLib.SimulationConfigurations.Values
-                    .GroupBy(c => c.CalculationName)
-                    .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
-                foreach (var configObj in configurations)
-                {
-                    U configState = _configLib.GetSimulationConfigurationState(
-                        configObj.ExternalId
-                    );
-
-                    // Check if the configuration has a schedule enabled for this connector.
-                    if (configState == null ||
-                        !connectorIdList.Contains(configObj.Connector) ||
-                        configObj.Schedule == null ||
-                        configObj.Schedule.Enabled == false)
-                    {
-                        continue;
-                    }
-                    var repeat = configObj.Schedule.RepeatTimeSpan; // frequency of simulations
-
-                    // Retrieve the last run time saved in the calculation state, or use the start date
-                    // if no run was saved in the state
-                    var lastRun = configState.LastRun.HasValue ?
-                        CogniteTime.FromUnixTimeMilliseconds(configState.LastRun.Value) : configObj.Schedule.StartDate - repeat;
-                    var nextRun = lastRun;
-
-                    // Determine if it is time to trigger the calculation. The calculation is triggered
-                    // if the deadline has passed, given the tolerance set 
-                    while (nextRun + repeat <= now)
-                    {
-                        nextRun += repeat;
-                        if (now >= nextRun && now <= (nextRun + tolerance))
-                        {
-                            bool calcExists = await _configLib
-                                .VerifyLocalConfigurationState(configState, configObj, token)
-                                .ConfigureAwait(false);
-                            if (!calcExists)
-                            {
-                                break;
-                            }
-                            _logger.LogInformation("Scheduled simulation ready to run: {CalcName} - {CalcModel}",
-                                configObj.CalculationName,
-                                configObj.ModelName);
-
-                            configState.LastRun = nextRun.ToUnixTimeMilliseconds(); // store state
-                            var runEvent = CreateRunEvent(configState, configObj); // create CDF event body
-                            eventsToCreate.Add(runEvent);
-                            break;
-                        }
-                    }
-                }
-                // create events related to all scheduled runs in this iteration.
-                if (eventsToCreate.Any())
-                {
-                    try
-                    {
-                        await CreateSimulationEventReadyToRun(eventsToCreate, token).ConfigureAwait(false);
-                    }
-                    catch (CogniteException ex)
-                    {
-                        _logger.LogError("Failed to create simulation run events in CDF: {Errors}",
-                                string.Join(". ", ex.CogniteErrors.Select(e => e.Message)));
-                    }
-
-                }
-                await Task.Delay(interval, token).ConfigureAwait(false);
-            }
+            await RunCron(token);
         }
         private SimulationEvent CreateRunEvent(U calcState, V calcConfig)
         {
