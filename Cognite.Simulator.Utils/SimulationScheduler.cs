@@ -110,7 +110,7 @@ namespace Cognite.Simulator.Utils
             
             var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
             var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
-            
+        
             await Task.Run(async () =>
             {
                 while (!token.IsCancellationRequested)
@@ -183,7 +183,7 @@ namespace Cognite.Simulator.Utils
                             continue;
                         }
                         Console.WriteLine($"Scheduling job for: {kvp.Key}");
-                        tasks.Add(RunJob(kvp.Value, _config.GetConnectorName(), tolerance, token ));
+                        tasks.Add(RunJob(kvp.Value, _config.GetConnectorName(), token));
                         kvp.Value.Scheduled = true;
                     }
                     if (tasks.Count != 0)
@@ -202,28 +202,23 @@ namespace Cognite.Simulator.Utils
         /// <param name="job">The scheduled job to run.</param>
         /// <param name="connectorName"></param>
         /// <param name="mainToken">The cancellation token.</param>
-        public async Task RunJob(ScheduledJob<U,V> job, string connectorName, TimeSpan tolerance, CancellationToken mainToken)
+        public async Task RunJob(ScheduledJob<U,V> job, string connectorName, CancellationToken mainToken)
         {
             if (job == null)
             {
                 _logger.LogError($"Scheduled Job is null. Exiting.");
                 return;
             }
-            
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
                 var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
                 var delay = nextOccurrence - DateTime.Now;
-
-                // Determine if it is time to trigger the calculation. The calculation is triggered
-                // if the deadline has passed, given the tolerance set 
+                // Retrieve the last run time saved in the calculation state, or use the start date
+                // if no run was saved in the state
                 if (job.ConfigState.LastRun.HasValue ) {
                     var lastRun = CogniteTime.FromUnixTimeMilliseconds(job.ConfigState.LastRun.Value) ;
-                    if (DateTime.Now - lastRun > tolerance) {
-                        continue;
-                    }
+                    
                 }
-                
                 if (delay.TotalMilliseconds > 0)
                 {
                     bool calcExists = await _configLib
@@ -235,7 +230,6 @@ namespace Cognite.Simulator.Utils
                         break;
                     }
                     var runEvent = CreateRunEvent(job.ConfigState, job.Config);
-                    job.ConfigState.LastRun = DateTime.Now.ToUnixTimeMilliseconds();
                     await CreateSimulationEventReadyToRun(new List<SimulationEvent> { runEvent }, job.TokenSource.Token).ConfigureAwait(false);
                     try
                     {
