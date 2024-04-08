@@ -12,13 +12,14 @@ using Com.Cognite.V1.Timeseries.Proto;
 using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
 using Microsoft.Extensions.Logging;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedData
     {
 
-        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR";
+        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
 
         public static string TestIntegrationExternalId = "petex-integration-tests-connector";
 
