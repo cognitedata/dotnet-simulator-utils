@@ -48,8 +48,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             
             await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
 
-            // await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
-            await TestHelpers.SimulateProsperRunningAsync(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
             var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
@@ -72,7 +71,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
                 var taskList = new List<Task> { scheduler.Run(linkedToken) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);

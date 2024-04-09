@@ -9,7 +9,7 @@ using CogniteSdk.Alpha;
 namespace Cognite.Simulator.Tests {
     public class TestHelpers {
         
-        public static async Task SimulateProsperRunningAsync(Client cdf, string connectorName = "scheduler-test-connector" ) {
+        public static async Task SimulateASimulatorRunning(Client cdf, string connectorName = "scheduler-test-connector" ) {
             var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                 new SimulatorIntegrationQuery
                 {

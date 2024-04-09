@@ -138,7 +138,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
-                await TestHelpers.SimulateProsperRunningAsync(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
@@ -211,7 +211,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
 
-                await TestHelpers.SimulateProsperRunningAsync(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     fileStorageClient,
