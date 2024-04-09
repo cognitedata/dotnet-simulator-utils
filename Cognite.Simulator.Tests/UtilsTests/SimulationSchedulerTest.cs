@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
+using Moq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -62,6 +63,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
+                var mockTimeManager = new Mock<ITimeManager>();
+                mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+                    .Callback<TimeSpan, CancellationToken>(async (delay, token) => await Task.Delay(1000, token));
+
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
@@ -72,7 +77,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                var taskList = new List<Task> { scheduler.Run(linkedToken) };
+                var taskList = new List<Task> { scheduler.Run(linkedToken, mockTimeManager.Object) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 

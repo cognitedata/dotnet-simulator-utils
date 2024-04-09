@@ -15,6 +15,24 @@ using Oryx.Cognite;
 
 namespace Cognite.Simulator.Utils
 {
+    public interface ITimeManager
+    {
+        Task Delay(TimeSpan delay, CancellationToken token);
+        DateTime GetCurrentTime();
+    }
+    
+    public class TimeManager : ITimeManager
+    {
+        public async Task Delay(TimeSpan delay, CancellationToken token)
+        {
+            await Task.Delay(delay, token).ConfigureAwait(false);
+        }
+
+        public DateTime GetCurrentTime()
+        {
+            return DateTime.Now;
+        }
+    }
 
     /// <summary>
     /// Represents a scheduled job for simulation.
@@ -82,6 +100,8 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly IList<SimulatorConfig> _simulators;
+
+        private ITimeManager _timeManager;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
         /// </summary>
@@ -139,7 +159,13 @@ namespace Cognite.Simulator.Utils
         /// check the schedule and create simulation events in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        public async Task Run(CancellationToken token) {
+        /// <param name="timeManager">Time manager</param>
+        public async Task Run(CancellationToken token, ITimeManager timeManager = null )  {
+            _timeManager = timeManager;
+            if (_timeManager == null)
+            {
+                _timeManager = new TimeManager();
+            }
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
@@ -245,7 +271,7 @@ namespace Cognite.Simulator.Utils
             }
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
-                var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
+                var nextOccurrence = job.Schedule.GetNextOccurrence(_timeManager.GetCurrentTime());
                 var delay = nextOccurrence - DateTime.Now;
                 if (delay.TotalMilliseconds > 0)
                 {
@@ -261,7 +287,7 @@ namespace Cognite.Simulator.Utils
                     await CreateSimulationEventReadyToRun(new List<SimulationEvent> { runEvent }, job.TokenSource.Token).ConfigureAwait(false);
                     try
                     {
-                        await Task.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
+                        await _timeManager.Delay(delay, job.TokenSource.Token);
                         _logger.LogDebug($"Job executed at: {DateTime.Now} for calculation: {job.CalculationName}");
                     }
                     catch (TaskCanceledException)
