@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Utils
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
     public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
-        where T : ConfigurationStateBase
+        where T : FileState
         where U : FileStatePoco
         where V : SimulationConfigurationWithRoutine
     {
@@ -119,7 +119,7 @@ namespace Cognite.Simulator.Utils
 
         /// <inheritdoc/>
         public async Task<bool> VerifyLocalConfigurationState(
-            T state,
+            FileState state,
             V config,
             CancellationToken token)
         {
@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Utils
                 config.CalculationName);
             State.Remove(state.Id);
             SimulationConfigurations.Remove(state.Id);
-            await RemoveStates(new List<T> { state }, token).ConfigureAwait(false);
+            await RemoveStates(new List<FileState> { state }, token).ConfigureAwait(false);
             return false;
         }
 
@@ -348,7 +348,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="config">Configuration object</param>
         /// <param name="token">Cancellation token</param>
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
-        Task<bool> VerifyLocalConfigurationState(T state, V config, CancellationToken token);
+        Task<bool> VerifyLocalConfigurationState(FileState state, V config, CancellationToken token);
     }
 
     /// <summary>
@@ -726,62 +726,5 @@ namespace Cognite.Simulator.Utils
         /// Created time
         /// </summary>
         public long CreatedTime { get; set; }
-    }
-
-    /// <summary>
-    /// This base class represents the state of a simulation configuration file
-    /// </summary>
-    public class ConfigurationStateBase : FileState
-    {
-
-        /// <summary>
-        /// Indicates if the JSON content of the file has been deserialized
-        /// </summary>
-        public bool Deserialized { get; set; }
-
-        /// <summary>
-        /// Creates a new simulation configuration file state with the provided id
-        /// </summary>
-        /// <param name="id"></param>
-        public ConfigurationStateBase(string id) : base(id)
-        {
-        }
-
-        /// <summary>
-        /// Data type of the file. For simulation configuration files, this is <see cref="SimulatorDataType.SimulationConfiguration"/> 
-        /// </summary>
-        /// <returns>String representation of <see cref="SimulatorDataType.SimulationConfiguration"/></returns>
-        public override string GetDataType()
-        {
-            return SimulatorDataType.SimulationConfiguration.MetadataValue();
-        }
-
-        /// <summary>
-        /// Initialize this simulation configuration state using a data object from the state store
-        /// </summary>
-        /// <param name="poco">Data object</param>
-        public override void Init(FileStatePoco poco)
-        {
-            base.Init(poco);
-        }
-
-        /// <summary>
-        /// Get the data object with the simulation configuration state properties to be persisted by
-        /// the state store
-        /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
-        {
-            return new FileStatePoco
-            {
-                Id = Id,
-                ModelName = ModelName,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                CdfId = CdfId,
-            };
-        }
     }
 }

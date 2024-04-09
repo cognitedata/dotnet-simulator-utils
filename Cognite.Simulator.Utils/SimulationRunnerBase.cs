@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
-        where U : ConfigurationStateBase
+        where U : FileState
         where V : SimulationConfigurationWithDataSampling
     {
         private readonly ConnectorConfig _connectorConfig;

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cognite.Simulator.Utils;
 using NCrontab;
 using System.Runtime.InteropServices.ComTypes;
+using Oryx.Cognite;
 
 namespace Cognite.Simulator.Utils
 {
@@ -20,7 +21,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="U">The type of configuration state.</typeparam>
     /// <typeparam name="V">The type of simulation configuration with data sampling.</typeparam>
-    public class ScheduledJob<U, V> where U : ConfigurationStateBase where V : SimulationConfigurationWithDataSampling
+    public class ScheduledJob<V> where V : SimulationConfigurationWithDataSampling
     {
         /// <summary>
         /// The schedule for the job.
@@ -55,7 +56,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// The configuration state.
         /// </summary>
-        public U ConfigState { get; set; }
+        public FileState ConfigState { get; set; }
 
         /// <summary>
         /// The calculation configuration.
@@ -74,7 +75,7 @@ namespace Cognite.Simulator.Utils
     /// of doing it in the connector.
     /// </summary>
     public class SimulationSchedulerBase<U, V> 
-        where U : ConfigurationStateBase
+        where U : FileState
         where V : SimulationConfigurationWithDataSampling
     {
         private readonly ConnectorConfig _config;
@@ -134,9 +135,14 @@ namespace Cognite.Simulator.Utils
             return runs;
         }
 
-        public async Task RunCron(CancellationToken token) {
+        /// <summary>
+        /// Starts the scheduler loop. For the existing simulation configuration files,
+        /// check the schedule and create simulation events in CDF accordingly
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        public async Task Run(CancellationToken token) {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
-            Dictionary<string,ScheduledJob<U,V>> scheduledJobs = new Dictionary<string, ScheduledJob<U,V>>();
+            Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
             
             var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
@@ -184,10 +190,8 @@ namespace Cognite.Simulator.Utils
                                 {
                                     continue;   
                                 }
-                                // Create new job
-                                // */5 * * * * =>
                                 var schedule = CrontabSchedule.Parse(config.Schedule.Repeat);
-                                var newJob = new ScheduledJob<U, V>
+                                var newJob = new ScheduledJob<V>
                                 {
                                     Schedule = schedule ,
                                     CalculationName = config.CalculationName,
@@ -220,12 +224,12 @@ namespace Cognite.Simulator.Utils
                     }
                     if (tasks.Count != 0)
                     {
-                        Task.WhenAll(tasks);
+                        _ = Task.WhenAll(tasks);
                     } 
-                    // Wait for 10 seconds before checking again
-                    await Task.Delay(interval);
+                    // Wait for interval seconds before checking again
+                    await Task.Delay(interval).ConfigureAwait(false);
                 }
-            }).ConfigureAwait(false);
+            }, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -233,7 +237,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
         /// <param name="mainToken">The cancellation token.</param>
-        public async Task RunJob(ScheduledJob<U,V> job, CancellationToken mainToken)
+        public async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
         {
             if (job == null)
             {
@@ -270,18 +274,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-
-        /// <summary>
-        /// Starts the scheduler loop. For the existing simulation configuration files,
-        /// check the schedule and create simulation events in CDF accordingly
-        /// </summary>
-        /// <param name="token">Cancellation token</param>
-        public async Task Run(CancellationToken token)
-        {
-            _logger.LogInformation("Starting simulation scheduler");
-            await RunCron(token);
-        }
-        private SimulationEvent CreateRunEvent(U calcState, V calcConfig)
+        private SimulationEvent CreateRunEvent(FileState calcState, V calcConfig)
         {
             return new SimulationEvent
             {

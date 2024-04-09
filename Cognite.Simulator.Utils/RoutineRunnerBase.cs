@@ -18,7 +18,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class RoutineRunnerBase<T, U, V> : SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
-        where U : ConfigurationStateBase
+        where U : FileState
         where V : SimulationConfigurationWithRoutine
     {
         private readonly CogniteDestination _cdf;

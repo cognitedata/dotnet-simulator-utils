@@ -52,11 +52,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
                 Assert.NotEmpty(lib.State);
-                // print all items in revisonMap
-                foreach (var item in revisionMap)
-                {
-                    Console.WriteLine("Test File library key : " + item.Key);
-                }
                 
                 var v1 = Assert.Contains(
                     revisionMap["PETEX-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
@@ -382,7 +377,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
-    public class TestConfigurationState : ConfigurationStateBase
+    public class TestConfigurationState : FileState
     {
         public TestConfigurationState(string id) : base(id)
         {
@@ -428,7 +423,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelName = routineRevision.ModelExternalId,
                 ModelExternalId = routineRevision.ModelExternalId,
                 Source = routineRevision.SimulatorExternalId,
-                Deserialized = false,
                 ExternalId = routineRevision.ExternalId,
             };
         }
