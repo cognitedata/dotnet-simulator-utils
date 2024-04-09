@@ -11,11 +11,66 @@ using Com.Cognite.V1.Timeseries.Proto;
 
 using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
+using Microsoft.Extensions.Logging;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedData
     {
+
+        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
+
+        public static string TestIntegrationExternalId = "petex-integration-tests-connector";
+
+        public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
+        {
+            if (sdk == null)
+            {
+                throw new ArgumentNullException(nameof(sdk));
+            }
+
+            var simulators = await sdk.Alpha.Simulators.ListAsync(
+                new SimulatorQuery
+                {
+                    Filter = new SimulatorFilter
+                    {
+                        Enabled = true
+                    },
+                }).ConfigureAwait(false);
+
+            var simulatorRes = simulators.Items.Where(s => s.ExternalId == simulator.ExternalId);
+            if (simulatorRes.Count() > 0)
+            {
+                return simulatorRes.First();
+            }
+
+            var res = await sdk.Alpha.Simulators.CreateAsync(
+                new List<SimulatorCreate> { simulator }).ConfigureAwait(false);
+
+            return res.First();
+        }
+
+        public static async Task DeleteSimulator(Client sdk, string externalId)
+        {
+            var simulators = await sdk.Alpha.Simulators.ListAsync(
+                new SimulatorQuery
+                {
+                    Filter = new SimulatorFilter
+                    {
+                        Enabled = true
+                    },
+                }).ConfigureAwait(false);
+
+            var simulatorRes = simulators.Items.Where(s => s.ExternalId == externalId);
+            if (simulatorRes.Count() > 0)
+            {
+                await sdk.Alpha.Simulators.DeleteAsync(new List<Identity>
+                {
+                    new Identity(externalId)
+                }).ConfigureAwait(false);
+            }
+        }
 
         public static async Task<SimulatorModel> GetOrCreateSimulatorModel(Client sdk, SimulatorModelCreate model)
         {
@@ -245,24 +300,17 @@ namespace Cognite.Simulator.Tests
                 Schedule = new SimulatorRoutineRevisionSchedule()
                 {
                     Enabled = true,
-                    StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 10000,
-                    Repeat = "5s",
+                    CronExpression = "*/5 * * * *",
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
-                {
-                    Enabled = false,
-                },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
-                {
-                    Enabled = false,
-                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
@@ -275,8 +323,8 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = "Test Scheduled Routine - 1",
-            ModelExternalId = "PROSPER-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "scheduler-test-connector",
+            ModelExternalId = "PETEX-Connector_Test_Model",
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
         };
 
@@ -290,27 +338,33 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "10m"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
-                    Aggregate = "stepInterpolation",
-                    Operator = "eq",
-                    Value = 1,
+                    new SimulatorRoutineRevisionLogicalCheck
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        Aggregate = "stepInterpolation",
+                        Operator = "eq",
+                        Value = 1
+                    }
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
-                    Aggregate = "average",
-                    MinSectionSize = 60,
-                    VarThreshold = 1.0,
-                    SlopeThreshold = -3.0,
+                    new SimulatorRoutineRevisionSteadyStateDetection
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        Aggregate = "average",
+                        MinSectionSize = 60,
+                        VarThreshold = 1.0,
+                        SlopeThreshold = -3.0,
+                    }
                 },
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
                     new SimulatorRoutineRevisionInputConstants() {
@@ -341,8 +395,8 @@ namespace Cognite.Simulator.Tests
                 },
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
             },
-            ExternalId = "Test Routine with Input Constants - 1",
-            RoutineExternalId = "Test Routine with Input Constants",
+            ExternalId = "PETEX Test Routine with Input Constants - 1",
+            RoutineExternalId = "PETEX Test Routine with Input Constants",
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -399,7 +453,7 @@ namespace Cognite.Simulator.Tests
         {
             ExternalId = SimulatorRoutineRevisionWithInputConstants.RoutineExternalId,
             ModelExternalId = "PROSPER-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "integration-tests-connector",
+            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
             Name = "Simulation Runner Test With Constant Inputs",
         };
 
@@ -413,27 +467,32 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
-                    ValidationEndOffset = "0s"
                 },
-                LogicalCheck = new SimulatorRoutineRevisionLogicalCheck()
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
-                    Aggregate = "stepInterpolation",
-                    Operator = "eq",
-                    Value = 1,
+                    new SimulatorRoutineRevisionLogicalCheck {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        Aggregate = "stepInterpolation",
+                        Operator = "eq",
+                        Value = 1,
+                    }
                 },
-                SteadyStateDetection = new SimulatorRoutineRevisionSteadyStateDetection()
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    Enabled = true,
-                    TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
-                    Aggregate = "average",
-                    MinSectionSize = 60,
-                    VarThreshold = 1.0,
-                    SlopeThreshold = -3.0,
+                    new SimulatorRoutineRevisionSteadyStateDetection 
+                    {
+                        Enabled = true,
+                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        Aggregate = "average",
+                        MinSectionSize = 60,
+                        VarThreshold = 1.0,
+                        SlopeThreshold = -3.0,
+                    }
                 },
                 InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
@@ -458,8 +517,8 @@ namespace Cognite.Simulator.Tests
                 
                 },
             },
-            ExternalId = "Test Routine with Input Timeseries - 1",
-            RoutineExternalId = "Test Routine with Input Timeseries",
+            ExternalId = "PETEX Test Routine with Input Timeseries - 1",
+            RoutineExternalId = "PETEX Test Routine with Input Timeseries",
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -508,32 +567,40 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreate = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = SimulatorRoutineRevision.RoutineExternalId,
-            ModelExternalId = "PROSPER-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "integration-tests-connector",
+            ModelExternalId = "PETEX-Connector_Test_Model",
+            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
             Name = "Simulation Runner Test",
         };
 
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
         {
-            ExternalId = "PROSPER-Connector_Test_Model",
+            ExternalId = "PETEX-Connector_Test_Model",
             Name = "Connector Test Model",
-            Description = "PROSPER-Connector Test Model",
+            Description = "PETEX-Connector Test Model",
             DataSetId = 8148496886298377,
-            SimulatorExternalId = "PROSPER",
+            SimulatorExternalId = TestSimulatorExternalId,
         };
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PROSPER-Connector_Test_Model-1",
+            ExternalId = "PETEX-Connector_Test_Model-1",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PROSPER-Connector_Test_Model-2",
+            ExternalId = "PETEX-Connector_Test_Model-2",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
+        };
+
+        public static SimulatorCreate SimulatorCreate = new SimulatorCreate()
+        {
+            ExternalId = TestSimulatorExternalId,
+            Name =  TestSimulatorExternalId,
+            FileExtensionTypes= new List<string> { "out" },
+            Enabled = true,
         };
     }
 }

@@ -6,6 +6,7 @@ using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace Cognite.Simulator.Utils
     /// to an object of this type. properties of this object should use pascal case while the JSON
     /// properties should be lower camel case</typeparam>
     public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
-        where T : ConfigurationStateBase
+        where T : FileState
         where U : FileStatePoco
         where V : SimulationConfigurationWithRoutine
     {
@@ -118,7 +119,7 @@ namespace Cognite.Simulator.Utils
 
         /// <inheritdoc/>
         public async Task<bool> VerifyLocalConfigurationState(
-            T state,
+            FileState state,
             V config,
             CancellationToken token)
         {
@@ -144,7 +145,7 @@ namespace Cognite.Simulator.Utils
                 config.CalculationName);
             State.Remove(state.Id);
             SimulationConfigurations.Remove(state.Id);
-            await RemoveStates(new List<T> { state }, token).ConfigureAwait(false);
+            await RemoveStates(new List<FileState> { state }, token).ConfigureAwait(false);
             return false;
         }
 
@@ -189,8 +190,8 @@ namespace Cognite.Simulator.Utils
                 Schedule = new ScheduleConfiguration()
                 {
                     Enabled = routineRev.Configuration.Schedule.Enabled,
-                    Start = routineRev.Configuration.Schedule.StartTime ?? 0, // TODO what's the default value here?
-                    Repeat = routineRev.Configuration.Schedule.Repeat
+                    Start = 0, // TODO what's the default value here?
+                    Repeat = routineRev.Configuration.Schedule.CronExpression
                 },
                 InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
                 {
@@ -224,25 +225,24 @@ namespace Cognite.Simulator.Utils
                     ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
                     SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
                     Granularity = routineRev.Configuration.DataSampling.Granularity,
-                    ValidationEndOffset = routineRev.Configuration.DataSampling.ValidationEndOffset
                 },
-                LogicalCheck = new LogicalCheckConfiguration()
+                LogicalCheck = routineRev.Configuration.LogicalCheck.Count() > 0 ? new LogicalCheckConfiguration()
                 {
-                    Enabled = routineRev.Configuration.LogicalCheck.Enabled,
-                    ExternalId = routineRev.Configuration.LogicalCheck.TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.LogicalCheck.Aggregate,
-                    Check = routineRev.Configuration.LogicalCheck.Operator,
-                    Value = routineRev.Configuration.LogicalCheck.Value ?? 0 // TODO what's the default value here?
-                },
-                SteadyStateDetection = new SteadyStateDetectionConfiguration()
+                    Enabled = routineRev.Configuration.LogicalCheck.ElementAt(0).Enabled,
+                    ExternalId = routineRev.Configuration.LogicalCheck.ElementAt(0).TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.LogicalCheck.ElementAt(0).Aggregate,
+                    Check = routineRev.Configuration.LogicalCheck.ElementAt(0).Operator,
+                    Value = routineRev.Configuration.LogicalCheck.ElementAt(0).Value ?? 0 // TODO what's the default value here?
+                } : null,
+                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Count() > 0 ? new SteadyStateDetectionConfiguration()
                 {
-                    Enabled = routineRev.Configuration.SteadyStateDetection.Enabled,
-                    ExternalId = routineRev.Configuration.SteadyStateDetection.TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.SteadyStateDetection.Aggregate,
-                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.MinSectionSize ?? 0, // TODO what's the default value here?
-                    VarThreshold = routineRev.Configuration.SteadyStateDetection.VarThreshold ?? 0, // TODO what's the default value here?
-                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.SlopeThreshold ?? 0 // TODO what's the default value here?
-                },
+                    Enabled = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Enabled,
+                    ExternalId = routineRev.Configuration.SteadyStateDetection.ElementAt(0).TimeseriesExternalId,
+                    AggregateType = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Aggregate,
+                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.ElementAt(0).MinSectionSize ?? 0, // TODO what's the default value here?
+                    VarThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).VarThreshold ?? 0, // TODO what's the default value here?
+                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).SlopeThreshold ?? 0 // TODO what's the default value here?
+                } : null,
                 UserEmail = "",
                 Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
                 {
@@ -348,7 +348,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="config">Configuration object</param>
         /// <param name="token">Cancellation token</param>
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
-        Task<bool> VerifyLocalConfigurationState(T state, V config, CancellationToken token);
+        Task<bool> VerifyLocalConfigurationState(FileState state, V config, CancellationToken token);
     }
 
     /// <summary>
@@ -457,12 +457,6 @@ namespace Cognite.Simulator.Utils
         /// Sampling granularity in minutes
         /// </summary>
         public int Granularity { get; set; }
-
-        /// <summary>
-        /// The validation window can be moved to the past by setting
-        /// this offset. The format it <c>number(w|d|h|m|s)</c>
-        /// </summary>
-        public string ValidationEndOffset { get; set; } = "0s";
     }
 
     /// <summary>
@@ -655,11 +649,6 @@ namespace Cognite.Simulator.Utils
         /// Start time as a <see cref="DateTime"/> object
         /// </summary>
         public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
-
-        /// <summary>
-        /// Simulation frequency as a <see cref="TimeSpan"/> object
-        /// </summary>
-        public TimeSpan RepeatTimeSpan => SimulationUtils.ConfigurationTimeStringToTimeSpan(Repeat);
     }
 
 
@@ -737,95 +726,5 @@ namespace Cognite.Simulator.Utils
         /// Created time
         /// </summary>
         public long CreatedTime { get; set; }
-    }
-
-    /// <summary>
-    /// This base class represents the state of a simulation configuration file
-    /// </summary>
-    public class ConfigurationStateBase : FileState
-    {
-        private long? _lastRun;
-
-        /// <summary>
-        /// Timestamp of the last time a simulation was ran using this configuration
-        /// </summary>
-        public long? LastRun
-        {
-            get => _lastRun;
-            set
-            {
-                if (value == _lastRun) return;
-                LastTimeModified = DateTime.UtcNow;
-                _lastRun = value;
-            }
-        }
-
-        /// <summary>
-        /// Indicates if the JSON content of the file has been deserialized
-        /// </summary>
-        public bool Deserialized { get; set; }
-
-        /// <summary>
-        /// Creates a new simulation configuration file state with the provided id
-        /// </summary>
-        /// <param name="id"></param>
-        public ConfigurationStateBase(string id) : base(id)
-        {
-        }
-
-        /// <summary>
-        /// Data type of the file. For simulation configuration files, this is <see cref="SimulatorDataType.SimulationConfiguration"/> 
-        /// </summary>
-        /// <returns>String representation of <see cref="SimulatorDataType.SimulationConfiguration"/></returns>
-        public override string GetDataType()
-        {
-            return SimulatorDataType.SimulationConfiguration.MetadataValue();
-        }
-
-        /// <summary>
-        /// Initialize this simulation configuration state using a data object from the state store
-        /// </summary>
-        /// <param name="poco">Data object</param>
-        public override void Init(FileStatePoco poco)
-        {
-            base.Init(poco);
-            if (poco is ConfigurationStateBasePoco statePoco)
-            {
-                _lastRun = statePoco.LastRun;
-            }
-        }
-
-        /// <summary>
-        /// Get the data object with the simulation configuration state properties to be persisted by
-        /// the state store
-        /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
-        {
-            return new ConfigurationStateBasePoco
-            {
-                Id = Id,
-                ModelName = ModelName,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                CdfId = CdfId,
-                LastRun = LastRun,
-            };
-        }
-    }
-
-    /// <summary>
-    /// Data object that contains the simulation configuration state properties to be persisted
-    /// by the state store. These properties are restored to the state on initialization
-    /// </summary>
-    public class ConfigurationStateBasePoco : FileStatePoco
-    {
-        /// <summary>
-        /// Timestamp of the last simulation run
-        /// </summary>
-        [StateStoreProperty("last-run")]
-        public long? LastRun { get; set; }
     }
 }

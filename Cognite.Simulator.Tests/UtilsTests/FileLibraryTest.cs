@@ -28,13 +28,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<StagingArea<ModelParsingInfo>>();
             StateStoreConfig stateConfig = null;
+            using var provider = services.BuildServiceProvider();
+
+            // prepopulate models in CDF
+            var cdf = provider.GetRequiredService<Client>();
 
             try
             {
-                using var provider = services.BuildServiceProvider();
-
-                // prepopulate models in CDF
-                var cdf = provider.GetRequiredService<Client>();
+                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
@@ -51,28 +52,29 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
                 Assert.NotEmpty(lib.State);
+                
                 var v1 = Assert.Contains(
-                    revisionMap["PROSPER-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap["PETEX-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
-                Assert.Equal("PROSPER", v1.Source);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal("PROSPER-Connector_Test_Model", v1.ModelExternalId);
+                Assert.Equal("PETEX-Connector_Test_Model", v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    revisionMap["PROSPER-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap["PETEX-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
-                Assert.Equal("PROSPER", v2.Source);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal("PROSPER-Connector_Test_Model", v2.ModelExternalId);
+                Assert.Equal("PETEX-Connector_Test_Model", v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(15)); // should be enough time to download the file from CDF and parse it
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
                 var modelLibTasks = lib.GetRunTasks(linkedToken);
                 await modelLibTasks
                     .RunAll(linkedTokenSource)
@@ -112,6 +114,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
 
@@ -126,14 +129,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ConfigurationLibraryTest>();
 
             StateStoreConfig stateConfig = null;
+            using var provider = services.BuildServiceProvider();
 
+            // prepopulate routine in CDF
+            var cdf = provider.GetRequiredService<CogniteDestination>();
             try
             {
-                using var provider = services.BuildServiceProvider();
 
-                // prepopulate routine in CDF
-                var cdf = provider.GetRequiredService<CogniteDestination>();
                 var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
+                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
@@ -159,8 +164,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                var state = Assert.Contains(
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                Assert.Equal("PROSPER", state.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
+                Assert.Equal("PETEX-Connector_Test_Model", state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
@@ -181,6 +186,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
             }
         }
 
@@ -193,15 +199,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ConfigurationLibraryTest>();
 
             StateStoreConfig stateConfig = null;
-
+            using var provider = services.BuildServiceProvider();
+            // prepopulate routine in CDF
+            var cdf = provider.GetRequiredService<CogniteDestination>();
             try
             {
-                using var provider = services.BuildServiceProvider();
                 
-                // prepopulate routine in CDF
-                var cdf = provider.GetRequiredService<CogniteDestination>();
+                
+                
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
-                await TestHelpers.SimulateProsperRunningAsync(cdf.CogniteClient, "integration-tests-connector").ConfigureAwait(false);
+                
+                await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
+
+                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     fileStorageClient,
@@ -233,14 +243,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var state = Assert.Contains(
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                Assert.Equal("PROSPER", state.Source);
+                Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
                 Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
                 Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("Test Routine with Input Constants", simConf.CalculationName);
-                Assert.Equal("Test Routine with Input Constants", simConf.CalcTypeUserDefined);
+                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalculationName);
+                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalcTypeUserDefined);
                 
                 Assert.Empty(simConf.InputTimeSeries);
                 Assert.NotEmpty(simConf.InputConstants);
@@ -262,6 +272,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
+
             }
         }
     }
@@ -311,7 +323,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = "PROSPER",
+                        Name = SeedData.TestSimulatorExternalId,
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
@@ -365,7 +377,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
-    public class TestConfigurationState : ConfigurationStateBase
+    public class TestConfigurationState : FileState
     {
         public TestConfigurationState(string id) : base(id)
         {
@@ -392,7 +404,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = "PROSPER",
+                        Name = SeedData.TestSimulatorExternalId,
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
@@ -411,7 +423,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ModelName = routineRevision.ModelExternalId,
                 ModelExternalId = routineRevision.ModelExternalId,
                 Source = routineRevision.SimulatorExternalId,
-                Deserialized = false,
                 ExternalId = routineRevision.ExternalId,
             };
         }

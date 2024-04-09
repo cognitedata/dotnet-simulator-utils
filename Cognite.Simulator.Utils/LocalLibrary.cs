@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="states">States to remove</param>
         /// <param name="token">Cancellation token</param>
         protected async Task RemoveStates(
-            IEnumerable<T> states,
+            IEnumerable<FileState> states,
             CancellationToken token)
         {
             if (states == null || !states.Any())

@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
-        where U : ConfigurationStateBase
+        where U : FileState
         where V : SimulationConfigurationWithDataSampling
     {
         private readonly ConnectorConfig _connectorConfig;
@@ -412,11 +412,7 @@ namespace Cognite.Simulator.Utils
                 }
                 else
                 {
-                    // If the validation end time should be in the past, subtract the 
-                    // configured offset
-                    var offset = SimulationUtils.ConfigurationTimeStringToTimeSpan(
-                        configObj.DataSampling.ValidationEndOffset);
-                    validationEnd = startTime - offset;
+                    validationEnd = startTime;
                 }
 
                 // Find the sampling configuration results

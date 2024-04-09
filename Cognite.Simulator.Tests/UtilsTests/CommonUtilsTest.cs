@@ -10,18 +10,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public class CommonUtilsTest
     {
-        [Theory]
-        [InlineData("60s", 1, 0, 0)]
-        [InlineData("12m", 12, 0, 0)]
-        [InlineData("240h", 0, 240, 0)]
-        [InlineData("2d", 0, 0, 2)]
-        [InlineData("1w", 0, 0, 7)]
-        public void TestParseStringToTimeSpan(string repeat, int min, int hours, int days)
-        {
-            var expected = new TimeSpan(days, hours, min, 0);
-            var result = SimulationUtils.ConfigurationTimeStringToTimeSpan(repeat);
-            Assert.Equal(expected, result);
-        }
 
         [Theory]
         [InlineData(1631296740000, 1631293140000, 1631296740000, true, true)]

@@ -48,7 +48,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<SampleSimulatorClient>();
             services.AddSingleton(new ConnectorConfig
             {
-                NamePrefix = SampleSimulationRunner.connectorName,
+                NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
                 UseSimulatorsApi = true
             });
@@ -62,6 +62,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+
+            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(true);
 
             // prepopulate routine in CDF
             SimulatorRoutineRevision revision;
@@ -98,7 +102,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
                 var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
@@ -121,8 +125,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     inTsIds.AddRange(inConstTsIds);
                 }
 
-                await TestHelpers.SimulateProsperRunningAsync(cdf, "integration-tests-connector").ConfigureAwait(true);
 
+                long runId = 0;
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
                     {
@@ -134,12 +138,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
-                var runId = runs.First().Id;
+                runId = runs.First().Id;
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken2 = linkedTokenSource2.Token;
-                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(15));
+                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(5));
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
@@ -264,6 +268,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
 
         }
@@ -354,7 +359,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = "PROSPER",
+                        Name = SeedData.TestSimulatorExternalId,
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
