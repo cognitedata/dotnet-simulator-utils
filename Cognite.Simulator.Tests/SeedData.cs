@@ -282,7 +282,6 @@ namespace Cognite.Simulator.Tests
             var routineRevisionsFiltered = routineRevisions.Items.Where(r => r.ExternalId == revisionToCreate.ExternalId);
             if (routineRevisionsFiltered.Count() > 0)
             {
-                Console.WriteLine("Found existing revision with external id: " + revisionToCreate.ExternalId );
                 return routineRevisionsFiltered.First();
             }
 
@@ -291,7 +290,6 @@ namespace Cognite.Simulator.Tests
                 {
                     revisionToCreate
                 }).ConfigureAwait(false);
-            Console.WriteLine("Created revision with external id: " + revisionToCreate.ExternalId);
             return revisionRes.First();
         }
 
