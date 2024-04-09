@@ -48,7 +48,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
             
             await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-
             await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
@@ -65,8 +64,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 var mockTimeManager = new Mock<ITimeManager>();
                 mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-                    .Callback<TimeSpan, CancellationToken>(async (delay, token) => await Task.Delay(1000, token));
+                    .Returns<TimeSpan, CancellationToken>((delay, token) => Task.Delay(1000).ContinueWith(_ => { }, token));
 
+
+
+                var desiredCurrentTime = DateTime.Now; // Example desired current time
+                    mockTimeManager.Setup(m => m.GetCurrentTime()).Returns(desiredCurrentTime);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
@@ -107,7 +110,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
-                        Limit = 10,
+                        Limit = 20,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
@@ -120,11 +123,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latestEventsFiltered = simRuns.Items.Where(
                     r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
+                // should create atleast 4 events IN 5 seconds
+                Assert.Equal(5, latestEventsFiltered.Count());
                 Assert.NotEmpty(latestEventsFiltered);
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
             }
             finally
             {
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
+
                 if (eventIds.Any())
                 {
                     await cdf.Events.DeleteAsync(eventIds, source.Token)
@@ -135,7 +142,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
     }
