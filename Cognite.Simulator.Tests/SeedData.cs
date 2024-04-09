@@ -315,7 +315,7 @@ namespace Cognite.Simulator.Tests
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
             },
-            ExternalId = "Test Scheduled Routine - 3",
+            ExternalId = "Test Scheduled Routine - 2",
             RoutineExternalId = $"Test Scheduled Routine - 1",
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };

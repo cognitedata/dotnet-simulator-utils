@@ -19,7 +19,6 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Represents a scheduled job for simulation.
     /// </summary>
-    /// <typeparam name="U">The type of configuration state.</typeparam>
     /// <typeparam name="V">The type of simulation configuration with data sampling.</typeparam>
     public class ScheduledJob<V> where V : SimulationConfigurationWithDataSampling
     {
