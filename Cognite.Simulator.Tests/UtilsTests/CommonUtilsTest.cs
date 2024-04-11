@@ -72,6 +72,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 DataSampling = new SimulatorRoutineRevisionDataSampling
                 {
+                    Enabled = true,
                     Granularity = 1,
                     SamplingWindow = 60,
                     ValidationWindow = 1200

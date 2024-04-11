@@ -141,11 +141,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var inTsIds = configObj.Inputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
 
-                // if (configObj.InputConstants != null) {
-                //     var inConstTsIds = configObj.InputConstants.Select(o => o.SaveTimeseriesExternalId).ToList();
-                //     tsToDelete.AddRange(inConstTsIds);
-                //     inTsIds.AddRange(inConstTsIds);
-                // }
                 Assert.True(outTsIds.Any());
                 Assert.True(inTsIds.Any());
 

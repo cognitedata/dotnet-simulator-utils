@@ -249,6 +249,7 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
@@ -282,6 +283,7 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,
@@ -417,6 +419,7 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
+                    Enabled = true,
                     ValidationWindow = 1440,
                     SamplingWindow = 60,
                     Granularity = 1,

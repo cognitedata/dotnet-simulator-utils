@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Utils
                 return true;
             }
 
-            Logger.LogWarning("Removing {Model} - {Calc} calculation configuration, not found in CDF",
+            Logger.LogWarning("Removing {Model} - {Simulation} calculation configuration, not found in CDF",
                 state.ModelName,
                 config.RoutineExternalId);
             State.Remove(state.Id);
