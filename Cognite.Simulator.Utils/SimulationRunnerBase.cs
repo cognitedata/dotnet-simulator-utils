@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
-        where U : ConfigurationStateBase
+        where U : FileState
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _connectorConfig;
@@ -117,13 +117,16 @@ namespace Cognite.Simulator.Utils
                 return new List<SimulationRun>();
             }
 
+            var connectorName = _connectorConfig.GetConnectorName();
+            var listOfIntegrations = CommonUtils.ConnectorsToExternalIds(simulators, connectorName);
+
             var query = new SimulationRunQuery()
             {
                 Filter = new SimulationRunFilter()
                 {
                     Status = status,
                     SimulatorExternalIds = simulators.Keys.ToList(),
-                    SimulatorIntegrationExternalIds = new List<string>() { _connectorConfig.GetConnectorName() }
+                    SimulatorIntegrationExternalIds = listOfIntegrations
                 }
             };
             var runsResult = await _cdfSimulators
@@ -195,12 +198,13 @@ namespace Cognite.Simulator.Utils
                     V calcObj = null;
                     bool skipped = false;
 
+                    var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
+
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, calcState, calcObj) = ValidateEventMetadata(e);
-
-                            if (calcState == null || calcObj == null || calcObj.SimulatorIntegrationExternalId != _connectorConfig.GetConnectorName())
+                            (modelState, calcState, calcObj) = ValidateEventMetadata(e, connectorIdList);
+                            if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
@@ -261,7 +265,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv)
+        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv, List<string> integrations)
         {
             string modelName = simEv.Run.ModelName;
             string simulator = simEv.Run.SimulatorName;
@@ -283,7 +287,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
             }
 
-            if (calcConfig.SimulatorIntegrationExternalId != _connectorConfig.GetConnectorName())
+            if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))
             {
                 return (model, null, null);
             }

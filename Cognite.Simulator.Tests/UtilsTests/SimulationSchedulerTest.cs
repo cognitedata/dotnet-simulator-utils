@@ -29,7 +29,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton(new ConnectorConfig
             {
-                NamePrefix = "scheduler-test-connector",
+                NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
                 UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
@@ -45,7 +45,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
-            await TestHelpers.SimulateProsperRunningAsync(cdf, "scheduler-test-connector").ConfigureAwait(false);
+            
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+
+            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
             var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
@@ -55,6 +58,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 SeedData.SimulatorRoutineRevisionCreateScheduled
             ).ConfigureAwait(false);
 
+            // this helps diagnose issues where the above function is giving an old revision
+            Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
 
@@ -66,7 +71,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
                 var taskList = new List<Task> { scheduler.Run(linkedToken) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
@@ -84,10 +89,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Filter = new SimulationRunFilter
                         {
-                            SimulatorIntegrationExternalIds = new List<string> { "scheduler-test-connector" },
-                            SimulatorExternalIds = new List<string> { "PROSPER" },
+                            SimulatorIntegrationExternalIds = new List<string> { SeedData.TestIntegrationExternalId },
+                            SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                             Status = SimulationRunStatus.ready,
-                            ModelRevisionExternalIds = new List<string> { "PROSPER-Connector_Test_Model-2" },
+                            // ModelRevisionExternalIds = new List<string> { "PETEX-Connector_Test_Model" },
                         },
                         Sort = new List<SimulatorSortItem>
                         {
@@ -100,6 +105,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         Limit = 10,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
+
+                var firstEvent = simRuns.Items.First();
+
+                Assert.Equal("PETEX-Connector_Test_Model" , firstEvent.ModelExternalId);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
@@ -121,6 +130,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
     }
@@ -136,6 +146,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 config,
                 configLib, 
                 logger,
+                null,
                 cdf)
         {
         }

@@ -9,12 +9,12 @@ using CogniteSdk.Alpha;
 namespace Cognite.Simulator.Tests {
     public class TestHelpers {
         
-        public static async Task SimulateProsperRunningAsync(Client cdf, string connectorName = "scheduler-test-connector" ) {
+        public static async Task SimulateASimulatorRunning(Client cdf, string connectorName = "scheduler-test-connector" ) {
             var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                 new SimulatorIntegrationQuery
                 {
                     Filter = new SimulatorIntegrationFilter() {
-                        simulatorExternalIds = new List<string> { "PROSPER" },
+                        simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                     }
                 }
             ).ConfigureAwait(false);
@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Tests {
                         new SimulatorIntegrationCreate
                         {
                             ExternalId = connectorName,
-                            SimulatorExternalId = "PROSPER",
+                            SimulatorExternalId = SeedData.TestSimulatorExternalId,
                             DataSetId = CdfTestClient.TestDataset,
                             Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
                             ConnectorVersion = "N/A",

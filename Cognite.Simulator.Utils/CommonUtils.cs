@@ -53,6 +53,31 @@ namespace Cognite.Simulator.Utils
                 throw ex;
             }
         }
+
+        /// <summary>
+        /// Function to convert list of connectors to externalIds
+        /// </summary>
+        /// <param name="simulators">object of simulator connectors</param>
+        /// <param name="baseConnectorName">the base connector name to which prefix will be appended</param>
+        public static List<string> ConnectorsToExternalIds(Dictionary<string, long> simulators, string baseConnectorName)
+        {
+            var connectorIdList = new List<string>();
+            if (simulators != null) {
+                foreach (var simulator in simulators.Select((value, i) => new { i, value }))
+                {
+                    var value = simulator.value;
+                    if (simulator.i > 0){
+                        connectorIdList.Add($"{value.Key}-{baseConnectorName}");
+                    } else {
+                        connectorIdList.Add(baseConnectorName);
+                    }
+                }
+            } else {
+                connectorIdList.Add(baseConnectorName);
+            }
+            return connectorIdList;
+        }
+        
     }
 
     /// <summary>
@@ -60,39 +85,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulationUtils
     {
-        /// <summary>
-        /// Parses strings in the format <c>number(w|d|h|m|s)</c> to a <see cref="TimeSpan"/>
-        /// object
-        /// </summary>
-        /// <param name="time">Time string</param>
-        public static TimeSpan ConfigurationTimeStringToTimeSpan(string time)
-        {
-            var repeatRegex = Regex.Match(
-                time,
-                @"((?<weeks>\d+)w)|((?<days>\d+)d)|((?<hours>\d+)h)|((?<minutes>\d+)m)|((?<seconds>\d+)s)", RegexOptions.Compiled);
-            if (repeatRegex.Groups["weeks"].Success)
-            {
-                var hours = int.Parse(repeatRegex.Groups["weeks"].Value) * 168;
-                return TimeSpan.FromHours(hours);
-            }
-            if (repeatRegex.Groups["days"].Success)
-            {
-                return TimeSpan.FromDays(int.Parse(repeatRegex.Groups["days"].Value));
-            }
-            if (repeatRegex.Groups["hours"].Success)
-            {
-                return TimeSpan.FromHours(int.Parse(repeatRegex.Groups["hours"].Value));
-            }
-            if (repeatRegex.Groups["minutes"].Success)
-            {
-                return TimeSpan.FromMinutes(int.Parse(repeatRegex.Groups["minutes"].Value));
-            }
-            if (repeatRegex.Groups["seconds"].Success)
-            {
-                return TimeSpan.FromSeconds(int.Parse(repeatRegex.Groups["seconds"].Value));
-            }
-            throw new ArgumentException("Cannot parse provided string to a TimeSpan", nameof(time));
-        }
 
         /// <summary>
         /// Run logical check and steady state detection based on a simulation configuration. 
