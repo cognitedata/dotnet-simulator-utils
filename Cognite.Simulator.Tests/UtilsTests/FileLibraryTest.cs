@@ -54,20 +54,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(lib.State);
                 
                 var v1 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v1.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v2.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
@@ -163,11 +163,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PETEX-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("Test Routine with Input TS and extended IO", simConf.RoutineExternalId);
+                Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
                 {
                     Assert.True(input.IsTimeSeries);
@@ -239,14 +239,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
                 var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
 
-                Assert.Equal("Test Routine with extended IO", routineRevision.RoutineExternalId);
-                Assert.Equal("Test Routine with extended IO - 1", routineRevision.ExternalId);
+                Assert.Equal(SeedData.TestRoutineExternalId, routineRevision.RoutineExternalId);
+                Assert.Equal($"{SeedData.TestRoutineExternalId} - 1", routineRevision.ExternalId);
                 
                 Assert.NotEmpty(simConf.Inputs);
                 foreach (var input in simConf.Inputs)

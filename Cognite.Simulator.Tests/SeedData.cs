@@ -13,15 +13,18 @@ using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
 using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Common;
+using CogniteSdk.Beta.DataModels;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedData
     {
-
-        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
+        private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
+        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + Now;
+        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + Now;
+        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + Now;
+        public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
+        public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {
@@ -403,8 +406,8 @@ namespace Cognite.Simulator.Tests
                     },
                 },
             },
-            ExternalId = "Test Routine with extended IO - 1",
-            RoutineExternalId = "Test Routine with extended IO",
+            ExternalId = $"{TestRoutineExternalId} - 1",
+            RoutineExternalId = TestRoutineExternalId,
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -529,8 +532,8 @@ namespace Cognite.Simulator.Tests
                     },
                 },
             },
-            ExternalId = "Test Routine with Input TS and extended IO - 1",
-            RoutineExternalId = "Test Routine with Input TS and extended IO",
+            ExternalId = $"{TestRoutineExternalIdWithTs} - 1",
+            RoutineExternalId = TestRoutineExternalIdWithTs,
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,

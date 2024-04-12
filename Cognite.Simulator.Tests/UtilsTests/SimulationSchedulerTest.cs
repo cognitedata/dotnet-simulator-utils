@@ -108,7 +108,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var firstEvent = simRuns.Items.First();
 
-                Assert.Equal("PETEX-Connector_Test_Model" , firstEvent.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, firstEvent.ModelExternalId);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
