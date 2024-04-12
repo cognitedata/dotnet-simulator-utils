@@ -401,11 +401,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 throw new ArgumentNullException(nameof(input));
             }
+            if (input.Value == null)
+            {
+                throw new ArgumentNullException(nameof(input.Value));
+            }
             if (input.Value.Type == SimulatorValueType.DOUBLE)
             {
-                value = (input.Value as SimulatorValue.Double).Value;
-            } else if (!double.TryParse((input.Value as SimulatorValue.String).Value, out value)) {
-                throw new InvalidOperationException("Could not parse input value");
+                var doubleValue = input.Value as SimulatorValue.Double;
+                if (doubleValue == null)
+                {
+                    throw new InvalidOperationException("Could not parse input value");
+                }
+                value = doubleValue.Value;
+            }
+            else
+            {
+                var stringValue = input.Value as SimulatorValue.String;
+                if (stringValue == null || !double.TryParse(stringValue.Value, out value))
+                {
+                    throw new InvalidOperationException("Could not parse input value");
+                }
             }
             _inputs.Add(value);
         }

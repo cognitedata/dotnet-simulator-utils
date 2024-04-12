@@ -140,6 +140,11 @@ namespace Cognite.Simulator.Utils
                     validationRange,
                     token).ConfigureAwait(false);
 
+                if (!steadyStateDetection.MinSectionSize.HasValue || !steadyStateDetection.VarThreshold.HasValue || !steadyStateDetection.SlopeThreshold.HasValue)
+                {
+                    throw new SimulationException("Steady state detection configuration is missing required parameters");
+                }
+
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
                         config.DataSampling.Granularity,
@@ -190,8 +195,12 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentException($"Logical check operator not recognized: {lcConfig.Operator}", nameof(lcConfig));
             }
+            if (!lcConfig.Value.HasValue)
+            {
+                throw new ArgumentException("Logical check value is missing", nameof(lcConfig));
+            }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value ?? 0, op, validationRange.Max); // todo defaults
+            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max); // todo defaults
         }
 
         /// <summary>

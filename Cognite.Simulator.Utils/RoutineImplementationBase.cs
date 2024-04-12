@@ -82,10 +82,6 @@ namespace Cognite.Simulator.Utils
         public virtual Dictionary<string, SimulatorValueItem> PerformSimulation()
         {
             _simulationResults.Clear();
-            // if (_config.CalculationType != "UserDefined")
-            // {
-            //     throw new SimulationException($"Calculation type not supported: {_config.CalculationType}");
-            // }
             if (_script == null || !_script.Any())
             {
                 throw new SimulationException("Missing routine script");
@@ -132,7 +128,7 @@ namespace Cognite.Simulator.Utils
                                 ParseGet(step.Arguments);
                                 break;
                             }
-                            throw new SimulationRoutineException($"Invalid procedure step: {step.StepType}", stepNumber: step.Order);
+                            throw new SimulationRoutineException($"Invalid stage step: {step.StepType}", stepNumber: step.Order);
                     };
                 }
                 catch (Exception e) when (e is SimulationException)
@@ -215,14 +211,6 @@ namespace Cognite.Simulator.Utils
                     if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
                     {
                         var inputManualValue = matchingInputManualValues.First();
-                        // if (inputManualValue.Unit != null)
-                        // {
-                        //     extraArgs.Add("unit", inputManualValue.Unit.Name);
-                        //     if (inputManualValue.Unit.Type != null)
-                        //     {
-                        //         extraArgs.Add("unitType", inputManualValue.Unit.Type);
-                        //     }
-                        // } TODO: this is a part of the SimulatorRoutineRevisionInput now, do we need to add it to the extraArgs?
                         // Set constant input
                         SetInput(inputManualValue, _inputData[argRefId], extraArgs);
                     }

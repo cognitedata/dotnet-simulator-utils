@@ -49,6 +49,11 @@ namespace Cognite.Simulator.Utils
             IExtractionStateStore store = null) :
             base(config, logger, store)
         {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
+
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             SimulationConfigurations = new Dictionary<string, V>();
             _simulators = simulators;
