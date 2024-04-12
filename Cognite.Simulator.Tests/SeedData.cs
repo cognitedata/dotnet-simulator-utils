@@ -469,6 +469,108 @@ namespace Cognite.Simulator.Tests
             Name = "Simulation Runner Test With Extended IO",
         };
 
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithStringsIO = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    Enabled = true,
+                    ValidationWindow = 1440,
+                    SamplingWindow = 60,
+                    Granularity = 1,
+                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Constant 1",
+                        ReferenceId = "IC1",
+                        ValueType = SimulatorValueType.STRING,
+                        Value = SimulatorValue.Create("40"),
+                    },
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Constant 2",
+                        ReferenceId = "IC2",
+                        ValueType = SimulatorValueType.STRING,
+                        Value = SimulatorValue.Create("2"),
+                    },
+                },
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        ValueType = SimulatorValueType.STRING,
+                    },
+                },
+            },
+            ExternalId = $"{TestRoutineExternalId} - 1",
+            RoutineExternalId = TestRoutineExternalId,
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 1,
+                    Description = "Set simulation inputs",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "inputConstant" },
+                                { "referenceId", "IC1" },
+                            },
+                        },
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "inputConstant" },
+                                { "referenceId", "IC2" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "outputTimeSeries" },
+                                { "referenceId", "OT1" },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithStringsIO = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevisionWithStringsIO.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test With Strings IO",
+        };
+
         public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithTsAndExtendedIO = new SimulatorRoutineRevisionCreate()
         {
             Configuration = new SimulatorRoutineRevisionConfiguration()

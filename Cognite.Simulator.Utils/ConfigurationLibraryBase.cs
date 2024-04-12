@@ -1,12 +1,10 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -276,31 +274,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         Task<bool> VerifyLocalConfigurationState(FileState state, V config, CancellationToken token);
-    }
-
-    /// <summary>
-    /// Simulation schedule configuration
-    /// </summary>
-    public class ScheduleConfiguration
-    {
-        /// <summary>
-        /// Whether or not to run on schedule
-        /// </summary>
-        public bool Enabled { get; set; }
-
-        /// <summary>
-        /// Start time in milliseconds since Unix epoch
-        /// </summary>
-        public long Start { get; set; }
-
-        /// <summary>
-        /// Simulation frequency. The format it <c>number(w|d|h|m|s)</c>
-        /// </summary>
-        public string Repeat { get; set; }
-
-        /// <summary>
-        /// Start time as a <see cref="DateTime"/> object
-        /// </summary>
-        public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
     }
 }

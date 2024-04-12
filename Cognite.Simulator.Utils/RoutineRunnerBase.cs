@@ -146,7 +146,7 @@ namespace Cognite.Simulator.Utils
                         RoutineRevisionInfo = routineRevisionInfo,
                         ReferenceId = inputValue.ReferenceId,
                         Name = originalInput.Name,
-                        Unit = inputValue.Unit.Name,
+                        Unit = inputValue.Unit?.Name,
                         SaveTimeseriesExternalId = originalInput.SaveTimeseriesExternalId
                     };
                     

@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Model external id key
         /// </summary>
-        public const string ExternalId = "modelName";
+        public const string ExternalId = "modelExternalId";
     }
 
     /// <summary>
