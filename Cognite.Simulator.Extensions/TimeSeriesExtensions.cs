@@ -81,49 +81,6 @@ namespace Cognite.Simulator.Extensions
             return result.Results;
         }
 
-        // /// <summary>
-        // /// Creates time series in CDF that represent the model version used when running simulations.
-        // /// Creates the ones not found in CDF, and returns the ones that already exist.
-        // /// Data points in this time series should contain the model version as value and the calculation time as timestamp.
-        // /// </summary>
-        // /// <param name="timeSeries">CDF time series resource</param>
-        // /// <param name="calculation">Calculation</param>
-        // /// <param name="dataSetId">Data set id</param>
-        // /// <param name="token">Cancellation token</param>
-        // /// <returns>Created or existing time series</returns>
-        // /// <exception cref="ArgumentNullException"></exception>
-        // /// <exception cref="SimulationModelVersionCreationException"></exception>
-        // public static async Task<TimeSeries> GetOrCreateSimulationModelVersion(
-        //     this TimeSeriesResource timeSeries,
-        //     SimulatorRoutineRevision calculation,
-        //     long? dataSetId,
-        //     CancellationToken token)
-        // {
-        //     if (calculation == null)
-        //     {
-        //         throw new ArgumentNullException(nameof(calculation));
-        //     }
-
-        //     var externalId = $"{calculation.Model.Simulator}-MV-{calculation.GetCalcTypeForIds()}-{calculation.Model.GetModelNameForIds()}";
-        //     var create = GetTimeSeriesCreatePrototype(externalId, SimulatorDataType.SimulationModelVersion, calculation, dataSetId, true);
-        //     create.Name = $"{calculation.GetCalcTypeForNames()} - {calculation.Model.GetModelNameForNames()} model version";
-        //     create.Description = $"Version of model {calculation.Model.Name} used in {calculation.Type} calculations";
-
-        //     var ts = await timeSeries.GetOrCreateTimeSeriesAsync(
-        //         new List<string> { externalId },
-        //         (ids) => new List<TimeSeriesCreate> { create },
-        //         100,
-        //         5,
-        //         RetryMode.None,
-        //         SanitationMode.None,
-        //         token).ConfigureAwait(false);
-        //     if (!ts.IsAllGood)
-        //     {
-        //         throw new SimulationModelVersionCreationException($"Could not create simulation model version time series in CDF", ts.Errors);
-        //     }
-        //     return ts.Results.First();
-        // }
-
         /// <summary>
         /// Creates time series in CDF that represent sampled simulation inputs.
         /// Creates the ones not found in CDF, and returns the ones that already exist.

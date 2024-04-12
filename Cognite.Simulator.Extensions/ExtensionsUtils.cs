@@ -59,14 +59,9 @@ namespace Cognite.Simulator.Extensions
             metadata.AddRange(
                 new Dictionary<string, string>()
                 {
-                    // { CalculationMetadata.TypeKey, calc.RoutineExternalId },
                     { RoutineRevisionMetadataForTS.RoutineExternalId, calc.RoutineExternalId },
                     { RoutineRevisionMetadataForTS.RoutineRevisionExternalId, calc.ExternalId },
                 });
-            // if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-            // {
-            //     metadata.Add(CalculationMetadata.UserDefinedTypeKey, calc.UserDefinedType);
-            // }
             return metadata;
         }
 
@@ -78,7 +73,7 @@ namespace Cognite.Simulator.Extensions
             {
                 { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
                 { BaseMetadata.SimulatorKey, model.Simulator },
-                { ModelMetadata.NameKey, model.Name },
+                { ModelMetadata.ExternalId, model.ExternalId },
                 { BaseMetadata.DataTypeKey, dataType.MetadataValue() }
             };
         }

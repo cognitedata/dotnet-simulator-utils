@@ -35,25 +35,9 @@ namespace Cognite.Simulator.Extensions
     public static class ModelMetadata
     {
         /// <summary>
-        /// Model name metadata key
+        /// Model external id key
         /// </summary>
-        public const string NameKey = "modelName";
-
-        /// <summary>
-        /// Model version metadata key
-        /// </summary>
-        public const string VersionKey = "version";
-
-        /// <summary>
-        /// Error message metadata key. This metadata key is present only in files with errors
-        /// that prevent the file from being opened by the simulator
-        /// </summary>
-        public const string ErrorMessageKey = "errorMessage";
-
-        /// <summary>
-        /// Data type of model files
-        /// </summary>
-        public const SimulatorDataType DataType = SimulatorDataType.ModelFile;
+        public const string ExternalId = "modelName";
     }
 
     /// <summary>
@@ -70,36 +54,6 @@ namespace Cognite.Simulator.Extensions
         /// Routine revision metadata key
         /// </summary>
         public const string RoutineRevisionExternalId = "routineRevisionExternalId";
-
-        // /// <summary>
-        // /// Calculation type metadata key
-        // /// </summary>
-        // public const string TypeKey = "calcType";
-
-        // /// <summary>
-        // /// Calculation name metadata key
-        // /// </summary>
-        // public const string NameKey = "calcName";
-
-        // /// <summary>
-        // /// Type of user defined calculation metadata key
-        // /// </summary>
-        // public const string UserDefinedTypeKey = "calcTypeUserDefined";
-
-        // /// <summary>
-        // /// Result type metadata key
-        // /// </summary>
-        // public const string ResultTypeKey = "resultType";
-
-        // /// <summary>
-        // /// Result name metadata key
-        // /// </summary>
-        // public const string ResultNameKey = "resultName";
-
-        // /// <summary>
-        // /// Data type of calculation files
-        // /// </summary>
-        // public const SimulatorDataType DataType = SimulatorDataType.SimulationConfiguration;
     }
 
     /// <summary>
