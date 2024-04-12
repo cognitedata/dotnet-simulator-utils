@@ -20,8 +20,8 @@ namespace Cognite.Simulator.Tests
     {
 
         public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
-
-        public static string TestIntegrationExternalId = "petex-integration-tests-connector";
+        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + DateTime.UtcNow.ToUnixTimeMilliseconds();
+        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {
@@ -323,7 +323,7 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = "Test Scheduled Routine - 1",
-            ModelExternalId = "PETEX-Connector_Test_Model",
+            ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
         };
@@ -461,8 +461,8 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = SimulatorRoutineRevisionWithExtendedIO.RoutineExternalId,
-            ModelExternalId = "PETEX-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Test With Extended IO",
         };
 
@@ -579,14 +579,14 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithTsAndExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = SimulatorRoutineRevisionWithTsAndExtendedIO.RoutineExternalId,
-            ModelExternalId = "PETEX-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Test With TS and Extended IO",
         };
 
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model",
+            ExternalId = TestModelExternalId,
             Name = "Connector Test Model",
             Description = "PETEX-Connector Test Model",
             DataSetId = 8148496886298377,
@@ -595,14 +595,14 @@ namespace Cognite.Simulator.Tests
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model-1",
+            ExternalId = $"{TestModelExternalId}-1",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model-2",
+            ExternalId = $"{TestModelExternalId}-2",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
