@@ -71,7 +71,7 @@ namespace Cognite.Simulator.Utils
         private readonly IConfigurationProvider<U, V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
-        private readonly IList<SimulatorConfig> _simulators;
+        private readonly IEnumerable<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
         /// </summary>
@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig config,
             IConfigurationProvider<U, V> configLib,
             ILogger logger,
-            IList<SimulatorConfig> simulators,
+            IEnumerable<SimulatorConfig> simulators,
             CogniteDestination cdf)
         {
             _configLib = configLib;
