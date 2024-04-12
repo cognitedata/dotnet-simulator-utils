@@ -348,6 +348,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 throw new ArgumentException("Output value type must be double");
             }
+            if (_output == null)
+            {
+                throw new InvalidOperationException("Output value not set");
+            }
             return new SimulatorValueItem() {
                 Value = new SimulatorValue.Double(_output.Value),
                 ReferenceId = outputConfig.ReferenceId,

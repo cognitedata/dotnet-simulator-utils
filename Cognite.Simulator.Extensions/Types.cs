@@ -47,21 +47,6 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string RoutineExternalId { get; set; }
 
-        // /// <summary>
-        // /// Calculation type (e.g. IPR/VLP)
-        // /// </summary>
-        // public string Type { get; set; }
-
-        // /// <summary>
-        // /// Routine name (e.g. Rate by Nodal Analysis)
-        // /// </summary>
-        // public string RoutineName { get; set; }
-
-        // /// <summary>
-        // /// Calculation type - user defined (e.g. CustomIprVlp)
-        // /// </summary>
-        // public string UserDefinedType { get; set; }
-
         /// <summary>
         /// Simulator model associated with this calculation
         /// </summary>
@@ -302,12 +287,6 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
 
-        // /// <summary>
-        // /// Time series external id. Auto-generated
-        // /// </summary>
-        // public abstract string SaveTimeSeriesExternalId {
-        //     get;
-        // }
         internal abstract string TimeSeriesName
         {
             get;
@@ -344,15 +323,5 @@ namespace Cognite.Simulator.Extensions
             }
             return null;
         }
-
-        // /// <summary>
-        // /// Overwrite the time series External ID with the one provided as parameters.
-        // /// If this method is not used, the time series External ID is auto-generated.
-        // /// </summary>
-        // /// <param name="externalId">New External ID to be used</param>
-        // public void OverwriteTimeSeriesId(string externalId)
-        // {
-        //     ExternalIdOverwrite = externalId;
-        // }
     }
 }

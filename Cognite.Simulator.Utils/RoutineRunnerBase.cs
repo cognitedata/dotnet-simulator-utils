@@ -150,24 +150,22 @@ namespace Cognite.Simulator.Utils
                         SaveTimeseriesExternalId = originalInput.SaveTimeseriesExternalId
                     };
                     
-                    if (inputValue.Value.Type != SimulatorValueType.DOUBLE)
-                    {
-                        throw new SimulationException($"Could not parse input constant {originalInput.Name} with value {inputValue.Value}. Only double precision values are supported.");
-                    }
-                    var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
-
                     inputData[inputValue.ReferenceId] = inputValue;
 
                     if (simInput.ShouldSaveToTimeSeries) {
+                        if (inputValue.Value.Type == SimulatorValueType.DOUBLE) {
+                            var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
 
-                        inputTsToCreate.Add(simInput);
-                        dpsToCreate.Add(
-                            new Identity(simInput.SaveTimeseriesExternalId),
-                            new List<Datapoint> 
-                            { 
-                                new Datapoint(samplingRange.Midpoint, inputConstValue) 
-                            });
-
+                            inputTsToCreate.Add(simInput);
+                            dpsToCreate.Add(
+                                new Identity(simInput.SaveTimeseriesExternalId),
+                                new List<Datapoint> 
+                                { 
+                                    new Datapoint(samplingRange.Midpoint, inputConstValue) 
+                                });
+                        } else {
+                            throw new SimulationException($"Could not save input value for {originalInput.Name} ({originalInput.ReferenceId}). Only double precision values can be saved to time series.");
+                        }
                     }
                 }
             }
@@ -243,17 +241,18 @@ namespace Cognite.Simulator.Utils
                     outputTsToCreate.Add(outputTs);
 
                     var valueItem = results[output.ReferenceId];
-                    if (valueItem.Value.Type != SimulatorValueType.DOUBLE)
+                    if (valueItem.Value.Type == SimulatorValueType.DOUBLE)
                     {
-                        _logger.LogWarning($"Could persist value for {output.ReferenceId}. Only double precision values are supported.");
-                        continue;
+                        var value = (valueItem.Value as SimulatorValue.Double).Value;
+                        dpsToCreate.Add(
+                            new Identity(outputTs.SaveTimeseriesExternalId),
+                            new List<Datapoint> 
+                            { 
+                                new Datapoint(samplingRange.Midpoint, value) 
+                            });  
+                    } else {
+                        throw new SimulationException($"Could not save output value for {output.Name} ({output.ReferenceId}). Only double precision values can be saved to time series.");
                     }
-                    dpsToCreate.Add(
-                        new Identity(outputTs.SaveTimeseriesExternalId),
-                        new List<Datapoint> 
-                        { 
-                            new Datapoint(samplingRange.Midpoint, (valueItem.Value as SimulatorValue.Double).Value) 
-                        });
                 }
             }
             try

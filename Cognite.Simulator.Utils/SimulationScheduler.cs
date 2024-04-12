@@ -14,7 +14,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Represents a scheduled job for simulation.
     /// </summary>
-    /// <typeparam name="V">The type of simulation configuration with data sampling.</typeparam>
+    /// <typeparam name="V">Type of the simulator routine revision</typeparam>
     public class ScheduledJob<V> where V : SimulatorRoutineRevision
     {
         /// <summary>
@@ -26,11 +26,6 @@ namespace Cognite.Simulator.Utils
         /// The Task of the scheduled job.
         /// </summary>
         public Task Task { get; set; }
-
-        // /// <summary>
-        // /// Routine external id.
-        // /// </summary>
-        // public string RoutineExternalId { get; set; }
 
         /// <summary>
         /// The token source for the job, will be used to cancel it.
