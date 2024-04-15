@@ -132,7 +132,7 @@ namespace Cognite.Simulator.Utils
 
             var configObj = routineRevision.Configuration;
 
-            // Collect manual inputs, to run simulations and to store as time series and data points
+            // Collect constant inputs, to run simulations and to store as time series and data points
             if (configObj.Inputs != null) {
                 foreach (var originalInput in configObj.Inputs.Where(i => i.IsConstant))
                 {

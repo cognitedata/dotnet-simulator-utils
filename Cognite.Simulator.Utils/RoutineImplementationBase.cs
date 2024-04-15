@@ -167,11 +167,7 @@ namespace Cognite.Simulator.Utils
             if (matchingOutputs.Any())
                 {
                     var output = matchingOutputs.First();
-                    if (argType == "outputTimeSeries")
-                    {
-                        // Get the simulation result as a time series data point
-                        _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
-                    }
+                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
                 }
             else
             {
@@ -192,35 +188,14 @@ namespace Cognite.Simulator.Utils
             var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
-            switch (argType)
+            var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();
+            if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
             {
-                case "inputTimeSeries":
-                    var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId && i.IsTimeSeries).ToList();
-                    if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
-                    {
-                        // Set input time series
-                        SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
-                    }
-                    else
-                    {
-                        throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
-                    }
-                    break;
-                case "inputConstant":
-                    var matchingInputManualValues = _config.Inputs.Where(i => i.ReferenceId == argRefId && i.IsConstant).ToList();
-                    if (matchingInputManualValues.Any() && _inputData.ContainsKey(argRefId))
-                    {
-                        var inputManualValue = matchingInputManualValues.First();
-                        // Set constant input
-                        SetInput(inputManualValue, _inputData[argRefId], extraArgs);
-                    }
-                    else
-                    {
-                        throw new SimulationException($"Set error: Constant value input with key {argRefId} not found");
-                    }
-                    break;
-                default:
-                    throw new SimulationException($"Set error: Invalid argument type {argType}");
+                SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+            }
+            else
+            {
+                throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
             }
         }
     }
