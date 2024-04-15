@@ -1,12 +1,10 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +24,7 @@ namespace Cognite.Simulator.Utils
     public abstract class ConfigurationLibraryBase<T, U, V> : LocalLibrary<T, U>, IConfigurationProvider<T, V>
         where T : FileState
         where U : FileStatePoco
-        where V : SimulationConfigurationWithRoutine
+        where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
         public Dictionary<string, V> SimulationConfigurations { get; }
@@ -51,6 +49,11 @@ namespace Cognite.Simulator.Utils
             IExtractionStateStore store = null) :
             base(config, logger, store)
         {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
+
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             SimulationConfigurations = new Dictionary<string, V>();
             _simulators = simulators;
@@ -140,9 +143,9 @@ namespace Cognite.Simulator.Utils
                 return true;
             }
 
-            Logger.LogWarning("Removing {Model} - {Calc} calculation configuration, not found in CDF",
+            Logger.LogWarning("Removing {Model} - {Simulation} calculation configuration, not found in CDF",
                 state.ModelName,
-                config.CalculationName);
+                config.RoutineExternalId);
             State.Remove(state.Id);
             SimulationConfigurations.Remove(state.Id);
             await RemoveStates(new List<FileState> { state }, token).ConfigureAwait(false);
@@ -158,13 +161,20 @@ namespace Cognite.Simulator.Utils
             Task.Run(() => ReadConfigurations(token), token).Wait(token);
         }
 
+        /// <summary>
+        /// Convert a routine revision to a state object of type <typeparamref name="T"/>
+        /// </summary>
         protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
         {
             throw new NotImplementedException();
         }
 
-        protected virtual V LocalConfigurationFromRoutine(SimulationConfigurationWithRoutine simulationConfigurationWithRoutine) {
-            return (V) simulationConfigurationWithRoutine;
+        /// <summary>
+        /// Convert a routine revision to a configuration object of type <typeparamref name="V"/>
+        /// Generally not advised on overriding this method.
+        /// </summary>
+        protected virtual V LocalConfigurationFromRoutine(SimulatorRoutineRevision routineRevision) {
+            return (V) routineRevision;
         }
 
         private (V, T) ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
@@ -176,87 +186,7 @@ namespace Cognite.Simulator.Utils
                 return (localConfiguration, rState);
             }
             
-            var simulators = _simulators.ToDictionary(s => s.Name, s => s);
-            // TODO: we should rather use the new type natively
-            var simulationConfigurationWithRoutine = new SimulationConfigurationWithRoutine()
-            {
-                ExternalId = routineRev.ExternalId,
-                Simulator = simulators[routineRev.SimulatorExternalId].Name,
-                ModelName = routineRev.ModelExternalId,
-                CalculationName = routineRev.RoutineExternalId,
-                CalculationType = "UserDefined",
-                CalcTypeUserDefined = routineRev.RoutineExternalId,
-                Connector = routineRev.SimulatorIntegrationExternalId,
-                Schedule = new ScheduleConfiguration()
-                {
-                    Enabled = routineRev.Configuration.Schedule.Enabled,
-                    Start = 0, // TODO what's the default value here?
-                    Repeat = routineRev.Configuration.Schedule.CronExpression
-                },
-                InputConstants = routineRev.Configuration.InputConstants.Select(ic => new InputConstantConfiguration()
-                {
-                    Name = ic.Name,
-                    Type = ic.ReferenceId,
-                    Unit = ic.Unit,
-                    UnitType = ic.UnitType,
-                    Value = ic.Value,
-                    SaveTimeseriesExternalId = ic.SaveTimeseriesExternalId
-                }),
-                InputTimeSeries = routineRev.Configuration.InputTimeseries.Select(its => new InputTimeSeriesConfiguration()
-                {
-                    Name = its.Name,
-                    Type = its.ReferenceId,
-                    Unit = its.Unit,
-                    UnitType = its.UnitType,
-                    SensorExternalId = its.SourceExternalId,
-                    AggregateType = its.Aggregate,
-                    SampleExternalId = its.SaveTimeseriesExternalId
-                }),
-                OutputTimeSeries = routineRev.Configuration.OutputTimeseries.Select(ots => new OutputTimeSeriesConfiguration()
-                {
-                    Name = ots.Name,
-                    Type = ots.ReferenceId,
-                    Unit = ots.Unit,
-                    UnitType = ots.UnitType,
-                    ExternalId = ots.SaveTimeseriesExternalId
-                }),
-                DataSampling = new DataSamplingConfiguration()
-                {
-                    ValidationWindow = routineRev.Configuration.DataSampling.ValidationWindow,
-                    SamplingWindow = routineRev.Configuration.DataSampling.SamplingWindow,
-                    Granularity = routineRev.Configuration.DataSampling.Granularity,
-                },
-                LogicalCheck = routineRev.Configuration.LogicalCheck.Count() > 0 ? new LogicalCheckConfiguration()
-                {
-                    Enabled = routineRev.Configuration.LogicalCheck.ElementAt(0).Enabled,
-                    ExternalId = routineRev.Configuration.LogicalCheck.ElementAt(0).TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.LogicalCheck.ElementAt(0).Aggregate,
-                    Check = routineRev.Configuration.LogicalCheck.ElementAt(0).Operator,
-                    Value = routineRev.Configuration.LogicalCheck.ElementAt(0).Value ?? 0 // TODO what's the default value here?
-                } : null,
-                SteadyStateDetection = routineRev.Configuration.SteadyStateDetection.Count() > 0 ? new SteadyStateDetectionConfiguration()
-                {
-                    Enabled = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Enabled,
-                    ExternalId = routineRev.Configuration.SteadyStateDetection.ElementAt(0).TimeseriesExternalId,
-                    AggregateType = routineRev.Configuration.SteadyStateDetection.ElementAt(0).Aggregate,
-                    MinSectionSize = routineRev.Configuration.SteadyStateDetection.ElementAt(0).MinSectionSize ?? 0, // TODO what's the default value here?
-                    VarThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).VarThreshold ?? 0, // TODO what's the default value here?
-                    SlopeThreshold = routineRev.Configuration.SteadyStateDetection.ElementAt(0).SlopeThreshold ?? 0 // TODO what's the default value here?
-                } : null,
-                UserEmail = "",
-                Routine = routineRev.Script.Select((s, i) => new CalculationProcedure()
-                {
-                    Order = i,
-                    Steps = s.Steps.Select((step, j) => new CalculationProcedureStep()
-                    {
-                        Step = j,
-                        Type = step.StepType,
-                        Arguments = step.Arguments
-                    })
-                }),
-                CreatedTime = routineRev.CreatedTime
-            };
-            localConfiguration = LocalConfigurationFromRoutine(simulationConfigurationWithRoutine);
+            localConfiguration = LocalConfigurationFromRoutine(routineRev);
             SimulationConfigurations.Add(routineRev.Id.ToString(), localConfiguration);
 
             rState = StateFromRoutineRevision(routineRev);
@@ -349,382 +279,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         Task<bool> VerifyLocalConfigurationState(FileState state, V config, CancellationToken token);
-    }
-
-    /// <summary>
-    /// Represent a configuration object for simulation routines
-    /// </summary>
-    public class SimulationConfigurationWithRoutine : SimulationConfigurationWithDataSampling
-    {
-        /// <summary>
-        /// Simulation manual value inputs configuration
-        /// </summary>
-        public IEnumerable<InputConstantConfiguration> InputConstants { get; set; }
-
-        /// <summary>
-        /// Times series that will hold simulation output data points
-        /// </summary>
-        public IEnumerable<OutputTimeSeriesConfiguration> OutputTimeSeries { get; set; }
-
-        /// <summary>
-        /// Simulation routine
-        /// </summary>
-        public IEnumerable<CalculationProcedure> Routine { get; set; }
-    }
-
-    /// <summary>
-    /// Represents the groups (procedures) that contain simulation steps in a routine
-    /// </summary>
-    public class CalculationProcedure
-    {
-        /// <summary>
-        /// The order in witch to execute this procedure, in relation to other
-        /// procedures
-        /// </summary>
-        public int Order { get; set; }
-
-        /// <summary>
-        /// Steps contained in this procedure
-        /// </summary>
-        public IEnumerable<CalculationProcedureStep> Steps { get; set; }
-    }
-
-    /// <summary>
-    /// Represent a simulation step
-    /// </summary>
-    public class CalculationProcedureStep
-    {
-        /// <summary>
-        /// Order in which to execute this step
-        /// </summary>
-        public int Step { get; set; }
-
-        /// <summary>
-        /// Step type. When using <see cref="RoutineImplementationBase"/> as a base class for a routine,
-        /// the valid types are <c>Get</c>, <c>Set</c> and <c>Command</c>
-        /// </summary>
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Dictionary containing any argument needed by specific simulator client to execute the step
-        /// </summary>
-        public Dictionary<string, string> Arguments { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a configuration object for steady state simulations
-    /// </summary>
-    public class SimulationConfigurationWithDataSampling : SimulationConfigurationBase
-    {
-        /// <summary>
-        /// Data sampling configuration
-        /// </summary>
-        public DataSamplingConfiguration DataSampling { get; set; }
-
-        /// <summary>
-        /// Logical check configuration
-        /// </summary>
-        public LogicalCheckConfiguration LogicalCheck { get; set; }
-
-        /// <summary>
-        /// Steady state detection configuration
-        /// </summary>
-        public SteadyStateDetectionConfiguration SteadyStateDetection { get; set; }
-
-        /// <summary>
-        /// Simulation input time series configuration
-        /// </summary>
-        public IEnumerable<InputTimeSeriesConfiguration> InputTimeSeries { get; set; }
-    }
-
-    /// <summary>
-    /// Configures how to sample data from CDF. The validation window is the time length evaluated, 
-    /// and the sampling window is the minimum time length that can be used to sample data.
-    /// </summary>
-    public class DataSamplingConfiguration
-    {
-        /// <summary>
-        /// Validation window in minutes
-        /// </summary>
-        public int ValidationWindow { get; set; }
-
-        /// <summary>
-        /// Sampling window in minutes
-        /// </summary>
-        public int SamplingWindow { get; set; }
-
-        /// <summary>
-        /// Sampling granularity in minutes
-        /// </summary>
-        public int Granularity { get; set; }
-    }
-
-    /// <summary>
-    /// Configures how to run a logical check (e.g. well status check)
-    /// </summary>
-    public class LogicalCheckConfiguration
-    {
-        /// <summary>
-        /// Whether or not to run logical check for this configuration 
-        /// </summary>
-        public bool Enabled { get; set; }
-
-        /// <summary>
-        /// External ID of the time series to run the logical check against
-        /// </summary>
-        public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Data points aggregate type conforming to CDF. One of <c>average</c>, <c>max</c>, <c>min</c>, <c>count</c>, 
-        /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
-        /// </summary>
-        public string AggregateType { get; set; }
-
-        /// <summary>
-        /// Equality operator. One of <c>eq</c>, <c>ne</c>, <c>gt</c>, <c>ge</c>, <c>lt</c>, <c>le</c>
-        /// </summary>
-        public string Check { get; set; }
-
-        /// <summary>
-        /// The value to compare against using the <see cref="Check"/> operator
-        /// </summary>
-        public double Value { get; set; }
-
-    }
-
-    /// <summary>
-    /// Configures how to run steady state detection
-    /// </summary>
-    public class SteadyStateDetectionConfiguration
-    {
-        /// <summary>
-        /// Whether or not to run steady state detection for this configuration 
-        /// </summary>
-        public bool Enabled { get; set; }
-
-        /// <summary>
-        /// External ID of the time series to be evaluated
-        /// </summary>
-        public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Data points aggregate type conforming to CDF. One of <c>average</c>, <c>max</c>, <c>min</c>, <c>count</c>, 
-        /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
-        /// </summary>
-        public string AggregateType { get; set; }
-
-        /// <summary>
-        /// Minimum size of section (segment distance)
-        /// </summary>
-        public int MinSectionSize { get; set; }
-
-        /// <summary>
-        /// Variance threshold
-        /// </summary>
-        public double VarThreshold { get; set; }
-
-        /// <summary>
-        /// Slope threshold
-        /// </summary>
-        public double SlopeThreshold { get; set; }
-    }
-
-    /// <summary>
-    /// Time series configuration
-    /// </summary>
-    public class TimeSeriesConfiguration
-    {
-        /// <summary>
-        /// Input name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Input type
-        /// </summary>
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Input unit (e.g. degC, BARg)
-        /// </summary>
-        public string Unit { get; set; }
-
-        /// <summary>
-        /// Input unit type (e.g. Temperature, Pressure)
-        /// </summary>
-        public string UnitType { get; set; }
-    }
-
-    /// <summary>
-    /// Output time series configuration
-    /// </summary>
-    public class OutputTimeSeriesConfiguration : TimeSeriesConfiguration
-    {
-        /// <summary>
-        /// External id of the time series that will contain simulation output data points
-        /// </summary>
-        public string ExternalId { get; set; }
-    }
-
-
-    /// <summary>
-    /// Input time series configuration
-    /// </summary>
-    public class InputTimeSeriesConfiguration : TimeSeriesConfiguration
-    {
-        /// <summary>
-        /// External ID of the time series in CDF containing the input data points
-        /// </summary>
-        public string SensorExternalId { get; set; }
-
-        /// <summary>
-        /// Data points aggregate type conforming to CDF. One of <c>average</c>, <c>max</c>, <c>min</c>, <c>count</c>, 
-        /// <c>sum</c>, <c>interpolation</c>, <c>stepInterpolation</c>, <c>totalVariation</c>, <c>continuousVariance</c>, <c>discreteVariance</c>
-        /// </summary>
-        public string AggregateType { get; set; }
-
-        /// <summary>
-        /// External ID to use when saving the input sample in CDF
-        /// </summary>
-        public string SampleExternalId { get; set; }
-    }
-
-    /// <summary>
-    /// Manually input the value into routine
-    /// </summary>
-    public class InputConstantConfiguration
-    {
-        /// <summary>
-        /// Input name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Input type
-        /// </summary>
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Input unit (e.g. degC, BARg)
-        /// </summary>
-        public string Unit { get; set; }
-
-        /// <summary>
-        /// Input unit type (e.g. Temperature, Pressure)
-        /// </summary>
-        public string UnitType { get; set; }
-
-        /// <summary>
-        /// The value of the manual input
-        /// </summary>
-        public string Value { get; set; }
-
-        /// <summary>
-        /// External ID to use when saving the input sample in CDF
-        /// </summary>
-        public string SaveTimeseriesExternalId { get; set; }
-    }
-
-    /// <summary>
-    /// Simulation schedule configuration
-    /// </summary>
-    public class ScheduleConfiguration
-    {
-        /// <summary>
-        /// Whether or not to run on schedule
-        /// </summary>
-        public bool Enabled { get; set; }
-
-        /// <summary>
-        /// Start time in milliseconds since Unix epoch
-        /// </summary>
-        public long Start { get; set; }
-
-        /// <summary>
-        /// Simulation frequency. The format it <c>number(w|d|h|m|s)</c>
-        /// </summary>
-        public string Repeat { get; set; }
-
-        /// <summary>
-        /// Start time as a <see cref="DateTime"/> object
-        /// </summary>
-        public DateTime StartDate => CogniteTime.FromUnixTimeMilliseconds(Start);
-    }
-
-
-    /// <summary>
-    /// Base class for simulation configuration objects. This object should be
-    /// used to deserialize the contents of a configuration file in CDF
-    /// </summary>
-    public class SimulationConfigurationBase
-    {
-        /// <summary>
-        /// External ID of the simulation configuration
-        /// </summary>
-        public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Simulator name
-        /// </summary>
-        public string Simulator { get; set; }
-
-        /// <summary>
-        /// Model name
-        /// </summary>
-        public string ModelName { get; set; }
-
-        /// <summary>
-        /// Calculation name
-        /// </summary>
-        public string CalculationName { get; set; }
-
-        /// <summary>
-        /// Calculation type. Used to identify different types of calculations
-        /// supported by a given simulator.
-        /// </summary>
-        public string CalculationType { get; set; }
-
-        /// <summary>
-        /// User defined calculation type. User defined calculations will have
-        /// <b>UserDefined</b> as <see cref="CalculationType"/>. This property
-        /// provides a way of differentiating user defined calculations
-        /// </summary>
-        public string CalcTypeUserDefined { get; set; } = "";
-
-        /// <summary>
-        /// Connector name
-        /// </summary>
-        public string Connector { get; set; }
-
-        /// <summary>
-        /// Email of the user who created this configuration
-        /// </summary>
-        public string UserEmail { get; set; } = "";
-
-        /// <summary>
-        /// Simulation schedule configuration
-        /// </summary>
-        public ScheduleConfiguration Schedule { get; set; }
-
-        /// <summary>
-        /// Calculation object crated from this configuration
-        /// </summary>
-        public SimulatorCalculation Calculation => new SimulatorCalculation
-        {
-            ExternalId = ExternalId,
-            Model = new SimulatorModelInfo
-            {
-                Name = ModelName,
-                Simulator = Simulator
-            },
-            Name = CalculationName,
-            Type = CalculationType,
-            UserDefinedType = CalcTypeUserDefined
-        };
-
-        /// <summary>
-        /// Created time
-        /// </summary>
-        public long CreatedTime { get; set; }
     }
 }

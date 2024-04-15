@@ -13,15 +13,18 @@ using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
 using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Common;
+using CogniteSdk.Beta.DataModels;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedData
     {
-
-        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + DateTime.UtcNow.ToUnixTimeMilliseconds();
-
-        public static string TestIntegrationExternalId = "petex-integration-tests-connector";
+        private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
+        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + Now;
+        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + Now;
+        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + Now;
+        public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
+        public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {
@@ -323,12 +326,12 @@ namespace Cognite.Simulator.Tests
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = "Test Scheduled Routine - 1",
-            ModelExternalId = "PETEX-Connector_Test_Model",
+            ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
         };
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithInputConstants = new SimulatorRoutineRevisionCreate()
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithExtendedIO = new SimulatorRoutineRevisionCreate()
         {
             Configuration = new SimulatorRoutineRevisionConfiguration()
             {
@@ -366,37 +369,45 @@ namespace Cognite.Simulator.Tests
                         SlopeThreshold = -3.0,
                     }
                 },
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>() {
-                    new SimulatorRoutineRevisionInputConstants() {
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
-                        Value = "42",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 1",
                         ReferenceId = "IC1",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Value = SimulatorValue.Create(42),
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
                     },
-                    new SimulatorRoutineRevisionInputConstants() {
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
-                        Value = "100",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 2",
                         ReferenceId = "IC2",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Value = SimulatorValue.Create(100),
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
                     },
                 },
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
-                    new SimulatorRoutineRevisionOutputTimeseries() {
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 1",
                         ReferenceId = "OT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
                 },
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
             },
-            ExternalId = "PETEX Test Routine with Input Constants - 1",
-            RoutineExternalId = "PETEX Test Routine with Input Constants",
+            ExternalId = $"{TestRoutineExternalId} - 1",
+            RoutineExternalId = TestRoutineExternalId,
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -449,15 +460,118 @@ namespace Cognite.Simulator.Tests
                 },
             },
         };
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithInputConstants = new SimulatorRoutineCreateCommandItem()
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = SimulatorRoutineRevisionWithInputConstants.RoutineExternalId,
-            ModelExternalId = "PROSPER-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
-            Name = "Simulation Runner Test With Constant Inputs",
+            ExternalId = SimulatorRoutineRevisionWithExtendedIO.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test With Extended IO",
         };
 
-        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevision = new SimulatorRoutineRevisionCreate()
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithStringsIO = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    Enabled = true,
+                    ValidationWindow = 1440,
+                    SamplingWindow = 60,
+                    Granularity = 1,
+                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Constant 1",
+                        ReferenceId = "IC1",
+                        ValueType = SimulatorValueType.STRING,
+                        Value = SimulatorValue.Create("40"),
+                    },
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Constant 2",
+                        ReferenceId = "IC2",
+                        ValueType = SimulatorValueType.STRING,
+                        Value = SimulatorValue.Create("2"),
+                    },
+                },
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        ValueType = SimulatorValueType.STRING,
+                    },
+                },
+            },
+            ExternalId = $"{TestRoutineExternalId} - 1",
+            RoutineExternalId = TestRoutineExternalId,
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 1,
+                    Description = "Set simulation inputs",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "inputConstant" },
+                                { "referenceId", "IC1" },
+                            },
+                        },
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "inputConstant" },
+                                { "referenceId", "IC2" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "argumentType", "outputTimeSeries" },
+                                { "referenceId", "OT1" },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithStringsIO = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevisionWithStringsIO.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test With Strings IO",
+        };
+
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithTsAndExtendedIO = new SimulatorRoutineRevisionCreate()
         {
             Configuration = new SimulatorRoutineRevisionConfiguration()
             {
@@ -494,31 +608,34 @@ namespace Cognite.Simulator.Tests
                         SlopeThreshold = -3.0,
                     }
                 },
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>() {
-                    new SimulatorRoutineRevisionOutputTimeseries() {
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 1",
                         ReferenceId = "OT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
                 },
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>() {
-                    new SimulatorRoutineRevisionInputTimeseries() {
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
                         Name = "Input Test 1",
                         ReferenceId = "IT1",
-                        Unit = "STB/MMscf",
-                        UnitType = "LiqRate/GasRate",
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Type = "LiqRate/GasRate",
+                        },
                         Aggregate = "average",
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
                         SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
                     },
-                
                 },
             },
-            ExternalId = "PETEX Test Routine with Input Timeseries - 1",
-            RoutineExternalId = "PETEX Test Routine with Input Timeseries",
+            ExternalId = $"{TestRoutineExternalIdWithTs} - 1",
+            RoutineExternalId = TestRoutineExternalIdWithTs,
             Script = new List<SimulatorRoutineRevisionScriptStage>() {
                 new SimulatorRoutineRevisionScriptStage() {
                     Order = 1,
@@ -564,17 +681,17 @@ namespace Cognite.Simulator.Tests
             },
         };
 
-        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreate = new SimulatorRoutineCreateCommandItem()
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithTsAndExtendedIO = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = SimulatorRoutineRevision.RoutineExternalId,
-            ModelExternalId = "PETEX-Connector_Test_Model",
-            SimulatorIntegrationExternalId = "petex-integration-tests-connector",
-            Name = "Simulation Runner Test",
+            ExternalId = SimulatorRoutineRevisionWithTsAndExtendedIO.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test With TS and Extended IO",
         };
 
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model",
+            ExternalId = TestModelExternalId,
             Name = "Connector Test Model",
             Description = "PETEX-Connector Test Model",
             DataSetId = 8148496886298377,
@@ -583,14 +700,14 @@ namespace Cognite.Simulator.Tests
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model-1",
+            ExternalId = $"{TestModelExternalId}-1",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = new SimulatorModelRevisionCreate()
         {
-            ExternalId = "PETEX-Connector_Test_Model-2",
+            ExternalId = $"{TestModelExternalId}-2",
             ModelExternalId = SimulatorModelCreate.ExternalId,
             Description = "integration test. can be deleted at any time. the test will recreate it.",
         };
