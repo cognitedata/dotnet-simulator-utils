@@ -149,9 +149,9 @@ namespace Cognite.Simulator.Utils
                     ssDps.ToTimeSeriesData(
                         config.DataSampling.Granularity,
                         steadyStateDetection.Aggregate.ToDataPointAggregate()),
-                    steadyStateDetection.MinSectionSize ?? 0, // TODO what are the defaults?
-                    steadyStateDetection.VarThreshold ?? 0,
-                    steadyStateDetection.SlopeThreshold ?? 0);
+                    steadyStateDetection.MinSectionSize.Value,
+                    steadyStateDetection.VarThreshold.Value,
+                    steadyStateDetection.SlopeThreshold.Value);
             }
 
             TimeSeriesData feasibleTimestamps;
@@ -200,7 +200,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentException("Logical check value is missing", nameof(lcConfig));
             }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max); // todo defaults
+            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max);
         }
 
         /// <summary>
