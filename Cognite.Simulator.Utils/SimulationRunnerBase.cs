@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Utils
     public abstract class SimulationRunnerBase<T, U, V>
         where T : ModelStateBase
         where U : FileState
-        where V : SimulationConfigurationWithDataSampling
+        where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _connectorConfig;
         private readonly IList<SimulatorConfig> _simulators;
@@ -204,11 +204,11 @@ namespace Cognite.Simulator.Utils
                         try
                         {
                             (modelState, calcState, calcObj) = ValidateEventMetadata(e, connectorIdList);
-                            if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.Connector) )
+                            if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
-                                calcObj?.Connector);
+                                calcObj?.SimulatorIntegrationExternalId);
                                 skipped = true;
                                 continue;
                             }
@@ -240,7 +240,7 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogError(error.Message);
                                 }
                             }
-                            _logger.LogError("Calculation run failed with error: {Message}", ex.Message);
+                            _logger.LogError("Calculation run failed with error: {Message}", ex);
                             e.Run = await UpdateSimulationRunStatus(
                                 runId,
                                 SimulationRunStatus.failure,
@@ -287,7 +287,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
             }
 
-            if (!integrations.Contains(calcConfig.Connector))
+            if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))
             {
                 return (model, null, null);
             }
@@ -363,7 +363,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
         /// <param name="configState">Configuration state object</param>
-        /// <param name="configObj">Configuration object</param>
+        /// <param name="routineRevision">Routine revision object</param>
         /// <param name="metadata">Metadata to add to the event</param>
         /// <param name="token">Cancellation token</param>
         protected virtual async Task InitSimulationRun(
@@ -371,7 +371,7 @@ namespace Cognite.Simulator.Utils
             DateTime startTime,
             T modelState,
             U configState,
-            V configObj,
+            V routineRevision,
             Dictionary<string, string> metadata,
             CancellationToken token)
         {
@@ -384,9 +384,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(simEv));
             }
-            if (configObj == null)
+            if (routineRevision == null)
             {
-                throw new ArgumentNullException(nameof(configObj));
+                throw new ArgumentNullException(nameof(routineRevision));
             }
 
             simEv.Run = await UpdateSimulationRunStatus(
@@ -397,11 +397,12 @@ namespace Cognite.Simulator.Utils
 
             SamplingRange samplingRange = null;
             var validationEnd = startTime;
+            var configObj = routineRevision.Configuration;
             try
             {
                 if (configObj.DataSampling == null)
                 {
-                    throw new SimulationException($"Data sampling configuration for {configObj.CalculationName} missing");
+                    throw new SimulationException($"Data sampling configuration for {routineRevision.ExternalId} missing");
                 }
                 // Determine the validation end time
                 if (simEv.Run.ValidationEndTime.HasValue)
@@ -409,10 +410,6 @@ namespace Cognite.Simulator.Utils
                     // If the event contains a validation end overwrite, use that instead of
                     // the current time
                     validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
-                }
-                else
-                {
-                    validationEnd = startTime;
                 }
 
                 // Find the sampling configuration results
@@ -422,9 +419,9 @@ namespace Cognite.Simulator.Utils
                     validationEnd,
                     token).ConfigureAwait(false);
 
-                _logger.LogInformation("Running calculation {Type} for model {ModelName}. Calculation time: {Time}",
-                    configObj.CalculationType,
-                    configObj.ModelName,
+                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Calculation time: {Time}",
+                    routineRevision.ExternalId,
+                    routineRevision.ModelExternalId,
                     CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
             }
             catch (SimulationException ex)
@@ -446,7 +443,7 @@ namespace Cognite.Simulator.Utils
                 startTime,
                 modelState,
                 configState,
-                configObj,
+                routineRevision,
                 samplingRange,
                 token).ConfigureAwait(false);
 
@@ -501,7 +498,7 @@ namespace Cognite.Simulator.Utils
         protected virtual void BuildRunConfiguration(
             SamplingRange samplingRange,
             SimulationRunEvent simEv,
-            V configObj,
+            SimulatorRoutineRevisionConfiguration configObj,
             DateTime validationEnd)
         {
             if (simEv == null)

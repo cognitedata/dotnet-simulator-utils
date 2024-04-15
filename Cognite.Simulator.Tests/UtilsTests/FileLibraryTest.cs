@@ -54,20 +54,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(lib.State);
                 
                 var v1 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v1.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v2.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
@@ -125,8 +125,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        // TODO this used to have a test for IPR/VLP (predefined), but it was removed
-        // add it back once we support predefined calcs again
         [Fact]
         public async Task TestConfigurationLibrary()
         {
@@ -149,8 +147,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
-                    SeedData.SimulatorRoutineCreate,
-                    SeedData.SimulatorRoutineRevision
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -172,16 +170,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PETEX-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                foreach (var input in simConf.InputTimeSeries)
+                Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
+                foreach (var input in simConf.Configuration.Inputs)
                 {
+                    Assert.True(input.IsTimeSeries);
                     Assert.NotNull(input.Name);
-                    Assert.NotNull(input.SensorExternalId);
-                    Assert.NotNull(input.SampleExternalId);
+                    Assert.NotNull(input.SourceExternalId);
+                    Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
                 var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
@@ -198,7 +197,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestConfigurationLibraryWithConstInputs()
+        public async Task TestConfigurationLibraryWithExtendedIO()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -222,8 +221,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     fileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithInputConstants,
-                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -231,10 +230,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
-
-                // TODO: don't create the folder anymore
-                // bool dirExists = Directory.Exists("./configurations");
-                // Assert.True(dirExists, "Should have created a directory for the files");
 
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -251,20 +246,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
-                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
+                var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalculationName);
-                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalcTypeUserDefined);
+
+                Assert.Equal(SeedData.TestRoutineExternalId, routineRevision.RoutineExternalId);
+                Assert.Equal($"{SeedData.TestRoutineExternalId} - 1", routineRevision.ExternalId);
                 
-                Assert.Empty(simConf.InputTimeSeries);
-                Assert.NotEmpty(simConf.InputConstants);
-                foreach (var input in simConf.InputConstants)
+                Assert.NotEmpty(simConf.Inputs);
+                foreach (var input in simConf.Inputs)
                 {
                     Assert.NotNull(input.Value);
-                    Assert.NotNull(input.Type);
+                    Assert.NotNull(input.ReferenceId);
+                    Assert.True(input.IsConstant);
                     Assert.NotNull(input.Name);
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
@@ -391,7 +387,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithRoutine>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulatorRoutineRevision>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 

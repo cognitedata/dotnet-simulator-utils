@@ -364,6 +364,7 @@ namespace Cognite.Simulator.Utils
         public SimulatorModelInfo Model => new SimulatorModelInfo()
         {
             Name = ModelName,
+            ExternalId = ModelExternalId,
             Simulator = Source
         };
 

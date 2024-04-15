@@ -2,6 +2,7 @@
 using Cognite.Extractor.Common;
 using Cognite.Simulator.Extensions;
 using CogniteSdk;
+using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
 using System;
 using System.Collections.Generic;
@@ -95,7 +96,7 @@ namespace Cognite.Simulator.Utils
         /// <returns></returns>
         public static async Task<TimeRange> RunSteadyStateAndLogicalCheck(
             DataPointsResource dataPoints,
-            SimulationConfigurationWithDataSampling config,
+            SimulatorRoutineRevisionConfiguration config,
             DateTime validationEnd,
             CancellationToken token)
         {
@@ -112,38 +113,45 @@ namespace Cognite.Simulator.Utils
 
             // Check for sensor status, if enabled
             TimeSeriesData validationDps = null;
-            if (config.LogicalCheck != null && config.LogicalCheck.Enabled)
+            var logicalCheck = config.LogicalCheck.FirstOrDefault();
+            if (logicalCheck != null && logicalCheck.Enabled)
             {
                 var dps = await dataPoints.GetSample(
-                    config.LogicalCheck.ExternalId,
-                    config.LogicalCheck.AggregateType.ToDataPointAggregate(),
+                    logicalCheck.TimeseriesExternalId,
+                    logicalCheck.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
                     config.DataSampling.Granularity,
-                    config.LogicalCheck.AggregateType.ToDataPointAggregate());
-                validationDps = LogicalCheckInternal(validationDps, validationRange, config.LogicalCheck, config.DataSampling);
+                    logicalCheck.Aggregate.ToDataPointAggregate());
+                validationDps = LogicalCheckInternal(validationDps, validationRange, logicalCheck, config.DataSampling);
             }
 
             // Check for steady state, if enabled
             TimeSeriesData ssdMap = null;
-            if (config.SteadyStateDetection != null && config.SteadyStateDetection.Enabled)
+            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
+            if (steadyStateDetection != null && steadyStateDetection.Enabled)
             {
                 var ssDps = await dataPoints.GetSample(
-                    config.SteadyStateDetection.ExternalId,
-                    config.SteadyStateDetection.AggregateType.ToDataPointAggregate(),
+                    steadyStateDetection.TimeseriesExternalId,
+                    steadyStateDetection.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
                     validationRange,
                     token).ConfigureAwait(false);
 
+                if (!steadyStateDetection.MinSectionSize.HasValue || !steadyStateDetection.VarThreshold.HasValue || !steadyStateDetection.SlopeThreshold.HasValue)
+                {
+                    throw new SimulationException("Steady state detection configuration is missing required parameters");
+                }
+
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
                         config.DataSampling.Granularity,
-                        config.SteadyStateDetection.AggregateType.ToDataPointAggregate()),
-                    config.SteadyStateDetection.MinSectionSize,
-                    config.SteadyStateDetection.VarThreshold,
-                    config.SteadyStateDetection.SlopeThreshold);
+                        steadyStateDetection.Aggregate.ToDataPointAggregate()),
+                    steadyStateDetection.MinSectionSize.Value,
+                    steadyStateDetection.VarThreshold.Value,
+                    steadyStateDetection.SlopeThreshold.Value);
             }
 
             TimeSeriesData feasibleTimestamps;
@@ -181,14 +189,18 @@ namespace Cognite.Simulator.Utils
             };
         }
 
-        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, LogicalCheckConfiguration lcConfig, DataSamplingConfiguration sampling)
+        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, SimulatorRoutineRevisionLogicalCheck lcConfig, SimulatorRoutineRevisionDataSampling sampling)
         {
-            if (!Enum.TryParse(lcConfig.Check, true, out DataSampling.LogicOperator op))
+            if (!Enum.TryParse(lcConfig.Operator, true, out DataSampling.LogicOperator op))
             {
-                throw new ArgumentException($"Logical check operator not recognized: {lcConfig.Check}", nameof(lcConfig));
+                throw new ArgumentException($"Logical check operator not recognized: {lcConfig.Operator}", nameof(lcConfig));
+            }
+            if (!lcConfig.Value.HasValue)
+            {
+                throw new ArgumentException("Logical check value is missing", nameof(lcConfig));
             }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value, op, validationRange.Max);
+            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max);
         }
 
         /// <summary>
