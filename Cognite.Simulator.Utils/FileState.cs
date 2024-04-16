@@ -194,6 +194,21 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private long _logId;
+        /// <summary>
+        /// Model revision logId
+        /// </summary>
+        public long LogId {
+            get => _logId;
+            set
+            {
+                if (value == _logId) return;
+                LastTimeModified = DateTime.UtcNow;
+                _logId = value;
+            }
+        }
+
+
         /// <summary>
         /// File extension to use when saving this file locally.
         /// Should conform with the extension expected by the simulator
@@ -232,6 +247,7 @@ namespace Cognite.Simulator.Utils
             _updatedTime = poco.UpdatedTime;
             _isInDirectory = poco.IsInDirectory;
             _externalId = poco.ExternalId;
+            _logId = poco.LogId;
         }
 
         /// <summary>
@@ -322,5 +338,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("is-stored-in-directory")]
         public bool IsInDirectory { get; set; }
+
+        /// <summary>
+        /// Model revision logId
+        /// </summary>
+        [StateStoreProperty("log-id")]
+        public long LogId { get; set; }
     }
 }

@@ -26,12 +26,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<StagingArea<ModelParsingInfo>>();
+            services.AddSingleton<ModelParsingInfo>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
             // prepopulate models in CDF
             var cdf = provider.GetRequiredService<Client>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
             try
             {
@@ -80,6 +81,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
+                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
+
                 // Verify that the files were downloaded and processed
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
@@ -92,17 +95,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 
-                var log1 = await lib.StagingArea.GetEntry(v1.Id, source.Token);
-                Assert.NotNull(log1);
-                Assert.True(log1.Parsed);
-                Assert.False(log1.Error);
-                Assert.Equal(ParsingStatus.success, log1.Status);
+                var logv2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    new List<Identity> { new Identity(v2.LogId) }, source.Token).ConfigureAwait(false);
 
-                var log2 = await lib.StagingArea.GetEntry(v2.Id, source.Token);
-                Assert.NotNull(log2);
-                Assert.True(log2.Parsed);
-                Assert.False(log2.Error);
-                Assert.Equal(ParsingStatus.success, log2.Status);
+                var logv2Data = logv2.First().Data;
+                var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
+                Assert.Equal("Model parsed successfully", parsedModelEntry2.First().Message);
+                Assert.Equal("Information", parsedModelEntry2.First().Severity);
             }
             finally
             {
@@ -299,11 +298,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
+        private ILogger<ModeLibraryTest> _logger;
         public ModeLibraryTest(
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
-            StagingArea<ModelParsingInfo> staging,
             IExtractionStateStore store = null) :
             base(
                 new FileLibraryConfig
@@ -326,22 +325,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 logger,
                 downloadClient,
-                staging,
                 store)
         {
+            _logger = logger;
         }
 
-        public StagingArea<ModelParsingInfo> StagingArea => Staging;
-
-        protected override Task ExtractModelInformation(IEnumerable<TestFileState> modelStates, CancellationToken token)
+        protected override Task ExtractModelInformation(TestFileState modelState, CancellationToken token)
         {
             return Task.Run(() =>
             {
-                foreach (var state in modelStates)
-                {
-                    state.ParsingInfo.SetSuccess("Model parsed successfully");
-                    state.Processed = true;
-                }
+                _logger.LogInformation("Model parsed successfully");
+                modelState.ParsingInfo.SetSuccess();
+                modelState.Processed = true;
             }, token);
         }
 
@@ -369,6 +364,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Processed = false,
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
+                LogId = modelRevision.LogId,
             };
         }
     }

@@ -89,7 +89,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<StagingArea<ModelParsingInfo>>();
+            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton<SampleSimulatorClient>();
