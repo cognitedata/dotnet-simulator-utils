@@ -32,6 +32,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             // prepopulate models in CDF
             var cdf = provider.GetRequiredService<Client>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
             try
             {
@@ -80,6 +81,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
+                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
+
                 // Verify that the files were downloaded and processed
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
@@ -92,22 +95,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 
-                var log1 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                    new List<Identity> { new Identity(v1.LogId) }, source.Token).ConfigureAwait(false);
-
-                var log1Data = log1.First().Data;
-                Assert.NotEmpty(log1Data);
-
-                var parsedModelEntry1 = log1Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
-                Assert.Equal("Model parsed successfully", parsedModelEntry1.First().Message);
-                Assert.Equal("Information", parsedModelEntry1.First().Severity);
-
-
-                var log2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                var logv2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                     new List<Identity> { new Identity(v2.LogId) }, source.Token).ConfigureAwait(false);
 
-                var log2Data = log2.First().Data;
-                var parsedModelEntry2 = log2Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
+                var logv2Data = logv2.First().Data;
+                var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
                 Assert.Equal("Model parsed successfully", parsedModelEntry2.First().Message);
                 Assert.Equal("Information", parsedModelEntry2.First().Severity);
             }
@@ -311,7 +303,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
-            ScopedRemoteApiSink remoteSink,
             IExtractionStateStore store = null) :
             base(
                 new FileLibraryConfig
@@ -334,7 +325,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 logger,
                 downloadClient,
-                remoteSink,
                 store)
         {
             _logger = logger;

@@ -30,7 +30,6 @@ namespace Cognite.Simulator.Utils
         where V : ModelParsingInfo, new()
     {
         private readonly ILogger _logger;
-        private readonly ScopedRemoteApiSink _remoteApiSink;
         
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -41,19 +40,16 @@ namespace Cognite.Simulator.Utils
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
-        /// <param name="remoteSink">Remote API sink for the logger</param>
         public ModelLibraryBase(
             FileLibraryConfig config, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            ScopedRemoteApiSink remoteSink,
             IExtractionStateStore store = null): 
             base(SimulatorDataType.ModelFile, config, simulators, cdf, logger, downloadClient, store)
         {
             _logger = logger;
-            _remoteApiSink = remoteSink;
         }
 
         /// <inheritdoc/>
@@ -202,8 +198,6 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", logId)) {
                         try
                         {
-                            Console.WriteLine("PUSHING LOGID");
-                            Console.WriteLine(logId);
                             _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
                             await ExtractModelInformation(item, token).ConfigureAwait(false);
                         }
@@ -213,7 +207,6 @@ namespace Cognite.Simulator.Utils
                         }
                     } 
                 }
-                await _remoteApiSink.Flush(CdfSimulatorResources, CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the local version history matches the one in CDF. Else,
                 // delete the local state and files for the missing versions.
@@ -229,7 +222,6 @@ namespace Cognite.Simulator.Utils
         {
             if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != ParsingStatus.ready)
             {
-                //await Staging.UpdateEntry(modelState.Id, (V) modelState.ParsingInfo, token).ConfigureAwait(false);
                 var newStatus = SimulatorModelRevisionStatus.unknown;
                 switch (modelState.ParsingInfo.Status)
                 {
