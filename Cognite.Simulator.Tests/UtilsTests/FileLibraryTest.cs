@@ -364,7 +364,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Processed = false,
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
-                LogId = modelRevision.LogId ?? 0,
+                LogId = modelRevision.LogId,
             };
         }
     }
