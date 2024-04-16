@@ -81,54 +81,6 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Parsing log entry
-    /// </summary>
-    public class ParsingLog
-    {
-        /// <summary>
-        /// Creates a new parsing log entry
-        /// </summary>
-        /// <param name="level">Log level</param>
-        /// <param name="message">Message</param>
-        public ParsingLog(ParsingLogLevel level, string message)
-        {
-            Level = level;
-            Message = message;
-        }
-
-        /// <summary>
-        /// Log level
-        /// </summary>
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ParsingLogLevel Level { get; set; }
-        
-        /// <summary>
-        /// Log message
-        /// </summary>
-        public string Message { get; set; }
-
-    }
-
-    /// <summary>
-    /// Parsing log level
-    /// </summary>
-    public enum ParsingLogLevel
-    {
-        /// <summary>
-        /// Information level
-        /// </summary>
-        INFORMATION,
-        /// <summary>
-        /// Warning level
-        /// </summary>
-        WARNING,
-        /// <summary>
-        /// Error level
-        /// </summary>
-        ERROR
-    }
-
-    /// <summary>
     /// Extension utilities for the model parsing info
     /// </summary>
     public static class ModelParsingExtensions
