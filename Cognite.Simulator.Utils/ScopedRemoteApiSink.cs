@@ -90,6 +90,8 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(SimulatorsResource client, CancellationToken token)
         {
+            Console.WriteLine("Sending logs to CDF");
+            Console.WriteLine($"Log buffer size: {logBuffer.Count}");
             foreach (var log in logBuffer)
             {
                 try {

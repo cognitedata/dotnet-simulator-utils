@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Serilog.Context;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,8 +33,8 @@ namespace Cognite.Simulator.Utils
         protected IList<SimulatorConfig> Simulators { get; }
         private ConnectorConfig Config { get; }
 
-        private readonly Dictionary<string, long> _simulatorIntegrationIds;
-        private readonly ILogger<ConnectorBase<T>> _logger;
+        private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationIds;
+        private readonly ILogger _logger;
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
@@ -56,14 +57,14 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ILogger<ConnectorBase<T>> logger,
+            ILogger logger,
             RemoteConfigManager<T> remoteConfigManager,
             ScopedRemoteApiSink remoteSink)
         {
             Cdf = cdf;
             Simulators = simulators;
             Config = config;
-            _simulatorIntegrationIds = new Dictionary<string, long>();
+            _simulatorIntegrationIds = new Dictionary<string, SimulatorIntegration>();
             _logger = logger;
             _remoteApiSink = remoteSink;
             _config = config;
@@ -75,7 +76,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="simulator">Simulator name</param>
         /// <returns>Simulator integration ID, or null if not found</returns>
-        public long? GetSimulatorIntegrationId(string simulator)
+        public SimulatorIntegration GetSimulatorIntegrationId(string simulator)
         {
             if (!_simulatorIntegrationIds.ContainsKey(simulator))
             {
@@ -223,12 +224,12 @@ namespace Cognite.Simulator.Utils
                         var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
                             integrationToCreate
                         }, token).ConfigureAwait(false);
-                        _simulatorIntegrationIds[simulator.Name] = res.First().Id;
+                        _simulatorIntegrationIds[simulator.Name] = res.First();
                     }
                     else
                     {
                         _logger.LogInformation("Found existing simulator integration for {Simulator}", simulator.Name);
-                        _simulatorIntegrationIds[simulator.Name] = existing.Id;
+                        _simulatorIntegrationIds[simulator.Name] = existing;
                     }
                 }
             }
@@ -273,18 +274,24 @@ namespace Cognite.Simulator.Utils
                         LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
                     };
                     var simIntegrationId = GetSimulatorIntegrationId(simulator.Name);
+                    Console.WriteLine("simIntegrationId.LogId");
+                    Console.WriteLine(simIntegrationId.LogId);
                     if (simIntegrationId == null)
                     {
                         _logger.LogWarning("Simulator integration for {Simulator} not found", simulator.Name);
                         throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
                     }
-                    var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(GetSimulatorIntegrationId(simulator.Name).Value)
+                    using (LogContext.PushProperty("LogId", simIntegrationId.LogId)) {
+                        var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(GetSimulatorIntegrationId(simulator.Name).Id)
                         {
                             Update = integrationUpdate,
                         };
-                    await simulatorsApi.UpdateSimulatorIntegrationAsync(
-                        new [] { integrationUpdateItem },
-                        token).ConfigureAwait(false);
+                        await simulatorsApi.UpdateSimulatorIntegrationAsync(
+                            new [] { integrationUpdateItem },
+                            token).ConfigureAwait(false);
+                        
+                        _logger.LogInformation("Updating connector heartbeat");
+                    }
                 }
             }
             catch (CogniteException e)
