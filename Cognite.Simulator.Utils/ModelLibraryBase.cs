@@ -201,10 +201,6 @@ namespace Cognite.Simulator.Utils
                             _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
                             await ExtractModelInformation(item, token).ConfigureAwait(false);
                         }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Error extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
-                        }
                         finally
                         {
                             await UpdateModelParsingInfo(item, token).ConfigureAwait(false);
