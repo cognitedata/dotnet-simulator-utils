@@ -201,6 +201,8 @@ namespace Cognite.Simulator.Utils
                     var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
 
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
+                        Console.WriteLine("LOG ID");
+                        Console.WriteLine(e.Run.LogId);
                         try
                         {
                             (modelState, calcState, calcObj) = ValidateEventMetadata(e, connectorIdList);

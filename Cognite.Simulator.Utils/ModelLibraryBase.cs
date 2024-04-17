@@ -196,6 +196,8 @@ namespace Cognite.Simulator.Utils
                 foreach (var item in group){
                     var logId = item.LogId;
                     using (LogContext.PushProperty("LogId", logId)) {
+                        Console.WriteLine("MODEL PARSING LOG ID");
+                        Console.WriteLine(logId);
                         try
                         {
                             _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
