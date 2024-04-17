@@ -64,14 +64,9 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Invoke the given command on the simulator using the provided arguments.
-        /// The <paramref name="command"/> parameter can be <c>null</c> in case 
-        /// the provided arguments are sufficient to run the command
         /// </summary>
-        /// <param name="command">Command to invoke, or <c>null</c></param>
-        /// <param name="arguments">Extra arguments</param>
-        public abstract void RunCommand(
-            string command,
-            Dictionary<string, string> arguments);
+        /// <param name="arguments">Arguments</param>
+        public abstract void RunCommand(Dictionary<string, string> arguments);
 
         /// <summary>
         /// Perform the simulation routine and collect the results
@@ -140,27 +135,17 @@ namespace Cognite.Simulator.Utils
 
         private void ParseCommand(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("argumentType", out string argType))
-            {
-                argType = null;
-            }
-            var extraArgs = arguments.Where(s => s.Key != "argumentType")
-                .ToDictionary(dict => dict.Key, dict => dict.Value);
             // Perform command
-            RunCommand(argType, extraArgs);
+            RunCommand(arguments);
         }
 
         private void ParseGet(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("argumentType", out string argType))
-            {
-                throw new SimulationException($"Get error: Assignment type not defined");
-            }
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
                 throw new SimulationException($"Get error: Output value not defined");
             }
-            var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
+            var extraArgs = arguments.Where(s => s.Key != "referenceId")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
             
             var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
@@ -177,15 +162,11 @@ namespace Cognite.Simulator.Utils
 
         private void ParseSet(Dictionary<string, string> arguments)
         {
-            if (!arguments.TryGetValue("argumentType", out string argType))
-            {
-                throw new SimulationException($"Set error: Assignment type not defined");
-            }
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
                 throw new SimulationException($"Set error: Input value not defined");
             }
-            var extraArgs = arguments.Where(s => s.Key != "referenceId" && s.Key != "argumentType")
+            var extraArgs = arguments.Where(s => s.Key != "referenceId")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
             var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();

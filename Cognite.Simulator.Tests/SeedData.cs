@@ -417,7 +417,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC1" },
                             },
                         },
@@ -425,7 +424,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC2" },
                             },
                         },
@@ -439,7 +437,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -452,7 +450,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },
@@ -519,7 +516,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC1" },
                             },
                         },
@@ -527,7 +523,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC2" },
                             },
                         },
@@ -541,7 +536,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -554,7 +549,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },
@@ -645,7 +639,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputTimeSeries" },
                                 { "referenceId", "IT1" },
                             },
                         },
@@ -659,7 +652,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -672,7 +665,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },
