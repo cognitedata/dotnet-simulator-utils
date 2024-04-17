@@ -191,17 +191,19 @@ namespace Cognite.Simulator.Utils
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
-
+                
                 // Extract the data for each model file (version) in this group
                 foreach (var item in group){
                     var logId = item.LogId;
                     using (LogContext.PushProperty("LogId", logId)) {
-                        Console.WriteLine("MODEL PARSING LOG ID");
-                        Console.WriteLine(logId);
                         try
                         {
                             _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
                             await ExtractModelInformation(item, token).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Error extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
                         }
                         finally
                         {

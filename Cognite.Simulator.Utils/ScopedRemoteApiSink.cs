@@ -27,9 +27,6 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
-            Console.WriteLine("apiLoggerConfig.Level");
-            Console.WriteLine(apiLoggerConfig == null ? "apiLoggerConfig is null" : "apiLoggerConfig is not null");
-            Console.WriteLine(apiLoggerConfig.Level);
             if(apiLoggerConfig == null || !apiLoggerConfig.Enabled)
             {
                 return;
@@ -93,18 +90,8 @@ namespace Cognite.Simulator.Utils {
 
         private async Task SendToRemoteApi(SimulatorsResource client, CancellationToken token)
         {
-            Console.WriteLine("Sending logs to CDF");
-            Console.WriteLine("LOG BUFFER COUNT");
-            Console.WriteLine(logBuffer.Count);
             foreach (var log in logBuffer)
             {
-                Console.WriteLine($"Sending logs for logId: {log.Key}");
-                Console.WriteLine($"LOG COUNT: {log.Value.Count}");
-                //print log.value
-                foreach (var logData in log.Value)
-                {
-                    Console.WriteLine($"FROM BUFFER Timestamp: {logData.Timestamp}, Severity: {logData.Severity}, Message: {logData.Message}");
-                }
                 try {
                     // to make sure we remove only the logs that were sent to the remote API
                     if (logBuffer.TryRemove(log.Key, out var logData))
