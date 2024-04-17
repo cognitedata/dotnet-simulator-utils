@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Utils
                 }
             else
             {
-                throw new SimulationException($"Get error: Invalid output type {argType}");
+                throw new SimulationException($"Get error: Output with key {argRefId} not found");
             }
         }
 
