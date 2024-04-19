@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils {
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId != null)
+            if (logId != null || logId != 0)
             {
                 long logIdLong = long.Parse(logId.ToString());
                 // Customize the log data to send to the remote API
@@ -96,13 +96,12 @@ namespace Cognite.Simulator.Utils {
                     // to make sure we remove only the logs that were sent to the remote API
                     if (logBuffer.TryRemove(log.Key, out var logData))
                     {
-                        if(log.Key != 0){
-                            await client.UpdateLogsBatch(
-                                log.Key,
-                                logData,
-                                token
-                            ).ConfigureAwait(false);   
-                        }
+                        await client.UpdateLogsBatch(
+                            log.Key,
+                            logData,
+                            token
+                        ).ConfigureAwait(false);   
+                        
                     }
                 }
                 catch (Exception ex)
