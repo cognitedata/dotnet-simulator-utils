@@ -405,11 +405,11 @@ namespace Cognite.Simulator.Utils
                     throw new SimulationException($"Data sampling configuration for {routineRevision.ExternalId} missing");
                 }
                 // Determine the validation end time
-                if (simEv.Run.ValidationEndTime.HasValue)
+                if (simEv.Run.RunTime.HasValue)
                 {
                     // If the event contains a validation end overwrite, use that instead of
                     // the current time
-                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.ValidationEndTime.Value);
+                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.RunTime.Value);
                 }
 
                 // Find the sampling configuration results
