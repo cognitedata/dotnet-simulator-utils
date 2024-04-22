@@ -164,7 +164,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         {
                             RoutineExternalId = routineRevision.RoutineExternalId,
                             RunType = SimulationRunType.external,
-                            ValidationEndTime = validationEndOverwrite,
+                            RunTime = validationEndOverwrite,
                             Inputs = inputOverrides.Any() ? inputOverrides : null
                         }
                     }, source.Token).ConfigureAwait(false);
