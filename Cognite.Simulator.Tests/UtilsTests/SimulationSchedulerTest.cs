@@ -1,15 +1,12 @@
 ﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
-using Cognite.Simulator.Extensions;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -17,6 +14,29 @@ using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    /// <summary>
+    /// Fake time manager for testing purposes
+    /// Made so that the tests don't have to wait for the delay
+    /// </summary>
+    class FakeTimeManager : ITimeManager
+    {
+        ILogger<FakeTimeManager> _logger;
+
+        public FakeTimeManager(
+            ILogger<FakeTimeManager> logger
+        )
+        {
+            _logger = logger;
+        }
+
+        // Only delay for 1000ms instead of the given delay
+        public Task Delay(TimeSpan delay, CancellationToken token)
+        {
+            _logger.LogWarning("Using fake delay, delaying for 1000ms instead of {delay}ms", delay.TotalMilliseconds);
+            return Task.Delay(1000, token);
+        }
+    }
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationSchedulerTest
     {
@@ -34,6 +54,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
             });
+            services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>
+            {
+                new SimulatorConfig
+                {
+                    Name = SeedData.TestSimulatorExternalId,
+                    DataSetId = CdfTestClient.TestDataset
+                }
+            });
+            services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
 
             StateStoreConfig stateConfig = null;
@@ -47,7 +76,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
             
             await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-
             await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
@@ -62,7 +90,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
-
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 var scheduler = provider.GetRequiredService<SampleSimulationScheduler>();
@@ -115,11 +142,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latestEventsFiltered = simRuns.Items.Where(
                     r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
+                // should create at least 4 events IN 5 seconds
+                var isBetween4and5 = latestEventsFiltered.Count() >= 4 && latestEventsFiltered.Count() <= 5;
+                Assert.True(isBetween4and5);
                 Assert.NotEmpty(latestEventsFiltered);
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
             }
             finally
             {
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
+
                 if (eventIds.Any())
                 {
                     await cdf.Events.DeleteAsync(eventIds, source.Token)
@@ -130,7 +162,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
     }
@@ -142,11 +173,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLib, 
             ConnectorConfig config,
             ILogger<SampleSimulationScheduler> logger, 
-            CogniteDestination cdf) : base(
+            CogniteDestination cdf,
+            IEnumerable<SimulatorConfig> simulators,
+            ITimeManager timeManager
+            ) : base(
                 config,
                 configLib, 
                 logger,
-                null,
+                simulators,
+                timeManager,
                 cdf)
         {
         }

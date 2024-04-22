@@ -10,6 +10,31 @@ using NCrontab;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// A wrapper around the .NET Task.Delay method.
+    /// This is useful for testing purposes, where the delay can be faked.
+    /// </summary>
+    public interface ITimeManager
+    {
+        /// <summary>
+        /// Delays the current thread for a specified time.
+        /// </summary>
+        Task Delay(TimeSpan delay, CancellationToken token);
+    }
+    
+    /// <summary>
+    /// Default implementation of the time manager.
+    /// </summary>
+    public class TimeManager : ITimeManager
+    {
+        /// <summary>
+        /// Delays the current thread for a specified time.
+        /// </summary>
+        public async Task Delay(TimeSpan delay, CancellationToken token)
+        {
+            await Task.Delay(delay, token).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>
     /// Represents a scheduled job for simulation.
@@ -71,6 +96,7 @@ namespace Cognite.Simulator.Utils
         private readonly IConfigurationProvider<U, V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
+        private readonly ITimeManager _timeManager;
         private readonly IEnumerable<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
@@ -79,12 +105,14 @@ namespace Cognite.Simulator.Utils
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
         /// <param name="simulators">List of simulators</param>
+        /// <param name="timeManager">Time manager</param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IConfigurationProvider<U, V> configLib,
             ILogger logger,
             IEnumerable<SimulatorConfig> simulators,
+            ITimeManager timeManager,
             CogniteDestination cdf)
         {
             _configLib = configLib;
@@ -92,6 +120,7 @@ namespace Cognite.Simulator.Utils
             _simulators = simulators;
             _cdf = cdf;
             _config = config;
+            _timeManager = timeManager ?? new TimeManager();
         }
 
         /// <summary>
@@ -208,6 +237,16 @@ namespace Cognite.Simulator.Utils
                 var delay = nextOccurrence - DateTime.Now;
                 if (delay.TotalMilliseconds > 0)
                 {
+                    try
+                    {
+                        await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
+                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
+                        break;
+                    }
                     bool calcExists = await _configLib
                         .VerifyLocalConfigurationState(job.ConfigState, routineRev, mainToken)
                         .ConfigureAwait(false);
@@ -225,16 +264,6 @@ namespace Cognite.Simulator.Utils
                         items: new List<SimulationRunCreate> { runEvent },
                         token: job.TokenSource.Token
                     ).ConfigureAwait(false);
-                    try
-                    {
-                        await Task.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
-                        break;
-                    }
                 }
             }
         }
