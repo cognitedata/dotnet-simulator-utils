@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
         private readonly IConfigurationProvider<U, V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
-        private ITimeManager _timeManager;
+        private readonly ITimeManager _timeManager;
         private readonly IEnumerable<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
