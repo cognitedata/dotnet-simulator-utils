@@ -8,6 +8,7 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
+using Oryx.Cognite;
 
 namespace Cognite.Simulator.Utils {
 
@@ -43,24 +44,24 @@ namespace Cognite.Simulator.Utils {
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId != null)
-            {
-                long logIdLong = long.Parse(logId.ToString());
-                if (logIdLong != 0) {
-                    // Customize the log data to send to the remote API
-                    var logData = new SimulatorLogDataEntry
-                    {
-                        Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
-                        Severity = logEvent.Level.ToString(),
-                        Message = logEvent.RenderMessage(),
-                    };
-
-                    logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
-                        oldValue.Add(logData);
-                        return oldValue;
-                    });
-                }
+            var isLogIdNull = logId == null || long.Parse(logId.ToString()) == 0;
+            
+            if(isLogIdNull){
+                return;
             }
+            
+            // Customize the log data to send to the remote API
+            var logData = new SimulatorLogDataEntry
+            {
+                Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
+                Severity = logEvent.Level.ToString(),
+                Message = logEvent.RenderMessage(),
+            };
+
+            logBuffer.AddOrUpdate(long.Parse(logId.ToString()), new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+                oldValue.Add(logData);
+                return oldValue;
+            });
         }
 
         /// <summary>
