@@ -20,9 +20,9 @@ namespace Cognite.Simulator.Tests
     public class SeedData
     {
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + Now;
-        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + Now;
-        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + Now;
+        public static string TestSimulatorExternalId = "UTILS_TEST_SIMULATOR_" + Now;
+        public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
+        public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
@@ -417,7 +417,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC1" },
                             },
                         },
@@ -425,7 +424,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC2" },
                             },
                         },
@@ -439,7 +437,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -452,7 +450,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },
@@ -519,7 +516,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC1" },
                             },
                         },
@@ -527,7 +523,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputConstant" },
                                 { "referenceId", "IC2" },
                             },
                         },
@@ -541,7 +536,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -554,7 +549,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },
@@ -645,7 +639,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "inputTimeSeries" },
                                 { "referenceId", "IT1" },
                             },
                         },
@@ -659,7 +652,7 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Command",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "Simulate" },
+                                { "command", "Simulate" },
                             },
                         },
                     },
@@ -672,7 +665,6 @@ namespace Cognite.Simulator.Tests
                             Order = 1,
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
-                                { "argumentType", "outputTimeSeries" },
                                 { "referenceId", "OT1" },
                             },
                         },

@@ -143,10 +143,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
                 // should create at least 4 events IN 5 seconds
-                var isBetween4and5 = latestEventsFiltered.Count() >= 4 && latestEventsFiltered.Count() <= 5;
-                Assert.True(isBetween4and5);
                 Assert.NotEmpty(latestEventsFiltered);
-                Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
+                Assert.InRange(latestEventsFiltered.Count(), 4, 5);
             }
             finally
             {
