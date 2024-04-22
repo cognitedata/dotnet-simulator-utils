@@ -29,11 +29,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _logger = logger;
         }
 
-        public DateTime GetCurrentTime()
-        {
-            return DateTime.Now;
-        }
-
         // Only delay for 1000ms instead of the given delay
         public Task Delay(TimeSpan delay, CancellationToken token)
         {
@@ -134,7 +129,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
-                        Limit = 20,
+                        Limit = 10,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
@@ -147,7 +142,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latestEventsFiltered = simRuns.Items.Where(
                     r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
-                // should create atleast 4 events IN 5 seconds
+                // should create at least 4 events IN 5 seconds
                 var isAtleastFiveEvents = latestEventsFiltered.Count() >= 4;
                 Assert.True(isAtleastFiveEvents);
                 Assert.NotEmpty(latestEventsFiltered);

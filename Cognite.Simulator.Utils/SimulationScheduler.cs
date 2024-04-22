@@ -11,7 +11,8 @@ using NCrontab;
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// A wrapper around the .NET time functions to allow for easier testing.
+    /// A wrapper around the .NET Task.Delay method.
+    /// This is useful for testing purposes, where the delay can be faked.
     /// </summary>
     public interface ITimeManager
     {
@@ -19,10 +20,6 @@ namespace Cognite.Simulator.Utils
         /// Delays the current thread for a specified time.
         /// </summary>
         Task Delay(TimeSpan delay, CancellationToken token);
-        /// <summary>
-        /// Gets the current time.
-        /// </summary>
-        DateTime GetCurrentTime();
     }
     
     /// <summary>
@@ -36,14 +33,6 @@ namespace Cognite.Simulator.Utils
         public async Task Delay(TimeSpan delay, CancellationToken token)
         {
             await Task.Delay(delay, token).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Gets the current time.
-        /// </summary>
-        public DateTime GetCurrentTime()
-        {
-            return DateTime.Now;
         }
     }
 
@@ -139,7 +128,7 @@ namespace Cognite.Simulator.Utils
         /// check the schedule and create simulation events in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        public async Task Run(CancellationToken token)  {
+        public async Task Run(CancellationToken token) {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
@@ -244,7 +233,7 @@ namespace Cognite.Simulator.Utils
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
                 var routineRev = job.RoutineRevision;
-                var nextOccurrence = job.Schedule.GetNextOccurrence(_timeManager.GetCurrentTime());
+                var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
                 var delay = nextOccurrence - DateTime.Now;
                 if (delay.TotalMilliseconds > 0)
                 {
