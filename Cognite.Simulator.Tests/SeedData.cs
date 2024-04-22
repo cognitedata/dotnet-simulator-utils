@@ -20,9 +20,9 @@ namespace Cognite.Simulator.Tests
     public class SeedData
     {
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestSimulatorExternalId = "PETEX_TEST_SIMULATOR_" + Now;
-        public static string TestIntegrationExternalId = "petex-integration-tests-connector-" + Now;
-        public static string TestModelExternalId = "PETEX-Connector_Test_Model_" + Now;
+        public static string TestSimulatorExternalId = "UTILS_TEST_SIMULATOR_" + Now;
+        public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
+        public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
