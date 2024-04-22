@@ -208,6 +208,16 @@ namespace Cognite.Simulator.Utils
                 var delay = nextOccurrence - DateTime.Now;
                 if (delay.TotalMilliseconds > 0)
                 {
+                    try
+                    {
+                        await Task.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
+                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
+                        break;
+                    }
                     bool calcExists = await _configLib
                         .VerifyLocalConfigurationState(job.ConfigState, routineRev, mainToken)
                         .ConfigureAwait(false);
@@ -226,15 +236,6 @@ namespace Cognite.Simulator.Utils
                         token: job.TokenSource.Token
                     ).ConfigureAwait(false);
                     try
-                    {
-                        await Task.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
-                        break;
-                    }
                 }
             }
         }
