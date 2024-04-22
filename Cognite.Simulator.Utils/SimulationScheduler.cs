@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Utils
         /// check the schedule and create simulation events in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        public async Task Run(CancellationToken token )  {
+        public async Task Run(CancellationToken token)  {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);

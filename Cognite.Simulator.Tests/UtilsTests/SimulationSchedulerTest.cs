@@ -1,20 +1,16 @@
 ﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
-// using Cognite.Simulator.Extensions;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-// using System.IO;
 using System.Linq;
-// using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
-// using Moq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -35,14 +31,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public DateTime GetCurrentTime()
         {
-            return DateTime.Now + TimeSpan.FromSeconds(5000);
+            return DateTime.Now;
         }
 
-        // Only delay for 100ms instead of the given delay
+        // Only delay for 1000ms instead of the given delay
         public Task Delay(TimeSpan delay, CancellationToken token)
         {
-            _logger.LogWarning("Using fake delay, delaying for 100ms instead of {delay}ms", delay.TotalMilliseconds);
-            return Task.Delay(100, token);
+            _logger.LogWarning("Using fake delay, delaying for 1000ms instead of {delay}ms", delay.TotalMilliseconds);
+            return Task.Delay(1000, token);
         }
     }
 
@@ -62,6 +58,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 AddMachineNameSuffix = false,
                 UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
+            });
+            services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>
+            {
+                new SimulatorConfig
+                {
+                    Name = SeedData.TestSimulatorExternalId,
+                    DataSetId = CdfTestClient.TestDataset
+                }
             });
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
@@ -91,13 +95,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
-                // var mockTimeManager = new Mock<ITimeManager>();
-                // mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-                //     .Returns<TimeSpan, CancellationToken>((delay, token) => Task.Delay(1000).ContinueWith(_ => { }, token));
-
-                // var desiredCurrentTime = DateTime.Now; // Example desired current time
-                // mockTimeManager.Setup(m => m.GetCurrentTime()).Returns(desiredCurrentTime);
-
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 var scheduler = provider.GetRequiredService<SampleSimulationScheduler>();
@@ -182,13 +179,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConnectorConfig config,
             ILogger<SampleSimulationScheduler> logger, 
             CogniteDestination cdf,
-            // IEnumerable<SimulatorConfig> simulators,
+            IEnumerable<SimulatorConfig> simulators,
             ITimeManager timeManager
             ) : base(
                 config,
                 configLib, 
                 logger,
-                null,
+                simulators,
                 timeManager,
                 cdf)
         {
