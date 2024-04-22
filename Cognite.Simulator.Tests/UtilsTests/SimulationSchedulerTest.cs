@@ -1,23 +1,51 @@
 ﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
-using Cognite.Simulator.Extensions;
+// using Cognite.Simulator.Extensions;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
+// using System.IO;
 using System.Linq;
-using System.Text;
+// using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
-using Moq;
+// using Moq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    /// <summary>
+    /// Fake time manager for testing purposes
+    /// Made so that the tests don't have to wait for the delay
+    /// </summary>
+    class FakeTimeManager : ITimeManager
+    {
+        ILogger<FakeTimeManager> _logger;
+
+        public FakeTimeManager(
+            ILogger<FakeTimeManager> logger
+        )
+        {
+            _logger = logger;
+        }
+
+        public DateTime GetCurrentTime()
+        {
+            return DateTime.Now + TimeSpan.FromSeconds(5000);
+        }
+
+        // Only delay for 100ms instead of the given delay
+        public Task Delay(TimeSpan delay, CancellationToken token)
+        {
+            _logger.LogWarning("Using fake delay, delaying for 100ms instead of {delay}ms", delay.TotalMilliseconds);
+            return Task.Delay(100, token);
+        }
+    }
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationSchedulerTest
     {
@@ -35,6 +63,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
             });
+            services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
 
             StateStoreConfig stateConfig = null;
@@ -62,14 +91,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
-                var mockTimeManager = new Mock<ITimeManager>();
-                mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-                    .Returns<TimeSpan, CancellationToken>((delay, token) => Task.Delay(1000).ContinueWith(_ => { }, token));
+                // var mockTimeManager = new Mock<ITimeManager>();
+                // mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+                //     .Returns<TimeSpan, CancellationToken>((delay, token) => Task.Delay(1000).ContinueWith(_ => { }, token));
 
-
-
-                var desiredCurrentTime = DateTime.Now; // Example desired current time
-                    mockTimeManager.Setup(m => m.GetCurrentTime()).Returns(desiredCurrentTime);
+                // var desiredCurrentTime = DateTime.Now; // Example desired current time
+                // mockTimeManager.Setup(m => m.GetCurrentTime()).Returns(desiredCurrentTime);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
@@ -80,7 +107,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                var taskList = new List<Task> { scheduler.Run(linkedToken, mockTimeManager.Object) };
+                var taskList = new List<Task> { scheduler.Run(linkedToken) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 
@@ -154,11 +181,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConfigurationLibraryTest configLib, 
             ConnectorConfig config,
             ILogger<SampleSimulationScheduler> logger, 
-            CogniteDestination cdf) : base(
+            CogniteDestination cdf,
+            // IEnumerable<SimulatorConfig> simulators,
+            ITimeManager timeManager
+            ) : base(
                 config,
                 configLib, 
                 logger,
                 null,
+                timeManager,
                 cdf)
         {
         }

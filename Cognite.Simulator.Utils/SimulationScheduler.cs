@@ -10,19 +10,37 @@ using NCrontab;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// A wrapper around the .NET time functions to allow for easier testing.
+    /// </summary>
     public interface ITimeManager
     {
+        /// <summary>
+        /// Delays the current thread for a specified time.
+        /// </summary>
         Task Delay(TimeSpan delay, CancellationToken token);
+        /// <summary>
+        /// Gets the current time.
+        /// </summary>
         DateTime GetCurrentTime();
     }
     
+    /// <summary>
+    /// Default implementation of the time manager.
+    /// </summary>
     public class TimeManager : ITimeManager
     {
+        /// <summary>
+        /// Delays the current thread for a specified time.
+        /// </summary>
         public async Task Delay(TimeSpan delay, CancellationToken token)
         {
             await Task.Delay(delay, token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Gets the current time.
+        /// </summary>
         public DateTime GetCurrentTime()
         {
             return DateTime.Now;
@@ -98,12 +116,14 @@ namespace Cognite.Simulator.Utils
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
         /// <param name="simulators">List of simulators</param>
+        /// <param name="timeManager">Time manager</param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IConfigurationProvider<U, V> configLib,
             ILogger logger,
             IEnumerable<SimulatorConfig> simulators,
+            ITimeManager timeManager,
             CogniteDestination cdf)
         {
             _configLib = configLib;
@@ -111,6 +131,7 @@ namespace Cognite.Simulator.Utils
             _simulators = simulators;
             _cdf = cdf;
             _config = config;
+            _timeManager = timeManager ?? new TimeManager();
         }
 
         /// <summary>
@@ -118,13 +139,7 @@ namespace Cognite.Simulator.Utils
         /// check the schedule and create simulation events in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        /// <param name="timeManager">Time manager</param>
-        public async Task Run(CancellationToken token, ITimeManager timeManager = null )  {
-            _timeManager = timeManager;
-            if (_timeManager == null)
-            {
-                _timeManager = new TimeManager();
-            }
+        public async Task Run(CancellationToken token )  {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
             Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
@@ -235,7 +250,7 @@ namespace Cognite.Simulator.Utils
                 {
                     try
                     {
-                        await _timeManager.Delay(delay, job.TokenSource.Token););
+                        await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
                         _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
                     }
                     catch (TaskCanceledException)
