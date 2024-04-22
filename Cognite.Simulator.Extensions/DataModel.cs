@@ -35,61 +35,25 @@ namespace Cognite.Simulator.Extensions
     public static class ModelMetadata
     {
         /// <summary>
-        /// Model name metadata key
+        /// Model external id key
         /// </summary>
-        public const string NameKey = "modelName";
-
-        /// <summary>
-        /// Model version metadata key
-        /// </summary>
-        public const string VersionKey = "version";
-
-        /// <summary>
-        /// Error message metadata key. This metadata key is present only in files with errors
-        /// that prevent the file from being opened by the simulator
-        /// </summary>
-        public const string ErrorMessageKey = "errorMessage";
-
-        /// <summary>
-        /// Data type of model files
-        /// </summary>
-        public const SimulatorDataType DataType = SimulatorDataType.ModelFile;
+        public const string ExternalId = "modelExternalId";
     }
 
     /// <summary>
-    /// Metadata keys present in calculations (simulation configurations)
+    /// Metadata keys needed when creating tume series in CDF
     /// </summary>
-    public static class CalculationMetadata
+    public static class RoutineRevisionMetadataForTS
     {
         /// <summary>
-        /// Calculation type metadata key
+        /// Routine external id metadata key
         /// </summary>
-        public const string TypeKey = "calcType";
+        public const string RoutineExternalId = "routineExternalId";
 
         /// <summary>
-        /// Calculation name metadata key
+        /// Routine revision metadata key
         /// </summary>
-        public const string NameKey = "calcName";
-
-        /// <summary>
-        /// Type of user defined calculation metadata key
-        /// </summary>
-        public const string UserDefinedTypeKey = "calcTypeUserDefined";
-
-        /// <summary>
-        /// Result type metadata key
-        /// </summary>
-        public const string ResultTypeKey = "resultType";
-
-        /// <summary>
-        /// Result name metadata key
-        /// </summary>
-        public const string ResultNameKey = "resultName";
-
-        /// <summary>
-        /// Data type of calculation files
-        /// </summary>
-        public const SimulatorDataType DataType = SimulatorDataType.SimulationConfiguration;
+        public const string RoutineRevisionExternalId = "routineRevisionExternalId";
     }
 
     /// <summary>
@@ -112,7 +76,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Variable type metadata key
         /// </summary>
-        public const string VariableTypeKey = "variableType";
+        public const string VariableTypeKey = "referenceId";
 
         /// <summary>
         /// Variable name metadata key
@@ -151,7 +115,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// simulation input variable type metadata key
         /// </summary>
-        public const string VariableTypeKey = VariableMetadata.VariableTypeKey;
+        public const string VariableRefIdKey = VariableMetadata.VariableTypeKey;
 
         /// <summary>
         /// Simulation input variable name metadata key

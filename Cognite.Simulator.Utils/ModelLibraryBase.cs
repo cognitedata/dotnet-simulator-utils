@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Serilog.Context;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
@@ -28,10 +29,7 @@ namespace Cognite.Simulator.Utils
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
     {
-        /// <summary>
-        /// Staging area, used to store the model parsing info in CDF
-        /// </summary>
-        protected StagingArea<V> Staging { get; }
+        private readonly ILogger _logger;
         
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -41,7 +39,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
-        /// <param name="staging">Staging area</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             FileLibraryConfig config, 
@@ -49,11 +46,10 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            StagingArea<V> staging,
-            IExtractionStateStore store = null) : 
+            IExtractionStateStore store = null): 
             base(SimulatorDataType.ModelFile, config, simulators, cdf, logger, downloadClient, store)
         {
-            Staging = staging;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -197,13 +193,19 @@ namespace Cognite.Simulator.Utils
                 InitModelParsingInfo(group);
 
                 // Extract the data for each model file (version) in this group
-                try
-                {
-                    await ExtractModelInformation(group, token).ConfigureAwait(false);
-                }
-                finally
-                {
-                    await UpdateModelParsingInfo(group, token).ConfigureAwait(false);
+                foreach (var item in group){
+                    var logId = item.LogId;
+                    using (LogContext.PushProperty("LogId", logId)) {
+                        try
+                        {
+                            _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
+                            await ExtractModelInformation(item, token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            await UpdateModelParsingInfo(item, token).ConfigureAwait(false);
+                        }
+                    } 
                 }
 
                 // Verify that the local version history matches the one in CDF. Else,
@@ -216,30 +218,31 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private async Task UpdateModelParsingInfo(IEnumerable<T> modelStates, CancellationToken token)
+        private async Task UpdateModelParsingInfo(T modelState, CancellationToken token)
         {
-            foreach(var revision in modelStates)
+            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != ParsingStatus.ready)
             {
-                if (revision.ParsingInfo != null && revision.ParsingInfo.Status != ParsingStatus.ready)
+                var newStatus = SimulatorModelRevisionStatus.unknown;
+                switch (modelState.ParsingInfo.Status)
                 {
-                    await Staging.UpdateEntry(revision.Id, (V) revision.ParsingInfo, token).ConfigureAwait(false);
+                    case ParsingStatus.success:
+                        newStatus = SimulatorModelRevisionStatus.success;
+                        break;
                     
-                    var newStatus = revision.ParsingInfo.Status == ParsingStatus.success
-                                ? SimulatorModelRevisionStatus.success
-                                : revision.ParsingInfo.Status == ParsingStatus.failure
-                                    ? SimulatorModelRevisionStatus.failure
-                                    : SimulatorModelRevisionStatus.unknown;
-
-                    var modelRevisionPatch =
-                        new SimulatorModelRevisionUpdateItem(long.Parse(revision.Id)) {
-                            Update =
-                                new SimulatorModelRevisionUpdate {
-                                    Status = new Update<SimulatorModelRevisionStatus>(newStatus),
-                                }
-                        };
-
-                    await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
+                    case ParsingStatus.failure:
+                        newStatus = SimulatorModelRevisionStatus.failure;
+                        break;
                 }
+
+                var modelRevisionPatch =
+                    new SimulatorModelRevisionUpdateItem(long.Parse(modelState.Id)) {
+                        Update =
+                            new SimulatorModelRevisionUpdate {
+                                Status = new Update<SimulatorModelRevisionStatus>(newStatus),
+                            }
+                    };
+
+                await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
             }
         }
 
@@ -247,13 +250,15 @@ namespace Cognite.Simulator.Utils
         {
             foreach(var file in modelStates)
             {
-                V info = new V();
-                info.Parsed = false;
-                info.ModelName = file.Model.Name;
-                info.Simulator = file.Model.Simulator;
-                info.ModelVersion = file.Version;
-                info.Status = ParsingStatus.ready;    
+                V info = new V(){
+                    Parsed = false,
+                    ModelName = file.Model.Name,
+                    Simulator = file.Model.Simulator,
+                    ModelVersion = file.Version,
+                    Status = ParsingStatus.ready,
+                };
                 file.ParsingInfo = info;
+                file.LogId = file.LogId;
             }
         }
 
@@ -261,10 +266,10 @@ namespace Cognite.Simulator.Utils
         /// This method should open the model versions in the simulator, extract the required information and
         /// ingest it to CDF. 
         /// </summary>
-        /// <param name="modelStates">Model file states</param>
+        /// <param name="modelState">Model file states</param>
         /// <param name="token">Cancellation token</param>
         protected abstract Task ExtractModelInformation(
-            IEnumerable<T> modelStates,
+            T modelState,
             CancellationToken token);
     }
 
@@ -351,6 +356,7 @@ namespace Cognite.Simulator.Utils
         public SimulatorModelInfo Model => new SimulatorModelInfo()
         {
             Name = ModelName,
+            ExternalId = ModelExternalId,
             Simulator = Source
         };
 

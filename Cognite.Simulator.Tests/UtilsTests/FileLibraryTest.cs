@@ -26,12 +26,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<StagingArea<ModelParsingInfo>>();
+            services.AddSingleton<ModelParsingInfo>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
             // prepopulate models in CDF
             var cdf = provider.GetRequiredService<Client>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
             try
             {
@@ -54,20 +55,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(lib.State);
                 
                 var v1 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-1"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
                 Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v1.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
                 Assert.Equal(1, v1.Version);
                 Assert.False(v1.Processed);
 
                 var v2 = Assert.Contains(
-                    revisionMap["PETEX-Connector_Test_Model-2"].Id.ToString(), // This this revision should exist in CDF
+                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
                     libState);
                 Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
                 Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal("PETEX-Connector_Test_Model", v2.ModelExternalId);
+                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
                 Assert.Equal(2, v2.Version);
                 Assert.False(v2.Processed);
 
@@ -79,6 +80,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLibTasks
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
+
+                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the files were downloaded and processed
                 Assert.True(v1.Processed);
@@ -92,17 +95,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 
-                var log1 = await lib.StagingArea.GetEntry(v1.Id, source.Token);
-                Assert.NotNull(log1);
-                Assert.True(log1.Parsed);
-                Assert.False(log1.Error);
-                Assert.Equal(ParsingStatus.success, log1.Status);
+                var logv2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    new List<Identity> { new Identity(v2.LogId) }, source.Token).ConfigureAwait(false);
 
-                var log2 = await lib.StagingArea.GetEntry(v2.Id, source.Token);
-                Assert.NotNull(log2);
-                Assert.True(log2.Parsed);
-                Assert.False(log2.Error);
-                Assert.Equal(ParsingStatus.success, log2.Status);
+                var logv2Data = logv2.First().Data;
+                var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
+                Assert.Equal("Model parsed successfully", parsedModelEntry2.First().Message);
+                Assert.Equal("Information", parsedModelEntry2.First().Severity);
             }
             finally
             {
@@ -118,8 +117,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        // TODO this used to have a test for IPR/VLP (predefined), but it was removed
-        // add it back once we support predefined calcs again
         [Fact]
         public async Task TestConfigurationLibrary()
         {
@@ -142,8 +139,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
-                    SeedData.SimulatorRoutineCreate,
-                    SeedData.SimulatorRoutineRevision
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -165,16 +162,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PETEX-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                foreach (var input in simConf.InputTimeSeries)
+                Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
+                foreach (var input in simConf.Configuration.Inputs)
                 {
+                    Assert.True(input.IsTimeSeries);
                     Assert.NotNull(input.Name);
-                    Assert.NotNull(input.SensorExternalId);
-                    Assert.NotNull(input.SampleExternalId);
+                    Assert.NotNull(input.SourceExternalId);
+                    Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
                 var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
                 Assert.NotNull(simConfState);
@@ -191,7 +189,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestConfigurationLibraryWithConstInputs()
+        public async Task TestConfigurationLibraryWithExtendedIO()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -215,8 +213,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     fileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithInputConstants,
-                    SeedData.SimulatorRoutineRevisionWithInputConstants
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -224,10 +222,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
-
-                // TODO: don't create the folder anymore
-                // bool dirExists = Directory.Exists("./configurations");
-                // Assert.True(dirExists, "Should have created a directory for the files");
 
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -244,20 +238,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
                 Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal("PROSPER-Connector_Test_Model", state.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
-                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
+                var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
-                Assert.Equal("UserDefined", simConf.CalculationType);
-                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalculationName);
-                Assert.Equal("PETEX Test Routine with Input Constants", simConf.CalcTypeUserDefined);
+
+                Assert.Equal(SeedData.TestRoutineExternalId, routineRevision.RoutineExternalId);
+                Assert.Equal($"{SeedData.TestRoutineExternalId} - 1", routineRevision.ExternalId);
                 
-                Assert.Empty(simConf.InputTimeSeries);
-                Assert.NotEmpty(simConf.InputConstants);
-                foreach (var input in simConf.InputConstants)
+                Assert.NotEmpty(simConf.Inputs);
+                foreach (var input in simConf.Inputs)
                 {
                     Assert.NotNull(input.Value);
-                    Assert.NotNull(input.Type);
+                    Assert.NotNull(input.ReferenceId);
+                    Assert.True(input.IsConstant);
                     Assert.NotNull(input.Name);
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
@@ -303,11 +298,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
+        private ILogger<ModeLibraryTest> _logger;
         public ModeLibraryTest(
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
-            StagingArea<ModelParsingInfo> staging,
             IExtractionStateStore store = null) :
             base(
                 new FileLibraryConfig
@@ -330,22 +325,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 logger,
                 downloadClient,
-                staging,
                 store)
         {
+            _logger = logger;
         }
 
-        public StagingArea<ModelParsingInfo> StagingArea => Staging;
-
-        protected override Task ExtractModelInformation(IEnumerable<TestFileState> modelStates, CancellationToken token)
+        protected override Task ExtractModelInformation(TestFileState modelState, CancellationToken token)
         {
             return Task.Run(() =>
             {
-                foreach (var state in modelStates)
-                {
-                    state.ParsingInfo.SetSuccess("Model parsed successfully");
-                    state.Processed = true;
-                }
+                _logger.LogInformation("Model parsed successfully");
+                modelState.ParsingInfo.SetSuccess();
+                modelState.Processed = true;
             }, token);
         }
 
@@ -373,6 +364,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Processed = false,
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
+                LogId = modelRevision.LogId,
             };
         }
     }
@@ -385,7 +377,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulationConfigurationWithRoutine>
+        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulatorRoutineRevision>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 

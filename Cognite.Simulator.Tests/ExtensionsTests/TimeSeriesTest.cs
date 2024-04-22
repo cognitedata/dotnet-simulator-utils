@@ -27,6 +27,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var model = new SimulatorModelInfo
             {
                 Name = "Connector Test Model",
+                ExternalId = "Connector_Test_Model",
                 Simulator = "TestSimulator"
             };
 
@@ -69,14 +70,14 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Assert.Equal(bc1.DataSetId, bc1Ts.DataSetId);
                 Assert.Equal(bc1.Unit, bc1Ts.Unit);
                 Assert.Equal(bc1.Name, bc1Ts.Metadata["variableName"]);
-                Assert.Equal(bc1.Key, bc1Ts.Metadata["variableType"]);
+                Assert.Equal(bc1.Key, bc1Ts.Metadata["referenceId"]);
                 Assert.True(bc1Ts.IsStep);
                 Assert.False(bc1Ts.IsString);
                 var bc2Ts = result.Where(ts => ts.ExternalId == bc2Id).First();
                 Assert.Equal(bc2.DataSetId, bc2Ts.DataSetId);
                 Assert.Equal(bc2.Unit, bc2Ts.Unit);
                 Assert.Equal(bc2.Name, bc2Ts.Metadata["variableName"]);
-                Assert.Equal(bc2.Key, bc2Ts.Metadata["variableType"]);
+                Assert.Equal(bc2.Key, bc2Ts.Metadata["referenceId"]);
                 Assert.True(bc2Ts.IsStep);
                 Assert.False(bc2Ts.IsString);
             }
@@ -109,41 +110,40 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var model = new SimulatorModelInfo
             {
                 Name = "Connector Test Model",
+                ExternalId = "Connector_Test_Model",
                 Simulator = "TestSimulator"
             };
-            var calculation = new SimulatorCalculation
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo
             {
                 Model = model,
-                Name = "Test Calculation",
-                Type = "UserDefined",
-                UserDefinedType = "TestCalc"
+                ExternalId = "TestCalc - 1",
+                RoutineExternalId = "TestCalc",
             };
 
             var inA = new SimulationInput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Input A",
-                Type = "THP",
+                ReferenceId = "THP",
                 Unit = "BARg",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.IN.A" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Input_A-TestCalc-THP"
             };
             var inB = new SimulationInput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Input B",
-                Type = "THT",
+                ReferenceId = "THT",
                 Unit = "DegC",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.IN.B" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Input_B-TestCalc-CTM" 
             };
-            string overwriteId = "TestSimulator-Input_B-TestCalc-CTM";
-            inB.OverwriteTimeSeriesId(overwriteId);
-            Assert.Equal(overwriteId, inB.TimeSeriesExternalId);
 
             var inputs = new List<SimulationInput>
             {
@@ -153,14 +153,15 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var outA = new SimulationOutput
             {
-                Calculation = calculation,
+                RoutineRevisionInfo = routineRevisionInfo,
                 Name = "Output A",
-                Type = "GasRate",
+                ReferenceId = "GasRate",
                 Unit = "MMscf/day",
                 Metadata = new Dictionary<string, string>
                     {
                         { "sourceAddress", "TEST.OUT.A" }
-                    }
+                    },
+                SaveTimeseriesExternalId = "TestSimulator-Output_A-TestCalc-GasRate"
             };
             var outputs = new List<SimulationOutput> { 
                 outA
@@ -168,23 +169,12 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var tsToDelete = new List<Identity>
             {
-                new Identity(inA.TimeSeriesExternalId),
-                new Identity(inB.TimeSeriesExternalId),
-                new Identity(outA.TimeSeriesExternalId)
+                new Identity(inA.SaveTimeseriesExternalId),
+                new Identity(inB.SaveTimeseriesExternalId),
+                new Identity(outA.SaveTimeseriesExternalId)
             };
             try
             {
-                //Test model version time series
-                var mvTs = await timeSeries.GetOrCreateSimulationModelVersion(
-                    calculation,
-                    dataSetId,
-                    CancellationToken.None).ConfigureAwait(false);
-                Assert.NotNull(mvTs);
-                tsToDelete.Add(new Identity(mvTs.ExternalId));
-                Assert.True(mvTs.IsStep);
-                Assert.False(mvTs.IsString);
-                Assert.Equal(SimulatorDataType.SimulationModelVersion.MetadataValue(), mvTs.Metadata[BaseMetadata.DataTypeKey]);
-
                 // Test input time series
                 var inputTs = await timeSeries.GetOrCreateSimulationInputs(
                     inputs,
@@ -192,17 +182,17 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     CancellationToken.None).ConfigureAwait(false);
                 Assert.True(inputTs.Any());
                 Assert.Equal(2, inputTs.Count());
-                var inTsA = inputTs.First(ts => ts.ExternalId == inA.TimeSeriesExternalId);
+                var inTsA = inputTs.First(ts => ts.ExternalId == inA.SaveTimeseriesExternalId);
                 Assert.Equal(inA.Unit, inTsA.Unit);
                 Assert.Equal(inA.Name, inTsA.Metadata["variableName"]);
-                Assert.Equal(inA.Type, inTsA.Metadata["variableType"]);
+                Assert.Equal(inA.ReferenceId, inTsA.Metadata["referenceId"]);
                 Assert.Equal(inA.Metadata["sourceAddress"], inTsA.Metadata["sourceAddress"]);
                 Assert.False(inTsA.IsStep);
                 Assert.False(inTsA.IsString);
-                var inTsB = inputTs.First(ts => ts.ExternalId == inB.TimeSeriesExternalId);
+                var inTsB = inputTs.First(ts => ts.ExternalId == inB.SaveTimeseriesExternalId);
                 Assert.Equal(inB.Unit, inTsB.Unit);
                 Assert.Equal(inB.Name, inTsB.Metadata["variableName"]);
-                Assert.Equal(inB.Type, inTsB.Metadata["variableType"]);
+                Assert.Equal(inB.ReferenceId, inTsB.Metadata["referenceId"]);
                 Assert.Equal(inB.Metadata["sourceAddress"], inTsB.Metadata["sourceAddress"]);
                 Assert.False(inTsB.IsStep);
                 Assert.False(inTsB.IsString);
@@ -213,10 +203,10 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     dataSetId,
                     CancellationToken.None).ConfigureAwait(false);
                 Assert.Single(outputTs);
-                var outTsA = outputTs.First(ts => ts.ExternalId == outA.TimeSeriesExternalId);
+                var outTsA = outputTs.First(ts => ts.ExternalId == outA.SaveTimeseriesExternalId);
                 Assert.Equal(outA.Unit, outTsA.Unit);
                 Assert.Equal(outA.Name, outTsA.Metadata["variableName"]);
-                Assert.Equal(outA.Type, outTsA.Metadata["variableType"]);
+                Assert.Equal(outA.ReferenceId, outTsA.Metadata["referenceId"]);
                 Assert.Equal(outA.Metadata["sourceAddress"], outTsA.Metadata["sourceAddress"]);
                 Assert.False(outTsA.IsStep);
                 Assert.False(outTsA.IsString);

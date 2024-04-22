@@ -18,7 +18,7 @@ namespace Cognite.Simulator.Extensions
     public static class EventsExtensions
     {
         /// <summary>
-        /// Update the simulation event with the given external ID (<paramref name="externalId"/>).
+        /// Update the simulation event with the given id (<paramref name="id"/>).
         /// Update the event start time (<paramref name="startTime"/>) and its
         /// metadata
         /// </summary>

@@ -9,10 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -31,18 +31,65 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationRunnerTest
     {
+
+        public static IEnumerable<object[]> InputParams => 
+            new List<object[]>
+            {
+                // 1. timeseries inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
+                    new List<SimulationInputOverride>(),
+                    SimulatorValue.Create(2037.478183282069),
+                    true // check for timeseries
+                },
+                // 2. constant inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                    new List<SimulationInputOverride>(),
+                    SimulatorValue.Create(142),
+                    true
+                },
+                // 3. constant inputs with override
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                    new List<SimulationInputOverride> {
+                        new SimulationInputOverride {
+                            ReferenceId = "IC1",
+                            Value = new SimulatorValue.Double(-42),
+                        },
+                    },
+                    SimulatorValue.Create(58),
+                    true
+                },
+                // 4. constant string inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithStringsIO,
+                    SeedData.SimulatorRoutineRevisionWithStringsIO,
+                    new List<SimulationInputOverride>(),
+                    SimulatorValue.Create("42"),
+                    false
+                }
+            };
+
         private const long validationEndOverwrite = 1631304000000L;
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task TestSimulationRunnerBase(bool useConstInputs)
-        {
+        [MemberData(nameof(InputParams))]
+        public async Task TestSimulationRunnerBase(
+            SimulatorRoutineCreateCommandItem createRoutineItem, 
+            SimulatorRoutineRevisionCreate createRevisionItem,
+            IEnumerable<SimulationInputOverride> inputOverrides,
+            SimulatorValue result,
+            bool checkTs
+        ) {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<StagingArea<ModelParsingInfo>>();
+            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ConfigurationLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton<SampleSimulatorClient>();
@@ -68,23 +115,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(true);
 
             // prepopulate routine in CDF
-            SimulatorRoutineRevision revision;
-
-            if (useConstInputs) {
-                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf,
-                    FileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithInputConstants,
-                    SeedData.SimulatorRoutineRevisionWithInputConstants
-                ).ConfigureAwait(false);
-            } else {
-                revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf,
-                    FileStorageClient,
-                    SeedData.SimulatorRoutineCreate,
-                    SeedData.SimulatorRoutineRevision
-                ).ConfigureAwait(false);
-            }
+            SimulatorRoutineRevision revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                cdf,
+                FileStorageClient,
+                createRoutineItem,
+                createRevisionItem
+            ).ConfigureAwait(false);
 
             try
             {
@@ -111,34 +147,29 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var configState = Assert.Contains(
                     revision.Id.ToString(), // This simulator configuration should exist in CDF
                     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
-                var configObj = configLib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = configLib.GetSimulationConfiguration(revision.ExternalId);
+                Assert.NotNull(routineRevision);
+                var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
 
-                var outTsIds = configObj.OutputTimeSeries.Select(o => o.ExternalId).ToList();
+                var outTsIds = configObj.Outputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(outTsIds);
-                var inTsIds = configObj.InputTimeSeries.Select(o => o.SampleExternalId).ToList();
+                var inTsIds = configObj.Inputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
 
-                if (configObj.InputConstants != null) {
-                    var inConstTsIds = configObj.InputConstants.Select(o => o.SaveTimeseriesExternalId).ToList();
-                    tsToDelete.AddRange(inConstTsIds);
-                    inTsIds.AddRange(inConstTsIds);
-                }
-
-
-                long runId = 0;
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
                     new List<SimulationRunCreate>
                     {
                         new SimulationRunCreate
                         {
-                            RoutineExternalId = configObj.CalculationName,
+                            RoutineExternalId = routineRevision.RoutineExternalId,
                             RunType = SimulationRunType.external,
-                            ValidationEndTime = validationEndOverwrite
+                            RunTime = validationEndOverwrite,
+                            Inputs = inputOverrides.Any() ? inputOverrides : null
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
-                runId = runs.First().Id;
+                var runId = runs.First().Id;
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -148,16 +179,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
                 Assert.True(runner.MetadataInitialized);
-                
-                // Check that output time series were created
-                var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
-                Assert.True(outTs.Any(), $"No output time series were created [{string.Join(",", outTsIds)}]");
-                Assert.Equal(outTsIds.Count, outTs.Count());
-
-                // Check that input time series were created
-                var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
-                Assert.True(inTs.Any(), $"No input time series were created [{string.Join(",", inTsIds)}]");
-                Assert.Equal(inTsIds.Count, inTs.Count());
 
                 var runUpdated = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
                     new List<long> { runId }, source.Token).ConfigureAwait(false);
@@ -213,35 +234,80 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 logData = logsRes.First().Data;
                 Assert.NotNull(logData.First().Message);
 
-                // Check that the correct output was added as a data point
-                var outDps = await cdf.DataPoints.ListAsync(
-                    new DataPointsQuery
+                // check inputs/outputs from the /runs/data/list endpoint
+                var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(
+                    new List<long> { runId }, source.Token).ConfigureAwait(false);
+                Assert.NotEmpty(runDataRes);
+                var inputs = runDataRes.First().Inputs;
+                Assert.NotEmpty(inputs);
+                foreach (var input in inputs)
+                {
+                    Assert.Contains(input.ReferenceId, configObj.Inputs.Select(i => i.ReferenceId));
+                    if (input.TimeseriesExternalId != null)
                     {
-                        Start = simulationTime.ToString(),
-                        End = (simulationTime + 1).ToString(),
-                        Items = outTs.Select(o => new DataPointsQueryItem
-                        {
-                            ExternalId = o.ExternalId
-                        })
-                    }, source.Token).ConfigureAwait(false);
-                Assert.True(outDps.Items.Any());
-                Assert.NotNull(SampleRoutine._output);
-                Assert.Equal(SampleRoutine._output, outDps.Items.First().NumericDatapoints.Datapoints.First().Value);
+                        Assert.Contains(input.TimeseriesExternalId, inTsIds);
+                    }
+                    if (inputOverrides.Any(i => i.ReferenceId == input.ReferenceId)) {
+                        Assert.True(input.Overridden);
+                        var inputValue = input.Value as SimulatorValue.Double;
+                        var inputOverride = inputOverrides.First(i => i.ReferenceId == input.ReferenceId).Value as SimulatorValue.Double;
+                        Assert.Equal(inputValue?.Value, inputOverride?.Value);
+                    } else {
+                        Assert.NotEqual(input.Overridden, true);
+                    }
+                }
 
-                // Check that the correct input sample was added as a data point
-                var inDps = await cdf.DataPoints.ListAsync(
-                    new DataPointsQuery
-                    {
-                        Start = simulationTime.ToString(),
-                        End = (simulationTime + 1).ToString(),
-                        Items = inTs.Select(i => new DataPointsQueryItem
+                Assert.NotEmpty(runDataRes);
+                Assert.NotEmpty(runDataRes.First().Outputs);
+
+                var resultValue = runDataRes.First().Outputs.First().Value;
+                Assert.Equal(resultValue.Type, result?.Type);
+                Assert.Equal(resultValue, result);
+
+                if (checkTs) {
+                    Assert.True(outTsIds.Any());
+                    Assert.True(inTsIds.Any());
+
+                    // Check that output time series were created
+                    var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
+                    Assert.True(outTs.Any(), $"No output time series were created [{string.Join(",", outTsIds)}]");
+                    Assert.Equal(outTsIds.Count, outTs.Count());
+
+                    // Check that input time series were created
+                    var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
+                    Assert.True(inTs.Any(), $"No input time series were created [{string.Join(",", inTsIds)}]");
+                    Assert.Equal(inTsIds.Count, inTs.Count());
+
+                    // Check that the correct output was added as a data point
+                    var outDps = await cdf.DataPoints.ListAsync(
+                        new DataPointsQuery
                         {
-                            ExternalId = i.ExternalId
-                        })
-                    }, source.Token).ConfigureAwait(false);
-                Assert.True(inDps.Items.Any());
-                Assert.NotEmpty(SampleRoutine._inputs);
-                Assert.Contains(inDps.Items.First().NumericDatapoints.Datapoints.First().Value, SampleRoutine._inputs);
+                            Start = simulationTime.ToString(),
+                            End = (simulationTime + 1).ToString(),
+                            Items = outTs.Select(o => new DataPointsQueryItem
+                            {
+                                ExternalId = o.ExternalId
+                            })
+                        }, source.Token).ConfigureAwait(false);
+                    Assert.True(outDps.Items.Any());
+                    Assert.NotNull(SampleRoutine._output);
+                    Assert.Equal(SampleRoutine._output, outDps.Items.First().NumericDatapoints.Datapoints.First().Value);
+
+                    // Check that the correct input sample was added as a data point
+                    var inDps = await cdf.DataPoints.ListAsync(
+                        new DataPointsQuery
+                        {
+                            Start = simulationTime.ToString(),
+                            End = (simulationTime + 1).ToString(),
+                            Items = inTs.Select(i => new DataPointsQueryItem
+                            {
+                                ExternalId = i.ExternalId
+                            })
+                        }, source.Token).ConfigureAwait(false);
+                    Assert.True(inDps.Items.Any());
+                    Assert.NotEmpty(SampleRoutine._inputs);
+                    Assert.Contains(inDps.Items.First().NumericDatapoints.Datapoints.First().Value, SampleRoutine._inputs);
+                }
             }
             finally
             {
@@ -272,36 +338,48 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
         }
-
-        
-        private static Dictionary<string, string> ToRowDictionary(SequenceData data)
-        {
-            Dictionary<string, string> result = new();
-            foreach (var row in data.Rows)
-            {
-                var cells = row.Values.ToArray();
-                var key = ((MultiValue.String)cells[0]).Value;
-                var value = ((MultiValue.String)cells[1]).Value;
-                result.Add(key, value);
-            }
-            return result;
-        }
     }
 
     public class SampleRoutine : RoutineImplementationBase
     {
         public static List<double> _inputs;
         public static double? _output;
-        public SampleRoutine(SimulationConfigurationWithRoutine config, Dictionary<string, double> inputData)
+        public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, SimulatorValueItem> inputData)
             :base(config, inputData)
         {
             _inputs = new List<double>();
             _output = null;
         }
         
-        public override double GetTimeSeriesOutput(OutputTimeSeriesConfiguration outputConfig, Dictionary<string, string> arguments)
+        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
         {
-            return _output.Value;
+            SimulatorValue outputValue;
+            if (outputConfig == null)
+            {
+                throw new ArgumentNullException(nameof(outputConfig));
+            }
+            if (_output == null)
+            {
+                throw new InvalidOperationException("Output value not set");
+            }
+            if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
+            {
+                outputValue = new SimulatorValue.Double(_output.Value);   
+            } else if (outputConfig.ValueType == SimulatorValueType.STRING)
+            {
+                outputValue = new SimulatorValue.String(_output.ToString());
+            } else {
+                throw new InvalidOperationException("Unsupported value type");
+            }
+            return new SimulatorValueItem() {
+                Value = outputValue,
+                ReferenceId = outputConfig.ReferenceId,
+                TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
+                Unit = outputConfig.Unit != null ? new SimulatorValueUnit() {
+                    Name = outputConfig.Unit.Name,
+                } : null,
+                ValueType = outputConfig.ValueType
+            };
         }
 
         public override void RunCommand(string command, Dictionary<string, string> arguments)
@@ -316,23 +394,44 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        public override void SetManualInput(string value, Dictionary<string, string> arguments)
+        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
         {
-            _inputs.Add(double.Parse(value));
-        }
-
-        public override void SetTimeSeriesInput(InputTimeSeriesConfiguration inputConfig, double value, Dictionary<string, string> arguments)
-        {
+            double value;
+            if (input == null)
+            {
+                throw new ArgumentNullException(nameof(input));
+            }
+            if (input.Value == null)
+            {
+                throw new ArgumentNullException(nameof(input.Value));
+            }
+            if (input.Value.Type == SimulatorValueType.DOUBLE)
+            {
+                var doubleValue = input.Value as SimulatorValue.Double;
+                if (doubleValue == null)
+                {
+                    throw new InvalidOperationException("Could not parse input value");
+                }
+                value = doubleValue.Value;
+            }
+            else
+            {
+                var stringValue = input.Value as SimulatorValue.String;
+                if (stringValue == null || !double.TryParse(stringValue.Value, out value))
+                {
+                    throw new InvalidOperationException("Could not parse input value");
+                }
+            }
             _inputs.Add(value);
         }
     }
 
-    public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulationConfigurationWithRoutine>
+    public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
-        public Task<Dictionary<string, double>> RunSimulation(
+        public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             TestFileState modelState, 
-            SimulationConfigurationWithRoutine simulationConfiguration, 
-            Dictionary<string, double> inputData)
+            SimulatorRoutineRevision simulationConfiguration, 
+            Dictionary<string, SimulatorValueItem> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData);
             return Task.FromResult(routine.PerformSimulation());
@@ -340,7 +439,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class SampleSimulationRunner :
-        RoutineRunnerBase<TestFileState, TestConfigurationState, SimulationConfigurationWithRoutine>
+        RoutineRunnerBase<TestFileState, TestConfigurationState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
@@ -381,7 +480,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
             TestConfigurationState configState,
-            SimulationConfigurationWithRoutine configObj,
+            SimulatorRoutineRevision configObj,
             Dictionary<string, string> metadata)
         {
             MetadataInitialized = true;

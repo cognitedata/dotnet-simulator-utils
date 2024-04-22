@@ -51,54 +51,17 @@ namespace Cognite.Simulator.Extensions
             }
         }
 
-        internal static string GetModelNameForIds(this SimulatorModelInfo model)
-        {
-            return model.Name.ReplaceSpecialCharacters("_");
-        }
-
-        internal static string GetModelNameForNames(this SimulatorModelInfo model)
-        {
-            return model.Name.ReplaceSlashAndBackslash("_");
-        }
-
-        internal static string GetCalcTypeForIds(this SimulatorCalculation calc)
-        {
-            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-            {
-                return calc.UserDefinedType.ReplaceSpecialCharacters("_");
-            }
-            return calc.Type.ReplaceSpecialCharacters("_");
-        }
-        
-        internal static string GetCalcTypeForNames(this SimulatorCalculation calc)
-        {
-            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-            {
-                return $"{calc.Type.ReplaceSlashAndBackslash("_")}-{calc.UserDefinedType.ReplaceSlashAndBackslash("_")}";
-            }
-            return calc.Type.ReplaceSlashAndBackslash("_");
-        }
-
-        internal static string GetCalcNameForNames(this SimulatorCalculation calc)
-        {
-            return calc.Name.ReplaceSlashAndBackslash("_");
-        }
-
         internal static Dictionary<string, string> GetCommonMetadata(
-            this SimulatorCalculation calc,
+            this SimulatorRoutineRevisionInfo calc,
             SimulatorDataType dataType)
         {
             var metadata = calc.Model.GetCommonMetadata(dataType);
             metadata.AddRange(
                 new Dictionary<string, string>()
                 {
-                    { CalculationMetadata.TypeKey, calc.Type },
-                    { CalculationMetadata.NameKey, calc.Name },
+                    { RoutineRevisionMetadataForTS.RoutineExternalId, calc.RoutineExternalId },
+                    { RoutineRevisionMetadataForTS.RoutineRevisionExternalId, calc.ExternalId },
                 });
-            if (calc.Type == "UserDefined" && !string.IsNullOrEmpty(calc.UserDefinedType))
-            {
-                metadata.Add(CalculationMetadata.UserDefinedTypeKey, calc.UserDefinedType);
-            }
             return metadata;
         }
 
@@ -110,7 +73,7 @@ namespace Cognite.Simulator.Extensions
             {
                 { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
                 { BaseMetadata.SimulatorKey, model.Simulator },
-                { ModelMetadata.NameKey, model.Name },
+                { ModelMetadata.ExternalId, model.ExternalId },
                 { BaseMetadata.DataTypeKey, dataType.MetadataValue() }
             };
         }
