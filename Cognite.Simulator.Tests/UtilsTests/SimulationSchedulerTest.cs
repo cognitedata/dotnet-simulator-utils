@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
+using Moq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -47,7 +48,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
             
             await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-
             await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
@@ -62,6 +62,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
+                var mockTimeManager = new Mock<ITimeManager>();
+                mockTimeManager.Setup(m => m.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+                    .Returns<TimeSpan, CancellationToken>((delay, token) => Task.Delay(1000).ContinueWith(_ => { }, token));
+
+
+
+                var desiredCurrentTime = DateTime.Now; // Example desired current time
+                    mockTimeManager.Setup(m => m.GetCurrentTime()).Returns(desiredCurrentTime);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
@@ -72,7 +80,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                var taskList = new List<Task> { scheduler.Run(linkedToken) };
+                var taskList = new List<Task> { scheduler.Run(linkedToken, mockTimeManager.Object) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 
@@ -102,7 +110,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
-                        Limit = 10,
+                        Limit = 20,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
@@ -115,11 +123,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var latestEventsFiltered = simRuns.Items.Where(
                     r => r.CreatedTime >= testStartTimeMillis && r.RunType == SimulationRunType.scheduled
                 );
+                // should create atleast 4 events IN 5 seconds
+                var isAtleastFiveEvents = latestEventsFiltered.Count() >= 4;
+                Assert.True(isAtleastFiveEvents);
                 Assert.NotEmpty(latestEventsFiltered);
                 Assert.Contains(latestEventsFiltered, e => e.RunType == SimulationRunType.scheduled);
             }
             finally
             {
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
+
                 if (eventIds.Any())
                 {
                     await cdf.Events.DeleteAsync(eventIds, source.Token)
@@ -130,7 +143,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
     }
