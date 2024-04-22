@@ -235,7 +235,6 @@ namespace Cognite.Simulator.Utils
                         items: new List<SimulationRunCreate> { runEvent },
                         token: job.TokenSource.Token
                     ).ConfigureAwait(false);
-                    try
                 }
             }
         }
