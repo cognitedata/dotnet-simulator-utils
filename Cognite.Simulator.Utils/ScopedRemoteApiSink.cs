@@ -8,6 +8,7 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
+using Oryx.Cognite;
 
 namespace Cognite.Simulator.Utils {
 
@@ -42,10 +43,15 @@ namespace Cognite.Simulator.Utils {
                 return;
             }
 
-            logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId != null)
+            logEvent.Properties.TryGetValue("LogId", out var logIdProp);
+            var logIdStr = logIdProp?.ToString();
+            
+            if (string.IsNullOrEmpty(logIdStr))
             {
-                long logIdLong = long.Parse(logId.ToString());
+                return;
+            }
+
+            if(long.TryParse(logIdStr, out var logId)) {    
                 // Customize the log data to send to the remote API
                 var logData = new SimulatorLogDataEntry
                 {
@@ -54,11 +60,12 @@ namespace Cognite.Simulator.Utils {
                     Message = logEvent.RenderMessage(),
                 };
 
-                logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+                logBuffer.AddOrUpdate(logId, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
                     oldValue.Add(logData);
                     return oldValue;
                 });
             }
+            
         }
 
         /// <summary>
@@ -100,7 +107,8 @@ namespace Cognite.Simulator.Utils {
                             log.Key,
                             logData,
                             token
-                        ).ConfigureAwait(false);
+                        ).ConfigureAwait(false);   
+                        
                     }
                 }
                 catch (Exception ex)
