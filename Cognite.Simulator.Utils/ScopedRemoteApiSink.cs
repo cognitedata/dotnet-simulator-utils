@@ -43,25 +43,30 @@ namespace Cognite.Simulator.Utils {
                 return;
             }
 
-            logEvent.Properties.TryGetValue("LogId", out var logId);
-            var isLogIdNull = logId == null || long.Parse(logId.ToString()) == 0;
+            logEvent.Properties.TryGetValue("LogId", out var logIdProp);
+            var logIdStr = logIdProp?.ToString();
+            var isLogIdNull = string.IsNullOrEmpty(logIdStr);
             
-            if(isLogIdNull){
+            if (isLogIdNull)
+            {
                 return;
             }
-            
-            // Customize the log data to send to the remote API
-            var logData = new SimulatorLogDataEntry
-            {
-                Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
-                Severity = logEvent.Level.ToString(),
-                Message = logEvent.RenderMessage(),
-            };
 
-            logBuffer.AddOrUpdate(long.Parse(logId.ToString()), new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
-                oldValue.Add(logData);
-                return oldValue;
-            });
+            if(long.TryParse(logIdStr, out var logId)) {    
+                // Customize the log data to send to the remote API
+                var logData = new SimulatorLogDataEntry
+                {
+                    Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
+                    Severity = logEvent.Level.ToString(),
+                    Message = logEvent.RenderMessage(),
+                };
+
+                logBuffer.AddOrUpdate(logId, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+                    oldValue.Add(logData);
+                    return oldValue;
+                });
+            }
+            
         }
 
         /// <summary>
