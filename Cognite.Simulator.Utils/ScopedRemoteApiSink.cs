@@ -45,9 +45,8 @@ namespace Cognite.Simulator.Utils {
 
             logEvent.Properties.TryGetValue("LogId", out var logIdProp);
             var logIdStr = logIdProp?.ToString();
-            var isLogIdNull = string.IsNullOrEmpty(logIdStr);
             
-            if (isLogIdNull)
+            if (string.IsNullOrEmpty(logIdStr))
             {
                 return;
             }
