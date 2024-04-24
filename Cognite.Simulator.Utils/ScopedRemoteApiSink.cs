@@ -20,6 +20,17 @@ namespace Cognite.Simulator.Utils {
         private SimulatorLoggingConfig apiLoggerConfig;
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
+        private long? defaultLogId;
+
+
+        /// <summary>
+        /// Sets the default log ID.
+        /// </summary>
+        /// <param name="logId">The default log ID to set.</param>
+        public void SetDefaultLogId(long logId)
+        {
+            defaultLogId = logId;
+        }
 
         /// <summary>
         /// Store the log in the buffer to be sent to the remote API.
@@ -43,22 +54,22 @@ namespace Cognite.Simulator.Utils {
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId != null)
-            {
-                long logIdLong = long.Parse(logId.ToString());
-                // Customize the log data to send to the remote API
-                var logData = new SimulatorLogDataEntry
-                {
-                    Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
-                    Severity = logEvent.Level.ToString(),
-                    Message = logEvent.RenderMessage(),
-                };
-
-                logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
-                    oldValue.Add(logData);
-                    return oldValue;
-                });
+            if (logId == null && defaultLogId == null){
+                return;
             }
+            long logIdLong = logId == null ? long.Parse(defaultLogId.ToString()) : long.Parse(logId.ToString());
+            // Customize the log data to send to the remote API
+            var logData = new SimulatorLogDataEntry
+            {
+                Timestamp = logEvent.Timestamp.ToUnixTimeMilliseconds(),
+                Severity = logEvent.Level.ToString(),
+                Message = logEvent.RenderMessage(),
+            };
+
+            logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+                oldValue.Add(logData);
+                return oldValue;
+            });
         }
 
         /// <summary>

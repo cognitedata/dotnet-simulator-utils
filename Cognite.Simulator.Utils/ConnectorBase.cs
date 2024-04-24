@@ -32,7 +32,7 @@ namespace Cognite.Simulator.Utils
         protected IList<SimulatorConfig> Simulators { get; }
         private ConnectorConfig Config { get; }
 
-        private readonly Dictionary<string, long> _simulatorIntegrationIds;
+        private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
         private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
@@ -63,7 +63,7 @@ namespace Cognite.Simulator.Utils
             Cdf = cdf;
             Simulators = simulators;
             Config = config;
-            _simulatorIntegrationIds = new Dictionary<string, long>();
+            _simulatorIntegrationsList = new Dictionary<string, SimulatorIntegration>();
             _logger = logger;
             _remoteApiSink = remoteSink;
             _config = config;
@@ -75,13 +75,26 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="simulator">Simulator name</param>
         /// <returns>Simulator integration ID, or null if not found</returns>
-        public long? GetSimulatorIntegrationId(string simulator)
+        public SimulatorIntegration GetSimulatorIntegration(string simulator)
         {
-            if (!_simulatorIntegrationIds.ContainsKey(simulator))
+            if (!_simulatorIntegrationsList.ContainsKey(simulator))
             {
                 return null;
             }
-            return _simulatorIntegrationIds[simulator];
+            return _simulatorIntegrationsList[simulator];
+        }
+
+        /// <summary>
+        /// Returns the first simulator integration.
+        /// </summary>
+        /// <returns>The first simulator integration.</returns>
+        public SimulatorIntegration GetFirstSimulatorIntegration()
+        {
+            if(_simulatorIntegrationsList.Count == 0)
+            {
+                return null;
+            }
+            return _simulatorIntegrationsList.First().Value;
         }
 
         /// <summary>
@@ -223,12 +236,12 @@ namespace Cognite.Simulator.Utils
                         var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
                             integrationToCreate
                         }, token).ConfigureAwait(false);
-                        _simulatorIntegrationIds[simulator.Name] = res.First().Id;
+                        _simulatorIntegrationsList[simulator.Name] = res.First();
                     }
                     else
                     {
                         _logger.LogInformation("Found existing simulator integration for {Simulator}", simulator.Name);
-                        _simulatorIntegrationIds[simulator.Name] = existing.Id;
+                        _simulatorIntegrationsList[simulator.Name] = existing;
                     }
                 }
             }
@@ -272,13 +285,13 @@ namespace Cognite.Simulator.Utils
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
                         LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
                     };
-                    var simIntegrationId = GetSimulatorIntegrationId(simulator.Name);
-                    if (simIntegrationId == null)
+                    var simIntegration = GetSimulatorIntegration(simulator.Name);
+                    if (simIntegration == null)
                     {
                         _logger.LogWarning("Simulator integration for {Simulator} not found", simulator.Name);
                         throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
                     }
-                    var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(GetSimulatorIntegrationId(simulator.Name).Value)
+                    var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(simIntegration.Id)
                         {
                             Update = integrationUpdate,
                         };
