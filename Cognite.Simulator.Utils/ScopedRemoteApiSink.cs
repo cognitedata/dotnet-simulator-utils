@@ -57,7 +57,7 @@ namespace Cognite.Simulator.Utils {
             if (logId == null && defaultLogId == null){
                 return;
             }
-            long logIdLong = logId == null ? long.Parse(defaultLogId.ToString()) : long.Parse(logId.ToString());
+            long logIdLong = logId == null ? defaultLogId.Value : long.Parse(logId.ToString());
             // Customize the log data to send to the remote API
             var logData = new SimulatorLogDataEntry
             {
