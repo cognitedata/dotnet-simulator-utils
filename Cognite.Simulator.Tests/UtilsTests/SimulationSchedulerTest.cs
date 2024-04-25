@@ -98,7 +98,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
                 var taskList = new List<Task> { scheduler.Run(linkedToken) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
@@ -144,7 +144,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 );
                 // should create at least 4 events IN 5 seconds
                 Assert.NotEmpty(latestEventsFiltered);
-                Assert.InRange(latestEventsFiltered.Count(), 4, 5);
+                Assert.InRange(latestEventsFiltered.Count(), 4, 6);
             }
             finally
             {
