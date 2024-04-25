@@ -164,7 +164,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         {
                             RoutineExternalId = routineRevision.RoutineExternalId,
                             RunType = SimulationRunType.external,
-                            ValidationEndTime = validationEndOverwrite,
+                            RunTime = validationEndOverwrite,
                             Inputs = inputOverrides.Any() ? inputOverrides : null
                         }
                     }, source.Token).ConfigureAwait(false);
@@ -382,15 +382,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             };
         }
 
-        public override void RunCommand(string command, Dictionary<string, string> arguments)
+        public override void RunCommand(Dictionary<string, string> arguments)
         {
-            if (command == null)
+            if (arguments == null)
             {
-                throw new ArgumentNullException(nameof(command));
+                throw new ArgumentNullException(nameof(arguments));
             }
-            if (command == "Simulate")
-            {
-                _output = _inputs.Sum();
+            if(arguments.TryGetValue("command", out var cmd)) {
+                if (cmd == "Simulate")
+                {
+                    _output = _inputs.Sum();
+                }
+            } else {
+                throw new InvalidOperationException("No command provided");
             }
         }
 

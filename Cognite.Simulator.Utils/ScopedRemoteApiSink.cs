@@ -8,6 +8,7 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
+using Oryx.Cognite;
 
 namespace Cognite.Simulator.Utils {
 
@@ -70,6 +71,7 @@ namespace Cognite.Simulator.Utils {
                 oldValue.Add(logData);
                 return oldValue;
             });
+            
         }
 
         /// <summary>
@@ -111,7 +113,8 @@ namespace Cognite.Simulator.Utils {
                             log.Key,
                             logData,
                             token
-                        ).ConfigureAwait(false);
+                        ).ConfigureAwait(false);   
+                        
                     }
                 }
                 catch (Exception ex)

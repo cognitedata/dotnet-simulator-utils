@@ -191,7 +191,7 @@ namespace Cognite.Simulator.Utils
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
-
+                
                 // Extract the data for each model file (version) in this group
                 foreach (var item in group){
                     var logId = item.LogId;
