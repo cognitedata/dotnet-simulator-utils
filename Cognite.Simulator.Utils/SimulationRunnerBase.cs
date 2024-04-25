@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulation configuration files
         /// </summary>
-        protected IConfigurationProvider<U, V> ConfigurationLibrary { get; }
+        protected IConfigurationProvider<V> ConfigurationLibrary { get; }
 
         private long? simulatorIntegrationId;
 
@@ -63,7 +63,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary,
-            IConfigurationProvider<U, V> configLibrary,
+            IConfigurationProvider<V> configLibrary,
             ILogger logger)
         {
             if (cdf == null)
@@ -194,7 +194,6 @@ namespace Cognite.Simulator.Utils
                     var runId = e.Run.Id;
                     var startTime = DateTime.UtcNow;
                     T modelState = null;
-                    U calcState = null;
                     V calcObj = null;
                     bool skipped = false;
 
@@ -203,8 +202,8 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, calcState, calcObj) = ValidateEventMetadata(e, connectorIdList);
-                            if (calcState == null || calcObj == null || !connectorIdList.Contains(calcObj.SimulatorIntegrationExternalId) )
+                            (modelState, calcObj) = ValidateEventMetadata(e, connectorIdList);
+                            if (calcObj == null || !connectorIdList.Contains(calcObj.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
@@ -216,7 +215,6 @@ namespace Cognite.Simulator.Utils
                             var metadata = new Dictionary<string, string>();
                             InitSimulationEventMetadata(
                                 modelState,
-                                calcState,
                                 calcObj,
                                 metadata);
                             PublishSimulationRunStatus("RUNNING_CALCULATION", token);
@@ -225,7 +223,6 @@ namespace Cognite.Simulator.Utils
                                 e,
                                 startTime,
                                 modelState,
-                                calcState,
                                 calcObj,
                                 metadata,
                                 token)
@@ -265,7 +262,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, U, V) ValidateEventMetadata(SimulationRunEvent simEv, List<string> integrations)
+        private (T, V) ValidateEventMetadata(SimulationRunEvent simEv, List<string> integrations)
         {
             string modelName = simEv.Run.ModelName;
             string simulator = simEv.Run.SimulatorName;
@@ -278,10 +275,10 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
-            U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
+            // U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
             V calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simEv.Run.RoutineRevisionExternalId);
 
-            if (calcConfig == null || calcState == null)
+            if (calcConfig == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
@@ -289,13 +286,13 @@ namespace Cognite.Simulator.Utils
 
             if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))
             {
-                return (model, null, null);
+                return (model, null);
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
                 throw new ConnectorException("Calculation failed due to connector error");
             }
-            return (model, calcState, calcConfig);
+            return (model, calcConfig);
         }
 
         /// <summary>
@@ -304,12 +301,10 @@ namespace Cognite.Simulator.Utils
         /// At this point, any simulator specific metadata that needs to be added to the event, should be initialized here.
         /// </summary>
         /// <param name="modelState">Model state</param>
-        /// <param name="configState">Simulation configuration state</param>
         /// <param name="configObj">Simulation configuration object</param>
         /// <param name="metadata">Metadata to be added to the CDF event</param>
         protected abstract void InitSimulationEventMetadata(
             T modelState,
-            U configState,
             V configObj,
             Dictionary<string, string> metadata);
 
@@ -362,7 +357,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="simEv">Simulation event</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
-        /// <param name="configState">Configuration state object</param>
         /// <param name="routineRevision">Routine revision object</param>
         /// <param name="metadata">Metadata to add to the event</param>
         /// <param name="token">Cancellation token</param>
@@ -370,7 +364,6 @@ namespace Cognite.Simulator.Utils
             SimulationRunEvent simEv,
             DateTime startTime,
             T modelState,
-            U configState,
             V routineRevision,
             Dictionary<string, string> metadata,
             CancellationToken token)
@@ -442,7 +435,6 @@ namespace Cognite.Simulator.Utils
                 simEv,
                 startTime,
                 modelState,
-                configState,
                 routineRevision,
                 samplingRange,
                 token).ConfigureAwait(false);
@@ -472,7 +464,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="e">Simulation event</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
-        /// <param name="configState">Configuration state object</param>
         /// <param name="configObj">Configuration object</param>
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="token">Cancellation token</param>
@@ -480,7 +471,6 @@ namespace Cognite.Simulator.Utils
             SimulationRunEvent e,
             DateTime startTime,
             T modelState,
-            U configState,
             V configObj,
             SamplingRange samplingRange,
             CancellationToken token);

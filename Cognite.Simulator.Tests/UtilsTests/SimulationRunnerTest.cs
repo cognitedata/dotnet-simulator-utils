@@ -143,10 +143,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 
-                Assert.NotEmpty(configLib.State);
-                var configState = Assert.Contains(
-                    revision.Id.ToString(), // This simulator configuration should exist in CDF
-                    (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
+                // Assert.NotEmpty(configLib.State);
+                // var configState = Assert.Contains(
+                //     revision.Id.ToString(), // This simulator configuration should exist in CDF
+                //     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
                 var routineRevision = configLib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
@@ -483,7 +483,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
-            TestConfigurationState configState,
+            // TestConfigurationState configState,
             SimulatorRoutineRevision configObj,
             Dictionary<string, string> metadata)
         {

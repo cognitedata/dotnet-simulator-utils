@@ -157,12 +157,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                Assert.NotEmpty(lib.State);
-               var state = Assert.Contains(
-                    revision.Id.ToString(), // This simulator configuration should exist in CDF
-                    (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
+            //     Assert.NotEmpty(lib.State);
+            //    var state = Assert.Contains(
+            //         revision.Id.ToString(), // This simulator configuration should exist in CDF
+            //         (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
+            //     Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
+            //     Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
                 Assert.NotNull(simConf);
@@ -174,9 +174,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.NotNull(input.SourceExternalId);
                     Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
-                var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
-                Assert.NotNull(simConfState);
-                Assert.Equal(state, simConfState);
+                // var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
+                // Assert.NotNull(simConfState);
+                // Assert.Equal(state, simConfState);
             }
             finally
             {
@@ -233,12 +233,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                Assert.NotEmpty(lib.State);
-                var state = Assert.Contains(
-                    revision.Id.ToString(), // This simulator configuration should exist in CDF
-                    (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
+                // Assert.NotEmpty(lib.State);
+                // var state = Assert.Contains(
+                //     revision.Id.ToString(), // This simulator configuration should exist in CDF
+                //     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
+                // Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
+                // Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
                 var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
                 var simConf = routineRevision.Configuration;
@@ -257,9 +257,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
 
-                var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
-                Assert.NotNull(simConfState);
-                Assert.Equivalent(state, simConfState, true);
+                // var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
+                // Assert.NotNull(simConfState);
+                // Assert.Equivalent(state, simConfState, true);
             }
             finally
             {
@@ -377,12 +377,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<TestConfigurationState, FileStatePoco, SimulatorRoutineRevision>
+        ConfigurationLibraryBase<SimulatorRoutineRevision>
     {
         public ConfigurationLibraryTest(
             CogniteDestination cdf, 
-            ILogger<ConfigurationLibraryTest> logger, 
-            IExtractionStateStore store = null) : 
+            ILogger<ConfigurationLibraryTest> logger) : 
             base(
                 new FileLibraryConfig
                 {
@@ -400,23 +399,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         DataSetId = CdfTestClient.TestDataset
                     }
                 },
-                cdf, logger, store)
+                cdf, logger)
         {
         }
 
-        protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
-        {
-            return new TestConfigurationState(routineRevision.Id.ToString())
-            {
-                CdfId = routineRevision.Id,
-                DataSetId = routineRevision.DataSetId,
-                CreatedTime = routineRevision.CreatedTime,
-                UpdatedTime = routineRevision.CreatedTime,
-                ModelName = routineRevision.ModelExternalId,
-                ModelExternalId = routineRevision.ModelExternalId,
-                Source = routineRevision.SimulatorExternalId,
-                ExternalId = routineRevision.ExternalId,
-            };
-        }
+        // protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
+        // {
+        //     return new TestConfigurationState(routineRevision.Id.ToString())
+        //     {
+        //         CdfId = routineRevision.Id,
+        //         DataSetId = routineRevision.DataSetId,
+        //         CreatedTime = routineRevision.CreatedTime,
+        //         UpdatedTime = routineRevision.CreatedTime,
+        //         ModelName = routineRevision.ModelExternalId,
+        //         ModelExternalId = routineRevision.ModelExternalId,
+        //         Source = routineRevision.SimulatorExternalId,
+        //         ExternalId = routineRevision.ExternalId,
+        //     };
+        // }
     }
 }

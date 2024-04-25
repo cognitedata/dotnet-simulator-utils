@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary, 
-            IConfigurationProvider<U, V> configLibrary,
+            IConfigurationProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
             ILogger logger) : 
             base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger)
@@ -88,7 +88,6 @@ namespace Cognite.Simulator.Utils
             SimulationRunEvent e, 
             DateTime startTime, 
             T modelState, 
-            U configState, 
             V routineRevision, 
             SamplingRange samplingRange, 
             CancellationToken token)

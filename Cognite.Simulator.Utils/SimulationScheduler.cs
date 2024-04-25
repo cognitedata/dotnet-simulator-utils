@@ -67,10 +67,10 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public long CreatedTime { get; set; }
 
-        /// <summary>
-        /// The configuration state.
-        /// </summary>
-        public FileState ConfigState { get; set; }
+        // /// <summary>
+        // /// The configuration state.
+        // /// </summary>
+        // public FileState ConfigState { get; set; }
 
         /// <summary>
         /// Routine revision.
@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _config;
-        private readonly IConfigurationProvider<U, V> _configLib;
+        private readonly IConfigurationProvider<V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
-            IConfigurationProvider<U, V> configLib,
+            IConfigurationProvider<V> configLib,
             ILogger logger,
             IEnumerable<SimulatorConfig> simulators,
             ITimeManager timeManager,
@@ -147,17 +147,17 @@ namespace Cognite.Simulator.Utils
                     
                     foreach (var routineRev in configurations)
                     {
-                        U configState = _configLib.GetSimulationConfigurationState(
-                            routineRev.ExternalId
-                        );
+                        // U configState = _configLib.GetSimulationConfigurationState(
+                        //     routineRev.ExternalId
+                        // );
 
                         // Check if the configuration has a schedule for this connector.
-                        if (configState == null ||
-                            !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                            routineRev.Configuration.Schedule == null )
-                        {
-                            continue;
-                        }
+                        // if (configState == null ||
+                        //     !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
+                        //     routineRev.Configuration.Schedule == null )
+                        // {
+                        //     continue;
+                        // }
 
                         // Check if the job already exists and if it should be cancelled due 
                         // to a new configuration on the API
@@ -184,7 +184,7 @@ namespace Cognite.Simulator.Utils
                                     Schedule = schedule,
                                     TokenSource = new CancellationTokenSource(),
                                     CreatedTime = routineRev.CreatedTime,
-                                    ConfigState = configState,
+                                    // ConfigState = configState,
                                     RoutineRevision = routineRev,
                                 };
                                 _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
@@ -247,10 +247,10 @@ namespace Cognite.Simulator.Utils
                         _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
                         break;
                     }
-                    bool calcExists = await _configLib
-                        .VerifyLocalConfigurationState(job.ConfigState, routineRev, mainToken)
+                    bool revisionExists = await _configLib
+                        .VerifyInMemoryCache(routineRev, mainToken)
                         .ConfigureAwait(false);
-                    if (!calcExists)
+                    if (!revisionExists)
                     {
                         _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
                         break;
