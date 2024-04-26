@@ -152,12 +152,11 @@ namespace Cognite.Simulator.Utils
                         // );
 
                         // Check if the configuration has a schedule for this connector.
-                        // if (configState == null ||
-                        //     !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                        //     routineRev.Configuration.Schedule == null )
-                        // {
-                        //     continue;
-                        // }
+                        if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
+                            routineRev.Configuration.Schedule == null )
+                        {
+                            continue;
+                        }
 
                         // Check if the job already exists and if it should be cancelled due 
                         // to a new configuration on the API
