@@ -194,7 +194,7 @@ namespace Cognite.Simulator.Utils
                     var runId = e.Run.Id;
                     var startTime = DateTime.UtcNow;
                     T modelState = null;
-                    V calcObj = null;
+                    V routineRev = null;
                     bool skipped = false;
 
                     var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
@@ -202,12 +202,12 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, calcObj) = ValidateEventMetadata(e, connectorIdList);
-                            if (calcObj == null || !connectorIdList.Contains(calcObj.SimulatorIntegrationExternalId) )
+                            (modelState, routineRev) = ValidateEventMetadata(e, connectorIdList);
+                            if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
-                                calcObj?.SimulatorIntegrationExternalId);
+                                routineRev?.SimulatorIntegrationExternalId);
                                 skipped = true;
                                 continue;
                             }
@@ -215,7 +215,7 @@ namespace Cognite.Simulator.Utils
                             var metadata = new Dictionary<string, string>();
                             InitSimulationEventMetadata(
                                 modelState,
-                                calcObj,
+                                routineRev,
                                 metadata);
                             PublishSimulationRunStatus("RUNNING_CALCULATION", token);
 
@@ -223,7 +223,7 @@ namespace Cognite.Simulator.Utils
                                 e,
                                 startTime,
                                 modelState,
-                                calcObj,
+                                routineRev,
                                 metadata,
                                 token)
                                 .ConfigureAwait(false);
