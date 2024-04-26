@@ -129,7 +129,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
-                        Limit = 10,
+                        Limit = 20,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
