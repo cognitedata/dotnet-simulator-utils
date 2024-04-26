@@ -383,13 +383,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf, 
             ILogger<RoutineLibraryTest> logger) : 
             base(
-                new FileLibraryConfig
+                new RoutineLibraryConfig
                 {
-                    FilesTable = "ConfigurationFiles",
-                    LibraryId = "ConfigurationState",
-                    LibraryTable = "Library",
                     LibraryUpdateInterval = 2, // Update every 2 seconds
-                    StateStoreInterval = 2, // Save state every 2 seconds
                 },
                 new List<SimulatorConfig>
                 {

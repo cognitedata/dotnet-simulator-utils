@@ -80,6 +80,16 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
+    /// Represents configuration for a local routine library. Used to configure <seealso cref="RoutineLibraryBase{V}"/>
+    /// </summary>
+    public class RoutineLibraryConfig {
+        /// <summary>
+        /// Interval for fetching new data from CDF and updating the library
+        /// </summary>
+        public int LibraryUpdateInterval { get; set; } = 5;
+    }
+
+    /// <summary>
     /// Represents the configuration for connectors. This defines basic
     /// connector properties such as name and intervals for status report and
     /// for fetching events
@@ -165,27 +175,6 @@ namespace Cognite.Simulator.Utils
         /// Configuration for the simulator API logger.
         /// </summary>
         public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
-    }
-
-    /// <summary>
-    /// Staging area configuration
-    /// </summary>
-    public class StagingConfig
-    {
-        /// <summary>
-        /// Whether or not to enable the staging area
-        /// </summary>
-        public bool Enabled { get; set; } = true;
-        
-        /// <summary>
-        /// Name of the database to be used
-        /// </summary>
-        public string Database { get; set; } = "SIMCONFIG";
-        
-        /// <summary>
-        /// Name of the table to be used
-        /// </summary>
-        public string Table { get; set; }
     }
 
     /// <summary>

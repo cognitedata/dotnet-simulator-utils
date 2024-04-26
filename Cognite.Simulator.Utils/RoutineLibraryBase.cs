@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
         public Dictionary<string, V> RoutineRevisions { get; }
 
         private readonly ILogger _logger;
-        private readonly FileLibraryConfig _config;
+        private readonly RoutineLibraryConfig _config;
 
         private IList<SimulatorConfig> _simulators;
         /// <inheritdoc/>
@@ -39,7 +39,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
         public RoutineLibraryBase(
-            FileLibraryConfig config,
+            RoutineLibraryConfig config,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ILogger logger)

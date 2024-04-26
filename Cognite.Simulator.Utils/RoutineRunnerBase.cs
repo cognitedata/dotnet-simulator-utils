@@ -77,7 +77,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="e">Simulation event</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state</param>
-        /// <param name="configState">Configuration state</param>
         /// <param name="routineRevision">Routine revision object</param>
         /// <param name="samplingRange">Input sampling range</param>
         /// <param name="token">Cancellation token</param>
