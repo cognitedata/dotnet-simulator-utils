@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
             string routineRevisionExternalId
         )
         {
-            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId);
+            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId).OrderByDescending(c => c.CreatedTime);
             if (revisions.Any())
             {
                 return revisions.First();

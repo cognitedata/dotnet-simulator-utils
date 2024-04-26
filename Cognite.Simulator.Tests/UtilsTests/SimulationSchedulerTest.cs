@@ -175,8 +175,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 configLib, 
                 logger,
                 simulators,
-                timeManager,
-                cdf)
+                cdf,
+                timeManager)
         {
         }
     }

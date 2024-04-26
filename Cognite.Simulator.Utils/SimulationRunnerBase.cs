@@ -202,7 +202,7 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, routineRev) = ValidateEventMetadata(e, connectorIdList);
+                            (modelState, routineRev) = GetModelAndRoutine(e, connectorIdList);
                             if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
@@ -262,25 +262,24 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, V) ValidateEventMetadata(SimulationRunEvent simEv, List<string> integrations)
+        private (T, V) GetModelAndRoutine(SimulationRunEvent simEv, List<string> integrations)
         {
-            string modelName = simEv.Run.ModelName;
-            string simulator = simEv.Run.SimulatorName;
+            string modelRevExternalId = simEv.Run.ModelRevisionExternalId;
             string calcTypeUserDefined = simEv.Run.RoutineName;
             string eventId = simEv.Run.Id.ToString();
          
-            var model = ModelLibrary.GetLatestModelVersion(simulator, modelName);
+            var model = ModelLibrary.GetModelRevision(modelRevExternalId);
             if (model == null)
             {
                 _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
-                throw new SimulationException($"Could not find a model file for {modelName}");
+                throw new SimulationException($"Could not find a model file for {modelRevExternalId}");
             }
             V calcConfig = RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
 
             if (calcConfig == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
-                throw new SimulationException($"Could not find a routine revision for model: {modelName} routineRevision: {calcTypeUserDefined}");
+                throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {calcTypeUserDefined}");
             }
 
             if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))

@@ -100,15 +100,15 @@ namespace Cognite.Simulator.Utils
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
         /// <param name="simulators">List of simulators</param>
-        /// <param name="timeManager">Time manager</param>
+        /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IRoutineProvider<V> configLib,
             ILogger logger,
             IEnumerable<SimulatorConfig> simulators,
-            ITimeManager timeManager,
-            CogniteDestination cdf)
+            CogniteDestination cdf,
+            ITimeManager timeManager = null)
         {
             _configLib = configLib;
             _logger = logger;

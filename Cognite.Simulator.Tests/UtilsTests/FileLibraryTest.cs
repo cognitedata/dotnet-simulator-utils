@@ -91,7 +91,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.False(string.IsNullOrEmpty(v2.FilePath));
                 Assert.True(System.IO.File.Exists(v2.FilePath));
 
-                var latest = lib.GetLatestModelVersion(v1.Source, v1.ModelName);
+                var latest = lib.GetModelRevision($"{SeedData.TestModelExternalId}-2");
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 

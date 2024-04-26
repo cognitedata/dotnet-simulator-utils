@@ -53,25 +53,36 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <inheritdoc/>
-        public T GetLatestModelVersion(string simulator, string modelName)
+        public T GetModelRevision(string modelRevisionExternalId)
         {
-            var modelVersions = GetAllModelVersions(simulator, modelName);
-            if (modelVersions.Any())
-            {
-                return modelVersions.First();
-            }
-            return null;
+            var modelVersions = State.Values
+                .Where(s => s.ExternalId == modelRevisionExternalId
+                    && s.Version > 0
+                    && !string.IsNullOrEmpty(s.FilePath))
+                .OrderByDescending(s => s.CreatedTime);
+            return modelVersions.FirstOrDefault();
+            // var modelVersions = GetAllModelVersions(simulator, modelName);
+            // if (modelVersions.Any())
+            // {
+            //     return modelVersions.First();
+            // }
+            // return null;
         }
 
         /// <inheritdoc/>
-        public IEnumerable<T> GetAllModelVersions(string simulator, string modelName)
+        public IEnumerable<T> GetAllModelRevisions(string modelExternalId)
         {
+            // var modelVersions = State.Values
+            //     .Where(s => s.ModelName == modelName
+            //         && s.Source == simulator
+            //         && s.Version > 0
+            //         && !string.IsNullOrEmpty(s.FilePath))
+            //     .OrderByDescending(s => s.Version);
             var modelVersions = State.Values
-                .Where(s => s.ModelName == modelName
-                    && s.Source == simulator
+                .Where(s => s.ModelExternalId == modelExternalId
                     && s.Version > 0
                     && !string.IsNullOrEmpty(s.FilePath))
-                .OrderByDescending(s => s.Version);
+                .OrderByDescending(s => s.CreatedTime);
             return modelVersions;
         }
 
@@ -79,20 +90,18 @@ namespace Cognite.Simulator.Utils
         /// Utility function to remove the local copies (files) of all model versions
         /// except the latest one
         /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
-        protected void RemoveLocalFiles(string simulator, string modelName)
+        /// <param name="modelExternalId">Model external id</param>
+        protected void RemoveLocalFiles(string modelExternalId)
         {
             var modelVersionsAll = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath)
-                    && (f.IsExtracted || !f.CanRead)
-                    && f.Source == simulator)
+                    && (f.IsExtracted || !f.CanRead))
                 .ToList();
             var currentModelVersions = modelVersionsAll
-                .Where(f => f.ModelName == modelName)
-                .OrderByDescending(f => f.Version);
+                .Where(f => f.ModelExternalId == modelExternalId)
+                .OrderByDescending(f => f.CreatedTime);
             var otherModelVersionsMap = modelVersionsAll
-                .Where(f => f.ModelName != modelName)
+                .Where(f => f.ModelExternalId != modelExternalId)
                 .ToDictionarySafe(f => f.FilePath, f => true);
             var latestVersion = currentModelVersions.FirstOrDefault();
             var modelVersionsToDelete = currentModelVersions.Skip(1);
@@ -128,7 +137,7 @@ namespace Cognite.Simulator.Utils
             }
             try
             {
-                var localRevisions = GetAllModelVersions(state.Source, state.ModelName);
+                var localRevisions = GetAllModelRevisions(state.ModelExternalId);
                 if (localRevisions.Any())
                 {
                     var modelRevisionsInCdfAllRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
@@ -177,7 +186,7 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// This method find all model versions that have not been processed and calls
-        /// the <see cref="ExtractModelInformation(IEnumerable{T}, CancellationToken)"/> method 
+        /// the <see cref="ExtractModelInformation(T, CancellationToken)"/> method 
         /// to process the models.  
         /// </summary>
         /// <param name="token">Cancellation token</param>
@@ -187,7 +196,7 @@ namespace Cognite.Simulator.Utils
             // The models are grouped by (simulator, model name)
             var modelGroups = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
-                .GroupBy(f => new { f.Source, f.ModelName });
+                .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
                 InitModelParsingInfo(group);
@@ -214,7 +223,7 @@ namespace Cognite.Simulator.Utils
 
                 // Keep only a local copy of the latest model version. After the data is extracted,
                 // not need to keep a local copy of versions that are not used in calculations
-                RemoveLocalFiles(group.Key.Source, group.Key.ModelName);
+                RemoveLocalFiles(group.Key.ModelExternalId);
             }
         }
 
@@ -280,20 +289,18 @@ namespace Cognite.Simulator.Utils
     public interface IModelProvider<T>
     {
         /// <summary>
-        /// Returns the state object of the latest version of the given model
+        /// Returns the state object of the given version of the given model
         /// </summary>
-        /// <param name="simulator">Simulator</param>
-        /// <param name="modelName">Model Name</param>
+        /// <param name="modelRevisionExternalId">Model revision external id</param>
         /// <returns>State object</returns>
-        T GetLatestModelVersion(string simulator, string modelName);
+        T GetModelRevision(string modelRevisionExternalId);
 
         /// <summary>
         /// Returns the state objects of all the versions of the given model
         /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <param name="modelName">Model name</param>
+        /// <param name="modelExternalId">Model external id</param>
         /// <returns>List of state objects</returns>
-        IEnumerable<T> GetAllModelVersions(string simulator, string modelName);
+        IEnumerable<T> GetAllModelRevisions(string modelExternalId);
     }
 
     /// <summary>
