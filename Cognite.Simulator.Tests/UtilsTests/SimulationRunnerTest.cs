@@ -143,18 +143,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 
-                // Assert.NotEmpty(configLib.State);
-                // var configState = Assert.Contains(
-                //     revision.Id.ToString(), // This simulator configuration should exist in CDF
-                //     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
                 var routineRevision = configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
 
-                var outTsIds = configObj.Outputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
+                var outTsIds = configObj.Outputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(outTsIds);
-                var inTsIds = configObj.Inputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
+                var inTsIds = configObj.Inputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
 
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
@@ -483,7 +479,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
-            // TestConfigurationState configState,
             SimulatorRoutineRevision configObj,
             Dictionary<string, string> metadata)
         {

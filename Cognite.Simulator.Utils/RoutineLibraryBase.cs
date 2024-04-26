@@ -17,8 +17,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="V">Routine revision object type.</typeparam>
     public abstract class RoutineLibraryBase<V> : IRoutineProvider<V>
-        // where T : FileState
-        // where U : FileStatePoco
         where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
@@ -43,7 +41,6 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ILogger logger)
-            // base(config, logger, store)
         {
             if (cdf == null)
             {
@@ -59,49 +56,12 @@ namespace Cognite.Simulator.Utils
         
 
         /// <summary>
-        /// Initializes the local entity library. Finds entities in CDF and restores the state.
+        /// Initializes the routine library. Finds entities in CDF and caches them in memory.
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
-        {
-
-            // if (_store != null)
-            // {
-            //     await _store.RestoreExtractionState(
-            //         new Dictionary<string, BaseExtractionState>() { { _config.LibraryId, _libState } },
-            //         _config.LibraryTable,
-            //         true,
-            //         token).ConfigureAwait(false);
-            // }
-            
+        {            
             await ReadRoutineRevisions(token).ConfigureAwait(false);
-
-            // if (_store != null)
-            // {
-            //     await _store.RestoreExtractionState<U, T>(
-            //         State,
-            //         _config.FilesTable,
-            //         (state, poco) =>
-            //         {
-            //             state.Init(poco);
-            //         },
-            //         token).ConfigureAwait(false);
-            //     if (_store is LiteDBStateStore ldbStore)
-            //     {
-            //         HashSet<string> idsToKeep = new HashSet<string>(State.Select(s => s.Value.Id));
-            //         var col = ldbStore.Database.GetCollection<FileStatePoco>(_config.FilesTable);
-            //         var stateToDelete = col
-            //             .Find(s => !idsToKeep.Contains(s.Id))
-            //             .ToList();
-            //         if (stateToDelete.Any())
-            //         {
-            //             foreach(var state in stateToDelete)
-            //             {
-            //                 col.Delete(state.Id);
-            //             }
-            //         }
-            //     }
-            // }
         }
 
         /// <summary>
@@ -144,37 +104,14 @@ namespace Cognite.Simulator.Utils
             return calcConfig;
         }
 
-        // /// <inheritdoc/>
-        // public T GetSimulationConfigurationState(
-        //     string routineRevisionExternalId)
-        // {
-        //     var calcConfigs = SimulationConfigurations
-        //         .Where(c => c.Value.ExternalId == routineRevisionExternalId);
-
-        //     // if (calcConfigs.Any())
-        //     // {
-        //     //     var id = calcConfigs.First().Key;
-        //     //     if (State.TryGetValue(id, out var configState))
-        //     //     {
-        //     //         return configState;
-        //     //     }
-        //     // }
-
-        //     (_, T newConfigState) = TryReadRoutineRevisionFromCdf(routineRevisionExternalId).GetAwaiter().GetResult();
-
-        //     return newConfigState;
-        // }
-
-        /// <inheritdoc/>
+        /// <summary>
+        /// Verifies that the routine revision exists in CDF.
+        /// In case it does not, should remove from memory.
+        /// </summary>
         public async Task<bool> VerifyInMemoryCache(
-            // FileState state,
             V config,
             CancellationToken token)
         {
-            // if (state == null)
-            // {
-            //     throw new ArgumentNullException(nameof(state));
-            // }
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));

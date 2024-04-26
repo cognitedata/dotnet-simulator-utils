@@ -118,7 +118,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestConfigurationLibrary()
+        public async Task TestRoutineLibrary()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -157,13 +157,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-            //     Assert.NotEmpty(lib.State);
-            //    var state = Assert.Contains(
-            //         revision.Id.ToString(), // This simulator configuration should exist in CDF
-            //         (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-            //     Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-            //     Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
-
                 var simConf = lib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(simConf);
                 Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
@@ -174,9 +167,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.NotNull(input.SourceExternalId);
                     Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
-                // var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
-                // Assert.NotNull(simConfState);
-                // Assert.Equal(state, simConfState);
             }
             finally
             {
@@ -189,7 +179,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestConfigurationLibraryWithExtendedIO()
+        public async Task TestRoutineLibraryWithExtendedIO()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -233,13 +223,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                // Assert.NotEmpty(lib.State);
-                // var state = Assert.Contains(
-                //     revision.Id.ToString(), // This simulator configuration should exist in CDF
-                //     (IReadOnlyDictionary<string, TestConfigurationState>)lib.State);
-                // Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
-                // Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
-
                 var routineRevision = lib.GetRoutineRevision(revision.ExternalId);
                 var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
@@ -256,10 +239,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.NotNull(input.Name);
                     Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
                 }
-
-                // var simConfState = lib.GetSimulationConfigurationState(revision.ExternalId);
-                // Assert.NotNull(simConfState);
-                // Assert.Equivalent(state, simConfState, true);
             }
             finally
             {
@@ -398,20 +377,5 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf, logger)
         {
         }
-
-        // protected override TestConfigurationState StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
-        // {
-        //     return new TestConfigurationState(routineRevision.Id.ToString())
-        //     {
-        //         CdfId = routineRevision.Id,
-        //         DataSetId = routineRevision.DataSetId,
-        //         CreatedTime = routineRevision.CreatedTime,
-        //         UpdatedTime = routineRevision.CreatedTime,
-        //         ModelName = routineRevision.ModelExternalId,
-        //         ModelExternalId = routineRevision.ModelExternalId,
-        //         Source = routineRevision.SimulatorExternalId,
-        //         ExternalId = routineRevision.ExternalId,
-        //     };
-        // }
     }
 }

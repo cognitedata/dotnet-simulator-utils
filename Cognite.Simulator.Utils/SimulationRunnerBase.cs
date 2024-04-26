@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulation configuration files
         /// </summary>
-        protected IRoutineProvider<V> ConfigurationLibrary { get; }
+        protected IRoutineProvider<V> RoutineLibrary { get; }
 
         private long? simulatorIntegrationId;
 
@@ -56,14 +56,14 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulators">List of simulators</param>
         /// <param name="cdf">CDF client</param>
         /// <param name="modelLibrary">Model library</param>
-        /// <param name="configLibrary">Configuration library</param>
+        /// <param name="routineLibrary">Configuration library</param>
         /// <param name="logger">Logger</param>
         public SimulationRunnerBase(
             ConnectorConfig connectorConfig,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary,
-            IRoutineProvider<V> configLibrary,
+            IRoutineProvider<V> routineLibrary,
             ILogger logger)
         {
             if (cdf == null)
@@ -78,7 +78,7 @@ namespace Cognite.Simulator.Utils
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
             ModelLibrary = modelLibrary;
-            ConfigurationLibrary = configLibrary;
+            RoutineLibrary = routineLibrary;
         }
 
         private async Task<SimulationRun> UpdateSimulationRunStatus(
@@ -276,7 +276,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
             // U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
-            V calcConfig = ConfigurationLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
+            V calcConfig = RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
 
             if (calcConfig == null)
             {
