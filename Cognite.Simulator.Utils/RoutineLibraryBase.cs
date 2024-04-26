@@ -14,18 +14,15 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Represents a local routine revision library.
     /// It fetches all routine revisions from CDF and stores them in memory.
-    /// It also stores the state of the routine revisions (e.g. scheduling params) in a local state store (LocalLibrary).
     /// </summary>
-    /// <typeparam name="V">Configuration object type. The contents of the routine revision
-    /// to an object of this type. properties of this object should use pascal case while the JSON
-    /// properties should be lower camel case</typeparam>
-    public abstract class ConfigurationLibraryBase<V> : IConfigurationProvider<V>
+    /// <typeparam name="V">Routine revision object type.</typeparam>
+    public abstract class RoutineLibraryBase<V> : IRoutineProvider<V>
         // where T : FileState
         // where U : FileStatePoco
         where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
-        public Dictionary<string, V> SimulationConfigurations { get; }
+        public Dictionary<string, V> RoutineRevisions { get; }
 
         private readonly ILogger _logger;
         private readonly FileLibraryConfig _config;
@@ -41,7 +38,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulators">Dictionary of simulators</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
-        public ConfigurationLibraryBase(
+        public RoutineLibraryBase(
             FileLibraryConfig config,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
@@ -56,7 +53,7 @@ namespace Cognite.Simulator.Utils
             _config = config;
 
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            SimulationConfigurations = new Dictionary<string, V>();
+            RoutineRevisions = new Dictionary<string, V>();
             _simulators = simulators;
         }
         
@@ -77,7 +74,7 @@ namespace Cognite.Simulator.Utils
             //         token).ConfigureAwait(false);
             // }
             
-            await ReadConfigurations(token).ConfigureAwait(false);
+            await ReadRoutineRevisions(token).ConfigureAwait(false);
 
             // if (_store != null)
             // {
@@ -132,14 +129,14 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Looks for the routine revision in the memory with the given external id
         /// </summary>
-        public V GetSimulationConfiguration(
+        public V GetRoutineRevision(
             string routineRevisionExternalId
-            )
+        )
         {
-            var calcConfigs = SimulationConfigurations.Values.Where(c => c.ExternalId == routineRevisionExternalId);
-            if (calcConfigs.Any())
+            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId);
+            if (revisions.Any())
             {
-                return calcConfigs.First();
+                return revisions.First();
             }
 
             V calcConfig = TryReadRoutineRevisionFromCdf(routineRevisionExternalId).GetAwaiter().GetResult();
@@ -196,7 +193,7 @@ namespace Cognite.Simulator.Utils
                 config.ModelExternalId,
                 config.ExternalId);
             // State.Remove(state.Id);
-            SimulationConfigurations.Remove(config.Id.ToString());
+            RoutineRevisions.Remove(config.Id.ToString());
             // await RemoveStates(new List<FileState> { state }, token).ConfigureAwait(false);
             return false;
         }
@@ -226,7 +223,7 @@ namespace Cognite.Simulator.Utils
                 //     );
 
 
-                await ReadConfigurations(token).ConfigureAwait(false);
+                await ReadRoutineRevisions(token).ConfigureAwait(false);
 
                 // if (State.Any())
                 // {
@@ -274,16 +271,16 @@ namespace Cognite.Simulator.Utils
         }
 
         private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
-            V localConfiguration = null;
+            // V localConfiguration = null;
             // T rState = null;
-            if (routineRev.Script == null)
-            {
-                _logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
-                return localConfiguration;
-            }
+            // if (routineRev.Script == null)
+            // {
+            //     _logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
+            //     return localConfiguration;
+            // }
             
-            localConfiguration = LocalConfigurationFromRoutine(routineRev);
-            SimulationConfigurations.Add(routineRev.Id.ToString(), localConfiguration);
+            V localConfiguration = LocalConfigurationFromRoutine(routineRev);
+            RoutineRevisions.Add(routineRev.Id.ToString(), localConfiguration);
 
             // rState = StateFromRoutineRevision(routineRev);
             // if (rState != null)
@@ -298,7 +295,7 @@ namespace Cognite.Simulator.Utils
             return localConfiguration;
         }
 
-        private async Task ReadConfigurations(CancellationToken token)
+        private async Task ReadRoutineRevisions(CancellationToken token)
         {
             var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
                 new SimulatorRoutineRevisionQuery()
@@ -319,7 +316,7 @@ namespace Cognite.Simulator.Utils
 
             foreach (var routineRev in routineRevisions)
             {
-                if (!SimulationConfigurations.ContainsKey(routineRev.Id.ToString()))
+                if (!RoutineRevisions.ContainsKey(routineRev.Id.ToString()))
                 {
                     ReadAndSaveRoutineRevision(routineRev);
                 }
@@ -335,15 +332,15 @@ namespace Cognite.Simulator.Utils
 
 
     /// <summary>
-    /// Interface for libraries that can provide configuration information
+    /// Interface for libraries that can provide routine configuration information
     /// </summary>
     /// <typeparam name="V">Configuration object type</typeparam>
-    public interface IConfigurationProvider<V>
+    public interface IRoutineProvider<V>
     {
         /// <summary>
-        /// Dictionary of simulation configurations. The key is the file external ID
+        /// Dictionary of simulation routines. The key is the routine revision id
         /// </summary>
-        Dictionary<string, V> SimulationConfigurations { get; }
+        Dictionary<string, V> RoutineRevisions { get; }
 
         /// <summary>
         /// Initializes the library
@@ -364,7 +361,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="routinerRevisionExternalId">Simulator name</param>
         /// <returns>Simulation configuration state object</returns>
-        V GetSimulationConfiguration(
+        V GetRoutineRevision(
             string routinerRevisionExternalId);
 
         /// <summary>

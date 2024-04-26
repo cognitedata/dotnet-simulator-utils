@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary, 
-            IConfigurationProvider<V> configLibrary,
+            IRoutineProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
             ILogger logger) : 
             base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger)

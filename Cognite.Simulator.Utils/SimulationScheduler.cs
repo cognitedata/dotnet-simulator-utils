@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _config;
-        private readonly IConfigurationProvider<V> _configLib;
+        private readonly IRoutineProvider<V> _configLib;
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
-            IConfigurationProvider<V> configLib,
+            IRoutineProvider<V> configLib,
             ILogger logger,
             IEnumerable<SimulatorConfig> simulators,
             ITimeManager timeManager,
@@ -141,11 +141,11 @@ namespace Cognite.Simulator.Utils
                 while (!token.IsCancellationRequested)
                 {
                     // Check for new schedules
-                    var configurations = _configLib.SimulationConfigurations.Values
+                    var routineRevisions = _configLib.RoutineRevisions.Values
                         .GroupBy(c => c.RoutineExternalId)
                         .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
                     
-                    foreach (var routineRev in configurations)
+                    foreach (var routineRev in routineRevisions)
                     {
                         // U configState = _configLib.GetSimulationConfigurationState(
                         //     routineRev.ExternalId
@@ -171,7 +171,7 @@ namespace Cognite.Simulator.Utils
                             }
                         }
 
-                        if ( !scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var existingJob)) {
+                        if (!scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var existingJob)) {
                             try
                             {
                                 if (routineRev.Configuration.Schedule.Enabled == false)

@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
-            services.AddSingleton<ConfigurationLibraryTest>();
+            services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton(new ConnectorConfig
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,
@@ -91,7 +91,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             try
             {
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
-                var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                var configLib = provider.GetRequiredService<RoutineLibraryTest>();
                 var scheduler = provider.GetRequiredService<SampleSimulationScheduler>();
 
                 await configLib.Init(source.Token).ConfigureAwait(false);
@@ -107,7 +107,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // var configState = Assert.Contains(
                 //     revision.Id.ToString(),
                 //     (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
-                var configObj = configLib.GetSimulationConfiguration(revision.ExternalId);
+                var configObj = configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(configObj);
 
                 // Should have created at least one simulation event ready to run
@@ -168,7 +168,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         SimulationSchedulerBase<TestConfigurationState, SimulatorRoutineRevision>
     {
         public SampleSimulationScheduler(
-            ConfigurationLibraryTest configLib, 
+            RoutineLibraryTest configLib, 
             ConnectorConfig config,
             ILogger<SampleSimulationScheduler> logger, 
             CogniteDestination cdf,

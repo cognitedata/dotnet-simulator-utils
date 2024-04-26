@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulation configuration files
         /// </summary>
-        protected IConfigurationProvider<V> ConfigurationLibrary { get; }
+        protected IRoutineProvider<V> ConfigurationLibrary { get; }
 
         private long? simulatorIntegrationId;
 
@@ -63,7 +63,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary,
-            IConfigurationProvider<V> configLibrary,
+            IRoutineProvider<V> configLibrary,
             ILogger logger)
         {
             if (cdf == null)
@@ -276,7 +276,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
             // U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
-            V calcConfig = ConfigurationLibrary.GetSimulationConfiguration(simEv.Run.RoutineRevisionExternalId);
+            V calcConfig = ConfigurationLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
 
             if (calcConfig == null)
             {

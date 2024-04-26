@@ -123,7 +123,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
-            services.AddSingleton<ConfigurationLibraryTest>();
+            services.AddSingleton<RoutineLibraryTest>();
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
-                var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                var lib = provider.GetRequiredService<RoutineLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
@@ -164,7 +164,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             //     Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
             //     Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
-                var simConf = lib.GetSimulationConfiguration(revision.ExternalId);
+                var simConf = lib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(simConf);
                 Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
@@ -194,7 +194,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
-            services.AddSingleton<ConfigurationLibraryTest>();
+            services.AddSingleton<RoutineLibraryTest>();
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
@@ -220,7 +220,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
 
-                var lib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                var lib = provider.GetRequiredService<RoutineLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 
 
@@ -240,7 +240,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Assert.Equal(SeedData.TestSimulatorExternalId, state.Source);
                 // Assert.Equal(SeedData.TestModelExternalId, state.ModelName);
 
-                var routineRevision = lib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = lib.GetRoutineRevision(revision.ExternalId);
                 var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
 
@@ -376,12 +376,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
-    public class ConfigurationLibraryTest :
-        ConfigurationLibraryBase<SimulatorRoutineRevision>
+    public class RoutineLibraryTest :
+        RoutineLibraryBase<SimulatorRoutineRevision>
     {
-        public ConfigurationLibraryTest(
+        public RoutineLibraryTest(
             CogniteDestination cdf, 
-            ILogger<ConfigurationLibraryTest> logger) : 
+            ILogger<RoutineLibraryTest> logger) : 
             base(
                 new FileLibraryConfig
                 {
