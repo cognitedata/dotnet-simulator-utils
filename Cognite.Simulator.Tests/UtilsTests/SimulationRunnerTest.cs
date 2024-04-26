@@ -90,7 +90,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
-            services.AddSingleton<ConfigurationLibraryTest>();
+            services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton<SampleSimulatorClient>();
             services.AddSingleton(new ConnectorConfig
@@ -127,7 +127,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
 
                 var modelLib = provider.GetRequiredService<ModeLibraryTest>();
-                var configLib = provider.GetRequiredService<ConfigurationLibraryTest>();
+                var configLib = provider.GetRequiredService<RoutineLibraryTest>();
                 var runner = provider.GetRequiredService<SampleSimulationRunner>();
                 var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
@@ -143,18 +143,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
 
-                Assert.NotEmpty(configLib.State);
-                var configState = Assert.Contains(
-                    revision.Id.ToString(), // This simulator configuration should exist in CDF
-                    (IReadOnlyDictionary<string, TestConfigurationState>)configLib.State);
-                var routineRevision = configLib.GetSimulationConfiguration(revision.ExternalId);
+                var routineRevision = configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
 
-                var outTsIds = configObj.Outputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
+                var outTsIds = configObj.Outputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(outTsIds);
-                var inTsIds = configObj.Inputs.Where(o => !String.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
+                var inTsIds = configObj.Inputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)).Select(o => o.SaveTimeseriesExternalId).ToList();
                 tsToDelete.AddRange(inTsIds);
 
                 var runs = await cdf.Alpha.Simulators.CreateSimulationRunsAsync(
@@ -452,7 +448,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public SampleSimulationRunner(
             CogniteDestination cdf,
             ModeLibraryTest modelLibrary,
-            ConfigurationLibraryTest configLibrary,
+            RoutineLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
             Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
@@ -483,7 +479,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         protected override void InitSimulationEventMetadata(
             TestFileState modelState,
-            TestConfigurationState configState,
             SimulatorRoutineRevision configObj,
             Dictionary<string, string> metadata)
         {
