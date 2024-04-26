@@ -116,62 +116,43 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(config));
             }
-            var revisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
-                new List<CogniteSdk.Identity> { new CogniteSdk.Identity(config.Id) },
-                token
-            ).ConfigureAwait(false);
-            if (revisionRes.Count() == 1)
-            {
-                return true;
+
+            bool exists = false;
+
+            try {
+                var revisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
+                    new List<CogniteSdk.Identity> { new CogniteSdk.Identity(config.Id) },
+                    token
+                ).ConfigureAwait(false);
+                exists = revisionRes.Count() == 1;
+            } catch (CogniteException e) {
+                _logger.LogError(e, "Cannot find routine revision {Id} on remote", config.Id);
             }
 
-            _logger.LogWarning("Removing {Model} - {Simulation} routine revision, not found in CDF",
-                // state.ModelName,
-                config.ModelExternalId,
-                config.ExternalId);
-            // State.Remove(state.Id);
-            RoutineRevisions.Remove(config.Id.ToString());
-            // await RemoveStates(new List<FileState> { state }, token).ConfigureAwait(false);
-            return false;
+            if (!exists)
+            {
+                _logger.LogWarning("Removing {Model} - {Routine} routine revision, not found in CDF",
+                    config.ModelExternalId,
+                    config.ExternalId);
+                RoutineRevisions.Remove(config.Id.ToString());
+            }
+            return exists;
         }
 
-        // /// <summary>
-        // /// Fetch routine revisions from CDF and store them in memory
-        // /// </summary>
-        // /// <param name="token">Cancellation token</param>
-        // protected void FetchRemoteState(CancellationToken token)
-        // {
-        //     Task.Run(() => ReadConfigurations(token), token).Wait(token);
-        // }
-
-         /// <summary>
-        /// Periodically searches for entities CDF, in case new ones are found, store locally.
+        /// <summary>
+        /// Periodically searches for routine revisions CDF, in case new ones are found, store locally.
         /// Entities are saved with the internal CDF id as name
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        private async Task FetchAndProcessRemoteState(CancellationToken token)
+        private async Task FetchAndProcessRemoteRoutines(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
-                // string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
-                // Logger.LogDebug("Updating entity library. There are currently {Num} entities. Extracted range: {TimeRange}",
-                //     State.Count,
-                //     timeRange
-                //     );
+                _logger.LogDebug("Updating routine revisions library. There are currently {Num} entities.",
+                    RoutineRevisions.Count);
 
 
                 await ReadRoutineRevisions(token).ConfigureAwait(false);
-
-                // if (State.Any())
-                // {
-                //     var maxUpdatedMs = State
-                //         .Select(s => s.Value.UpdatedTime)
-                //         .Max();
-                //     var maxUpdatedDt = CogniteTime.FromUnixTimeMilliseconds(maxUpdatedMs);
-                //     _libState.UpdateDestinationRange(
-                //         maxUpdatedDt,
-                //         maxUpdatedDt);
-                // }
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.LibraryUpdateInterval), token)
@@ -187,17 +168,8 @@ namespace Cognite.Simulator.Utils
         /// <returns>List of tasks</returns>
         public IEnumerable<Task> GetRunTasks(CancellationToken token)
         {
-            return new List<Task> { FetchAndProcessRemoteState(token) };
+            return new List<Task> { FetchAndProcessRemoteRoutines(token) };
         }
-
-
-        // /// <summary>
-        // /// Convert a routine revision to a state object of type <typeparamref name="T"/>
-        // /// </summary>
-        // protected virtual T StateFromRoutineRevision(SimulatorRoutineRevision routineRevision)
-        // {
-        //     throw new NotImplementedException();
-        // }
 
         /// <summary>
         /// Convert a routine revision to a configuration object of type <typeparamref name="V"/>
@@ -208,27 +180,10 @@ namespace Cognite.Simulator.Utils
         }
 
         private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
-            // V localConfiguration = null;
-            // T rState = null;
-            // if (routineRev.Script == null)
-            // {
-            //     _logger.LogWarning("Skipping routine revision {Id} because it has no routine", routineRev.Id);
-            //     return localConfiguration;
-            // }
             
             V localConfiguration = LocalConfigurationFromRoutine(routineRev);
             RoutineRevisions.Add(routineRev.Id.ToString(), localConfiguration);
 
-            // rState = StateFromRoutineRevision(routineRev);
-            // if (rState != null)
-            // {   
-            //     var revisionId = routineRev.Id.ToString();
-            //     if (!State.ContainsKey(revisionId))
-            //     {
-            //         // If the revision does not exist locally, add it to the state store
-            //         State.Add(revisionId, rState);
-            //     }
-            // }
             return localConfiguration;
         }
 
@@ -237,18 +192,16 @@ namespace Cognite.Simulator.Utils
             var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
                 new SimulatorRoutineRevisionQuery()
                 {
+                    // TODO we should only fetch latest revisions here
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
-                        // TODO filter by created time, simulatorIntegrationExternalIds
-                        // CreatedTime = new CogniteSdk.TimeRange() {  Min = _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() + 1 },
+                        // TODO filter by simulatorIntegrationExternalIds
                         SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
                     }
                 },
                 token
             ).ConfigureAwait(false);
 
-            // TODO: what do we do with the timerange now that we don't use FileLibrary?
-            // TODO: we need our own _libState
             var routineRevisions = routineRevisionsRes.Items;
 
             foreach (var routineRev in routineRevisions)
@@ -259,17 +212,12 @@ namespace Cognite.Simulator.Utils
                 }
             }
         }
-
-        // public Task StoreLibraryState(CancellationToken token)
-        // {
-        //     throw new NotImplementedException();
-        // }
     }
 
 
 
     /// <summary>
-    /// Interface for libraries that can provide routine configuration information
+    /// Interface for library that can provide routine configuration information
     /// </summary>
     /// <typeparam name="V">Configuration object type</typeparam>
     public interface IRoutineProvider<V>
@@ -283,15 +231,6 @@ namespace Cognite.Simulator.Utils
         /// Initializes the library
         /// </summary>
         Task Init(CancellationToken token);
-
-        // /// <summary>
-        // /// Get the simulator configuration state object with the given parameter
-        // /// </summary>
-        // /// <param name="routineRevisionExternalId">Routine revision external id</param>
-        // /// <returns>Simulation configuration state object</returns>
-        // T GetSimulationConfigurationState(
-        //     string routineRevisionExternalId);
-        
     
         /// <summary>
         /// Get the simulation configuration object with the given property
@@ -305,13 +244,6 @@ namespace Cognite.Simulator.Utils
         /// Get the tasks that are running in the library
         /// </summary>
         IEnumerable<Task> GetRunTasks(CancellationToken token);
-
-
-        // /// <summary>
-        // /// Persists the configuration library state from memory to the store
-        // /// </summary>
-        // /// <param name="token">Cancellation token</param>
-        // Task StoreLibraryState(CancellationToken token);
 
         /// <summary>
         /// Verify that the routine revision exists in CDF.

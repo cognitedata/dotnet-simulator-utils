@@ -275,7 +275,6 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
                 throw new SimulationException($"Could not find a model file for {modelName}");
             }
-            // U calcState = ConfigurationLibrary.GetSimulationConfigurationState(simEv.Run.RoutineRevisionExternalId);
             V calcConfig = RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
 
             if (calcConfig == null)

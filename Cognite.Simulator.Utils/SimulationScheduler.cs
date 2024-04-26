@@ -67,11 +67,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public long CreatedTime { get; set; }
 
-        // /// <summary>
-        // /// The configuration state.
-        // /// </summary>
-        // public FileState ConfigState { get; set; }
-
         /// <summary>
         /// Routine revision.
         /// </summary>
@@ -147,10 +142,6 @@ namespace Cognite.Simulator.Utils
                     
                     foreach (var routineRev in routineRevisions)
                     {
-                        // U configState = _configLib.GetSimulationConfigurationState(
-                        //     routineRev.ExternalId
-                        // );
-
                         // Check if the configuration has a schedule for this connector.
                         if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
                             routineRev.Configuration.Schedule == null )
@@ -183,7 +174,6 @@ namespace Cognite.Simulator.Utils
                                     Schedule = schedule,
                                     TokenSource = new CancellationTokenSource(),
                                     CreatedTime = routineRev.CreatedTime,
-                                    // ConfigState = configState,
                                     RoutineRevision = routineRev,
                                 };
                                 _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
