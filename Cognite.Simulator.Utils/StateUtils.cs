@@ -43,25 +43,26 @@ namespace Cognite.Simulator.Utils
         internal static async Task RemoveFileStates(
             this IExtractionStateStore store,
             string tableName,
-            IEnumerable<FileState> states,
+            IEnumerable<(FileState, bool)> states,
             CancellationToken token)
         {
             if (!states.Any())
             {
                 return;
             }
-            await store.DeleteExtractionState(states, tableName, token)
+            await store.DeleteExtractionState(states.Select(s => s.Item1), tableName, token)
                 .ConfigureAwait(false);
-            foreach (var state in states)
+            foreach (var (state, withFile) in states)
             {
-                if (state.IsInDirectory)
-                {
-                    var dirPath = Path.GetDirectoryName(state.FilePath);
-                    DeleteLocalDirectory(dirPath);
-                } else {
-                    DeleteLocalFile(state.FilePath);
-                }
-                
+                if (withFile) {
+                    if (state.IsInDirectory)
+                    {
+                        var dirPath = Path.GetDirectoryName(state.FilePath);
+                        DeleteLocalDirectory(dirPath);
+                    } else {
+                        DeleteLocalFile(state.FilePath);
+                    }
+                }   
             }
         }
 

@@ -21,18 +21,14 @@ namespace Cognite.Simulator.Utils
     /// the time range to sample data where the process is in steady state.
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
-    /// <typeparam name="U">Type of simulation configuration state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class SimulationRunnerBase<T, U, V>
+    public abstract class SimulationRunnerBase<T, V>
         where T : ModelStateBase
-        where U : FileState
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _connectorConfig;
         private readonly IList<SimulatorConfig> _simulators;
-        private readonly EventsResource _cdfEvents;
         private readonly SimulatorsResource _cdfSimulators;
-        private readonly SequencesResource _cdfSequences;
         private readonly DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
 
@@ -72,9 +68,7 @@ namespace Cognite.Simulator.Utils
             }
             _connectorConfig = connectorConfig;
             _simulators = simulators;
-            _cdfEvents = cdf.CogniteClient.Events;
             _cdfSimulators = cdf.CogniteClient.Alpha.Simulators;
-            _cdfSequences = cdf.CogniteClient.Sequences;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
             ModelLibrary = modelLibrary;
@@ -202,7 +196,7 @@ namespace Cognite.Simulator.Utils
                     using (LogContext.PushProperty("LogId", e.Run.LogId)) {
                         try
                         {
-                            (modelState, routineRev) = GetModelAndRoutine(e, connectorIdList);
+                            (modelState, routineRev) = await GetModelAndRoutine(e, connectorIdList).ConfigureAwait(false);
                             if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
@@ -262,24 +256,23 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private (T, V) GetModelAndRoutine(SimulationRunEvent simEv, List<string> integrations)
+        private async Task<(T, V)> GetModelAndRoutine(SimulationRunEvent simEv, List<string> integrations)
         {
             string modelRevExternalId = simEv.Run.ModelRevisionExternalId;
-            string calcTypeUserDefined = simEv.Run.RoutineName;
-            string eventId = simEv.Run.Id.ToString();
+            string runId = simEv.Run.Id.ToString();
          
-            var model = ModelLibrary.GetModelRevision(modelRevExternalId);
+            var model = await ModelLibrary.GetModelRevision(modelRevExternalId).ConfigureAwait(false);
             if (model == null)
             {
-                _logger.LogError("Could not find a local model file to run Simulation Event {Id}", eventId);
+                _logger.LogError("Could not find a local model file to run Simulation run {Id}", runId);
                 throw new SimulationException($"Could not find a model file for {modelRevExternalId}");
             }
             V calcConfig = RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
 
             if (calcConfig == null)
             {
-                _logger.LogError("Could not find a local configuration to run Simulation Event {Id}", eventId);
-                throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {calcTypeUserDefined}");
+                _logger.LogError("Could not find a local configuration to run Simulation run {Id}", runId);
+                throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {simEv.Run.RoutineRevisionExternalId}");
             }
 
             if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))

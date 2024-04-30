@@ -16,11 +16,9 @@ namespace Cognite.Simulator.Utils
     /// Simulation runner for simulation routine revision of type <see cref="SimulatorRoutineRevision"/>
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
-    /// <typeparam name="U">Type of simulation configuration state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class RoutineRunnerBase<T, U, V> : SimulationRunnerBase<T, U, V>
+    public abstract class RoutineRunnerBase<T, V> : SimulationRunnerBase<T, V>
         where T : ModelStateBase
-        where U : FileState
         where V : SimulatorRoutineRevision
     {
         private readonly CogniteDestination _cdf;

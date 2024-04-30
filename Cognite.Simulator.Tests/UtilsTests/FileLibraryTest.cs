@@ -86,12 +86,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Verify that the files were downloaded and processed
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
-                Assert.False(System.IO.File.Exists(v1.FilePath)); // Should only have the latest version
+                Assert.True(System.IO.File.Exists(v1.FilePath)); // Both versions should have been downloaded
                 Assert.True(v2.Processed);
                 Assert.False(string.IsNullOrEmpty(v2.FilePath));
                 Assert.True(System.IO.File.Exists(v2.FilePath));
 
-                var latest = lib.GetModelRevision($"{SeedData.TestModelExternalId}-2");
+                var latest = await lib.GetModelRevision($"{SeedData.TestModelExternalId}-2").ConfigureAwait(false);
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 
@@ -99,8 +99,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<Identity> { new Identity(v2.LogId) }, source.Token).ConfigureAwait(false);
 
                 var logv2Data = logv2.First().Data;
-                var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model parsed successfully"));
-                Assert.Equal("Model parsed successfully", parsedModelEntry2.First().Message);
+                var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model revision parsed successfully"));
                 Assert.Equal("Information", parsedModelEntry2.First().Severity);
             }
             finally
@@ -313,13 +312,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             return Task.Run(() =>
             {
-                _logger.LogInformation("Model parsed successfully");
+                _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
                 modelState.ParsingInfo.SetSuccess();
                 modelState.Processed = true;
             }, token);
         }
 
-        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model)
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model)
         {
             if (modelRevision == null)
             {
@@ -345,13 +344,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ExternalId = modelRevision.ExternalId,
                 LogId = modelRevision.LogId,
             };
-        }
-    }
-
-    public class TestConfigurationState : FileState
-    {
-        public TestConfigurationState(string id) : base(id)
-        {
         }
     }
 

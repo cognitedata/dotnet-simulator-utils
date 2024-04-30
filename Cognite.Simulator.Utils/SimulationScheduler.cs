@@ -83,8 +83,7 @@ namespace Cognite.Simulator.Utils
     /// Also, at some point scheduling the creation of CDF events should be done by a cloud service, instead
     /// of doing it in the connector.
     /// </summary>
-    public class SimulationSchedulerBase<U, V> 
-        where U : FileState
+    public class SimulationSchedulerBase<V> 
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _config;

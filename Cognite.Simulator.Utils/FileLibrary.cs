@@ -92,7 +92,7 @@ namespace Cognite.Simulator.Utils
             CdfSimulatorResources = Cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             Logger = logger;
-            State = new Dictionary<string, T>();
+            State = new Dictionary<string, T>(); // TODO, it is not thread-safe (?)
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _resourceType = resourceType;
@@ -120,7 +120,7 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
             }
-            await FindFiles(false, token)
+            await FindModelRevisions(false, token)
                 .ConfigureAwait(false);
             if (_store != null)
             {
@@ -144,18 +144,19 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Remove the provided file states from the state store
         /// </summary>
-        /// <param name="states">States to remove</param>
+        /// <param name="statesAndFiles">List of tupples (T, bool) where the first element is the state object and the second is a flag indicating if the file should be removed from disk</param>
         /// <param name="token">Cancellation token</param>
         protected async Task RemoveStates(
-            IEnumerable<T> states,
+            IEnumerable<(T, bool)> statesAndFiles,
             CancellationToken token)
         {
-            if (states == null || !states.Any())
+            if (statesAndFiles == null || !statesAndFiles.Any())
             {
                 return;
             }
+            
             await _store
-                .RemoveFileStates(_config.FilesTable, states, token)
+                .RemoveFileStates(_config.FilesTable, statesAndFiles.Select(s => (s.Item1 as FileState, s.Item2)), token)
                 .ConfigureAwait(false);
         }
 
@@ -166,16 +167,37 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelRevision">CDF Simulator model revision</param>
         /// <param name="model">CDF Simulator model</param>
         /// <returns>File state object</returns>
-        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, CogniteSdk.Alpha.SimulatorModel model);
+        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model);
+
+        /// <summary>
+        /// Add a single model revision to the local state store
+        /// </summary>
+        public T AddModelRevisionToState(
+            SimulatorModelRevision modelRevision,
+            SimulatorModel model)
+        {
+            T rState = StateFromModelRevision(modelRevision, model);
+            if (rState == null || modelRevision == null)
+            {
+                return null;
+            }
+            var revisionId = modelRevision.Id.ToString();
+            if (!State.ContainsKey(revisionId))
+            {
+                // If the revision does not exist locally, add it to the state store
+                State.Add(revisionId, rState);
+            }
+            return rState;
+        }
 
         /// <summary>
         /// Find file ids of model revisions that have been created after the latest timestamp in the local store
         /// Build a local state to keep track of what files exist and which ones have
         /// been downloaded.
         /// </summary>
-        /// <param name="onlyLatest">Fetch only the files updated after the latest timestamp in the local store</param>
+        /// <param name="onlyLatest">Fetch only the latest model revisions</param>
         /// <param name="token">Cancellation token</param>
-        private async Task FindFiles(
+        private async Task FindModelRevisions(
             bool onlyLatest,
             CancellationToken token)
         {
@@ -217,17 +239,18 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes) {
                     var model = modelsMap[revision.ModelExternalId];
-                    T rState = StateFromModelRevision(revision, model);
-                    if (rState == null)
-                    {
-                        continue;
-                    }
-                    var revisionId = revision.Id.ToString();
-                    if (!State.ContainsKey(revisionId))
-                    {
-                        // If the revision does not exist locally, add it to the state store
-                        State.Add(revisionId, rState);
-                    }
+                    // T rState = StateFromModelRevision(revision, model);
+                    // if (rState == null)
+                    // {
+                    //     continue;
+                    // }
+                    // var revisionId = revision.Id.ToString();
+                    // if (!State.ContainsKey(revisionId))
+                    // {
+                    //     // If the revision does not exist locally, add it to the state store
+                    //     State.Add(revisionId, rState);
+                    // }
+                    AddModelRevisionToState(revision, model);
                 }
             }
             catch (System.Exception e)
@@ -255,6 +278,63 @@ namespace Cognite.Simulator.Utils
             }
         }
         
+        /// <summary>
+        /// Downloads a file from CDF and stores it locally
+        /// </summary>
+        /// <param name="modelState">State object representing the file to download</param>
+        /// <returns>True if the file was downloaded successfully, false otherwise</returns>
+        public async Task<bool> DownloadFileAsync(T modelState)
+        {
+            if (modelState == null)
+            {
+                throw new ArgumentNullException(nameof(modelState));
+            }
+            var fileId = new Identity(modelState.CdfId);
+            Logger.LogInformation("Downloading file: {Id}. Model external id: {ModelExternalId}, model revision external id: {ExternalId}",
+                modelState.CdfId,
+                modelState.ModelExternalId,
+                modelState.ExternalId);
+
+            try {
+                var response = await CdfFiles
+                    .DownloadAsync(new[] { fileId })
+                    .ConfigureAwait(false);
+                if (response.Any() && response.First().DownloadUrl != null)
+                {
+                    var uri = response.First().DownloadUrl;
+
+                    string filename;
+                                                
+                    if (modelState.GetExtension() == "json")
+                    {
+                        filename = Path.Combine(_modelFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                    } else {
+                        var storageFolder = Path.Combine(_modelFolder, $"{modelState.CdfId}");
+                        CreateDirectoryIfNotExists(storageFolder);
+                        filename = Path.Combine(  storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                        modelState.IsInDirectory = true;
+                    }
+                    
+                    bool downloaded = await _downloadClient
+                        .DownloadFileAsync(uri, filename)
+                        .ConfigureAwait(false);
+                    if (downloaded)
+                    {
+                        modelState.FilePath = filename;
+                        return true;
+                    }
+                    // // Update the timestamp of the last time the file changed. Next run, no need to fetch files changed before this timestamp.
+                    // // The code below only expands the time range.
+                    // _libState.UpdateDestinationRange(
+                    //     CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime),
+                    //     CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime));
+                }
+            } catch (ResponseException e) {
+                // File cannot be downloaded, skip for now and try again later
+                Logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
+            }
+            return false;
+        }
 
         /// <summary>
         /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
@@ -266,13 +346,13 @@ namespace Cognite.Simulator.Utils
             while (!token.IsCancellationRequested)
             {
                 string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
-                Logger.LogDebug("Updating file library. There are currently {Num} files. Extracted range: {TimeRange}",
+                Logger.LogInformation("Updating file library. There are currently {Num} files. Extracted range: {TimeRange}",
                     State.Count,
                     timeRange
                     );
 
                 // Find new model files in CDF and add the to the local state.
-                await FindFiles(true, token)
+                await FindModelRevisions(true, token)
                     .ConfigureAwait(false);
 
                 // Find the files that are not yet saved locally (no file path)
@@ -283,55 +363,61 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var file in files)
                 {
-                    // Get the download URL for the file. Could fetch more than one per request, but the 
-                    // URL expires after 30 seconds. Best to do one by one.
-                    Logger.LogInformation("Downloading file: {Id}. Created on {CreatedTime}. Updated on {UpdatedTime}",
-                        file.CdfId,
-                        CogniteTime.FromUnixTimeMilliseconds(file.CreatedTime).ToISOString(),
-                        CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
-                    try
-                    {   
-                        var fileId = new Identity(file.CdfId);
-                        var response = await CdfFiles
-                            .DownloadAsync(new[] { fileId }, token)
-                            .ConfigureAwait(false);
-                        if (response.Any() && response.First().DownloadUrl != null)
-                        {
-                            var uri = response.First().DownloadUrl;
+                    // // Get the download URL for the file. Could fetch more than one per request, but the 
+                    // // URL expires after 30 seconds. Best to do one by one.
+                    // Logger.LogInformation("Downloading file: {Id}. Created on {CreatedTime}. Updated on {UpdatedTime}",
+                    //     file.CdfId,
+                    //     CogniteTime.FromUnixTimeMilliseconds(file.CreatedTime).ToISOString(),
+                    //     CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
+                    // try
+                    // {   
+                    //     var fileId = new Identity(file.CdfId);
+                    //     var response = await CdfFiles
+                    //         .DownloadAsync(new[] { fileId }, token)
+                    //         .ConfigureAwait(false);
+                    //     if (response.Any() && response.First().DownloadUrl != null)
+                    //     {
+                    //         var uri = response.First().DownloadUrl;
 
-                            var filename = "";    
+                    //         var filename = "";    
                                                  
-                            if (file.GetExtension() == "json")
-                            {
-                                filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
-                            } else {
-                                var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
-                                CreateDirectoryIfNotExists(storageFolder);
-                                filename = Path.Combine(  storageFolder, $"{file.CdfId}.{file.GetExtension()}");
-                                file.IsInDirectory = true;
-                            }
+                    //         if (file.GetExtension() == "json")
+                    //         {
+                    //             filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
+                    //         } else {
+                    //             var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
+                    //             CreateDirectoryIfNotExists(storageFolder);
+                    //             filename = Path.Combine(  storageFolder, $"{file.CdfId}.{file.GetExtension()}");
+                    //             file.IsInDirectory = true;
+                    //         }
 
-                            bool downloaded = await _downloadClient
-                                .DownloadFileAsync(uri, filename)
-                                .ConfigureAwait(false);
-                            if (!downloaded)
-                            {
-                                // Could not download. Skip and try again later
-                                continue;
-                            }
-                            file.FilePath = filename;
-                            // Update the timestamp of the last time the file changed. Next run, no need to fetch files changed before this timestamp.
-                            // The code below only expands the time range.
-                            _libState.UpdateDestinationRange(
-                                CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
-                                CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
-                        }
-                    }
-                    catch (ResponseException e)
-                    {
-                        // File cannot be downloaded, skip for now and try again later
-                        Logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
-                        continue;
+                    //         bool downloaded = await _downloadClient
+                    //             .DownloadFileAsync(uri, filename)
+                    //             .ConfigureAwait(false);
+                    //         if (!downloaded)
+                    //         {
+                    //             // Could not download. Skip and try again later
+                    //             continue;
+                    //         }
+                    //         file.FilePath = filename;
+                    //         // Update the timestamp of the last time the file changed. Next run, no need to fetch files changed before this timestamp.
+                    //         // The code below only expands the time range.
+                    //         _libState.UpdateDestinationRange(
+                    //             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
+                    //             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
+                    //     }
+                    // }
+                    // catch (ResponseException e)
+                    // {
+                    //     // File cannot be downloaded, skip for now and try again later
+                    //     Logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
+                    //     continue;
+                    // }
+                    var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
+                    if (downloaded) {
+                        _libState.UpdateDestinationRange(
+                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
+                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
                     }
                 }
 
