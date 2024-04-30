@@ -59,15 +59,9 @@ namespace Cognite.Simulator.Utils
                 var modelRevisionRes = await CdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
-                var modelRes = await CdfSimulatorResources.ListSimulatorModelsAsync( // TODO use retrieve
-                    new SimulatorModelQuery
-                    {
-                        Filter = new SimulatorModelFilter
-                        {
-                            SimulatorExternalIds = new string[] { modelRevision.SimulatorExternalId }
-                        }
-                    }, token).ConfigureAwait(false);
-                var model = modelRes.Items.Where(m => m.ExternalId == modelRevision.ModelExternalId).FirstOrDefault();
+                var modelRes = await CdfSimulatorResources.RetrieveSimulatorModelsAsync(
+                    new List<Identity> { new Identity(modelRevision.ModelExternalId) }, token).ConfigureAwait(false);
+                var model = modelRes.FirstOrDefault();
                 var state = AddModelRevisionToState(modelRevision, model); // TODO what happens if the other thread is downloading it as well :(())
                 var downloaded = await DownloadFileAsync(state).ConfigureAwait(false);
                 if (downloaded)
