@@ -24,6 +24,7 @@ namespace Cognite.Simulator.Tests
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
+        public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -318,14 +319,14 @@ namespace Cognite.Simulator.Tests
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
             },
-            ExternalId = "Test Scheduled Routine - 2",
-            RoutineExternalId = $"Test Scheduled Routine - 1",
+            ExternalId = $"{TestScheduledRoutineExternalId} - 2",
+            RoutineExternalId = $"{TestScheduledRoutineExternalId} - 1",
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };
 
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = "Test Scheduled Routine - 1",
+            ExternalId = $"{TestScheduledRoutineExternalId} - 1",
             ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
