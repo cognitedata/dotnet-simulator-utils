@@ -120,8 +120,6 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
             }
-            await FindModelRevisions(false, token)
-                .ConfigureAwait(false);
             if (_store != null)
             {
                 await _store.RestoreExtractionState<U, T>(
@@ -170,8 +168,12 @@ namespace Cognite.Simulator.Utils
         protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model);
 
         /// <summary>
-        /// Add a single model revision to the local state store
+        /// Add a single model revision to the local state store.
+        /// Returns the existing state object if the revision already exists in the store.
         /// </summary>
+        /// <param name="modelRevision">Model revision to add</param>
+        /// <param name="model">Model associated to the revision</param>
+        /// <returns>State object for the model revision. Null if the model revision is invalid</returns>
         public T AddModelRevisionToState(
             SimulatorModelRevision modelRevision,
             SimulatorModel model)
@@ -182,12 +184,16 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            if (!State.ContainsKey(revisionId))
+            if (State.TryGetValue(revisionId, out T existingState))
+            {
+                return existingState;
+            }
+            else
             {
                 // If the revision does not exist locally, add it to the state store
                 State.Add(revisionId, rState);
+                return rState;
             }
-            return rState;
         }
 
         /// <summary>
@@ -229,9 +235,14 @@ namespace Cognite.Simulator.Utils
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
                                 CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
+                            },
+                            Sort = new List<SimulatorSortItem>() {
+                                new SimulatorSortItem() {
+                                    Order = SimulatorSortOrder.desc,
+                                    Property = "createdTime"
+                                }
                             }
-                        },
-                        token
+                        }, token
                     ).ConfigureAwait(false);
                 var modelRevisionsRes = modelRevisionsAllRes.Items
                     .Where(r => modelExternalIds.Contains(r.ModelExternalId))
@@ -363,56 +374,6 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var file in files)
                 {
-                    // // Get the download URL for the file. Could fetch more than one per request, but the 
-                    // // URL expires after 30 seconds. Best to do one by one.
-                    // Logger.LogInformation("Downloading file: {Id}. Created on {CreatedTime}. Updated on {UpdatedTime}",
-                    //     file.CdfId,
-                    //     CogniteTime.FromUnixTimeMilliseconds(file.CreatedTime).ToISOString(),
-                    //     CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime).ToISOString());
-                    // try
-                    // {   
-                    //     var fileId = new Identity(file.CdfId);
-                    //     var response = await CdfFiles
-                    //         .DownloadAsync(new[] { fileId }, token)
-                    //         .ConfigureAwait(false);
-                    //     if (response.Any() && response.First().DownloadUrl != null)
-                    //     {
-                    //         var uri = response.First().DownloadUrl;
-
-                    //         var filename = "";    
-                                                 
-                    //         if (file.GetExtension() == "json")
-                    //         {
-                    //             filename = Path.Combine(_modelFolder, $"{file.CdfId}.{file.GetExtension()}");
-                    //         } else {
-                    //             var storageFolder = Path.Combine(_modelFolder, $"{file.CdfId}");
-                    //             CreateDirectoryIfNotExists(storageFolder);
-                    //             filename = Path.Combine(  storageFolder, $"{file.CdfId}.{file.GetExtension()}");
-                    //             file.IsInDirectory = true;
-                    //         }
-
-                    //         bool downloaded = await _downloadClient
-                    //             .DownloadFileAsync(uri, filename)
-                    //             .ConfigureAwait(false);
-                    //         if (!downloaded)
-                    //         {
-                    //             // Could not download. Skip and try again later
-                    //             continue;
-                    //         }
-                    //         file.FilePath = filename;
-                    //         // Update the timestamp of the last time the file changed. Next run, no need to fetch files changed before this timestamp.
-                    //         // The code below only expands the time range.
-                    //         _libState.UpdateDestinationRange(
-                    //             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
-                    //             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
-                    //     }
-                    // }
-                    // catch (ResponseException e)
-                    // {
-                    //     // File cannot be downloaded, skip for now and try again later
-                    //     Logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
-                    //     continue;
-                    // }
                     var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
                     if (downloaded) {
                         _libState.UpdateDestinationRange(

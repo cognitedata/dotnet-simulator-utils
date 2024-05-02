@@ -52,25 +52,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
-                Assert.NotEmpty(lib.State);
-                
-                var v1 = Assert.Contains(
-                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
-                    libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
-                Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
-                Assert.Equal(1, v1.Version);
-                Assert.False(v1.Processed);
-
-                var v2 = Assert.Contains(
-                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
-                    libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
-                Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
-                Assert.Equal(2, v2.Version);
-                Assert.False(v2.Processed);
+                Assert.Empty(lib.State); // No files should have been processed upon the init()
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -84,9 +66,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the files were downloaded and processed
+                var v1 = Assert.Contains(
+                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
+                    libState);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
+                Assert.Equal("Connector Test Model", v1.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
+                Assert.Equal(1, v1.Version);
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
                 Assert.True(System.IO.File.Exists(v1.FilePath)); // Both versions should have been downloaded
+
+                var v2 = Assert.Contains(
+                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
+                    libState);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
+                Assert.Equal("Connector Test Model", v2.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
+                Assert.Equal(2, v2.Version);
                 Assert.True(v2.Processed);
                 Assert.False(string.IsNullOrEmpty(v2.FilePath));
                 Assert.True(System.IO.File.Exists(v2.FilePath));
@@ -190,9 +187,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // prepopulate routine in CDF
             var cdf = provider.GetRequiredService<CogniteDestination>();
             try
-            {
-                
-                
+            {  
                 
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 
@@ -208,7 +203,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
-
                 var lib = provider.GetRequiredService<RoutineLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 

@@ -137,20 +137,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token).ConfigureAwait(false);
                 await configLib.Init(source.Token).ConfigureAwait(false);
 
-                // foreach (var model in modelLib.State.Values)
-                // {
-                //     Console.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff" + '\n'));
-                //     Console.WriteLine($"0 Model: {model.ModelExternalId} file: {model.FilePath} {model.Processed} \n");
-                //     Console.WriteLine("0 --------------------------- \n");
-                // }   
-
-                // using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
-                // var linkedToken = linkedTokenSource.Token;
-                // linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                // var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
-                // taskList.AddRange(configLib.GetRunTasks(linkedToken));
-                // await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
-
                 // models are only processed right before the run happens
                 // so this should be empty
                 var processedModels = modelLib.State.Values.Where(m => m.FilePath != null && m.Processed);
@@ -180,13 +166,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(runs);
                 var run = runs.First();
 
-                // foreach (var model in modelLib.State.Values)
-                // {
-                //     // print current time in this format 2024-04-30 09:56:26.334
-                //     Console.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff" + '\n'));
-                //     Console.WriteLine($"1 Model: {model.ModelExternalId} file: {model.FilePath} {model.Processed} \n");
-                //     Console.WriteLine("1 --------------------------- \n");
-                // }  
+                var modelRevisionRes = await cdf.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
+                    new List<Identity> { new Identity(run.ModelRevisionExternalId) }, source.Token).ConfigureAwait(false);
+
+                var modelRevision = modelRevisionRes.First();
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -195,16 +178,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
-                // print all the models
-                // foreach (var model in modelLib.State.Values)
-                // {
-                //     Console.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff" + '\n'));
-                //     Console.WriteLine($"2 Model: {model.ModelExternalId} file: {model.FilePath} {model.Processed} \n");
-                //     Console.WriteLine("2 --------------------------- \n");
-                // }   
-                // Assert.Single(modelLib.State.Values.Where(m => m.FilePath != null && m.Processed));
-                // var processedModelAfterRun = modelLib.State.GetValueOrDefault(run.ModelRevisionExternalId);
-                // Assert.NotNull(processedModelAfterRun);
+                // Console.WriteLine($"2 ModelRevision: {modelRevision.Id} \n");
+                Assert.Single(modelLib.State); // only one model should be processed, the one that was used in the run
+                // this is because we are not running the full ModelLibrary here
+                var modelAfterRun = modelLib.State.GetValueOrDefault(modelRevision.Id.ToString());
+                Assert.NotNull(modelAfterRun);
+                Assert.True(modelAfterRun.Processed);
+                Assert.False(string.IsNullOrEmpty(modelAfterRun.FilePath));
 
                 Assert.True(runner.MetadataInitialized);
 

@@ -6,11 +6,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Serilog.Context;
 using System.Threading;
 using System.Threading.Tasks;
-using System.IO;
 using CogniteSdk.Alpha;
 using Cognite.Extensions;
 
@@ -93,23 +91,11 @@ namespace Cognite.Simulator.Utils
             }
 
             return await TryReadModelRevisionFromCdf(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
-            // var modelVersions = GetAllModelVersions(simulator, modelName);
-            // if (modelVersions.Any())
-            // {
-            //     return modelVersions.First();
-            // }
-            // return null;
         }
 
         /// <inheritdoc/>
         public IEnumerable<T> GetAllModelRevisions(string modelExternalId)
         {
-            // var modelVersions = State.Values
-            //     .Where(s => s.ModelName == modelName
-            //         && s.Source == simulator
-            //         && s.Version > 0
-            //         && !string.IsNullOrEmpty(s.FilePath))
-            //     .OrderByDescending(s => s.Version);
             var modelVersions = State.Values
                 .Where(s => s.ModelExternalId == modelExternalId
                     && s.Version > 0
@@ -117,40 +103,6 @@ namespace Cognite.Simulator.Utils
                 .OrderByDescending(s => s.CreatedTime);
             return modelVersions;
         }
-
-        // /// <summary>
-        // /// Utility function to remove the local copies (files) of all model versions
-        // /// except the latest one
-        // /// </summary>
-        // /// <param name="modelExternalId">Model external id</param>
-        // protected void RemoveLocalFiles(string modelExternalId)
-        // {
-        //     var modelVersionsAll = State.Values
-        //         .Where(f => !string.IsNullOrEmpty(f.FilePath)
-        //             && (f.IsExtracted || !f.CanRead))
-        //         .ToList();
-        //     var currentModelVersions = modelVersionsAll
-        //         .Where(f => f.ModelExternalId == modelExternalId)
-        //         .OrderByDescending(f => f.CreatedTime);
-        //     var otherModelVersionsMap = modelVersionsAll
-        //         .Where(f => f.ModelExternalId != modelExternalId)
-        //         .ToDictionarySafe(f => f.FilePath, f => true);
-        //     var latestVersion = currentModelVersions.FirstOrDefault();
-        //     var modelVersionsToDelete = currentModelVersions.Skip(1);
-        //     foreach (var version in modelVersionsToDelete)
-        //     {
-        //         // multiple revisions might refer to the same file
-        //         // delete the file only if no other revision refers to it
-        //         if (latestVersion.FilePath != version.FilePath && !otherModelVersionsMap.ContainsKey(version.FilePath)) {
-        //             if (version.IsInDirectory) {
-        //                 var dirPath = Path.GetDirectoryName(version.FilePath);
-        //                 StateUtils.DeleteLocalDirectory(dirPath);
-        //             } else {
-        //                 StateUtils.DeleteLocalFile(version.FilePath);
-        //             }
-        //         }
-        //     }
-        // }
 
         /// <summary>
         /// Verify that the model files stored locally have an equivalent model revisions in CDF.
@@ -172,19 +124,20 @@ namespace Cognite.Simulator.Utils
                 var localRevisions = GetAllModelRevisions(state.ModelExternalId);
                 if (localRevisions.Any())
                 {
-                    // TODO use retrieve
-                    var modelRevisionsInCdfAllRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
+                    var revisionsInCdfRes = await CdfSimulatorResources.ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery
                         {
-                            Filter = new SimulatorModelRevisionFilter()
+                            Filter = new SimulatorModelRevisionFilter() {
+                                ModelExternalIds = new List<string> { state.ModelExternalId }
+                            }
                         }, token).ConfigureAwait(false);
                     
-                    var revisionsInCdf = modelRevisionsInCdfAllRes.Items.Where(v => v.SimulatorExternalId == state.Source);
+                    var revisionsInCdf = revisionsInCdfRes.Items.ToDictionarySafe(r => r.Id.ToString(), r => r);
 
                     var statesToDelete = new List<T>();
                     foreach (var revision in localRevisions)
                     {
-                        if (!revisionsInCdf.Any(v => v.Id.ToString() == revision.Id))
+                        if (!revisionsInCdf.ContainsKey(revision.Id))
                         {
                             statesToDelete.Add(revision);
                             State.Remove(revision.Id);
@@ -198,9 +151,7 @@ namespace Cognite.Simulator.Utils
                         Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
                             statesToDelete.Count,
                             string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
-                        // var filesToDelete = statesToDelete.Where(s => !string.IsNullOrEmpty(s.FilePath) &&
-                        //     State.Where(f => f.Value.FilePath == s.FilePath).Count() == 1).ToList()
-                        // ).ToList();
+
                         var statesToDeleteWithFile = statesToDelete
                             .Select(s => (s, !filesInUseMap.ContainsKey(s.FilePath)));
                         await RemoveStates(statesToDeleteWithFile, token).ConfigureAwait(false);
@@ -259,19 +210,6 @@ namespace Cognite.Simulator.Utils
             {
                 // Extract the data for each model file (version) in this group
                 foreach (var item in group){
-                    // InitModelParsingInfo(item);
-                    // var logId = item.LogId;
-                    // using (LogContext.PushProperty("LogId", logId)) {
-                    //     try
-                    //     {
-                    //         _logger.LogInformation("Extracting model information for {ModelName} v{Version}", item.ModelName, item.Version);
-                    //         await ExtractModelInformation(item, token).ConfigureAwait(false);
-                    //     }
-                    //     finally
-                    //     {
-                    //         await UpdateModelParsingInfo(item, token).ConfigureAwait(false);
-                    //     }
-                    // }
                     await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
                 }
 
