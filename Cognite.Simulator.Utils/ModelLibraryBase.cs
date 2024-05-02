@@ -1,33 +1,73 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
-using CogniteSdk;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Serilog.Context;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
+using Serilog.Context;
+
+using Cognite.Simulator.Extensions;
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+
+using CogniteSdk;
 using CogniteSdk.Alpha;
+using CogniteSdk.Resources;
+using CogniteSdk.Resources.Alpha;
 using Cognite.Extensions;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a local model file library. This is a <see cref="FileLibrary{T, U}"/> that
-    /// fetches simulator model files from CDF, save a local copy and process the model (extract information).
+    /// Represents a local model file library.
+    /// It fetches simulator model files from CDF, save a local copy and process the model (extract information).
     /// This library only keeps the latest version of a given model file
     /// </summary>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<T, U, V> : FileLibrary<T, U>, IModelProvider<T>
+    public abstract class ModelLibraryBase<T, U, V> : IModelProvider<T>
         where T : ModelStateBase
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
     {
         private readonly ILogger _logger;
+
+         /// <summary>
+        /// Dictionary holding the file states. The keys are the external ids of the
+        /// CDF files and the values are the state objects of type <typeparamref name="T"/>
+        /// </summary>
+        public Dictionary<string, T> State { get; private set; }
+        
+        /// <summary>
+        /// CDF files resource. Can be used to read and write files in CDF
+        /// </summary>
+        protected FilesResource CdfFiles { get; private set; }
+
+        /// <summary>
+        /// CDF simulator resource. Can be used to read and write files in CDF
+        /// </summary>
+        protected SimulatorsResource CdfSimulatorResources { get; private set; }
+        
+        /// <summary>
+        /// Logger object
+        /// </summary>
+        protected ILogger Logger { get; private set; }
+
+        // Other injected services
+        private readonly FileLibraryConfig _config;
+        private readonly IList<SimulatorConfig> _simulators;
+        private readonly IExtractionStateStore _store;
+        private readonly FileStorageClient _downloadClient;
+
+        // Internal objects
+        private readonly BaseExtractionState _libState;
+        private readonly SimulatorDataType _resourceType;
+        private string _modelFolder;
+
         
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -44,10 +84,66 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            IExtractionStateStore store = null): 
-            base(SimulatorDataType.ModelFile, config, simulators, cdf, logger, downloadClient, store)
+            IExtractionStateStore store = null) 
         {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
+
+            _config = config;
+            _simulators = simulators;
+            CdfFiles = cdf.CogniteClient.Files;
+            CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
+            _store = store;
+            Logger = logger;
+            State = new Dictionary<string, T>(); // TODO, it is not thread-safe (?)
+            _libState = new BaseExtractionState(_config.LibraryId);
+            _modelFolder = _config.FilesDirectory;
+            _downloadClient = downloadClient;
+
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Initializes the local model library from the state store (sqlite database)
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        public async Task Init(CancellationToken token)
+        {
+            if (_resourceType != SimulatorDataType.ModelFile) {
+                throw new ArgumentException("Only model files are supported");
+            }
+            Logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
+            var dir = Directory.CreateDirectory(_modelFolder);
+            _modelFolder = dir.FullName;
+
+            if (_store != null)
+            {
+                await _store.RestoreExtractionState(
+                    new Dictionary<string, BaseExtractionState>() { { _config.LibraryId, _libState } },
+                    _config.LibraryTable,
+                    true,
+                    token).ConfigureAwait(false);
+
+                // await FindModelRevisions(false, token).ConfigureAwait(false);
+                // TODO uncomment this line when the library is ready to be used
+
+                await _store.RestoreExtractionState<U, T>(
+                    State,
+                    _config.FilesTable,
+                    (state, poco) =>
+                    {
+                        state.Init(poco);
+                    },
+                    token).ConfigureAwait(false);
+                if (_store is LiteDBStateStore ldbStore)
+                {
+                    HashSet<string> idsToKeep = new HashSet<string>(State.Select(s => s.Value.Id));
+                    ldbStore.RemoveUnusedState(_config.FilesTable, idsToKeep);
+                }
+            }
+            Logger.LogInformation("Local state store {Table} initiated. Tracking {Num} files", _config.FilesTable, State.Count);
         }
 
         private async Task<T> TryReadModelRevisionFromCdf(string modelRevisionExternalId, CancellationToken token)
@@ -74,6 +170,7 @@ namespace Cognite.Simulator.Utils
             }
             return null;
         }
+
         /// <inheritdoc/>
         public async Task<T> GetModelRevision(string modelRevisionExternalId)
         {
@@ -154,7 +251,10 @@ namespace Cognite.Simulator.Utils
 
                         var statesToDeleteWithFile = statesToDelete
                             .Select(s => (s, !filesInUseMap.ContainsKey(s.FilePath)));
-                        await RemoveStates(statesToDeleteWithFile, token).ConfigureAwait(false);
+
+                        await _store
+                            .RemoveFileStates(_config.FilesTable, statesToDeleteWithFile, token)
+                            .ConfigureAwait(false);
                     }
                 }   
             }
@@ -164,16 +264,6 @@ namespace Cognite.Simulator.Utils
                 return;
             }
             
-        }
-        
-        /// <summary>
-        /// Process model files that have been downloaded
-        /// </summary>
-        /// <param name="token">Cancellation token</param>
-        protected override void ProcessDownloadedFiles(CancellationToken token)
-        {
-            Task.Run(async () => await ExtractModelInformationAndUpdateState(token).ConfigureAwait(false), token)
-                .Wait(token);
         }
 
         private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
@@ -199,7 +289,7 @@ namespace Cognite.Simulator.Utils
         /// to process the models.  
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        protected virtual async Task ExtractModelInformationAndUpdateState(CancellationToken token)
+        private async Task ProcessDownloadedFiles(CancellationToken token)
         {
             // Find all model files for which we need to extract data
             // The models are grouped by (simulator, model name)
@@ -216,10 +306,6 @@ namespace Cognite.Simulator.Utils
                 // Verify that the local version history matches the one in CDF. Else,
                 // delete the local state and files for the missing versions.
                 await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
-
-                // // Keep only a local copy of the latest model version. After the data is extracted,
-                // // not need to keep a local copy of versions that are not used in calculations
-                // RemoveLocalFiles(group.Key.ModelExternalId);
             }
         }
 
@@ -273,6 +359,274 @@ namespace Cognite.Simulator.Utils
         protected abstract Task ExtractModelInformation(
             T modelState,
             CancellationToken token);
+
+        /// <summary>
+        /// Creates a state object of type <typeparamref name="T"/> from a
+        /// CDF Simulator model revision passed as parameter
+        /// </summary>
+        /// <param name="modelRevision">CDF Simulator model revision</param>
+        /// <param name="model">CDF Simulator model</param>
+        /// <returns>File state object</returns>
+        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model);
+
+        /// <summary>
+        /// Add a single model revision to the local state store.
+        /// Returns the existing state object if the revision already exists in the store.
+        /// </summary>
+        /// <param name="modelRevision">Model revision to add</param>
+        /// <param name="model">Model associated to the revision</param>
+        /// <returns>State object for the model revision. Null if the model revision is invalid</returns>
+        public T AddModelRevisionToState(
+            SimulatorModelRevision modelRevision,
+            SimulatorModel model)
+        {
+            T rState = StateFromModelRevision(modelRevision, model);
+            if (rState == null || modelRevision == null)
+            {
+                return null;
+            }
+            var revisionId = modelRevision.Id.ToString();
+            if (State.TryGetValue(revisionId, out T existingState))
+            {
+                return existingState;
+            }
+            else
+            {
+                // If the revision does not exist locally, add it to the state store
+                State.Add(revisionId, rState);
+                return rState;
+            }
+        }
+
+        /// <summary>
+        /// Find file ids of model revisions that have been created after the latest timestamp in the local store
+        /// Build a local state to keep track of what files exist and which ones have
+        /// been downloaded.
+        /// </summary>
+        /// <param name="onlyLatest">Fetch only the latest model revisions</param>
+        /// <param name="token">Cancellation token</param>
+        private async Task FindModelRevisions(
+            bool onlyLatest,
+            CancellationToken token)
+        {
+            try {
+                long createdAfter = 
+                    onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
+                        _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
+
+                var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
+
+                var modelsRes = await CdfSimulatorResources
+                    .ListSimulatorModelsAsync(new SimulatorModelQuery() {
+                        Filter = new SimulatorModelFilter() {
+                            SimulatorExternalIds = simulatorsExternalIds
+                        }
+                    }, token).ConfigureAwait(false);
+
+                var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
+
+                var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
+
+                if (modelExternalIds.Count == 0)
+                {
+                    return;
+                }
+
+                var modelRevisionsAllRes = await CdfSimulatorResources
+                    .ListSimulatorModelRevisionsAsync(
+                        new SimulatorModelRevisionQuery() {
+                            Filter = new SimulatorModelRevisionFilter() {
+                                CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
+                            },
+                            Sort = new List<SimulatorSortItem>() {
+                                new SimulatorSortItem() {
+                                    Order = SimulatorSortOrder.desc,
+                                    Property = "createdTime"
+                                }
+                            }
+                        }, token
+                    ).ConfigureAwait(false);
+                var modelRevisionsRes = modelRevisionsAllRes.Items
+                    .Where(r => modelExternalIds.Contains(r.ModelExternalId))
+                    .ToList();
+
+                foreach (var revision in modelRevisionsRes) {
+                    var model = modelsMap[revision.ModelExternalId];
+                    AddModelRevisionToState(revision, model);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogDebug("Failed to fetch model revisions from CDF: {Message}", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Creates a list of the tasks performed by this library.
+        /// These include searching and downloading files ans saving state.
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>List of tasks</returns>
+        public IEnumerable<Task> GetRunTasks(CancellationToken token)
+        {
+            return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
+        }
+
+        private void CreateDirectoryIfNotExists(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
+        
+        /// <summary>
+        /// Downloads a file from CDF and stores it locally
+        /// </summary>
+        /// <param name="modelState">State object representing the file to download</param>
+        /// <returns>True if the file was downloaded successfully, false otherwise</returns>
+        public async Task<bool> DownloadFileAsync(T modelState)
+        {
+            if (modelState == null)
+            {
+                throw new ArgumentNullException(nameof(modelState));
+            }
+            var fileId = new Identity(modelState.CdfId);
+            Logger.LogInformation("Downloading file: {Id}. Model external id: {ModelExternalId}, model revision external id: {ExternalId}",
+                modelState.CdfId,
+                modelState.ModelExternalId,
+                modelState.ExternalId);
+
+            try {
+                var response = await CdfFiles
+                    .DownloadAsync(new[] { fileId })
+                    .ConfigureAwait(false);
+                if (response.Any() && response.First().DownloadUrl != null)
+                {
+                    var uri = response.First().DownloadUrl;
+
+                    string filename;
+                                                
+                    if (modelState.GetExtension() == "json")
+                    {
+                        filename = Path.Combine(_modelFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                    } else {
+                        var storageFolder = Path.Combine(_modelFolder, $"{modelState.CdfId}");
+                        CreateDirectoryIfNotExists(storageFolder);
+                        filename = Path.Combine(  storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                        modelState.IsInDirectory = true;
+                    }
+                    
+                    bool downloaded = await _downloadClient
+                        .DownloadFileAsync(uri, filename)
+                        .ConfigureAwait(false);
+                    if (downloaded)
+                    {
+                        modelState.FilePath = filename;
+                        return true;
+                    }
+                }
+            } catch (ResponseException e) {
+                // File cannot be downloaded, skip for now and try again later
+                Logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
+        /// Files are saved with the internal CDF id as name
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        private async Task SearchAndDownloadFiles(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
+                Logger.LogInformation("Updating file library. There are currently {Num} files. Extracted range: {TimeRange}",
+                    State.Count,
+                    timeRange
+                    );
+
+                // Find new model files in CDF and add the to the local state.
+                await FindModelRevisions(true, token)
+                    .ConfigureAwait(false);
+
+                // Find the files that are not yet saved locally (no file path)
+                var files = State.Values
+                    .Where(f => string.IsNullOrEmpty(f.FilePath))
+                    .OrderBy(f => f.UpdatedTime)
+                    .ToList();
+
+                foreach (var file in files)
+                {
+                    var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
+                    if (downloaded) {
+                        _libState.UpdateDestinationRange(
+                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
+                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
+                    }
+                }
+
+                ProcessDownloadedFiles(token).Wait(token);
+
+                if (State.Any())
+                {
+                    var maxUpdatedMs = State
+                        .Select(s => s.Value.UpdatedTime)
+                        .Max();
+                    var maxUpdatedDt = CogniteTime.FromUnixTimeMilliseconds(maxUpdatedMs);
+                    _libState.UpdateDestinationRange(
+                        maxUpdatedDt,
+                        maxUpdatedDt);
+                }
+
+                await Task
+                    .Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Save periodically the library state (first and last file creation timestamp) and the 
+        /// files state (path to the file stored locally)
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        private async Task SaveStates(CancellationToken token)
+        {
+            if (_store == null)
+            {
+                return;
+            }
+            while (!token.IsCancellationRequested)
+            {
+                var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
+                var storeTask = StoreLibraryState(token);
+                await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Persists the library state from memory to the store
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        public async Task StoreLibraryState(CancellationToken token)
+        {
+            if (_store == null)
+            {
+                return;
+            }
+            await _store.StoreExtractionState(
+                new[] { _libState },
+                _config.LibraryTable,
+                token).ConfigureAwait(false);
+            await _store.StoreExtractionState(
+                State.Values,
+                _config.FilesTable,
+                (state) => state.GetPoco(),
+                token).ConfigureAwait(false);
+        }
+
     }
 
     /// <summary>
@@ -294,117 +648,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelExternalId">Model external id</param>
         /// <returns>List of state objects</returns>
         IEnumerable<T> GetAllModelRevisions(string modelExternalId);
-    }
-
-    /// <summary>
-    /// This base class represents the state of a model file
-    /// </summary>
-    public abstract class ModelStateBase : FileState
-    {
-        private int _version;
-        
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public int Version
-        {
-            get => _version;
-            set
-            {
-                if (value == _version) return;
-                LastTimeModified = DateTime.UtcNow;
-                _version = value;
-            }
-        }
-
-        /// <summary>
-        /// Information about model parsing
-        /// </summary>
-        public ModelParsingInfo ParsingInfo { get; set; }
-
-        /// <summary>
-        /// Indicates if information has been extracted from the model file
-        /// </summary>
-        public abstract bool IsExtracted { get; }
-        
-        /// <summary>
-        /// Indicates if the simulator can read the model file and
-        /// its data
-        /// </summary>
-        public bool CanRead { get; set; } = true;
-
-        /// <summary>
-        /// Creates a new model file state with the provided id
-        /// </summary>
-        /// <param name="id"></param>
-        public ModelStateBase(string id) : base(id)
-        {
-        }
-
-        /// <summary>
-        /// Data type of the file. For model files, this is <see cref="SimulatorDataType.ModelFile"/> 
-        /// </summary>
-        /// <returns>String representation of <see cref="SimulatorDataType.ModelFile"/></returns>
-        public override string GetDataType()
-        {
-            return SimulatorDataType.ModelFile.MetadataValue();
-        }
-
-        /// <summary>
-        /// Model data associated with this state
-        /// </summary>
-        public SimulatorModelInfo Model => new SimulatorModelInfo()
-        {
-            Name = ModelName,
-            ExternalId = ModelExternalId,
-            Simulator = Source
-        };
-
-        /// <summary>
-        /// Initialize this model state using a data object from the state store
-        /// </summary>
-        /// <param name="poco">Data object</param>
-        public override void Init(FileStatePoco poco)
-        {
-            base.Init(poco);
-            if (poco is ModelStateBasePoco mPoco)
-            {
-                _version = mPoco.Version;
-            }
-        }
-        /// <summary>
-        /// Get the data object with the model state properties to be persisted by
-        /// the state store
-        /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
-        {
-            return new ModelStateBasePoco
-            {
-                Id = Id,
-                ModelName = ModelName,
-                ModelExternalId = ModelExternalId,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                CdfId = CdfId,
-                Version = Version,
-                IsInDirectory = IsInDirectory
-            };
-        }
-    }
-
-    /// <summary>
-    /// Data object that contains the model state properties to be persisted
-    /// by the state store. These properties are restored to the state on initialization
-    /// </summary>
-    public class ModelStateBasePoco : FileStatePoco
-    {
-        /// <summary>
-        /// Model version
-        /// </summary>
-        [StateStoreProperty("version")]
-        public int Version { get; set; }
     }
 }
