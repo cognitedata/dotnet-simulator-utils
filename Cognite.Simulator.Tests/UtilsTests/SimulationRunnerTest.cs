@@ -179,7 +179,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
                 // Console.WriteLine($"2 ModelRevision: {modelRevision.Id} \n");
-                Assert.Single(modelLib.State); // only one model should be processed, the one that was used in the run
+                Assert.Single(modelLib.State.Values.Where(m => m.Processed && !string.IsNullOrEmpty(m.FilePath))); // only one model should be processed, the one that was used in the run
                 // this is because we are not running the full ModelLibrary here
                 var modelAfterRun = modelLib.State.GetValueOrDefault(modelRevision.Id.ToString());
                 Assert.NotNull(modelAfterRun);

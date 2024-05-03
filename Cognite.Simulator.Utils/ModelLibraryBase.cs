@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 
@@ -40,7 +40,7 @@ namespace Cognite.Simulator.Utils
         /// Dictionary holding the file states. The keys are the external ids of the
         /// CDF files and the values are the state objects of type <typeparamref name="T"/>
         /// </summary>
-        public Dictionary<string, T> State { get; private set; }
+        public ConcurrentDictionary<string, T> State { get; private set; }
         
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -65,7 +65,6 @@ namespace Cognite.Simulator.Utils
 
         // Internal objects
         private readonly BaseExtractionState _libState;
-        private readonly SimulatorDataType _resourceType;
         private string _modelFolder;
 
         
@@ -97,7 +96,7 @@ namespace Cognite.Simulator.Utils
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             Logger = logger;
-            State = new Dictionary<string, T>(); // TODO, it is not thread-safe (?)
+            State = new ConcurrentDictionary<string, T>(); // TODO, it is not thread-safe (?)
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
@@ -111,9 +110,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {
-            if (_resourceType != SimulatorDataType.ModelFile) {
-                throw new ArgumentException("Only model files are supported");
-            }
             Logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
             var dir = Directory.CreateDirectory(_modelFolder);
             _modelFolder = dir.FullName;
@@ -126,7 +122,7 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
 
-                // await FindModelRevisions(false, token).ConfigureAwait(false);
+                await FindModelRevisions(false, token).ConfigureAwait(false);
                 // TODO uncomment this line when the library is ready to be used
 
                 await _store.RestoreExtractionState<U, T>(
@@ -236,8 +232,10 @@ namespace Cognite.Simulator.Utils
                     {
                         if (!revisionsInCdf.ContainsKey(revision.Id))
                         {
-                            statesToDelete.Add(revision);
-                            State.Remove(revision.Id);
+                            if (State.TryRemove(revision.Id, out _))
+                            {
+                                statesToDelete.Add(revision);
+                            }
                         }
                     }
                     var filesInUseMap = State.Values
@@ -386,16 +384,7 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            if (State.TryGetValue(revisionId, out T existingState))
-            {
-                return existingState;
-            }
-            else
-            {
-                // If the revision does not exist locally, add it to the state store
-                State.Add(revisionId, rState);
-                return rState;
-            }
+            return State.GetOrAdd(revisionId, rState);
         }
 
         /// <summary>

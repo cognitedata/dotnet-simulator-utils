@@ -1,23 +1,24 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
+
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+using CogniteSdk;
+using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
-    public class FileLibraryTest
+    public class ModelLibraryTest
     {
         [Fact]
         public async Task TestModelLibrary()
@@ -52,7 +53,27 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
-                Assert.Empty(lib.State); // No files should have been processed upon the init()
+                Assert.NotEmpty(lib.State);
+
+                var modelExternalIdV1 = $"{SeedData.TestModelExternalId}-1";
+                var v1 = Assert.Contains(
+                    revisionMap[modelExternalIdV1].Id.ToString(), // This this revision should exist in CDF
+                    libState);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
+                Assert.Equal("Connector Test Model", v1.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
+                Assert.Equal(1, v1.Version);
+                Assert.False(v1.Processed);
+
+                var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
+                var v2 = Assert.Contains(
+                    revisionMap[modelExternalIdV2].Id.ToString(), // This this revision should exist in CDF
+                    libState);
+                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
+                Assert.Equal("Connector Test Model", v2.ModelName);
+                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
+                Assert.Equal(2, v2.Version);
+                Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -66,29 +87,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
 
                 // Verify that the files were downloaded and processed
-                var v1 = Assert.Contains(
-                    revisionMap[$"{SeedData.TestModelExternalId}-1"].Id.ToString(), // This this revision should exist in CDF
+                v1 = Assert.Contains(
+                    revisionMap[modelExternalIdV1].Id.ToString(),
                     libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
-                Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
-                Assert.Equal(1, v1.Version);
+                Assert.Equal(modelExternalIdV2, v2.ExternalId);
                 Assert.True(v1.Processed);
                 Assert.False(string.IsNullOrEmpty(v1.FilePath));
                 Assert.True(System.IO.File.Exists(v1.FilePath)); // Both versions should have been downloaded
 
-                var v2 = Assert.Contains(
-                    revisionMap[$"{SeedData.TestModelExternalId}-2"].Id.ToString(), // This this revision should exist in CDF
+                v2 = Assert.Contains(
+                    revisionMap[modelExternalIdV2].Id.ToString(), // This this revision should exist in CDF
                     libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
-                Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
-                Assert.Equal(2, v2.Version);
+                Assert.Equal(modelExternalIdV2, v2.ExternalId);
                 Assert.True(v2.Processed);
                 Assert.False(string.IsNullOrEmpty(v2.FilePath));
                 Assert.True(System.IO.File.Exists(v2.FilePath));
 
-                var latest = await lib.GetModelRevision($"{SeedData.TestModelExternalId}-2").ConfigureAwait(false);
+                var latest = await lib.GetModelRevision(modelExternalIdV2).ConfigureAwait(false);
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
 
