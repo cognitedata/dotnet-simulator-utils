@@ -118,7 +118,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task TestModelLibraryHotReloadAndCleanup()
+        public async Task TestModelLibraryHotReload()
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -137,7 +137,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
-                var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
@@ -154,9 +153,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
-                var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedToken);
+                var modelLibTasks = lib.GetRunTasks(linkedTokenSource.Token);
                 await modelLibTasks
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
@@ -173,9 +171,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // delete current models
                 var modelExternalIdToDelete = revisions.First().ModelExternalId;
                 await SeedData.DeleteSimulatorModel(cdf, modelExternalIdToDelete).ConfigureAwait(false);
-
-                // Verify that the state is empty
-                // Assert.Empty(lib.State); TODO this doesn't work yet
 
                 var revisionNewCreate = SeedData.GenerateSimulatorModelRevisionCreate("hot-reload", version: 1);
                 await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
@@ -194,6 +189,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(string.IsNullOrEmpty(newModelState.FilePath));
                     Assert.True(System.IO.File.Exists(newModelState.FilePath));
                 }
+
+                // cleanup
+                // Assert.Empty(lib.State); TODO revision cleanup logic
             }
             finally
             {

@@ -123,7 +123,6 @@ namespace Cognite.Simulator.Utils
                     token).ConfigureAwait(false);
 
                 await FindModelRevisions(false, token).ConfigureAwait(false);
-                // TODO uncomment this line when the library is ready to be used
 
                 await _store.RestoreExtractionState<U, T>(
                     State,
