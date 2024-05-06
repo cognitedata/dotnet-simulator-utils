@@ -290,7 +290,7 @@ namespace Cognite.Simulator.Utils
         private async Task ProcessDownloadedFiles(CancellationToken token)
         {
             // Find all model files for which we need to extract data
-            // The models are grouped by (simulator, model name)
+            // The models are grouped by (model external id)
             var modelGroups = State.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
                 .GroupBy(f => new { f.ModelExternalId });

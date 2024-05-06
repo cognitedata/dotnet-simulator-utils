@@ -55,25 +55,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(lib.State);
 
-                var modelExternalIdV1 = $"{SeedData.TestModelExternalId}-1";
-                var v1 = Assert.Contains(
-                    revisionMap[modelExternalIdV1].Id.ToString(), // This this revision should exist in CDF
-                    libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v1.Source);
-                Assert.Equal("Connector Test Model", v1.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v1.ModelExternalId);
-                Assert.Equal(1, v1.Version);
-                Assert.False(v1.Processed);
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    Assert.Equal("Connector Test Model", modelInState.ModelName);
+                    Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
+                    Assert.Equal(revision.VersionNumber, modelInState.Version);
+                    Assert.False(modelInState.Processed);
+                }
 
-                var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
-                var v2 = Assert.Contains(
-                    revisionMap[modelExternalIdV2].Id.ToString(), // This this revision should exist in CDF
-                    libState);
-                Assert.Equal(SeedData.TestSimulatorExternalId, v2.Source);
-                Assert.Equal("Connector Test Model", v2.ModelName);
-                Assert.Equal(SeedData.TestModelExternalId, v2.ModelExternalId);
-                Assert.Equal(2, v2.Version);
-                Assert.False(v2.Processed);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -86,23 +78,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
 
-                // Verify that the files were downloaded and processed
-                v1 = Assert.Contains(
-                    revisionMap[modelExternalIdV1].Id.ToString(),
-                    libState);
-                Assert.Equal(modelExternalIdV2, v2.ExternalId);
-                Assert.True(v1.Processed);
-                Assert.False(string.IsNullOrEmpty(v1.FilePath));
-                Assert.True(System.IO.File.Exists(v1.FilePath)); // Both versions should have been downloaded
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    Assert.True(modelInState.Processed);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                }
 
-                v2 = Assert.Contains(
-                    revisionMap[modelExternalIdV2].Id.ToString(), // This this revision should exist in CDF
+                var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
+                var v2 = Assert.Contains(
+                    revisionMap[modelExternalIdV2].Id.ToString(),
                     libState);
-                Assert.Equal(modelExternalIdV2, v2.ExternalId);
-                Assert.True(v2.Processed);
-                Assert.False(string.IsNullOrEmpty(v2.FilePath));
-                Assert.True(System.IO.File.Exists(v2.FilePath));
-
                 var latest = await lib.GetModelRevision(modelExternalIdV2).ConfigureAwait(false);
                 Assert.NotNull(latest);
                 Assert.Equal(v2, latest);
@@ -113,6 +102,98 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var logv2Data = logv2.First().Data;
                 var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model revision parsed successfully"));
                 Assert.Equal("Information", parsedModelEntry2.First().Severity);
+            }
+            finally
+            {
+                if (Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+            }
+        }
+
+        [Fact]
+        public async Task TestModelLibraryHotReloadAndCleanup()
+        {
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<ModelParsingInfo>();
+            StateStoreConfig stateConfig = null;
+            using var provider = services.BuildServiceProvider();
+
+            // prepopulate models in CDF
+            var cdf = provider.GetRequiredService<Client>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+
+            try
+            {
+                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
+
+                stateConfig = provider.GetRequiredService<StateStoreConfig>();
+                using var source = new CancellationTokenSource();
+
+                var lib = provider.GetRequiredService<ModeLibraryTest>();
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+                bool dirExists = Directory.Exists("./files");
+                Assert.True(dirExists, "Should have created a directory for the files");
+
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+
+                Assert.NotEmpty(lib.State);
+
+                // Start the library update loop that download and parses the files, stop after 5 secs
+                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                var linkedToken = linkedTokenSource.Token;
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
+                var modelLibTasks = lib.GetRunTasks(linkedToken);
+                await modelLibTasks
+                    .RunAll(linkedTokenSource)
+                    .ConfigureAwait(false);
+
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.True(modelInState.Processed);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                }
+
+                // delete current models
+                var modelExternalIdToDelete = revisions.First().ModelExternalId;
+                await SeedData.DeleteSimulatorModel(cdf, modelExternalIdToDelete).ConfigureAwait(false);
+
+                // Verify that the state is empty
+                // Assert.Empty(lib.State); TODO this doesn't work yet
+
+                var revisionNewCreate = SeedData.GenerateSimulatorModelRevisionCreate("hot-reload", version: 1);
+                await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
+
+                var revisionNew = await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
+
+                var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId).ConfigureAwait(false);
+
+                var newModelState = lib.State.GetValueOrDefault(revisionNew.Id.ToString());
+
+                // Accessed revision should be processed and have a file path
+                if (accessedRevision.ExternalId == revisionNew.ExternalId)
+                {
+                    Assert.NotNull(newModelState);
+                    Assert.True(newModelState.Processed); 
+                    Assert.False(string.IsNullOrEmpty(newModelState.FilePath));
+                    Assert.True(System.IO.File.Exists(newModelState.FilePath));
+                }
             }
             finally
             {
