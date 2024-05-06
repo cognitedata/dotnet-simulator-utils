@@ -137,7 +137,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token).ConfigureAwait(false);
                 await configLib.Init(source.Token).ConfigureAwait(false);
 
-                // models are only processed right before the run happens
+                // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
                 // so this should be empty
                 var processedModels = modelLib.State.Values.Where(m => m.FilePath != null && m.Processed);
                 Assert.Empty(processedModels);

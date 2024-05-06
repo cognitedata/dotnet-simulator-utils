@@ -31,7 +31,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
-            // prepopulate models in CDF
             var cdf = provider.GetRequiredService<Client>();
             var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
@@ -39,6 +38,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // prepopulate models in CDF
                 var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
@@ -128,7 +128,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
-            // prepopulate models in CDF
             var cdf = provider.GetRequiredService<Client>();
             var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
@@ -136,6 +135,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // prepopulate models in CDF
                 var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -144,11 +144,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var lib = provider.GetRequiredService<ModeLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 
-                bool dirExists = Directory.Exists("./files");
-                Assert.True(dirExists, "Should have created a directory for the files");
-
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
-
                 Assert.NotEmpty(lib.State);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs

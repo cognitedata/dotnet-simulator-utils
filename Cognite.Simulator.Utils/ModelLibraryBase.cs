@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             Logger = logger;
-            State = new ConcurrentDictionary<string, T>(); // TODO, it is not thread-safe (?)
+            State = new ConcurrentDictionary<string, T>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
@@ -151,7 +151,7 @@ namespace Cognite.Simulator.Utils
                 var modelRes = await CdfSimulatorResources.RetrieveSimulatorModelsAsync(
                     new List<Identity> { new Identity(modelRevision.ModelExternalId) }, token).ConfigureAwait(false);
                 var model = modelRes.FirstOrDefault();
-                var state = AddModelRevisionToState(modelRevision, model); // TODO what happens if the other thread is downloading it as well :(())
+                var state = AddModelRevisionToState(modelRevision, model);
                 var downloaded = await DownloadFileAsync(state).ConfigureAwait(false);
                 if (downloaded)
                 {
