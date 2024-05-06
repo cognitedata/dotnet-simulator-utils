@@ -55,10 +55,13 @@ namespace Cognite.Simulator.Utils {
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
-            if (logId == null && defaultLogId == null){
+            if (logId == null && defaultLogId == null) {
                 return;
             }
             long logIdLong = logId == null ? defaultLogId.Value : long.Parse(logId.ToString());
+            if (logIdLong == 0) {
+                return;
+            }
             // Customize the log data to send to the remote API
             var logData = new SimulatorLogDataEntry
             {
