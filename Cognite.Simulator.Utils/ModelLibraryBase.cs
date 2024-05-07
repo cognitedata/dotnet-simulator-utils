@@ -149,6 +149,11 @@ namespace Cognite.Simulator.Utils
             Logger.LogInformation("Local state store {Table} initiated. Tracking {Num} files", _config.FilesTable, State.Count);
         }
 
+        /// <summary>
+        /// Used when model library state lacks a model file needed for the current simulation run.
+        /// This method will download the file from CDF, extract the model information and run the simulation.
+        /// The file will be deleted after the simulation run, and only kept in TemporaryState dictionary.
+        /// </summary>
         private async Task<T> TryReadModelRevisionFromCdf(string modelRevisionExternalId, CancellationToken token)
         {
             try
