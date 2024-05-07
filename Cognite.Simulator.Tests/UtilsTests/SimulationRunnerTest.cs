@@ -142,7 +142,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var processedModels = modelLib.State.Values.Where(m => m.FilePath != null && m.Processed);
                 Assert.Empty(processedModels);
 
-                var routineRevision = configLib.GetRoutineRevision(revision.ExternalId);
+                var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
@@ -178,13 +178,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
-                // Console.WriteLine($"2 ModelRevision: {modelRevision.Id} \n");
-                Assert.Single(modelLib.State.Values.Where(m => m.Processed && !string.IsNullOrEmpty(m.FilePath))); // only one model should be processed, the one that was used in the run
-                // this is because we are not running the full ModelLibrary here
-                var modelAfterRun = modelLib.State.GetValueOrDefault(modelRevision.Id.ToString());
-                Assert.NotNull(modelAfterRun);
-                Assert.True(modelAfterRun.Processed);
-                Assert.False(string.IsNullOrEmpty(modelAfterRun.FilePath));
+                Assert.Empty(modelLib.TemporaryState); // temporary state should be empty after running the model as it cleans up automatically
+                Assert.Empty(Directory.GetFiles("./files/temp"));
 
                 Assert.True(runner.MetadataInitialized);
 

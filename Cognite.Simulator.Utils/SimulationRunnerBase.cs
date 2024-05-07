@@ -247,6 +247,7 @@ namespace Cognite.Simulator.Utils
                             {
                                 _logger.LogDebug("Calculation run finished for run {Id}", runId);
                                 PublishSimulationRunStatus("IDLE", token);
+                                ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
                     }
@@ -267,7 +268,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation run {Id}", runId);
                 throw new SimulationException($"Could not find a model file for {modelRevExternalId}");
             }
-            V calcConfig = RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId);
+            V calcConfig = await RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId).ConfigureAwait(false);
 
             if (calcConfig == null)
             {

@@ -110,14 +110,14 @@ namespace Cognite.Simulator.Tests
         }
 
         public static FileCreate SimpleModelFileCreate = new FileCreate() {
-            Name = "simulator-integration-tests-model",
-            ExternalId = "simulator-integration-tests-model",
+            Name = "simutils-tests-model",
+            ExternalId = "simutils-tests-model-single-byte",
             DataSetId = 8148496886298377,
         };
 
         public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
-            Name = "simulator-integration-tests-model-2",
-            ExternalId = "simulator-integration-tests-model-2",
+            Name = "simutils-tests-model-2",
+            ExternalId = "simutils-tests-model-single-byte-2",
             DataSetId = 8148496886298377,
         };
 
@@ -152,8 +152,9 @@ namespace Cognite.Simulator.Tests
             }
 
             var uploadUrl = res.UploadUrl;
+            var bytes = new byte[1] { 42 };
 
-            using (var fileStream = new StreamContent(new MemoryStream())) {
+            using (var fileStream = new StreamContent(new MemoryStream(bytes))) {
                 await fileStorageClient.UploadFileAsync(uploadUrl, fileStream).ConfigureAwait(false);
             }
 

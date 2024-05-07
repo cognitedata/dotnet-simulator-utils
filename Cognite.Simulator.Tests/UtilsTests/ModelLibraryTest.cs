@@ -175,7 +175,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId).ConfigureAwait(false);
 
-                var newModelState = lib.State.GetValueOrDefault(revisionNew.Id.ToString());
+                var newModelState = lib.TemporaryState.GetValueOrDefault(revisionNew.Id.ToString());
 
                 // Accessed revision should be processed and have a file path
                 if (accessedRevision.ExternalId == revisionNew.ExternalId)
@@ -186,8 +186,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(System.IO.File.Exists(newModelState.FilePath));
                 }
 
-                // cleanup
-                // Assert.Empty(lib.State); TODO revision cleanup logic
+                // cleanup temp state
+                lib.WipeTemporaryModelFiles();
+                Assert.Empty(Directory.GetFiles("./files/temp"));
+                Assert.Empty(lib.TemporaryState);
             }
             finally
             {
@@ -243,7 +245,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                var simConf = lib.GetRoutineRevision(revision.ExternalId);
+                var simConf = await lib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 Assert.NotNull(simConf);
                 Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
@@ -306,7 +308,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                var routineRevision = lib.GetRoutineRevision(revision.ExternalId);
+                var routineRevision = await lib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
 
@@ -396,9 +398,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             return Task.Run(() =>
             {
-                _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
-                modelState.ParsingInfo.SetSuccess();
-                modelState.Processed = true;
+                // make sure file exists
+                if (System.IO.File.Exists(modelState.FilePath))
+                {
+                    var fileBytes = System.IO.File.ReadAllBytes(modelState.FilePath);
+                    // test file is a single byte with value 42
+                    if (fileBytes.Length == 1 && fileBytes[0] == 42)
+                    {
+                        _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
+                        modelState.ParsingInfo.SetSuccess();
+                        modelState.Processed = true;
+                        return;
+                    }
+                }
+                modelState.ParsingInfo.SetFailure();
             }, token);
         }
 

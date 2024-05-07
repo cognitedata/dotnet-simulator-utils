@@ -36,11 +36,18 @@ namespace Cognite.Simulator.Utils
     {
         private readonly ILogger _logger;
 
-         /// <summary>
-        /// Dictionary holding the file states. The keys are the external ids of the
-        /// CDF files and the values are the state objects of type <typeparamref name="T"/>
+        /// <summary>
+        /// Dictionary holding the file states. The keys are the ids of the
+        /// CDF simulator model revisions and the values are the state objects of type <typeparamref name="T"/>
+        /// Should only be modified from a single thread to avoid multi-threading issues.
         /// </summary>
         public ConcurrentDictionary<string, T> State { get; private set; }
+
+        /// <summary>
+        /// Temporary model states that are used once and then deleted after the run.
+        /// We keep them in memory to avoid saving them to the state store and hence to avoid the multi-threading issues.
+        /// </summary>
+        public Dictionary<string, T> TemporaryState { get; private set; }
         
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -97,6 +104,7 @@ namespace Cognite.Simulator.Utils
             _store = store;
             Logger = logger;
             State = new ConcurrentDictionary<string, T>();
+            TemporaryState = new Dictionary<string, T>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
@@ -151,8 +159,8 @@ namespace Cognite.Simulator.Utils
                 var modelRes = await CdfSimulatorResources.RetrieveSimulatorModelsAsync(
                     new List<Identity> { new Identity(modelRevision.ModelExternalId) }, token).ConfigureAwait(false);
                 var model = modelRes.FirstOrDefault();
-                var state = AddModelRevisionToState(modelRevision, model);
-                var downloaded = await DownloadFileAsync(state).ConfigureAwait(false);
+                var state = StateFromModelRevision(modelRevision, model);
+                var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
@@ -467,13 +475,27 @@ namespace Cognite.Simulator.Utils
                 Directory.CreateDirectory(directoryPath);
             }
         }
+
+        /// <summary>
+        /// Wipes all temporary model files stored in memory
+        /// </summary>
+        public void WipeTemporaryModelFiles()
+        {
+            foreach (var state in TemporaryState.Values)
+            {
+                StateUtils.DeleteLocalFile(state.FilePath);
+            }
+            TemporaryState.Clear();
+        }
         
         /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// </summary>
         /// <param name="modelState">State object representing the file to download</param>
+        /// <param name="isTemporary">True if the file is temporary and should be deleted after use.
+        /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        public async Task<bool> DownloadFileAsync(T modelState)
+        public async Task<bool> DownloadFileAsync(T modelState, bool isTemporary = false)
         {
             if (modelState == null)
             {
@@ -495,15 +517,16 @@ namespace Cognite.Simulator.Utils
 
                     string filename;
                                                 
-                    if (modelState.GetExtension() == "json")
+                    var modelFolder = _modelFolder;
+                    if (isTemporary) // Temporary files are stored in a different folder
                     {
-                        filename = Path.Combine(_modelFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
-                    } else {
-                        var storageFolder = Path.Combine(_modelFolder, $"{modelState.CdfId}");
-                        CreateDirectoryIfNotExists(storageFolder);
-                        filename = Path.Combine(  storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
-                        modelState.IsInDirectory = true;
+                        modelFolder = Path.Combine(modelFolder, "temp");
+                        TemporaryState[modelState.Id] = modelState;
                     }
+                    var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
+                    CreateDirectoryIfNotExists(storageFolder);
+                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                    modelState.IsInDirectory = true;
                     
                     bool downloaded = await _downloadClient
                         .DownloadFileAsync(uri, filename)
@@ -636,5 +659,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelExternalId">Model external id</param>
         /// <returns>List of state objects</returns>
         IEnumerable<T> GetAllModelRevisions(string modelExternalId);
+
+        /// <summary>
+        /// Delete all temporary model files stored in memory and on disk
+        /// </summary>
+        void WipeTemporaryModelFiles();
     }
 }
