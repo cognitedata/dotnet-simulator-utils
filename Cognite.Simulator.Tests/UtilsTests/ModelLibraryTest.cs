@@ -185,11 +185,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(string.IsNullOrEmpty(newModelState.FilePath));
                     Assert.True(System.IO.File.Exists(newModelState.FilePath));
                 }
-                Assert.NotEmpty(Directory.GetFiles("./files/temp"));
+                Assert.NotEmpty(Directory.GetFiles($"./files/temp/{revisionNew.FileId}"));
 
                 // cleanup temp state
                 lib.WipeTemporaryModelFiles();
-                Assert.Empty(Directory.GetFiles("./files/temp"));
+                Assert.Empty(Directory.GetDirectories($"./files/temp"));
                 Assert.Empty(lib.TemporaryState);
             }
             finally
