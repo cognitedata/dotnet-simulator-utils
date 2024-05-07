@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extensions;
+using Cognite.Extractor.StateStorage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +15,17 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class StateUtils
     {
+        internal static void DeleteFileAndDirectory(string filePath, bool isInDirectory)
+        {
+            if (isInDirectory)
+            {
+                var dirPath = Path.GetDirectoryName(filePath);
+                DeleteLocalDirectory(dirPath);
+            } else {
+                DeleteLocalFile(filePath);
+            }
+        }
+
         internal static void RemoveUnusedState(
             this LiteDBStateStore store,
             string tableName,
@@ -23,45 +35,38 @@ namespace Cognite.Simulator.Utils
             var stateToDelete = col
                 .Find(s => !idsToKeep.Contains(s.Id))
                 .ToList();
-            if (stateToDelete.Any())
+            var filesInUseMap = col
+                    .Find(f => !string.IsNullOrEmpty(f.FilePath) && idsToKeep.Contains(f.Id))
+                    .ToDictionarySafe(f => f.FilePath, f => true);
+
+            foreach (var state in stateToDelete)
             {
-                foreach(var state in stateToDelete)
+                if (!filesInUseMap.ContainsKey(state.FilePath))
                 {
-                    if (state.IsInDirectory) {
-                        // get directory path from file path 
-                        // (file path is the directory path + file name)
-                        var dirPath = Path.GetDirectoryName(state.FilePath);
-                        DeleteLocalDirectory(dirPath);
-                    } else {
-                        DeleteLocalFile(state.FilePath);
-                    }
-                    col.Delete(state.Id);
+                    DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
                 }
+                col.Delete(state.Id);
             }
         }
 
-        internal static async Task RemoveFileStates(
+        internal static async Task RemoveFileStates<FileStateType>(
             this IExtractionStateStore store,
             string tableName,
-            IEnumerable<FileState> states,
+            IEnumerable<(FileStateType, bool)> states,
             CancellationToken token)
+            where FileStateType : FileState
         {
             if (!states.Any())
             {
                 return;
             }
-            await store.DeleteExtractionState(states, tableName, token)
+            await store.DeleteExtractionState(states.Select(s => s.Item1), tableName, token)
                 .ConfigureAwait(false);
-            foreach (var state in states)
+            foreach (var (state, withFile) in states)
             {
-                if (state.IsInDirectory)
-                {
-                    var dirPath = Path.GetDirectoryName(state.FilePath);
-                    DeleteLocalDirectory(dirPath);
-                } else {
-                    DeleteLocalFile(state.FilePath);
-                }
-                
+                if (withFile) {
+                    DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
+                }   
             }
         }
 

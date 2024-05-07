@@ -24,6 +24,7 @@ namespace Cognite.Simulator.Tests
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
+        public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -75,6 +76,14 @@ namespace Cognite.Simulator.Tests
             }
         }
 
+        public static async Task DeleteSimulatorModel(Client sdk, string modelExternalId)
+        {
+            await sdk.Alpha.Simulators.DeleteSimulatorModelsAsync(new List<Identity>
+            {
+                new Identity(modelExternalId)
+            }).ConfigureAwait(false);
+        }
+
         public static async Task<SimulatorModel> GetOrCreateSimulatorModel(Client sdk, SimulatorModelCreate model)
         {
             var models = await sdk.Alpha.Simulators.ListSimulatorModelsAsync(
@@ -101,14 +110,14 @@ namespace Cognite.Simulator.Tests
         }
 
         public static FileCreate SimpleModelFileCreate = new FileCreate() {
-            Name = "simulator-integration-tests-model",
-            ExternalId = "simulator-integration-tests-model",
+            Name = "simutils-tests-model",
+            ExternalId = "simutils-tests-model-single-byte",
             DataSetId = 8148496886298377,
         };
 
         public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
-            Name = "simulator-integration-tests-model-2",
-            ExternalId = "simulator-integration-tests-model-2",
+            Name = "simutils-tests-model-2",
+            ExternalId = "simutils-tests-model-single-byte-2",
             DataSetId = 8148496886298377,
         };
 
@@ -143,8 +152,9 @@ namespace Cognite.Simulator.Tests
             }
 
             var uploadUrl = res.UploadUrl;
+            var bytes = new byte[1] { 42 };
 
-            using (var fileStream = new StreamContent(new MemoryStream())) {
+            using (var fileStream = new StreamContent(new MemoryStream(bytes))) {
                 await fileStorageClient.UploadFileAsync(uploadUrl, fileStream).ConfigureAwait(false);
             }
 
@@ -178,15 +188,16 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
-        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient) {
-            var modelFile = await GetOrCreateFile(sdk, fileStorageClient, SimpleModelFileCreate).ConfigureAwait(false);
-            var modelFile2 = await GetOrCreateFile(sdk, fileStorageClient, SimpleModelFileCreate2).ConfigureAwait(false);
+        public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevisionWithFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file, SimulatorModelRevisionCreate revision)
+        {
+            var modelFile = await GetOrCreateFile(sdk, fileStorageClient, file).ConfigureAwait(false);
+            revision.FileId = modelFile.Id;
+            return await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, revision).ConfigureAwait(false);
+        }
 
-            SimulatorModelRevisionCreateV1.FileId = modelFile.Id;
-            SimulatorModelRevisionCreateV2.FileId = modelFile2.Id;
-
-            var rev1 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
-            var rev2 = await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient) {            
+            var rev1 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
+            var rev2 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate2, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
             return new List<SimulatorModelRevision> { rev1, rev2 };
         }
 
@@ -318,14 +329,14 @@ namespace Cognite.Simulator.Tests
                 InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
                 OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
             },
-            ExternalId = "Test Scheduled Routine - 2",
-            RoutineExternalId = $"Test Scheduled Routine - 1",
+            ExternalId = $"{TestScheduledRoutineExternalId} - 2",
+            RoutineExternalId = $"{TestScheduledRoutineExternalId} - 1",
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };
 
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
-            ExternalId = "Test Scheduled Routine - 1",
+            ExternalId = $"{TestScheduledRoutineExternalId} - 1",
             ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
@@ -690,19 +701,18 @@ namespace Cognite.Simulator.Tests
             SimulatorExternalId = TestSimulatorExternalId,
         };
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = new SimulatorModelRevisionCreate()
-        {
-            ExternalId = $"{TestModelExternalId}-1",
-            ModelExternalId = SimulatorModelCreate.ExternalId,
-            Description = "integration test. can be deleted at any time. the test will recreate it.",
-        };
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = new SimulatorModelRevisionCreate()
-        {
-            ExternalId = $"{TestModelExternalId}-2",
-            ModelExternalId = SimulatorModelCreate.ExternalId,
-            Description = "integration test. can be deleted at any time. the test will recreate it.",
-        };
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
+
+        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
+            return new SimulatorModelRevisionCreate()
+            {
+                ExternalId = $"{externalId}-{version}",
+                ModelExternalId = SimulatorModelCreate.ExternalId,
+                Description = "integration test. can be deleted at any time. the test will recreate it.",
+            };
+        }
 
         public static SimulatorCreate SimulatorCreate = new SimulatorCreate()
         {

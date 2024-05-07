@@ -89,17 +89,17 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Looks for the routine revision in the memory with the given external id
         /// </summary>
-        public V GetRoutineRevision(
+        public async Task<V> GetRoutineRevision(
             string routineRevisionExternalId
         )
         {
-            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId);
+            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId).OrderByDescending(c => c.CreatedTime);
             if (revisions.Any())
             {
                 return revisions.First();
             }
 
-            V calcConfig = TryReadRoutineRevisionFromCdf(routineRevisionExternalId).GetAwaiter().GetResult();
+            V calcConfig = await TryReadRoutineRevisionFromCdf(routineRevisionExternalId).ConfigureAwait(false);
 
             return calcConfig;
         }
@@ -237,7 +237,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="routinerRevisionExternalId">Simulator name</param>
         /// <returns>Simulation configuration state object</returns>
-        V GetRoutineRevision(
+        Task<V> GetRoutineRevision(
             string routinerRevisionExternalId);
 
         /// <summary>

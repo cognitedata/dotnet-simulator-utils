@@ -1,4 +1,5 @@
-﻿using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
@@ -136,14 +137,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token).ConfigureAwait(false);
                 await configLib.Init(source.Token).ConfigureAwait(false);
 
-                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
-                var linkedToken = linkedTokenSource.Token;
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                var taskList = new List<Task>(modelLib.GetRunTasks(linkedToken));
-                taskList.AddRange(configLib.GetRunTasks(linkedToken));
-                await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+                // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
+                // so this should be empty
+                var processedModels = modelLib.State.Values.Where(m => m.FilePath != null && m.Processed);
+                Assert.Empty(processedModels);
 
-                var routineRevision = configLib.GetRoutineRevision(revision.ExternalId);
+                var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
@@ -165,7 +164,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
-                var runId = runs.First().Id;
+                var run = runs.First();
+
+                var modelRevisionRes = await cdf.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
+                    new List<Identity> { new Identity(run.ModelRevisionExternalId) }, source.Token).ConfigureAwait(false);
+
+                var modelRevision = modelRevisionRes.First();
 
                 // Run the simulation runner and verify that the event above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -174,20 +178,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
+                Assert.Empty(modelLib.TemporaryState); // temporary state should be empty after running the model as it cleans up automatically
+                Assert.Empty(Directory.GetFiles("./files/temp"));
+
                 Assert.True(runner.MetadataInitialized);
 
                 var runUpdated = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
-                    new List<long> { runId }, source.Token).ConfigureAwait(false);
+                    new List<long> { run.Id }, source.Token).ConfigureAwait(false);
 
                 Assert.NotEmpty(runUpdated);
                 eventId = runUpdated.First().EventId;
                 Assert.NotNull(eventId);
                 Assert.NotNull(runUpdated.First().SimulationTime);
 
-                var retryCount = 0;
                 Event? cdfEvent = null;
 
-                while (retryCount < 20)
+                for (var retryCount = 0; retryCount < 20; retryCount++)
                 {
                     var cdfEvents = await cdf.Events.RetrieveAsync(
                         new List<long> { eventId.Value },
@@ -198,7 +204,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         cdfEvent = cdfEvents.First();
                         break;
                     } else {
-                        retryCount++;
                         await Task.Delay(100);
                     }
                 }
@@ -232,7 +237,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // check inputs/outputs from the /runs/data/list endpoint
                 var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(
-                    new List<long> { runId }, source.Token).ConfigureAwait(false);
+                    new List<long> { run.Id }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runDataRes);
                 var inputs = runDataRes.First().Inputs;
                 Assert.NotEmpty(inputs);
@@ -439,7 +444,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class SampleSimulationRunner :
-        RoutineRunnerBase<TestFileState, TestConfigurationState, SimulatorRoutineRevision>
+        RoutineRunnerBase<TestFileState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
         public bool MetadataInitialized { get; private set; }
