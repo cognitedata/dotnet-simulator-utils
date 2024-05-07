@@ -15,6 +15,17 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class StateUtils
     {
+        internal static void DeleteFileAndDirectory(string filePath, bool isInDirectory)
+        {
+            if (isInDirectory)
+            {
+                var dirPath = Path.GetDirectoryName(filePath);
+                DeleteLocalDirectory(dirPath);
+            } else {
+                DeleteLocalFile(filePath);
+            }
+        }
+
         internal static void RemoveUnusedState(
             this LiteDBStateStore store,
             string tableName,
@@ -32,13 +43,7 @@ namespace Cognite.Simulator.Utils
             {
                 if (!filesInUseMap.ContainsKey(state.FilePath))
                 {
-                    if (state.IsInDirectory)
-                    {
-                        var dirPath = Path.GetDirectoryName(state.FilePath);
-                        DeleteLocalDirectory(dirPath);
-                    } else {
-                        DeleteLocalFile(state.FilePath);
-                    }
+                    DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
                 }
                 col.Delete(state.Id);
             }
@@ -60,13 +65,7 @@ namespace Cognite.Simulator.Utils
             foreach (var (state, withFile) in states)
             {
                 if (withFile) {
-                    if (state.IsInDirectory)
-                    {
-                        var dirPath = Path.GetDirectoryName(state.FilePath);
-                        DeleteLocalDirectory(dirPath);
-                    } else {
-                        DeleteLocalFile(state.FilePath);
-                    }
+                    DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
                 }   
             }
         }

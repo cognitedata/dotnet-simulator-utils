@@ -489,7 +489,7 @@ namespace Cognite.Simulator.Utils
         {
             foreach (var state in TemporaryState.Values)
             {
-                StateUtils.DeleteLocalFile(state.FilePath);
+                StateUtils.DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
             }
             TemporaryState.Clear();
         }
