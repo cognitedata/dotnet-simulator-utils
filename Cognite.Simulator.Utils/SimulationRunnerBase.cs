@@ -434,7 +434,7 @@ namespace Cognite.Simulator.Utils
                 simEv.Run = await UpdateSimulationRunStatus(
                     simEv.Run.Id,
                     SimulationRunStatus.success,
-                    "Calculation ran to completion",
+                    "Simulation ran to completion",
                     token,
                     simEv.RunConfiguration
                 ).ConfigureAwait(false);

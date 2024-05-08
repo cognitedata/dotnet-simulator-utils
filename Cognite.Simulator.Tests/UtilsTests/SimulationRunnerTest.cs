@@ -183,16 +183,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.True(runner.MetadataInitialized);
 
-                var runUpdated = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
+                var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
                     new List<long> { run.Id }, source.Token).ConfigureAwait(false);
 
-                Assert.NotEmpty(runUpdated);
-                eventId = runUpdated.First().EventId;
+                Assert.NotEmpty(runUpdatedRes);
+                var runUpdated = runUpdatedRes.First();
+                Assert.Equal("Simulation ran to completion", runUpdated.StatusMessage);
+                Assert.NotNull(runUpdated.SimulationTime);
+
+                eventId = runUpdated.EventId;
                 Assert.NotNull(eventId);
-                Assert.NotNull(runUpdated.First().SimulationTime);
-
                 Event? cdfEvent = null;
-
                 for (var retryCount = 0; retryCount < 20; retryCount++)
                 {
                     var cdfEvents = await cdf.Events.RetrieveAsync(
@@ -216,10 +217,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(simulationTime <= validationEndOverwrite);
                 Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
                 Assert.Equal("success", eventStatus);
-                Assert.Equal(runUpdated.First().SimulationTime, simulationTime);
+                Assert.Equal(runUpdated.SimulationTime, simulationTime);
 
                 var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                    new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
 
                 // this test is not running the full connector runtime
                 // so logs are not being automatically sent to CDF
@@ -230,7 +231,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // check logs again after flushing
                 logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                    new List<Identity> { new Identity(runUpdated.First().LogId.Value) }, source.Token).ConfigureAwait(false);
+                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
 
                 logData = logsRes.First().Data;
                 Assert.NotNull(logData.First().Message);

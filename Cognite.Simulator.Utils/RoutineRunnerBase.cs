@@ -202,7 +202,7 @@ namespace Cognite.Simulator.Utils
                     RoutineRevisionInfo = routineRevisionInfo,
                     Name = inputTs.Name,
                     ReferenceId = inputTs.ReferenceId,
-                    Unit = inputTs.Unit.Name,
+                    Unit = inputTs.Unit?.Name,
                     SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
@@ -231,7 +231,7 @@ namespace Cognite.Simulator.Utils
                         SaveTimeseriesExternalId = output.SaveTimeseriesExternalId,
                         Name = output.Name,
                         ReferenceId = output.ReferenceId,
-                        Unit = output.Unit.Name,
+                        Unit = output.Unit?.Name,
                     };
 
                     outputTsToCreate.Add(outputTs);

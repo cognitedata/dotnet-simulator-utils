@@ -624,6 +624,11 @@ namespace Cognite.Simulator.Tests
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 2",
+                        ReferenceId = "OT2",
+                        ValueType = SimulatorValueType.DOUBLE
+                    },
                 },
                 Inputs = new List<SimulatorRoutineRevisionInput>() {
                     new SimulatorRoutineRevisionInput() {
@@ -636,6 +641,12 @@ namespace Cognite.Simulator.Tests
                         Aggregate = "average",
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
                         SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                    },
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Test 2",
+                        ReferenceId = "IT2",
+                        Aggregate = "average",
+                        SourceExternalId = "SimConnect-IntegrationTests-OnOffValues",
                     },
                 },
             },
@@ -677,6 +688,13 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                            },
+                        },
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 2,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "OT2" },
                             },
                         },
                     },
