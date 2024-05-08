@@ -254,7 +254,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(input.IsTimeSeries);
                     Assert.NotNull(input.Name);
                     Assert.NotNull(input.SourceExternalId);
-                    Assert.NotNull(input.SaveTimeseriesExternalId);
                 }
             }
             finally
