@@ -246,7 +246,8 @@ namespace Cognite.Simulator.Utils
                     var runEvent = new SimulationRunCreate
                         {
                             RoutineExternalId = routineRev.RoutineExternalId,
-                            RunType = SimulationRunType.scheduled
+                            RunType = SimulationRunType.scheduled,
+                            RunTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                         };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
