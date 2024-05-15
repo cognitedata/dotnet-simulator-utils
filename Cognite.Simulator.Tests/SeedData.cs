@@ -325,9 +325,8 @@ namespace Cognite.Simulator.Tests
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
+                Inputs = new List<SimulatorRoutineRevisionInput>(),
+                Outputs = new List<SimulatorRoutineRevisionOutput>(),
             },
             ExternalId = $"{TestScheduledRoutineExternalId} - 2",
             RoutineExternalId = $"{TestScheduledRoutineExternalId} - 1",
@@ -388,7 +387,7 @@ namespace Cognite.Simulator.Tests
                         Value = SimulatorValue.Create(42),
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
                     },
@@ -399,7 +398,7 @@ namespace Cognite.Simulator.Tests
                         Value = SimulatorValue.Create(100),
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
                     },
@@ -411,7 +410,7 @@ namespace Cognite.Simulator.Tests
                         ValueType = SimulatorValueType.DOUBLE,
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
@@ -620,7 +619,7 @@ namespace Cognite.Simulator.Tests
                         ValueType = SimulatorValueType.DOUBLE,
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
@@ -636,7 +635,7 @@ namespace Cognite.Simulator.Tests
                         ReferenceId = "IT1",
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         Aggregate = "average",
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
