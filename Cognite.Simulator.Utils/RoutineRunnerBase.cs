@@ -105,7 +105,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(runItem));
             }
-            _logger.LogInformation("Started running simulation run {ID}", runItem.Run.Id.ToString());
+            _logger.LogInformation("Started executing simulation run {ID}", runItem.Run.Id.ToString());
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
             var inputData = new Dictionary<string, SimulatorValueItem>();
