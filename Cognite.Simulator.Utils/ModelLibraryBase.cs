@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Temporary model states that are used once and then deleted after the run.
         /// We keep them in memory to avoid saving them to the state store and hence to avoid the multi-threading issues.
-        /// This state is used to store temporary model file paths, used only in case a run event is received before the model file has been downloaded. 
+        /// This state is used to store temporary model file paths, used only in case a run item is received before the model file has been downloaded. 
         /// </summary>
         public Dictionary<string, T> TemporaryState { get; private set; }
         

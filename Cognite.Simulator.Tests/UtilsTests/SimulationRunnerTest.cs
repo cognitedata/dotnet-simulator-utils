@@ -103,7 +103,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             StateStoreConfig stateConfig = null;
 
-            long? eventId = null;
             var tsToDelete = new List<string>();
 
             using var source = new CancellationTokenSource();
@@ -171,7 +170,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var modelRevision = modelRevisionRes.First();
 
-                // Run the simulation runner and verify that the event above was picked up for execution
+                // Run the simulation runner and verify that the run above was picked up for execution
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken2 = linkedTokenSource2.Token;
                 linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(5));
@@ -181,43 +180,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Empty(modelLib.TemporaryState); // temporary state should be empty after running the model as it cleans up automatically
                 Assert.Empty(Directory.GetFiles("./files/temp"));
 
-                Assert.True(runner.MetadataInitialized);
-
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
                     new List<long> { run.Id }, source.Token).ConfigureAwait(false);
 
                 Assert.NotEmpty(runUpdatedRes);
                 var runUpdated = runUpdatedRes.First();
                 Assert.Equal("Simulation ran to completion", runUpdated.StatusMessage);
+                Assert.Equal(SimulationRunStatus.success, runUpdated.Status);
                 Assert.NotNull(runUpdated.SimulationTime);
-
-                eventId = runUpdated.EventId;
-                Assert.NotNull(eventId);
-                Event? cdfEvent = null;
-                for (var retryCount = 0; retryCount < 20; retryCount++)
-                {
-                    var cdfEvents = await cdf.Events.RetrieveAsync(
-                        new List<long> { eventId.Value },
-                        true,
-                        source.Token).ConfigureAwait(false);
-                    if (cdfEvents.Any())
-                    {
-                        cdfEvent = cdfEvents.First();
-                        break;
-                    } else {
-                        await Task.Delay(100);
-                    }
-                }
-
-                Assert.NotNull(cdfEvent);
-                    
-                var eventMetadata = cdfEvent.Metadata;
-                Assert.True(eventMetadata.ContainsKey("simulationTime"));
-                Assert.True(long.TryParse(eventMetadata["simulationTime"], out var simulationTime));
-                Assert.True(simulationTime <= validationEndOverwrite);
-                Assert.True(eventMetadata.TryGetValue("status", out var eventStatus));
-                Assert.Equal("success", eventStatus);
-                Assert.Equal(runUpdated.SimulationTime, simulationTime);
+                var simulationTime = runUpdated.SimulationTime.Value;
 
                 var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                     new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
@@ -313,12 +284,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (eventId.HasValue)
-                {
-
-                    await cdf.Events.DeleteAsync(
-                        new List<long> { eventId.Value }, source.Token).ConfigureAwait(false);
-                }
                 if (tsToDelete.Any())
                 {
                     await cdf.TimeSeries.DeleteAsync(new TimeSeriesDelete
@@ -448,7 +413,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         RoutineRunnerBase<TestFileState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
-        public bool MetadataInitialized { get; private set; }
         private ILogger<SampleSimulationRunner> _logger;
 
         public SampleSimulationRunner(
@@ -475,20 +439,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 logger)
         {
             _logger = logger;
-        }
-
-        protected override async Task EndSimulationRun(SimulationRunEvent simEv,
-            CancellationToken token)
-        {
-            _logger.LogWarning("A warning to test remote logging. No actions needed, not a real connector");
-        }
-
-        protected override void InitSimulationEventMetadata(
-            TestFileState modelState,
-            SimulatorRoutineRevision configObj,
-            Dictionary<string, string> metadata)
-        {
-            MetadataInitialized = true;
         }
     }
 }
