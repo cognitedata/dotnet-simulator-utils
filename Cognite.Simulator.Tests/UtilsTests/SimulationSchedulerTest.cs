@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimulatorConfig
                 {
                     Name = SeedData.TestSimulatorExternalId,
-                    DataSetId = CdfTestClient.TestDataset
+                    DataSetId = SeedData.TestDataSetId
                 }
             });
             services.AddSingleton<ITimeManager, FakeTimeManager>();

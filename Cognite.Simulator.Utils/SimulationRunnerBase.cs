@@ -404,7 +404,7 @@ namespace Cognite.Simulator.Utils
                     validationEnd,
                     token).ConfigureAwait(false);
 
-                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Calculation time: {Time}",
+                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Simulation time: {Time}",
                     routineRevision.ExternalId,
                     routineRevision.ModelExternalId,
                     CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));

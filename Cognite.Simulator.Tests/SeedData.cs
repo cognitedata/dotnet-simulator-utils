@@ -26,6 +26,7 @@ namespace Cognite.Simulator.Tests
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
+        public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {
@@ -35,13 +36,7 @@ namespace Cognite.Simulator.Tests
             }
 
             var simulators = await sdk.Alpha.Simulators.ListAsync(
-                new SimulatorQuery
-                {
-                    Filter = new SimulatorFilter
-                    {
-                        Enabled = true
-                    },
-                }).ConfigureAwait(false);
+                new SimulatorQuery()).ConfigureAwait(false);
 
             var simulatorRes = simulators.Items.Where(s => s.ExternalId == simulator.ExternalId);
             if (simulatorRes.Count() > 0)
@@ -58,13 +53,7 @@ namespace Cognite.Simulator.Tests
         public static async Task DeleteSimulator(Client sdk, string externalId)
         {
             var simulators = await sdk.Alpha.Simulators.ListAsync(
-                new SimulatorQuery
-                {
-                    Filter = new SimulatorFilter
-                    {
-                        Enabled = true
-                    },
-                }).ConfigureAwait(false);
+                new SimulatorQuery()).ConfigureAwait(false);
 
             var simulatorRes = simulators.Items.Where(s => s.ExternalId == externalId);
             if (simulatorRes.Count() > 0)
@@ -112,13 +101,13 @@ namespace Cognite.Simulator.Tests
         public static FileCreate SimpleModelFileCreate = new FileCreate() {
             Name = "simutils-tests-model",
             ExternalId = "simutils-tests-model-single-byte",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
             Name = "simutils-tests-model-2",
             ExternalId = "simutils-tests-model-single-byte-2",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static async Task<CogniteSdk.File> GetOrCreateFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file)
@@ -228,14 +217,14 @@ namespace Cognite.Simulator.Tests
         {
             ExternalId = "SimConnect-IntegrationTests-OnOffValues",
             Name = "On/Off Values",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static TimeSeriesCreate SsdSensorDataTimeSeries = new TimeSeriesCreate()
         {
             ExternalId = "SimConnect-IntegrationTests-SsdSensorData",
             Name = "SSD Sensor Data",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
@@ -714,7 +703,7 @@ namespace Cognite.Simulator.Tests
             ExternalId = TestModelExternalId,
             Name = "Connector Test Model",
             Description = "PETEX-Connector Test Model",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
             SimulatorExternalId = TestSimulatorExternalId,
         };
 
@@ -736,7 +725,6 @@ namespace Cognite.Simulator.Tests
             ExternalId = TestSimulatorExternalId,
             Name =  TestSimulatorExternalId,
             FileExtensionTypes= new List<string> { "out" },
-            Enabled = true,
         };
     }
 }

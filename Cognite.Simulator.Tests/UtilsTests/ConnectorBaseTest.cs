@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var simConfig = new SimulatorConfig
             {
                 Name = simulatorName,
-                DataSetId = CdfTestClient.TestDataset
+                DataSetId = SeedData.TestDataSetId
             };
             services.AddSingleton(simConfig);
             var pipeConfig = new PipelineNotificationConfig();
@@ -55,7 +55,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             ExternalId = simulatorName,
                             Name = "TestSim",
                             FileExtensionTypes = new List<string> { "test" },
-                            Enabled = true,
                         }
                 }
             ).ConfigureAwait(false);
@@ -74,7 +73,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(integration);
                 Assert.Equal(simulatorName, integration.SimulatorExternalId);
                 Assert.Equal("1.2.3", integration.SimulatorVersion);
-                Assert.Equal(CdfTestClient.TestDataset, integration.DataSetId);
+                Assert.Equal(SeedData.TestDataSetId, integration.DataSetId);
                 Assert.Equal("v0.0.1", integration.ConnectorVersion);
                 Assert.StartsWith($"Test Connector", integration.ExternalId);
                 Assert.True(integration.Heartbeat >= timestamp);

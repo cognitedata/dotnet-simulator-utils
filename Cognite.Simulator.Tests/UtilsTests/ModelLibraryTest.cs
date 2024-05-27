@@ -383,7 +383,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorConfig
                     {
                         Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = CdfTestClient.TestDataset
+                        DataSetId = SeedData.TestDataSetId
                     }
                 },
                 cdf,
@@ -460,7 +460,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorConfig
                     {
                         Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = CdfTestClient.TestDataset
+                        DataSetId = SeedData.TestDataSetId
                     }
                 },
                 cdf, logger)
