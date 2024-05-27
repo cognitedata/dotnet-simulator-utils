@@ -174,15 +174,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Indicates if this connectors should use Cognite's Simulator Integration API
-        /// </summary>
-        /// <returns></returns>
-        public virtual bool ApiEnabled()
-        {
-            return true;
-        }
-
-        /// <summary>
         /// For each simulator specified in the configuration, create a simulator integration in CDF containing the
         /// simulator name, connector name, data set id, connector version, etc. These parameters will be updated
         /// periodically by the connector, and indicate the status of the currently running connector to
@@ -230,7 +221,6 @@ namespace Cognite.Simulator.Utils
                             DataSetId = simulator.DataSetId,
                             ConnectorVersion = GetConnectorVersion() ?? "N/A",
                             SimulatorVersion = GetSimulatorVersion(simulator.Name) ?? "N/A",
-                            RunApiEnabled = ApiEnabled()
                         };
 
                         var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
@@ -274,7 +264,6 @@ namespace Cognite.Simulator.Utils
                         DataSetId = new Update<long> { Set = simulator.DataSetId },
                         ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
                         SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) ?? "N/A" },
-                        RunApiEnabled = new Update<bool> { Set = ApiEnabled() },
                         ConnectorStatus = new Update<string> { Set = "IDLE" },
                         ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },

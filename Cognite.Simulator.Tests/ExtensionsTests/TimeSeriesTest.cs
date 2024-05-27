@@ -16,7 +16,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestCreateBoundaryConditions()
         {
-            const long dataSetId = CdfTestClient.TestDataset;
+            long dataSetId = SeedData.TestDataSetId;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
@@ -99,7 +99,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestCreateSimulationTimeSeries()
         {
-            const long dataSetId = CdfTestClient.TestDataset;
+            long dataSetId = SeedData.TestDataSetId;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 

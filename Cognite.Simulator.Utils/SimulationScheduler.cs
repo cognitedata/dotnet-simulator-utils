@@ -77,10 +77,10 @@ namespace Cognite.Simulator.Utils
     /// Each iteration, it checks the schedules for all configurations and determine if the simulation
     /// should be triggered.
     /// It is assumed that the simulator can only run one simulation at a time, and therefore there is no
-    /// need to schedule parallel simulation events.
+    /// need to schedule parallel simulation runs.
     /// Alternatives to this implementation include libraries such as Quartz, but the added complexity of
     /// a full fledged scheduling library in not necessary at this point.
-    /// Also, at some point scheduling the creation of CDF events should be done by a cloud service, instead
+    /// Also, at some point scheduling the creation of CDF simulation runs should be done by a cloud service, instead
     /// of doing it in the connector.
     /// </summary>
     public class SimulationSchedulerBase<V> 
@@ -119,7 +119,7 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Starts the scheduler loop. For the existing simulation configuration files,
-        /// check the schedule and create simulation events in CDF accordingly
+        /// check the schedule and create simulation runs in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token) {
@@ -154,7 +154,7 @@ namespace Cognite.Simulator.Utils
                         {
                             if (routineRev.CreatedTime > job.CreatedTime && job.TokenSource != null && !job.TokenSource.Token.IsCancellationRequested)
                             {
-                                _logger.LogDebug($"Cancelling job for Calculation : {routineRev.ExternalId} due to new configuration detected.");
+                                _logger.LogDebug($"Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.");
                                 job.TokenSource.Cancel();
                                 scheduledJobs.Remove(routineRev.RoutineExternalId);
                             }
@@ -180,7 +180,7 @@ namespace Cognite.Simulator.Utils
                             }
                             catch (Exception e)
                             {
-                               _logger.LogError($"Exception while scheduling job for Calculation : {job.RoutineRevision.ExternalId} Error: {e.Message}. Skipping.");
+                               _logger.LogError($"Exception while scheduling job for RoutineRevision : {job.RoutineRevision.ExternalId} Error: {e.Message}. Skipping.");
                             }
                         }
                     }

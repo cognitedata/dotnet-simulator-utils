@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Creates time series in CDF that represent sampled simulation inputs.
         /// Creates the ones not found in CDF, and returns the ones that already exist.
-        /// Data points in this time series should contain the sampled input as value, and the calculation time as timestamp.
+        /// Data points in this time series should contain the sampled input as value, and the simulation time as timestamp.
         /// </summary>
         /// <param name="timeSeries">CDF time series resource</param>
         /// <param name="inputs">List of simulation inputs</param>
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Creates time series in CDF that represent simulation results.
         /// Creates the ones not found in CDF, and returns the ones that already exist.
-        /// Data points in this time series should contain the simulation result as value, and the calculation time as timestamp.
+        /// Data points in this time series should contain the simulation result as value, and the simulation time as timestamp.
         /// </summary>
         /// <param name="timeSeries"></param>
         /// <param name="outputs"></param>
