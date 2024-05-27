@@ -66,7 +66,7 @@ namespace Cognite.Simulator.Utils
         protected ILogger Logger { get; private set; }
 
         // Other injected services
-        private readonly FileLibraryConfig _config;
+        private readonly ModelLibraryConfig _config;
         private readonly IList<SimulatorConfig> _simulators;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
@@ -86,7 +86,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
-            FileLibraryConfig config, 
+            ModelLibraryConfig config, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf, 
             ILogger logger, 

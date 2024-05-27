@@ -43,10 +43,10 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Represents the configuration for a file library. Used to configure <seealso cref="FileLibrary{T, U}"/>
+    /// Represents the configuration for a model library. Used to configure <seealso cref="ModelLibraryBase{V}"/>
     /// and derived classes
     /// </summary>
-    public class FileLibraryConfig
+    public class ModelLibraryConfig
     {
         /// <summary>
         /// Interval for writing the library state to the local store.
@@ -114,21 +114,16 @@ namespace Cognite.Simulator.Utils
         public int StatusInterval { get; set; } = 10;
 
         /// <summary>
-        /// The connector will fetch simulation calculation events from CDF with this interval (in seconds)
+        /// The connector will fetch simulation runs from CDF with this interval (in seconds)
         /// </summary>
-        public int FetchEventsInterval { get; set; } = 5;
+        public int FetchRunsInterval { get; set; } = 5;
 
         /// <summary>
-        /// The connector will run simulation events found on CDF that are not older than
-        /// this value (in seconds). In case it finds events older than this, the events will
+        /// The connector will run simulation run resource found on CDF that are not older than
+        /// this value (in seconds). In case it finds items older than this, the runs will
         /// fail due to timeout
         /// </summary>
-        public int SimulationEventTolerance { get; set; } = 1800; // 30 min
-
-        /// <summary>
-        /// The maximum number of rows to insert into a single sequence in CDF
-        /// </summary>
-        public long MaximumNumberOfSequenceRows { get; set; } = 100_000;
+        public int SimulationRunTolerance { get; set; } = 1800; // 30 min
 
         /// <summary>
         /// The connector will check if scheduled simulations should be triggered with

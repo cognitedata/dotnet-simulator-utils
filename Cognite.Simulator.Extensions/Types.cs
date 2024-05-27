@@ -48,7 +48,7 @@ namespace Cognite.Simulator.Extensions
         public string RoutineExternalId { get; set; }
 
         /// <summary>
-        /// Simulator model associated with this calculation
+        /// Simulator model associated with this routine
         /// </summary>
         public SimulatorModelInfo Model { get; set; }
 
@@ -218,7 +218,7 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents the sampled inputs used in a calculation
+    /// Represents the sampled inputs used in a simulation
     /// </summary>
     public class SimulationInput : SimulationTimeSeries
     {
@@ -239,7 +239,7 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents the results of a calculation
+    /// Represents the results of a simulation run
     /// </summary>
     public class SimulationOutput : SimulationTimeSeries
     {
@@ -251,7 +251,7 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents a simulation variable associated with a calculation. For instance,
+    /// Represents a simulation variable associated with a simulation run. For instance,
     /// simulation sampled inputs and result outputs
     /// </summary>
     public abstract class SimulationTimeSeries
@@ -263,7 +263,7 @@ namespace Cognite.Simulator.Extensions
         public string SaveTimeseriesExternalId { get; set; }
 
         /// <summary>
-        /// Calculation associated with this variable
+        /// Routine revision associated with this variable
         /// </summary>
         public SimulatorRoutineRevisionInfo RoutineRevisionInfo { get; set; }
 

@@ -17,7 +17,7 @@ namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// Represents the connector's simulation runner process. This base class can
-    /// fetch simulation events from CDF that are ready to run, validate them and find
+    /// fetch simulation runs from CDF that are ready to run, validate them and find
     /// the time range to sample data where the process is in steady state.
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
@@ -130,7 +130,7 @@ namespace Cognite.Simulator.Utils
             return runsResult.Items;
         }
 
-        private async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(
+        private async Task<IEnumerable<SimulationRunEvent>> FindSimulationRuns(
             Dictionary<string, long> simulatorDataSetMap,
             SimulationRunStatus status,
             CancellationToken token)
@@ -147,12 +147,12 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
-            var interval = TimeSpan.FromSeconds(_connectorConfig.FetchEventsInterval);
+            var interval = TimeSpan.FromSeconds(_connectorConfig.FetchRunsInterval);
             while (!token.IsCancellationRequested)
             {
                 var simulators = _simulators.ToDictionary(s => s.Name, s => s.DataSetId);
-                // Find events that are ready to run
-                var simulationEvents = await FindSimulationEvents(
+                // Find runs that are ready to be executed
+                var simulationEvents = await FindSimulationRuns(
                     simulators,
                     SimulationRunStatus.ready,
                     token).ConfigureAwait(false);
@@ -163,20 +163,20 @@ namespace Cognite.Simulator.Utils
                         simulationEvents.Count());
                 }
 
-                // Find events that are running. Should not have any, as the connector runs events in sequence.
-                // Any running events indicates that the connector went down during the run, and the event should fail
-                var simulationRunningEvents = await FindSimulationEvents(
+                // Find runs that are in progress. Should not have any, as the connector runs them in sequence.
+                // Any running events indicates that the connector went down during the run, and the run status should be updated to "failure".
+                var simulationRunningItems = await FindSimulationRuns(
                     simulators,
                     SimulationRunStatus.running,
                     token).ConfigureAwait(false);
-                if (simulationRunningEvents.Any())
+                if (simulationRunningItems.Any())
                 {
                     _logger.LogWarning(
                         "{Number} simulation event(s) that are running (but should have finished) found in CDF",
-                        simulationRunningEvents.Count());
+                        simulationRunningItems.Count());
                 }
                 var allEvents = new List<SimulationRunEvent>(simulationEvents);
-                allEvents.AddRange(simulationRunningEvents);
+                allEvents.AddRange(simulationRunningItems);
 
                 // sort by event time
                 allEvents.Sort((e1, e2) =>
@@ -211,7 +211,7 @@ namespace Cognite.Simulator.Utils
                                 modelState,
                                 routineRev,
                                 metadata);
-                            PublishSimulationRunStatus("RUNNING_CALCULATION", token);
+                            PublishSimulationRunStatus("RUNNING_SIMULATION", token);
 
                             await InitSimulationRun(
                                 e,
@@ -231,7 +231,7 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogError(error.Message);
                                 }
                             }
-                            _logger.LogError("Calculation run failed with error: {Message}", ex);
+                            _logger.LogError("Simulation run failed with error: {Message}", ex);
                             e.Run = await UpdateSimulationRunStatus(
                                 runId,
                                 SimulationRunStatus.failure,
@@ -242,10 +242,10 @@ namespace Cognite.Simulator.Utils
                         }
                         finally
                         {
-                            // the following check was added because the code below was running even for skipped events
+                            // the following check was added because the code below was running even for skipped runs
                             if (!skipped)
                             {
-                                _logger.LogDebug("Calculation run finished for run {Id}", runId);
+                                _logger.LogDebug("Simulation run finished for run {Id}", runId);
                                 PublishSimulationRunStatus("IDLE", token);
                                 ModelLibrary.WipeTemporaryModelFiles();
                             }
@@ -282,7 +282,7 @@ namespace Cognite.Simulator.Utils
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
-                throw new ConnectorException("Calculation failed due to connector error");
+                throw new ConnectorException("Simulation failed due to connector error");
             }
             return (model, calcConfig);
         }
