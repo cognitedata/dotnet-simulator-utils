@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Represents the configuration for a model library. Used to configure <seealso cref="ModelLibraryBase{V}"/>
+    /// Represents the configuration for a model library. Used to configure <seealso cref="ModelLibraryBase{T, U, V}"/>
     /// and derived classes
     /// </summary>
     public class ModelLibraryConfig
