@@ -206,7 +206,7 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
 
-                            PublishSimulationRunStatus("RUNNING_SIMULATION", token);
+                            PublishSimulationRunStatus(ConnectorStatus.RUNNING_SIMULATION, token);
 
                             await InitSimulationRun(
                                 runItem,
@@ -240,7 +240,7 @@ namespace Cognite.Simulator.Utils
                             if (!skipped)
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
-                                PublishSimulationRunStatus("IDLE", token);
+                                PublishSimulationRunStatus(ConnectorStatus.IDLE, token);
                                 ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
@@ -281,7 +281,7 @@ namespace Cognite.Simulator.Utils
             return (model, calcConfig);
         }
 
-        async void PublishSimulationRunStatus(string runStatus, CancellationToken token)
+        async void PublishSimulationRunStatus(ConnectorStatus status, CancellationToken token)
         {
             try
             {
@@ -305,7 +305,7 @@ namespace Cognite.Simulator.Utils
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 var simulatorIntegrationUpdate = new SimulatorIntegrationUpdate
                     {
-                        ConnectorStatus = new Update<string>(runStatus),
+                        ConnectorStatus = new Update<string>(status.ToString()),
                         ConnectorStatusUpdatedTime = new Update<long>(now)
                     };
                 await _cdfSimulators.UpdateSimulatorIntegrationAsync(

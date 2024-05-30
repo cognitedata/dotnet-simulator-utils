@@ -15,6 +15,44 @@ using CogniteSdk;
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
+    /// Connector status
+    /// </summary>
+    public enum ConnectorStatus
+    {
+        /// <summary>
+        /// Connector is currently idle.
+        /// </summary>
+        IDLE,
+
+        /// <summary>
+        /// Connector is currently running a simulation.
+        /// </summary>
+        RUNNING_SIMULATION,
+    }
+
+    /// <summary>
+    /// License status
+    /// </summary>
+    public enum LicenseStatus 
+    {
+        /// <summary>
+        /// License is available.
+        /// </summary>
+        AVAILABLE,
+        /// <summary>
+        /// License is not available.
+        /// </summary>
+        NOT_AVAILABLE,
+        /// <summary>
+        /// License status has not been checked yet.
+        /// </summary>
+        NOT_CHECKED_YET,
+        /// <summary>
+        /// License check is disabled.
+        /// </summary>
+        DISABLED
+    }
+    /// <summary>
     /// Base class for simulator connectors. Implements heartbeat reporting.
     /// The connector information is saved as a CDF sequence, where the rows
     /// are key/value pairs (see <seealso cref="SimulatorIntegrationSequenceRows"/>)
@@ -37,7 +75,7 @@ namespace Cognite.Simulator.Utils
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
-        private string LastLicenseCheckResult { get; set; }
+        private LicenseStatus LastLicenseCheckResult { get; set; }
         private const int FIFTEEN_MIN = 9000;
 
         private readonly RemoteConfigManager<T> _remoteConfigManager;
@@ -252,7 +290,7 @@ namespace Cognite.Simulator.Utils
         {   
             if (init)
             {
-                LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
+                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.NOT_CHECKED_YET : LicenseStatus.DISABLED;
             }
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
@@ -264,15 +302,15 @@ namespace Cognite.Simulator.Utils
                         DataSetId = new Update<long> { Set = simulator.DataSetId },
                         ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
                         SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) ?? "N/A" },
-                        ConnectorStatus = new Update<string> { Set = "IDLE" },
+                        ConnectorStatus = new Update<string> { Set = ConnectorStatus.IDLE.ToString() },
                         ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() }, 
                     } : new SimulatorIntegrationUpdate {
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
                     };
                     var simIntegration = GetSimulatorIntegration(simulator.Name);
                     if (simIntegration == null)
@@ -338,7 +376,7 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
+                LastLicenseCheckResult = CheckLicenseStatus() ? LicenseStatus.AVAILABLE : LicenseStatus.NOT_AVAILABLE;
                 await UpdateSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
             }
