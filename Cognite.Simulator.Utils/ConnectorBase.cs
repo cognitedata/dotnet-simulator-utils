@@ -14,6 +14,9 @@ using CogniteSdk;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Connector status
+    /// </summary>
     public enum ConnectorStatus
     {
         /// <summary>
@@ -27,11 +30,26 @@ namespace Cognite.Simulator.Utils
         RUNNING_SIMULATION,
     }
 
+    /// <summary>
+    /// License status
+    /// </summary>
     public enum LicenseStatus 
     {
+        /// <summary>
+        /// License is available.
+        /// </summary>
         AVAILABLE,
+        /// <summary>
+        /// License is not available.
+        /// </summary>
         NOT_AVAILABLE,
+        /// <summary>
+        /// License status has not been checked yet.
+        /// </summary>
         NOT_CHECKED_YET,
+        /// <summary>
+        /// License check is disabled.
+        /// </summary>
         DISABLED
     }
     /// <summary>
@@ -284,7 +302,7 @@ namespace Cognite.Simulator.Utils
                         DataSetId = new Update<long> { Set = simulator.DataSetId },
                         ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
                         SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) ?? "N/A" },
-                        ConnectorStatus = new Update<string> { Set = "IDLE" },
+                        ConnectorStatus = new Update<string> { Set = ConnectorStatus.IDLE.ToString() },
                         ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
