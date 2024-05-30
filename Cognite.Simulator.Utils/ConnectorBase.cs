@@ -14,6 +14,26 @@ using CogniteSdk;
 
 namespace Cognite.Simulator.Utils
 {
+    public enum ConnectorStatus
+    {
+        /// <summary>
+        /// Connector is currently idle.
+        /// </summary>
+        IDLE,
+
+        /// <summary>
+        /// Connector is currently running a simulation.
+        /// </summary>
+        RUNNING_SIMULATION,
+    }
+
+    public enum LicenseStatus 
+    {
+        AVAILABLE,
+        NOT_AVAILABLE,
+        NOT_CHECKED_YET,
+        DISABLED
+    }
     /// <summary>
     /// Base class for simulator connectors. Implements heartbeat reporting.
     /// The connector information is saved as a CDF sequence, where the rows
@@ -37,7 +57,7 @@ namespace Cognite.Simulator.Utils
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
-        private string LastLicenseCheckResult { get; set; }
+        private LicenseStatus LastLicenseCheckResult { get; set; }
         private const int FIFTEEN_MIN = 9000;
 
         private readonly RemoteConfigManager<T> _remoteConfigManager;
@@ -252,7 +272,7 @@ namespace Cognite.Simulator.Utils
         {   
             if (init)
             {
-                LastLicenseCheckResult = ShouldLicenseCheck() ? "Not checked yet" : "License check disabled";
+                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.NOT_CHECKED_YET : LicenseStatus.DISABLED;
             }
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
@@ -268,12 +288,13 @@ namespace Cognite.Simulator.Utils
                         ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() }, 
                     } : new SimulatorIntegrationUpdate {
                         Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult }, 
+                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
                     };
+                    Console.WriteLine($"License status: {LastLicenseCheckResult}");
                     var simIntegration = GetSimulatorIntegration(simulator.Name);
                     if (simIntegration == null)
                     {
@@ -338,7 +359,7 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                LastLicenseCheckResult = CheckLicenseStatus() ? "Available" : "Not available";
+                LastLicenseCheckResult = CheckLicenseStatus() ? LicenseStatus.AVAILABLE : LicenseStatus.NOT_AVAILABLE;
                 await UpdateSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
             }
