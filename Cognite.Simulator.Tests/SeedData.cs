@@ -99,13 +99,13 @@ namespace Cognite.Simulator.Tests
         }
 
         public static FileCreate SimpleModelFileCreate = new FileCreate() {
-            Name = "simutils-tests-model",
+            Name = "simutils-tests-model.out",
             ExternalId = "simutils-tests-model-single-byte",
             DataSetId = TestDataSetId,
         };
 
         public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
-            Name = "simutils-tests-model-2",
+            Name = "simutils-tests-model-2.out",
             ExternalId = "simutils-tests-model-single-byte-2",
             DataSetId = TestDataSetId,
         };
@@ -705,6 +705,7 @@ namespace Cognite.Simulator.Tests
             Description = "PETEX-Connector Test Model",
             DataSetId = TestDataSetId,
             SimulatorExternalId = TestSimulatorExternalId,
+            Type = "OilWell",
         };
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
@@ -725,6 +726,43 @@ namespace Cognite.Simulator.Tests
             ExternalId = TestSimulatorExternalId,
             Name =  TestSimulatorExternalId,
             FileExtensionTypes= new List<string> { "out" },
+            StepFields = new List<SimulatorStepField> {
+                new SimulatorStepField {
+                    StepType = "get/set",
+                    Fields = new List<SimulatorStepFieldParam> {
+                        new SimulatorStepFieldParam {
+                            Name = "address",
+                            Label = "OpenServer Address",
+                            Info = "Enter the address of the PROSPER variable, i.e. PROSPER.ANL. SYS. Pres",
+                        },
+                    },
+                },
+                new SimulatorStepField {
+                    StepType = "command",
+                    Fields = new List<SimulatorStepFieldParam> {
+                        new SimulatorStepFieldParam {
+                            Name = "address",
+                            Label = "OpenServer Address",
+                            Info = "Enter the PROSPER command",
+                        },
+                    },
+                },
+
+            },
+            ModelTypes = new List<SimulatorModelType> {
+                new SimulatorModelType {
+                    Name = "Oil and Water Well",
+                    Key = "OilWell",
+                },
+                new SimulatorModelType {
+                    Name = "Dry and Wet Gas Well",
+                    Key = "GasWell",
+                },
+                new SimulatorModelType {
+                    Name = "Retrograde Condensate Well",
+                    Key = "RetrogradeWell",
+                },
+            },
         };
     }
 }

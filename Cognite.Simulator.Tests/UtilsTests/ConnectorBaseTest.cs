@@ -55,6 +55,42 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             ExternalId = simulatorName,
                             Name = "TestSim",
                             FileExtensionTypes = new List<string> { "test" },
+                            ModelTypes = new List<SimulatorModelType> {
+                                new SimulatorModelType {
+                                    Name = "Oil and Water Well",
+                                    Key = "OilWell",
+                                },
+                                new SimulatorModelType {
+                                    Name = "Dry and Wet Gas Well",
+                                    Key = "GasWell",
+                                },
+                                new SimulatorModelType {
+                                    Name = "Retrograde Condensate Well",
+                                    Key = "RetrogradeWell",
+                                },
+                            },
+                            StepFields = new List<SimulatorStepField> {
+                                new SimulatorStepField {
+                                    StepType = "get/set",
+                                    Fields = new List<SimulatorStepFieldParam> {
+                                        new SimulatorStepFieldParam {
+                                            Name = "address",
+                                            Label = "OpenServer Address",
+                                            Info = "Enter the address of the PROSPER variable, i.e. PROSPER.ANL. SYS. Pres",
+                                        },
+                                    },
+                                },
+                                new SimulatorStepField {
+                                    StepType = "command",
+                                    Fields = new List<SimulatorStepFieldParam> {
+                                        new SimulatorStepFieldParam {
+                                            Name = "address",
+                                            Label = "OpenServer Address",
+                                            Info = "Enter the PROSPER command",
+                                        },
+                                    },
+                                },
+                            },
                         }
                 }
             ).ConfigureAwait(false);
