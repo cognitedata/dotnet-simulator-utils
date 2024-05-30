@@ -312,7 +312,6 @@ namespace Cognite.Simulator.Utils
                         LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
                         LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
                     };
-                    Console.WriteLine($"License status: {LastLicenseCheckResult}");
                     var simIntegration = GetSimulatorIntegration(simulator.Name);
                     if (simIntegration == null)
                     {
