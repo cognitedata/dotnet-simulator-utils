@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// License status has not been checked yet.
         /// </summary>
-        NOT_CHECKED_YET,
+        UNKNOWN,
         /// <summary>
         /// License check is disabled.
         /// </summary>
@@ -290,7 +290,7 @@ namespace Cognite.Simulator.Utils
         {   
             if (init)
             {
-                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.NOT_CHECKED_YET : LicenseStatus.DISABLED;
+                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.UNKNOWN : LicenseStatus.DISABLED;
             }
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
