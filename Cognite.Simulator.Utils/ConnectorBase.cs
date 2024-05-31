@@ -54,7 +54,7 @@ namespace Cognite.Simulator.Utils
     }
     /// <summary>
     /// Base class for simulator connectors. Implements heartbeat reporting.
-    /// The connector information is stored in the simulator integration resource in the SimInt API.
+    /// The connector information is stored in the simulator integration resource in CDF.
     /// </summary>
     public abstract class ConnectorBase<T> where T : BaseConfig
     {
