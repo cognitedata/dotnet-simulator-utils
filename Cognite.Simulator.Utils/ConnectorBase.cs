@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// License status has not been checked yet.
         /// </summary>
-        NOT_CHECKED_YET,
+        UNKNOWN,
         /// <summary>
         /// License check is disabled.
         /// </summary>
@@ -54,8 +54,7 @@ namespace Cognite.Simulator.Utils
     }
     /// <summary>
     /// Base class for simulator connectors. Implements heartbeat reporting.
-    /// The connector information is saved as a CDF sequence, where the rows
-    /// are key/value pairs (see <seealso cref="SimulatorIntegrationSequenceRows"/>)
+    /// The connector information is stored in the simulator integration resource in CDF.
     /// </summary>
     public abstract class ConnectorBase<T> where T : BaseConfig
     {
@@ -290,7 +289,7 @@ namespace Cognite.Simulator.Utils
         {   
             if (init)
             {
-                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.NOT_CHECKED_YET : LicenseStatus.DISABLED;
+                LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.UNKNOWN : LicenseStatus.DISABLED;
             }
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
