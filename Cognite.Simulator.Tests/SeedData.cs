@@ -20,7 +20,8 @@ namespace Cognite.Simulator.Tests
     public class SeedData
     {
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestSimulatorExternalId = "UTILS_TEST_SIMULATOR_" + Now;
+        public static string TestSimulatorExternalIdPrefix = "UTILS_TEST_SIMULATOR_";
+        public static string TestSimulatorExternalId = TestSimulatorExternalIdPrefix + Now;
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
@@ -55,13 +56,20 @@ namespace Cognite.Simulator.Tests
             var simulators = await sdk.Alpha.Simulators.ListAsync(
                 new SimulatorQuery()).ConfigureAwait(false);
 
-            var simulatorRes = simulators.Items.Where(s => s.ExternalId == externalId);
+            // delete all test simulators older than 3 minutes and the one with the given externalId
+            var createdTime = DateTime.UtcNow.AddMinutes(-3).ToUnixTimeMilliseconds();
+            var simulatorRes = simulators.Items.Where(s => 
+                (s.ExternalId.StartsWith(TestSimulatorExternalIdPrefix) && s.CreatedTime < createdTime) || s.ExternalId == externalId
+            );
             if (simulatorRes.Count() > 0)
             {
-                await sdk.Alpha.Simulators.DeleteAsync(new List<Identity>
+                foreach (var sim in simulatorRes)
                 {
-                    new Identity(externalId)
-                }).ConfigureAwait(false);
+                    await sdk.Alpha.Simulators.DeleteAsync(new List<Identity>
+                    {
+                        new Identity(sim.ExternalId)
+                    }).ConfigureAwait(false);
+                }
             }
         }
 
