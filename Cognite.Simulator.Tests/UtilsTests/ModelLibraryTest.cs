@@ -55,7 +55,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(lib.State);
 
-                foreach (var revision in revisions)
+                foreach (var revision in revisions.TakeLast(1)) // API returns only the latest revisions by default
                 {
                     var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
@@ -78,7 +78,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
 
-                foreach (var revision in revisions)
+                foreach (var revision in revisions.TakeLast(1))
                 {
                     var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
@@ -155,7 +155,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
-                foreach (var revision in revisions)
+                foreach (var revision in revisions.TakeLast(1))
                 {
                     var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);

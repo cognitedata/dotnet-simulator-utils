@@ -417,6 +417,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -424,6 +425,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -450,6 +452,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -516,6 +519,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -523,6 +527,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -549,6 +554,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -650,6 +656,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -676,6 +683,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -683,6 +691,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -708,9 +717,9 @@ namespace Cognite.Simulator.Tests
             Type = "OilWell",
         };
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
 
         public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
             return new SimulatorModelRevisionCreate()
@@ -741,13 +750,49 @@ namespace Cognite.Simulator.Tests
                     StepType = "command",
                     Fields = new List<SimulatorStepFieldParam> {
                         new SimulatorStepFieldParam {
-                            Name = "address",
-                            Label = "OpenServer Address",
+                            Name = "command",
+                            Label = "OpenServer Command",
                             Info = "Enter the PROSPER command",
                         },
                     },
                 },
 
+            },
+            UnitQuantities = new List<SimulatorUnitQuantity> {
+                new SimulatorUnitQuantity {
+                    Name = "LiqRate/GasRate",
+                    Label = "Liquid Gas Rate",
+                    Units = new List<SimulatorUnitEntry> {
+                        new SimulatorUnitEntry {
+                            Label = "STB/MMscf",
+                            Name = "STB/MMscf",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/Sm³",
+                            Name = "Sm3/Sm3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "m³/m³",
+                            Name = "m3/m3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "m³/m³Vn",
+                            Name = "m3/m3Vn",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "STB/m³Vn",
+                            Name = "STB/m3Vn",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/kSm³",
+                            Name = "Sm3/kSm3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/MSm³",
+                            Name = "Sm3/MSm3",
+                        },
+                    },
+                },
             },
             ModelTypes = new List<SimulatorModelType> {
                 new SimulatorModelType {

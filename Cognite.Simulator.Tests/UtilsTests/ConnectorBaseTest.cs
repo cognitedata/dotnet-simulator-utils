@@ -84,9 +84,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                     StepType = "command",
                                     Fields = new List<SimulatorStepFieldParam> {
                                         new SimulatorStepFieldParam {
-                                            Name = "address",
-                                            Label = "OpenServer Address",
-                                            Info = "Enter the PROSPER command",
+                                            Name = "command",
+                                            Label = "OpenServer Command",
+                                            Info = "Enter the command to send to the PROSPER, i.e. Simulate",
                                         },
                                     },
                                 },
