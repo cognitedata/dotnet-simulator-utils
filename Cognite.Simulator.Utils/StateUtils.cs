@@ -41,7 +41,7 @@ namespace Cognite.Simulator.Utils
 
             foreach (var state in stateToDelete)
             {
-                if (!filesInUseMap.ContainsKey(state.FilePath))
+                if (state.FilePath != null && !filesInUseMap.ContainsKey(state.FilePath))
                 {
                     DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
                 }
