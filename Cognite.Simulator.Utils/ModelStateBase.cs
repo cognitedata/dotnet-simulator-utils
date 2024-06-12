@@ -66,7 +66,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public SimulatorModelInfo Model => new SimulatorModelInfo()
         {
-            Name = ModelName,
             ExternalId = ModelExternalId,
             Simulator = Source
         };
@@ -93,7 +92,6 @@ namespace Cognite.Simulator.Utils
             return new ModelStateBasePoco
             {
                 Id = Id,
-                ModelName = ModelName,
                 ModelExternalId = ModelExternalId,
                 Source = Source,
                 DataSetId = DataSetId,

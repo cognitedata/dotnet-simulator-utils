@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
-                    Assert.Equal("Connector Test Model", modelInState.ModelName);
+                    Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
                     Assert.False(modelInState.Processed);
@@ -555,16 +555,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }, token);
         }
 
-        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model)
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
             if (modelRevision == null)
             {
                 throw new ArgumentNullException(nameof(modelRevision));
-            }
-
-            if (model == null)
-            {
-                throw new ArgumentNullException(nameof(model));
             }
 
             return new TestFileState(modelRevision.Id.ToString())
@@ -573,7 +568,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,
                 UpdatedTime = modelRevision.LastUpdatedTime,
-                ModelName = model.Name,
                 ModelExternalId = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,

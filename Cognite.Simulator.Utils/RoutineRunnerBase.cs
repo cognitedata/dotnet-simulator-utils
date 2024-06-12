@@ -120,7 +120,6 @@ namespace Cognite.Simulator.Utils
                     Model = new SimulatorModelInfo
                     {
                         ExternalId = modelState.ModelExternalId,
-                        Name = modelState.ModelName,
                         Simulator = routineRevision.SimulatorExternalId,
                     },
                     RoutineExternalId = routineRevision.RoutineExternalId,

@@ -26,7 +26,6 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var model = new SimulatorModelInfo
             {
-                Name = "Connector Test Model",
                 ExternalId = "Connector_Test_Model",
                 Simulator = "TestSimulator"
             };
@@ -109,7 +108,6 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             var model = new SimulatorModelInfo
             {
-                Name = "Connector Test Model",
                 ExternalId = "Connector_Test_Model",
                 Simulator = "TestSimulator"
             };
