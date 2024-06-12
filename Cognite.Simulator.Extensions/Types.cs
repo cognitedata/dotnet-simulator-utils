@@ -17,14 +17,6 @@ namespace Cognite.Simulator.Extensions
         /// Model external id
         /// </summary>
         public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Model name with special characters replaced
-        /// </summary>
-        public string ExternalIdWithSafeChars
-        {
-            get { return ExternalId.ReplaceSlashAndBackslash("_"); }
-        }
     }
 
     /// <summary>
@@ -50,10 +42,10 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Routine external id with special characters replaced
         /// </summary>
-        public string RoutineExternalIdSafeChars
+        public string ExternalIdSafeChars
         {
             get {
-                return RoutineExternalId.ReplaceSlashAndBackslash("_");
+                return ExternalId.ReplaceSlashAndBackslash("_");
             }
         }
     }
@@ -218,10 +210,10 @@ namespace Cognite.Simulator.Extensions
     public class SimulationInput : SimulationTimeSeries
     {
         internal override string TimeSeriesName =>
-            $"{Name} - INPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.ExternalIdWithSafeChars}";
+            $"{Name} - INPUT - {ReferenceId} - {RoutineRevisionInfo.ExternalIdSafeChars}";
 
         internal override string TimeSeriesDescription =>
-            $"Input sampled for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.ExternalId}";
+            $"Input {ReferenceId} sampled for {RoutineRevisionInfo.ExternalId}";
 
         /// <summary>
         /// Indicates if the time series should be saved back to CDF
@@ -239,10 +231,10 @@ namespace Cognite.Simulator.Extensions
     public class SimulationOutput : SimulationTimeSeries
     {
         internal override string TimeSeriesName => 
-            $"{Name} - OUTPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.ExternalIdWithSafeChars}";
+            $"{Name} - OUTPUT - {ReferenceId} - {RoutineRevisionInfo.ExternalIdSafeChars}";
 
         internal override string TimeSeriesDescription =>
-            $"Simulation result for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.ExternalId}";
+            $"Simulation result {ReferenceId} for {RoutineRevisionInfo.ExternalId}";
     }
 
     /// <summary>

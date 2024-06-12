@@ -57,7 +57,7 @@ namespace Cognite.Simulator.Extensions
                         return new TimeSeriesCreate
                         {
                             ExternalId = id,
-                            Name = $"{bc.Model.ExternalIdWithSafeChars} - {bc.Name.ReplaceSlashAndBackslash("_")}",
+                            Name = $"{bc.Model.ExternalId} - {bc.Name.ReplaceSlashAndBackslash("_")}",
                             IsStep = true,
                             Description = $"Boundary condition for model {bc.Model.ExternalId}",
                             Unit = bc.Unit,
