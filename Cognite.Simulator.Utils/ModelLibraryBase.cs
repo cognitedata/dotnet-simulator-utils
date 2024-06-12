@@ -169,6 +169,7 @@ namespace Cognite.Simulator.Utils
                 var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
+                    InitModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
                     return state;
                 }
@@ -279,17 +280,18 @@ namespace Cognite.Simulator.Utils
 
         private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
         {
-            InitModelParsingInfo(modelState);
-            var logId = modelState.LogId;
-            using (LogContext.PushProperty("LogId", logId)) {
-                try
-                {
-                    _logger.LogInformation("Extracting model information for {ModelName} v{Version}", modelState.ModelName, modelState.Version);
-                    await ExtractModelInformation(modelState, token).ConfigureAwait(false);
-                }
-                finally
-                {
-                    await PersistModelStatus(modelState, token).ConfigureAwait(false);
+            if (modelState.ShouldProcess()) {
+                var logId = modelState.LogId;
+                using (LogContext.PushProperty("LogId", logId)) {
+                    try
+                    {
+                        _logger.LogInformation("Extracting model information for {ModelName} v{Version}", modelState.ModelName, modelState.Version);
+                        await ExtractModelInformation(modelState, token).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        await PersistModelStatus(modelState, token).ConfigureAwait(false);
+                    }
                 }
             }
         }
@@ -304,8 +306,9 @@ namespace Cognite.Simulator.Utils
         {
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
+
             var modelGroups = State.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
+                .Where(f => !string.IsNullOrEmpty(f.FilePath))
                 .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
@@ -322,19 +325,9 @@ namespace Cognite.Simulator.Utils
 
         private async Task PersistModelStatus(T modelState, CancellationToken token)
         {
-            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != ParsingStatus.ready)
+            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
             {
-                var newStatus = SimulatorModelRevisionStatus.unknown;
-                switch (modelState.ParsingInfo.Status)
-                {
-                    case ParsingStatus.success:
-                        newStatus = SimulatorModelRevisionStatus.success;
-                        break;
-                    
-                    case ParsingStatus.failure:
-                        newStatus = SimulatorModelRevisionStatus.failure;
-                        break;
-                }
+                var newStatus = modelState.ParsingInfo.Status;
 
                 var modelRevisionPatch =
                     new SimulatorModelRevisionUpdateItem(long.Parse(modelState.Id)) {
@@ -348,14 +341,15 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void InitModelParsingInfo(T modelState)
+        private void InitModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
+            var status = modelRevision.Status;
+            var parsed = status == SimulatorModelRevisionStatus.failure || status == SimulatorModelRevisionStatus.success;
             V info = new V(){
-                Parsed = false,
-                ModelName = modelState.Model.Name,
-                Simulator = modelState.Model.Simulator,
-                ModelVersion = modelState.Version,
-                Status = ParsingStatus.ready,
+                Parsed = parsed,
+                Status = status,
+                Error = status == SimulatorModelRevisionStatus.failure,
+                LastUpdatedTime = modelRevision.LastUpdatedTime
             };
             modelState.ParsingInfo = info;
             modelState.LogId = modelState.LogId;
@@ -382,22 +376,25 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Add a single model revision to the local state store.
-        /// Returns the existing state object if the revision already exists in the store.
+        /// Updates model parsing info if the model revision is already in the state.
+        /// Returns the existing state object if the model revision is already in the state.
         /// </summary>
         /// <param name="modelRevision">Model revision to add</param>
         /// <param name="model">Model associated to the revision</param>
         /// <returns>State object for the model revision. Null if the model revision is invalid</returns>
-        public T AddModelRevisionToState(
+        public T UpsertModelRevisionInState(
             SimulatorModelRevision modelRevision,
             SimulatorModel model)
         {
-            T rState = StateFromModelRevision(modelRevision, model);
-            if (rState == null || modelRevision == null)
+            T newState = StateFromModelRevision(modelRevision, model);
+            if (newState == null || modelRevision == null)
             {
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            return State.GetOrAdd(revisionId, rState);
+            var state = State.GetOrAdd(revisionId, newState);
+            InitModelParsingInfo(state, modelRevision);
+            return state;
         }
 
         /// <summary>
@@ -412,7 +409,8 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             try {
-                long createdAfter = 
+
+                long updatedAfter = 
                     onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                         _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
@@ -438,7 +436,7 @@ namespace Cognite.Simulator.Utils
                     .ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
-                                CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
+                                LastUpdatedTime = new CogniteSdk.TimeRange() {  Min = updatedAfter + 1 },
                             },
                             Sort = new List<SimulatorSortItem>() {
                                 new SimulatorSortItem() {
@@ -454,7 +452,7 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes) {
                     var model = modelsMap[revision.ModelExternalId];
-                    AddModelRevisionToState(revision, model);
+                    UpsertModelRevisionInState(revision, model);
                 }
             }
             catch (System.Exception e)

@@ -71,7 +71,6 @@ namespace Cognite.Simulator.Extensions
         {
             return new Dictionary<string, string>()
             {
-                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
                 { BaseMetadata.SimulatorKey, model.Simulator },
                 { ModelMetadata.ExternalId, model.ExternalId },
                 { BaseMetadata.DataTypeKey, dataType.MetadataValue() }

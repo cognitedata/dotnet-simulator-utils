@@ -16,17 +16,6 @@ namespace Cognite.Simulator.Extensions
         /// Simulator metadata key
         /// </summary>
         public const string SimulatorKey = "simulator";
-
-        /// <summary>
-        /// Data model version key
-        /// </summary>
-        public const string DataModelVersionKey = "dataModelVersion";
-
-        /// <summary>
-        /// Data model version value. This hardcoded value should be bumped for every
-        /// new data model version
-        /// </summary>
-        public const string DataModelVersionValue = "1.0.2";
     }
 
     /// <summary>
@@ -54,18 +43,6 @@ namespace Cognite.Simulator.Extensions
         /// Routine revision metadata key
         /// </summary>
         public const string RoutineRevisionExternalId = "routineRevisionExternalId";
-    }
-
-    /// <summary>
-    /// Metadata keys present in the sequences mapping boundary conditions to
-    /// time series ids
-    /// </summary>
-    public static class BoundaryConditionsMapMetadata
-    {
-        /// <summary>
-        /// Data type of boundary conditions map
-        /// </summary>
-        public const SimulatorDataType DataType = SimulatorDataType.BoundaryConditionsMap;
     }
 
     /// <summary>
@@ -124,64 +101,14 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Columns that should be part of key/value pair sequences
-    /// </summary>
-    public static class KeyValuePairSequenceColumns
-    {
-        /// <summary>
-        /// Key column id
-        /// </summary>
-        public const string Key = "key";
-
-        /// <summary>
-        /// Key column name
-        /// </summary>
-        public const string KeyName = "Key";
-
-        /// <summary>
-        /// Value column id
-        /// </summary>
-        public const string Value = "value";
-
-        /// <summary>
-        /// Value column name
-        /// </summary>
-        public const string ValueName = "Value";
-    }
-
-    /// <summary>
     /// Types of simulator resources that can be stored in CDF
     /// </summary>
     public enum SimulatorDataType
     {
         /// <summary>
-        /// Model file data type
-        /// </summary>
-        ModelFile,
-        /// <summary>
-        /// Simulation configuration data type
-        /// </summary>
-        SimulationConfiguration,
-        /// <summary>
-        /// Boundary conditions map data type
-        /// </summary>
-        BoundaryConditionsMap,
-        /// <summary>
-        /// Simulator integration data type
-        /// </summary>
-        SimulatorIntegration,
-        /// <summary>
         /// Simulation output data type
         /// </summary>
         SimulationOutput,
-        /// <summary>
-        /// Simulation run configuration data type
-        /// </summary>
-        SimulationRunConfiguration,
-        /// <summary>
-        /// Simulation calculation data type
-        /// </summary>
-        SimulationEvent,
         /// <summary>
         /// Model boundary condition data type
         /// </summary>
@@ -190,10 +117,6 @@ namespace Cognite.Simulator.Extensions
         /// Simulation sampled input data type
         /// </summary>
         SimulationInput,
-        /// <summary>
-        /// Simulation model version data type
-        /// </summary>
-        SimulationModelVersion
     }
 
     /// <summary>
@@ -210,16 +133,9 @@ namespace Cognite.Simulator.Extensions
         {
             switch (dataType)
             {
-                case SimulatorDataType.ModelFile: return "Simulator File";
-                case SimulatorDataType.SimulationConfiguration: return "Simulation Configuration";
-                case SimulatorDataType.BoundaryConditionsMap: return "Boundary Condition Time Series Map";
-                case SimulatorDataType.SimulatorIntegration: return "Simulator Integration";
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
-                case SimulatorDataType.SimulationRunConfiguration: return "Run Configuration";
-                case SimulatorDataType.SimulationEvent: return "Simulation Calculation";
                 case SimulatorDataType.BoundaryCondition: return "Boundary Condition";
                 case SimulatorDataType.SimulationInput: return "Simulation Input";
-                case SimulatorDataType.SimulationModelVersion: return "Simulation Model Version";
 
                 default: throw new ArgumentException("Invalid data type");
             }

@@ -220,15 +220,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Data type of the file. Typically, one of the <see cref="SimulatorDataType"/> values.
-        /// </summary>
-        /// <returns>File data type</returns>
-        public virtual string GetDataType()
-        {
-            return "none";
-        }
-
-        /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>
         /// <param name="poco">Data object</param>
