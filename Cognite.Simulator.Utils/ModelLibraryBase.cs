@@ -313,9 +313,15 @@ namespace Cognite.Simulator.Utils
                 foreach (var item in group){
                     await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
                 }
-
-                // Verify that the local version history matches the one in CDF. Else,
-                // delete the local state and files for the missing versions.
+            }
+            // Verify that the local version history matches the one in CDF. Else,
+            // delete the local state and files for the missing versions.
+            // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
+            var modelGroupsToVerify = State.Values
+                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
+                .GroupBy(f => new { f.ModelExternalId });
+            foreach (var group in modelGroupsToVerify)
+            {
                 await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
             }
         }
@@ -340,16 +346,20 @@ namespace Cognite.Simulator.Utils
 
         private void InitModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
-            var status = modelRevision.Status;
-            var parsed = status == SimulatorModelRevisionStatus.failure || status == SimulatorModelRevisionStatus.success;
-            V info = new V(){
-                Parsed = parsed,
-                Status = status,
-                Error = status == SimulatorModelRevisionStatus.failure,
-                LastUpdatedTime = modelRevision.LastUpdatedTime
-            };
-            modelState.ParsingInfo = info;
-            modelState.LogId = modelState.LogId;
+            if (modelState.ParsingInfo == null || modelState.ParsingInfo.LastUpdatedTime < modelRevision.LastUpdatedTime)
+            {
+                var status = modelRevision.Status;
+                var isError = status == SimulatorModelRevisionStatus.failure;
+                var parsed = isError || status == SimulatorModelRevisionStatus.success;
+                V info = new V(){
+                    Parsed = parsed,
+                    Status = status,
+                    Error = isError,
+                    LastUpdatedTime = modelRevision.LastUpdatedTime
+                };
+                modelState.ParsingInfo = info;
+                modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+            }
         }
 
         /// <summary>

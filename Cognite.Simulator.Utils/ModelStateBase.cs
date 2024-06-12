@@ -58,7 +58,7 @@ namespace Cognite.Simulator.Utils
         public virtual bool ShouldProcess()
         {
             var isParsedBefore = ParsingInfo?.Parsed ?? false;
-            return !string.IsNullOrEmpty(FilePath) && !IsExtracted && CanRead && !isParsedBefore;
+            return !string.IsNullOrEmpty(FilePath) && CanRead && !isParsedBefore;
         }
 
         /// <summary>
