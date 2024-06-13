@@ -151,7 +151,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         new SimulatorModelRevisionUpdateItem(revision.Id) {
                             Update =
                                 new SimulatorModelRevisionUpdate {
-                                    Status = new Update<SimulatorModelRevisionStatus>(SimulatorModelRevisionStatus.success),
+                                    Status = new Update<SimulatorModelRevisionStatus>(SimulatorModelRevisionStatus.failure),
                                 }
                         };
                     var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionsAsync(
@@ -188,10 +188,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
+                    Assert.False(modelInState.CanRead);
                     Assert.False(modelInState.ShouldProcess());
                     Assert.True(modelInState.ParsingInfo.Parsed);
-                    Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
-                    Assert.False(modelInState.ParsingInfo.Error);
+                    Assert.Equal(SimulatorModelRevisionStatus.failure, modelInState.ParsingInfo.Status);
+                    Assert.True(modelInState.ParsingInfo.Error);
                     // last updated time should not change
                     Assert.Equal(revision.LastUpdatedTime, modelInState.ParsingInfo.LastUpdatedTime);
                 }
@@ -210,8 +211,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         new List<SimulatorModelRevisionUpdateItem> { modelRevisionPatch },
                         CancellationToken.None).ConfigureAwait(false);
                     updatedRevisions.AddRange(res);
-
-                    Console.WriteLine($"Updated revision {revision.ExternalId}, {res.First().Status}");
                 }
                 revisions = updatedRevisions;
                 revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
@@ -234,6 +233,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
 
                     Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
+                    Assert.True(modelInState.CanRead);
                     Assert.False(modelInState.ShouldProcess());
                     Assert.True(modelInState.ParsingInfo.Parsed);
                     Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);

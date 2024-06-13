@@ -166,7 +166,7 @@ namespace Cognite.Simulator.Utils
                 var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
-                    InitModelParsingInfo(state, modelRevision);
+                    UpdateModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
                     return state;
                 }
@@ -344,7 +344,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void InitModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
+        private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
             if (modelState.ParsingInfo == null || modelState.ParsingInfo.LastUpdatedTime < modelRevision.LastUpdatedTime)
             {
@@ -397,7 +397,7 @@ namespace Cognite.Simulator.Utils
             }
             var revisionId = modelRevision.Id.ToString();
             var state = State.GetOrAdd(revisionId, newState);
-            InitModelParsingInfo(state, modelRevision);
+            UpdateModelParsingInfo(state, modelRevision);
             return state;
         }
 
