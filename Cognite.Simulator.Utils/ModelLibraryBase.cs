@@ -342,7 +342,8 @@ namespace Cognite.Simulator.Utils
 
                 if (modelState.ParsingInfo.StatusMessage != null)
                 {
-                    modelRevisionPatch.Update.StatusMessage = new Update<string>(modelState.ParsingInfo.StatusMessage);
+                    var statusMessage = modelState.ParsingInfo.StatusMessage.LimitUtf8ByteCount(255);
+                    modelRevisionPatch.Update.StatusMessage = new Update<string>(statusMessage);
                 }
 
                 await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
