@@ -16,6 +16,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public SimulatorModelRevisionStatus Status { get; set; }
+
+        /// <summary>
+        /// Status message
+        /// </summary>
+        public string StatusMessage { get; set; }
         
         /// <summary>
         /// Whether or not the model was parsed
@@ -44,23 +49,25 @@ namespace Cognite.Simulator.Utils
         /// <param name="mpi">Model parsing info object</param>
         public static void SetSuccess(this ModelParsingInfo mpi)
         {
-            mpi.SetStatus(SimulatorModelRevisionStatus.success, true, false);
+            mpi.SetStatus(SimulatorModelRevisionStatus.success, true, false, "Model parsed successfully");
         }
 
         /// <summary>
         /// Update the model info status to failure
         /// </summary>
         /// <param name="mpi">Model parsing info object</param>
-        public static void SetFailure(this ModelParsingInfo mpi)
+        /// <param name="statusMessage">Status message</param>
+        public static void SetFailure(this ModelParsingInfo mpi, string statusMessage = "Model parsing failed")
         {
-            mpi.SetStatus(SimulatorModelRevisionStatus.failure, true, true);
+            mpi.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
         }
 
-        private static void SetStatus(this ModelParsingInfo mpi, SimulatorModelRevisionStatus status, bool isParsed, bool isError)
+        private static void SetStatus(this ModelParsingInfo mpi, SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
         {
             mpi.Status = status;
             mpi.Parsed = isParsed;
             mpi.Error = isError;
+            mpi.StatusMessage = statusMessage;
             mpi.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
     }

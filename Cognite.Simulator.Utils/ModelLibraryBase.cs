@@ -340,6 +340,11 @@ namespace Cognite.Simulator.Utils
                             }
                     };
 
+                if (modelState.ParsingInfo.StatusMessage != null)
+                {
+                    modelRevisionPatch.Update.StatusMessage = new Update<string>(modelState.ParsingInfo.StatusMessage);
+                }
+
                 await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
             }
         }
