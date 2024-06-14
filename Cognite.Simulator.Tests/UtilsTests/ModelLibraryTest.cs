@@ -15,6 +15,8 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
+using Cognite.Simulator.Extensions;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
@@ -147,17 +149,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revisions = new List<SimulatorModelRevision>();
                 foreach (var revision in initialRevisions)
                 {
-                    var modelRevisionPatch =
-                        new SimulatorModelRevisionUpdateItem(revision.Id) {
-                            Update =
-                                new SimulatorModelRevisionUpdate {
-                                    Status = new Update<SimulatorModelRevisionStatus>(SimulatorModelRevisionStatus.failure),
-                                }
-                        };
-                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionsAsync(
-                        new List<SimulatorModelRevisionUpdateItem> { modelRevisionPatch },
-                        CancellationToken.None).ConfigureAwait(false);
-                    revisions.AddRange(res);
+                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionParsingStatus(
+                        revision.Id,
+                        SimulatorModelRevisionStatus.failure,
+                        token: CancellationToken.None).ConfigureAwait(false);
+
+                    revisions.Add(res);
                 }
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
@@ -200,17 +197,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var updatedRevisions = new List<SimulatorModelRevision>();
                 foreach (var revision in revisions)
                 {
-                    var modelRevisionPatch =
-                        new SimulatorModelRevisionUpdateItem(revision.Id) {
-                            Update =
-                                new SimulatorModelRevisionUpdate {
-                                    Status = new Update<SimulatorModelRevisionStatus>(SimulatorModelRevisionStatus.unknown),
-                                }
-                        };
-                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionsAsync(
-                        new List<SimulatorModelRevisionUpdateItem> { modelRevisionPatch },
-                        CancellationToken.None).ConfigureAwait(false);
-                    updatedRevisions.AddRange(res);
+                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionParsingStatus(
+                        revision.Id,
+                        SimulatorModelRevisionStatus.unknown,
+                        token: CancellationToken.None).ConfigureAwait(false);
+
+                    updatedRevisions.Add(res);
                 }
                 revisions = updatedRevisions;
                 revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);

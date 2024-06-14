@@ -63,28 +63,6 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Metadata keys present in boundary conditions
-    /// </summary>
-    public static class BoundaryConditionMetadata
-    {
-        /// <summary>
-        /// Boundary condition variable type metadata key
-        /// </summary>
-        public const string VariableTypeKey = VariableMetadata.VariableTypeKey;
-
-        /// <summary>
-        /// Boundary condition variable name metadata key
-        /// </summary>
-        public const string VariableNameKey = VariableMetadata.VariableNameKey;
-
-        /// <summary>
-        /// Data type of boundary conditions
-        /// </summary>
-        public const SimulatorDataType DataType = SimulatorDataType.BoundaryCondition;
-    }
-
-
-    /// <summary>
     /// Metadata keys present in simulation inputs
     /// </summary>
     public static class SimulationVariableMetadata
@@ -110,10 +88,6 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         SimulationOutput,
         /// <summary>
-        /// Model boundary condition data type
-        /// </summary>
-        BoundaryCondition,
-        /// <summary>
         /// Simulation sampled input data type
         /// </summary>
         SimulationInput,
@@ -134,7 +108,6 @@ namespace Cognite.Simulator.Extensions
             switch (dataType)
             {
                 case SimulatorDataType.SimulationOutput: return "Simulation Output";
-                case SimulatorDataType.BoundaryCondition: return "Boundary Condition";
                 case SimulatorDataType.SimulationInput: return "Simulation Input";
 
                 default: throw new ArgumentException("Invalid data type");

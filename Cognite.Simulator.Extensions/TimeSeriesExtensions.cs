@@ -18,70 +18,6 @@ namespace Cognite.Simulator.Extensions
     public static class TimeSeriesExtensions
     {
         /// <summary>
-        /// Create time series in CDF that represent the boundary conditions of a simulator
-        /// model. If the time series already exists, it is returned instead
-        /// </summary>
-        /// <param name="timeSeries">CDF time series resource</param>
-        /// <param name="boundaryConditions">Dictionary of (time series external id, boundary condition) pairs</param>
-        /// <param name="token">Cancellation token</param>
-        /// <returns>Created boundary condition time series</returns>
-        /// <exception cref="ArgumentNullException">Thrown in the list of boundary conditions is null</exception>
-        /// <exception cref="BoundaryConditionsCreationException">Thrown when it was not possible to create the boundary conditions</exception>
-        public static async Task<IEnumerable<TimeSeries>> GetOrCreateBoundaryConditions(
-            this TimeSeriesResource timeSeries,
-            Dictionary<string, BoundaryCondition> boundaryConditions,
-            CancellationToken token)
-        {
-            if (boundaryConditions == null)
-            {
-                throw new ArgumentNullException(nameof(boundaryConditions));
-            }
-            if (boundaryConditions.Count == 0)
-            {
-                return Enumerable.Empty<TimeSeries>();
-            }
-            var result = await timeSeries.GetOrCreateTimeSeriesAsync(
-                boundaryConditions.Keys,
-                ids =>
-                {
-                    return ids.Select(id =>
-                    {
-                        var bc = boundaryConditions[id];
-                        var metadata = bc.Model.GetCommonMetadata(BoundaryConditionMetadata.DataType);
-                        metadata.AddRange(
-                            new Dictionary<string, string>()
-                            {
-                                { BoundaryConditionMetadata.VariableTypeKey, bc.Key },
-                                { BoundaryConditionMetadata.VariableNameKey, bc.Name },
-                            });
-                        return new TimeSeriesCreate
-                        {
-                            ExternalId = id,
-                            Name = $"{bc.Model.ExternalId} - {bc.Name.ReplaceSlashAndBackslash("_")}",
-                            IsStep = true,
-                            Description = $"Boundary condition for model {bc.Model.ExternalId}",
-                            Unit = bc.Unit,
-                            DataSetId = bc.DataSetId,
-                            IsString = false,
-                            Metadata = metadata
-                        };
-                    });
-                },
-                100,
-                5,
-                RetryMode.None,
-                SanitationMode.None,
-                token).ConfigureAwait(false);
-            if (!result.IsAllGood)
-            {
-                throw new BoundaryConditionsCreationException(
-                    "Cannot create boundary conditions",
-                    result.Errors);
-            }
-            return result.Results;
-        }
-
-        /// <summary>
         /// Creates time series in CDF that represent sampled simulation inputs.
         /// Creates the ones not found in CDF, and returns the ones that already exist.
         /// Data points in this time series should contain the sampled input as value, and the simulation time as timestamp.
@@ -199,20 +135,6 @@ namespace Cognite.Simulator.Extensions
             return tsCreate;
         }
 
-    }
-
-    /// <summary>
-    /// Represent errors related to read/write boundary conditions in CDF
-    /// </summary>
-    public class BoundaryConditionsCreationException : CogniteException
-    {
-        /// <summary>
-        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
-        /// </summary>
-        public BoundaryConditionsCreationException(string message, IEnumerable<CogniteError> errors)
-            : base(message, errors)
-        {
-        }
     }
 
     /// <summary>

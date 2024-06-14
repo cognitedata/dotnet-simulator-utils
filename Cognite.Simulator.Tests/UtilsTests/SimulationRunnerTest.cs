@@ -185,8 +185,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 Assert.NotEmpty(runUpdatedRes);
                 var runUpdated = runUpdatedRes.First();
-                Assert.Equal("Simulation ran to completion", runUpdated.StatusMessage);
                 Assert.Equal(SimulationRunStatus.success, runUpdated.Status);
+                Assert.Equal("Simulation ran to completion", runUpdated.StatusMessage);
                 Assert.NotNull(runUpdated.SimulationTime);
                 var simulationTime = runUpdated.SimulationTime.Value;
 

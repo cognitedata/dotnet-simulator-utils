@@ -174,37 +174,6 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents a boundary condition associated with a simulator model
-    /// </summary>
-    public class BoundaryCondition
-    {
-        /// <summary>
-        /// Model associated with this boundary condition
-        /// </summary>
-        public SimulatorModelInfo Model { get; set; }
-
-        /// <summary>
-        /// Boundary condition key (identifier)
-        /// </summary>
-        public string Key { get; set; }
-
-        /// <summary>
-        /// Boundary condition name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Boundary condition unit
-        /// </summary>
-        public string Unit { get; set; }
-
-        /// <summary>
-        /// ID of the CDF data set that contains this boundary condition
-        /// </summary>
-        public long? DataSetId { get; set; }
-    }
-
-    /// <summary>
     /// Represents the sampled inputs used in a simulation
     /// </summary>
     public class SimulationInput : SimulationTimeSeries

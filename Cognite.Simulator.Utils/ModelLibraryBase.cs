@@ -19,6 +19,8 @@ using CogniteSdk.Resources.Alpha;
 using Cognite.Extensions;
 using Cognite.Extractor.Common;
 
+using Cognite.Simulator.Extensions;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -332,21 +334,11 @@ namespace Cognite.Simulator.Utils
             {
                 var newStatus = modelState.ParsingInfo.Status;
 
-                var modelRevisionPatch =
-                    new SimulatorModelRevisionUpdateItem(long.Parse(modelState.Id)) {
-                        Update =
-                            new SimulatorModelRevisionUpdate {
-                                Status = new Update<SimulatorModelRevisionStatus>(newStatus),
-                            }
-                    };
-
-                if (modelState.ParsingInfo.StatusMessage != null)
-                {
-                    var statusMessage = modelState.ParsingInfo.StatusMessage.LimitUtf8ByteCount(255);
-                    modelRevisionPatch.Update.StatusMessage = new Update<string>(statusMessage);
-                }
-
-                await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
+                await CdfSimulatorResources.UpdateSimulatorModelRevisionParsingStatus(
+                    long.Parse(modelState.Id),
+                    newStatus,
+                    modelState.ParsingInfo.StatusMessage,
+                    token).ConfigureAwait(false);
             }
         }
 
