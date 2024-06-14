@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Cognite.Simulator.Extensions
@@ -71,7 +70,6 @@ namespace Cognite.Simulator.Extensions
         {
             return new Dictionary<string, string>()
             {
-                { BaseMetadata.DataModelVersionKey, BaseMetadata.DataModelVersionValue },
                 { BaseMetadata.SimulatorKey, model.Simulator },
                 { ModelMetadata.ExternalId, model.ExternalId },
                 { BaseMetadata.DataTypeKey, dataType.MetadataValue() }

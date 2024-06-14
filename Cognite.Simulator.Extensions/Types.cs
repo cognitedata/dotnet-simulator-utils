@@ -14,22 +14,9 @@ namespace Cognite.Simulator.Extensions
         public string Simulator { get; set; }
 
         /// <summary>
-        /// Model name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
         /// Model external id
         /// </summary>
         public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Model name with special characters replaced
-        /// </summary>
-        public string NameWithSafeChars
-        {
-            get { return Name.ReplaceSlashAndBackslash("_"); }
-        }
     }
 
     /// <summary>
@@ -55,10 +42,10 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Routine external id with special characters replaced
         /// </summary>
-        public string RoutineExternalIdSafeChars
+        public string ExternalIdSafeChars
         {
             get {
-                return RoutineExternalId.ReplaceSlashAndBackslash("_");
+                return ExternalId.ReplaceSlashAndBackslash("_");
             }
         }
     }
@@ -187,46 +174,15 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents a boundary condition associated with a simulator model
-    /// </summary>
-    public class BoundaryCondition
-    {
-        /// <summary>
-        /// Model associated with this boundary condition
-        /// </summary>
-        public SimulatorModelInfo Model { get; set; }
-
-        /// <summary>
-        /// Boundary condition key (identifier)
-        /// </summary>
-        public string Key { get; set; }
-
-        /// <summary>
-        /// Boundary condition name
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Boundary condition unit
-        /// </summary>
-        public string Unit { get; set; }
-
-        /// <summary>
-        /// ID of the CDF data set that contains this boundary condition
-        /// </summary>
-        public long? DataSetId { get; set; }
-    }
-
-    /// <summary>
     /// Represents the sampled inputs used in a simulation
     /// </summary>
     public class SimulationInput : SimulationTimeSeries
     {
         internal override string TimeSeriesName =>
-            $"{Name} - INPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.NameWithSafeChars}";
+            $"{Name} - INPUT - {ReferenceId} - {RoutineRevisionInfo.ExternalIdSafeChars}";
 
         internal override string TimeSeriesDescription =>
-            $"Input sampled for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
+            $"Input {ReferenceId} sampled for {RoutineRevisionInfo.ExternalId}";
 
         /// <summary>
         /// Indicates if the time series should be saved back to CDF
@@ -244,10 +200,10 @@ namespace Cognite.Simulator.Extensions
     public class SimulationOutput : SimulationTimeSeries
     {
         internal override string TimeSeriesName => 
-            $"{Name} - OUTPUT - {RoutineRevisionInfo.RoutineExternalIdSafeChars} - {RoutineRevisionInfo.Model.NameWithSafeChars}";
+            $"{Name} - OUTPUT - {ReferenceId} - {RoutineRevisionInfo.ExternalIdSafeChars}";
 
         internal override string TimeSeriesDescription =>
-            $"Simulation result for {RoutineRevisionInfo.RoutineExternalId} - {RoutineRevisionInfo.Model.Name}";
+            $"Simulation result {ReferenceId} for {RoutineRevisionInfo.ExternalId}";
     }
 
     /// <summary>

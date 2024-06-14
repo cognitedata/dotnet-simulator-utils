@@ -11,9 +11,7 @@ using Com.Cognite.V1.Timeseries.Proto;
 
 using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
-using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Common;
-using CogniteSdk.Beta.DataModels;
 
 namespace Cognite.Simulator.Tests
 {

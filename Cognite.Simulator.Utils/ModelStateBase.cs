@@ -52,12 +52,13 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Data type of the file. For model files, this is <see cref="SimulatorDataType.ModelFile"/> 
+        /// If true, the local file will be opened and parsed by the connector. By default, this happens only once per model revision.
+        /// Can be overridden, when re-parsing on every download is preferred.
         /// </summary>
-        /// <returns>String representation of <see cref="SimulatorDataType.ModelFile"/></returns>
-        public override string GetDataType()
+        public virtual bool ShouldProcess()
         {
-            return SimulatorDataType.ModelFile.MetadataValue();
+            var isParsedBefore = ParsingInfo?.Parsed ?? false;
+            return !string.IsNullOrEmpty(FilePath) && CanRead && !isParsedBefore;
         }
 
         /// <summary>
@@ -65,7 +66,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public SimulatorModelInfo Model => new SimulatorModelInfo()
         {
-            Name = ModelName,
             ExternalId = ModelExternalId,
             Simulator = Source
         };
@@ -92,7 +92,6 @@ namespace Cognite.Simulator.Utils
             return new ModelStateBasePoco
             {
                 Id = Id,
-                ModelName = ModelName,
                 ModelExternalId = ModelExternalId,
                 Source = Source,
                 DataSetId = DataSetId,
