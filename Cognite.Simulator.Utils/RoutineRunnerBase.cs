@@ -70,9 +70,9 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Run the given simulation event by parsing and executing the simulation routine associated with it
+        /// Run the given simulation run by parsing and executing the simulation routine associated with it
         /// </summary>
-        /// <param name="e">Simulation event</param>
+        /// <param name="runItem">Simulation run item</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state</param>
         /// <param name="routineRevision">Routine revision object</param>
@@ -82,7 +82,7 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
         /// <exception cref="ConnectorException">When it was not possible to save the results in CDF</exception>
         protected override async Task RunSimulation(
-            SimulationRunEvent e, 
+            SimulationRunItem runItem, 
             DateTime startTime, 
             T modelState, 
             V routineRevision, 
@@ -101,15 +101,15 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(samplingRange));
             }
-            if (e == null)
+            if (runItem == null)
             {
-                throw new ArgumentNullException(nameof(e));
+                throw new ArgumentNullException(nameof(runItem));
             }
-            _logger.LogInformation("Started running simulation event {ID}", e.Run.Id.ToString());
+            _logger.LogInformation("Started executing simulation run {ID}", runItem.Run.Id.ToString());
 
             var timeSeries = _cdf.CogniteClient.TimeSeries;
             var inputData = new Dictionary<string, SimulatorValueItem>();
-            var inputDataOverrides = await LoadSimulationInputOverrides(e.Run.Id, token).ConfigureAwait(false);
+            var inputDataOverrides = await LoadSimulationInputOverrides(runItem.Run.Id, token).ConfigureAwait(false);
 
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
@@ -120,7 +120,6 @@ namespace Cognite.Simulator.Utils
                     Model = new SimulatorModelInfo
                     {
                         ExternalId = modelState.ModelExternalId,
-                        Name = modelState.ModelName,
                         Simulator = routineRevision.SimulatorExternalId,
                     },
                     RoutineExternalId = routineRevision.RoutineExternalId,
@@ -257,7 +256,7 @@ namespace Cognite.Simulator.Utils
                 await _cdf.CogniteClient.Alpha.Simulators.SimulationRunCallbackAsync(
                     new SimulationRunCallbackItem()
                     {
-                        Id = e.Run.Id,
+                        Id = runItem.Run.Id,
                         Status = SimulationRunStatus.running,
                         Inputs = inputData.Values,
                         Outputs = results.Values,

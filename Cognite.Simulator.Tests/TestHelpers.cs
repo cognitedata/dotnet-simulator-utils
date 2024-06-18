@@ -27,11 +27,10 @@ namespace Cognite.Simulator.Tests {
                         {
                             ExternalId = connectorName,
                             SimulatorExternalId = SeedData.TestSimulatorExternalId,
-                            DataSetId = CdfTestClient.TestDataset,
+                            DataSetId = SeedData.TestDataSetId,
                             Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
                             ConnectorVersion = "N/A",
                             SimulatorVersion = "N/A",
-                            RunApiEnabled = true,
                         }
                     }
                 ).ConfigureAwait(false);
@@ -44,7 +43,6 @@ namespace Cognite.Simulator.Tests {
                             Update = new SimulatorIntegrationUpdate
                             {
                                 Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds()),
-                                RunApiEnabled = new Update<bool>(true),
                             }
                         }
                     }

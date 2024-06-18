@@ -19,6 +19,8 @@ using CogniteSdk.Resources.Alpha;
 using Cognite.Extensions;
 using Cognite.Extractor.Common;
 
+using Cognite.Simulator.Extensions;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -46,7 +48,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Temporary model states that are used once and then deleted after the run.
         /// We keep them in memory to avoid saving them to the state store and hence to avoid the multi-threading issues.
-        /// This state is used to store temporary model file paths, used only in case a run event is received before the model file has been downloaded. 
+        /// This state is used to store temporary model file paths, used only in case a run item is received before the model file has been downloaded. 
         /// </summary>
         public Dictionary<string, T> TemporaryState { get; private set; }
         
@@ -66,7 +68,7 @@ namespace Cognite.Simulator.Utils
         protected ILogger Logger { get; private set; }
 
         // Other injected services
-        private readonly FileLibraryConfig _config;
+        private readonly ModelLibraryConfig _config;
         private readonly IList<SimulatorConfig> _simulators;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
@@ -86,7 +88,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
-            FileLibraryConfig config, 
+            ModelLibraryConfig config, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf, 
             ILogger logger, 
@@ -162,13 +164,11 @@ namespace Cognite.Simulator.Utils
                 var modelRevisionRes = await CdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
-                var modelRes = await CdfSimulatorResources.RetrieveSimulatorModelsAsync(
-                    new List<Identity> { new Identity(modelRevision.ModelExternalId) }, token).ConfigureAwait(false);
-                var model = modelRes.FirstOrDefault();
-                var state = StateFromModelRevision(modelRevision, model);
+                var state = StateFromModelRevision(modelRevision);
                 var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
+                    UpdateModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
                     return state;
                 }
@@ -258,7 +258,7 @@ namespace Cognite.Simulator.Utils
                     {
                         Logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
                             statesToDelete.Count,
-                            string.Join(", ", statesToDelete.Select(s => s.ModelName + " v" + s.Version)));
+                            string.Join(", ", statesToDelete.Select(s => s.ModelExternalId + " v" + s.Version)));
 
                         var statesToDeleteWithFile = statesToDelete
                             .Select(s => (s, !filesInUseMap.ContainsKey(s.FilePath)));
@@ -279,17 +279,18 @@ namespace Cognite.Simulator.Utils
 
         private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
         {
-            InitModelParsingInfo(modelState);
-            var logId = modelState.LogId;
-            using (LogContext.PushProperty("LogId", logId)) {
-                try
-                {
-                    _logger.LogInformation("Extracting model information for {ModelName} v{Version}", modelState.ModelName, modelState.Version);
-                    await ExtractModelInformation(modelState, token).ConfigureAwait(false);
-                }
-                finally
-                {
-                    await PersistModelStatus(modelState, token).ConfigureAwait(false);
+            if (modelState.ShouldProcess()) {
+                var logId = modelState.LogId;
+                using (LogContext.PushProperty("LogId", logId)) {
+                    try
+                    {
+                        _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
+                        await ExtractModelInformation(modelState, token).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        await PersistModelStatus(modelState, token).ConfigureAwait(false);
+                    }
                 }
             }
         }
@@ -304,8 +305,9 @@ namespace Cognite.Simulator.Utils
         {
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
+
             var modelGroups = State.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
+                .Where(f => !string.IsNullOrEmpty(f.FilePath))
                 .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
@@ -313,52 +315,49 @@ namespace Cognite.Simulator.Utils
                 foreach (var item in group){
                     await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
                 }
-
-                // Verify that the local version history matches the one in CDF. Else,
-                // delete the local state and files for the missing versions.
+            }
+            // Verify that the local version history matches the one in CDF. Else,
+            // delete the local state and files for the missing versions.
+            // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
+            var modelGroupsToVerify = State.Values
+                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
+                .GroupBy(f => new { f.ModelExternalId });
+            foreach (var group in modelGroupsToVerify)
+            {
                 await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
             }
         }
 
         private async Task PersistModelStatus(T modelState, CancellationToken token)
         {
-            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != ParsingStatus.ready)
+            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
             {
-                var newStatus = SimulatorModelRevisionStatus.unknown;
-                switch (modelState.ParsingInfo.Status)
-                {
-                    case ParsingStatus.success:
-                        newStatus = SimulatorModelRevisionStatus.success;
-                        break;
-                    
-                    case ParsingStatus.failure:
-                        newStatus = SimulatorModelRevisionStatus.failure;
-                        break;
-                }
+                var newStatus = modelState.ParsingInfo.Status;
 
-                var modelRevisionPatch =
-                    new SimulatorModelRevisionUpdateItem(long.Parse(modelState.Id)) {
-                        Update =
-                            new SimulatorModelRevisionUpdate {
-                                Status = new Update<SimulatorModelRevisionStatus>(newStatus),
-                            }
-                    };
-
-                await CdfSimulatorResources.UpdateSimulatorModelRevisionsAsync(new [] { modelRevisionPatch }, token).ConfigureAwait(false);
+                await CdfSimulatorResources.UpdateSimulatorModelRevisionParsingStatus(
+                    long.Parse(modelState.Id),
+                    newStatus,
+                    modelState.ParsingInfo.StatusMessage,
+                    token).ConfigureAwait(false);
             }
         }
 
-        private void InitModelParsingInfo(T modelState)
+        private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
-            V info = new V(){
-                Parsed = false,
-                ModelName = modelState.Model.Name,
-                Simulator = modelState.Model.Simulator,
-                ModelVersion = modelState.Version,
-                Status = ParsingStatus.ready,
-            };
-            modelState.ParsingInfo = info;
-            modelState.LogId = modelState.LogId;
+            if (modelState.ParsingInfo == null || modelState.ParsingInfo.LastUpdatedTime < modelRevision.LastUpdatedTime)
+            {
+                var status = modelRevision.Status;
+                var isError = status == SimulatorModelRevisionStatus.failure;
+                var parsed = isError || status == SimulatorModelRevisionStatus.success;
+                V info = new V(){
+                    Parsed = parsed,
+                    Status = status,
+                    Error = isError,
+                    LastUpdatedTime = modelRevision.LastUpdatedTime
+                };
+                modelState.ParsingInfo = info;
+                modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+            }
         }
 
         /// <summary>
@@ -376,28 +375,28 @@ namespace Cognite.Simulator.Utils
         /// CDF Simulator model revision passed as parameter
         /// </summary>
         /// <param name="modelRevision">CDF Simulator model revision</param>
-        /// <param name="model">CDF Simulator model</param>
         /// <returns>File state object</returns>
-        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model);
+        protected abstract T StateFromModelRevision(SimulatorModelRevision modelRevision);
 
         /// <summary>
         /// Add a single model revision to the local state store.
-        /// Returns the existing state object if the revision already exists in the store.
+        /// Updates model parsing info if the model revision is already in the state.
+        /// Returns the existing state object if the model revision is already in the state.
         /// </summary>
         /// <param name="modelRevision">Model revision to add</param>
-        /// <param name="model">Model associated to the revision</param>
         /// <returns>State object for the model revision. Null if the model revision is invalid</returns>
-        public T AddModelRevisionToState(
-            SimulatorModelRevision modelRevision,
-            SimulatorModel model)
+        public T UpsertModelRevisionInState(
+            SimulatorModelRevision modelRevision)
         {
-            T rState = StateFromModelRevision(modelRevision, model);
-            if (rState == null || modelRevision == null)
+            T newState = StateFromModelRevision(modelRevision);
+            if (newState == null || modelRevision == null)
             {
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            return State.GetOrAdd(revisionId, rState);
+            var state = State.GetOrAdd(revisionId, newState);
+            UpdateModelParsingInfo(state, modelRevision);
+            return state;
         }
 
         /// <summary>
@@ -412,33 +411,16 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             try {
-                long createdAfter = 
+
+                long updatedAfter = 
                     onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                         _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
-
-                var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
-
-                var modelsRes = await CdfSimulatorResources
-                    .ListSimulatorModelsAsync(new SimulatorModelQuery() {
-                        Filter = new SimulatorModelFilter() {
-                            SimulatorExternalIds = simulatorsExternalIds
-                        }
-                    }, token).ConfigureAwait(false);
-
-                var modelsMap = modelsRes.Items.ToDictionary(m => m.ExternalId, m => m);
-
-                var modelExternalIds = modelsRes.Items.Select(m => m.ExternalId).ToList();
-
-                if (modelExternalIds.Count == 0)
-                {
-                    return;
-                }
 
                 var modelRevisionsAllRes = await CdfSimulatorResources
                     .ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery() {
                             Filter = new SimulatorModelRevisionFilter() {
-                                CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
+                                LastUpdatedTime = new CogniteSdk.TimeRange() {  Min = updatedAfter + 1 },
                             },
                             Sort = new List<SimulatorSortItem>() {
                                 new SimulatorSortItem() {
@@ -448,13 +430,14 @@ namespace Cognite.Simulator.Utils
                             }
                         }, token
                     ).ConfigureAwait(false);
+
+                var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
                 var modelRevisionsRes = modelRevisionsAllRes.Items
-                    .Where(r => modelExternalIds.Contains(r.ModelExternalId))
+                    .Where(r => simulatorsExternalIds.Contains(r.SimulatorExternalId))
                     .ToList();
 
                 foreach (var revision in modelRevisionsRes) {
-                    var model = modelsMap[revision.ModelExternalId];
-                    AddModelRevisionToState(revision, model);
+                    UpsertModelRevisionInState(revision);
                 }
             }
             catch (System.Exception e)

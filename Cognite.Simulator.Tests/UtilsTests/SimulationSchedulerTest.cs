@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimulatorConfig
                 {
                     Name = SeedData.TestSimulatorExternalId,
-                    DataSetId = CdfTestClient.TestDataset
+                    DataSetId = SeedData.TestDataSetId
                 }
             });
             services.AddSingleton<ITimeManager, FakeTimeManager>();
@@ -106,7 +106,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var configObj = configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(configObj);
 
-                // Should have created at least one simulation event ready to run
+                // Should have created at least one simulation run ready to be executed
                 var simRuns = await cdf.Alpha.Simulators.ListSimulationRunsAsync(
                     new SimulationRunQuery
                     {

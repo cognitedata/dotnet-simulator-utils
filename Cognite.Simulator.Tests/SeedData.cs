@@ -11,21 +11,21 @@ using Com.Cognite.V1.Timeseries.Proto;
 
 using Cognite.Simulator.Tests.DataProcessingTests;
 using Cognite.Simulator.Utils;
-using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Common;
-using CogniteSdk.Beta.DataModels;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedData
     {
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
-        public static string TestSimulatorExternalId = "UTILS_TEST_SIMULATOR_" + Now;
+        public static string TestSimulatorExternalIdPrefix = "UTILS_TEST_SIMULATOR_";
+        public static string TestSimulatorExternalId = TestSimulatorExternalIdPrefix + Now;
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
+        public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {
@@ -35,13 +35,7 @@ namespace Cognite.Simulator.Tests
             }
 
             var simulators = await sdk.Alpha.Simulators.ListAsync(
-                new SimulatorQuery
-                {
-                    Filter = new SimulatorFilter
-                    {
-                        Enabled = true
-                    },
-                }).ConfigureAwait(false);
+                new SimulatorQuery()).ConfigureAwait(false);
 
             var simulatorRes = simulators.Items.Where(s => s.ExternalId == simulator.ExternalId);
             if (simulatorRes.Count() > 0)
@@ -58,21 +52,22 @@ namespace Cognite.Simulator.Tests
         public static async Task DeleteSimulator(Client sdk, string externalId)
         {
             var simulators = await sdk.Alpha.Simulators.ListAsync(
-                new SimulatorQuery
-                {
-                    Filter = new SimulatorFilter
-                    {
-                        Enabled = true
-                    },
-                }).ConfigureAwait(false);
+                new SimulatorQuery()).ConfigureAwait(false);
 
-            var simulatorRes = simulators.Items.Where(s => s.ExternalId == externalId);
+            // delete all test simulators older than 3 minutes and the one with the given externalId
+            var createdTime = DateTime.UtcNow.AddMinutes(-3).ToUnixTimeMilliseconds();
+            var simulatorRes = simulators.Items.Where(s => 
+                (s.ExternalId.StartsWith(TestSimulatorExternalIdPrefix) && s.CreatedTime < createdTime) || s.ExternalId == externalId
+            );
             if (simulatorRes.Count() > 0)
             {
-                await sdk.Alpha.Simulators.DeleteAsync(new List<Identity>
+                foreach (var sim in simulatorRes)
                 {
-                    new Identity(externalId)
-                }).ConfigureAwait(false);
+                    await sdk.Alpha.Simulators.DeleteAsync(new List<Identity>
+                    {
+                        new Identity(sim.ExternalId)
+                    }).ConfigureAwait(false);
+                }
             }
         }
 
@@ -110,15 +105,15 @@ namespace Cognite.Simulator.Tests
         }
 
         public static FileCreate SimpleModelFileCreate = new FileCreate() {
-            Name = "simutils-tests-model",
+            Name = "simutils-tests-model.out",
             ExternalId = "simutils-tests-model-single-byte",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
-            Name = "simutils-tests-model-2",
+            Name = "simutils-tests-model-2.out",
             ExternalId = "simutils-tests-model-single-byte-2",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static async Task<CogniteSdk.File> GetOrCreateFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file)
@@ -228,14 +223,14 @@ namespace Cognite.Simulator.Tests
         {
             ExternalId = "SimConnect-IntegrationTests-OnOffValues",
             Name = "On/Off Values",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static TimeSeriesCreate SsdSensorDataTimeSeries = new TimeSeriesCreate()
         {
             ExternalId = "SimConnect-IntegrationTests-SsdSensorData",
             Name = "SSD Sensor Data",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
         };
 
         public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
@@ -325,9 +320,8 @@ namespace Cognite.Simulator.Tests
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
-                InputConstants = new List<SimulatorRoutineRevisionInputConstants>(),
-                InputTimeseries = new List<SimulatorRoutineRevisionInputTimeseries>(),
-                OutputTimeseries = new List<SimulatorRoutineRevisionOutputTimeseries>(),
+                Inputs = new List<SimulatorRoutineRevisionInput>(),
+                Outputs = new List<SimulatorRoutineRevisionOutput>(),
             },
             ExternalId = $"{TestScheduledRoutineExternalId} - 2",
             RoutineExternalId = $"{TestScheduledRoutineExternalId} - 1",
@@ -388,7 +382,7 @@ namespace Cognite.Simulator.Tests
                         Value = SimulatorValue.Create(42),
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
                     },
@@ -399,7 +393,7 @@ namespace Cognite.Simulator.Tests
                         Value = SimulatorValue.Create(100),
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
                     },
@@ -411,7 +405,7 @@ namespace Cognite.Simulator.Tests
                         ValueType = SimulatorValueType.DOUBLE,
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
@@ -429,6 +423,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -436,6 +431,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -462,6 +458,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -528,6 +525,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -535,6 +533,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IC2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -561,6 +560,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -620,7 +620,7 @@ namespace Cognite.Simulator.Tests
                         ValueType = SimulatorValueType.DOUBLE,
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
                     },
@@ -636,7 +636,7 @@ namespace Cognite.Simulator.Tests
                         ReferenceId = "IT1",
                         Unit = new SimulatorValueUnit() {
                             Name = "STB/MMscf",
-                            Type = "LiqRate/GasRate",
+                            Quantity = "LiqRate/GasRate",
                         },
                         Aggregate = "average",
                         SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
@@ -662,6 +662,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Set",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "IT1" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -688,6 +689,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT1" },
+                                { "address", "42" },
                             },
                         },
                         new SimulatorRoutineRevisionScriptStep() {
@@ -695,6 +697,7 @@ namespace Cognite.Simulator.Tests
                             StepType = "Get",
                             Arguments = new Dictionary<string, string>() {
                                 { "referenceId", "OT2" },
+                                { "address", "42" },
                             },
                         },
                     },
@@ -715,13 +718,14 @@ namespace Cognite.Simulator.Tests
             ExternalId = TestModelExternalId,
             Name = "Connector Test Model",
             Description = "PETEX-Connector Test Model",
-            DataSetId = 8148496886298377,
+            DataSetId = TestDataSetId,
             SimulatorExternalId = TestSimulatorExternalId,
+            Type = "OilWell",
         };
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2= GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
 
         public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
             return new SimulatorModelRevisionCreate()
@@ -737,7 +741,79 @@ namespace Cognite.Simulator.Tests
             ExternalId = TestSimulatorExternalId,
             Name =  TestSimulatorExternalId,
             FileExtensionTypes= new List<string> { "out" },
-            Enabled = true,
+            StepFields = new List<SimulatorStepField> {
+                new SimulatorStepField {
+                    StepType = "get/set",
+                    Fields = new List<SimulatorStepFieldParam> {
+                        new SimulatorStepFieldParam {
+                            Name = "address",
+                            Label = "OpenServer Address",
+                            Info = "Enter the address of the PROSPER variable, i.e. PROSPER.ANL. SYS. Pres",
+                        },
+                    },
+                },
+                new SimulatorStepField {
+                    StepType = "command",
+                    Fields = new List<SimulatorStepFieldParam> {
+                        new SimulatorStepFieldParam {
+                            Name = "command",
+                            Label = "OpenServer Command",
+                            Info = "Enter the PROSPER command",
+                        },
+                    },
+                },
+
+            },
+            UnitQuantities = new List<SimulatorUnitQuantity> {
+                new SimulatorUnitQuantity {
+                    Name = "LiqRate/GasRate",
+                    Label = "Liquid Gas Rate",
+                    Units = new List<SimulatorUnitEntry> {
+                        new SimulatorUnitEntry {
+                            Label = "STB/MMscf",
+                            Name = "STB/MMscf",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/Sm³",
+                            Name = "Sm3/Sm3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "m³/m³",
+                            Name = "m3/m3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "m³/m³Vn",
+                            Name = "m3/m3Vn",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "STB/m³Vn",
+                            Name = "STB/m3Vn",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/kSm³",
+                            Name = "Sm3/kSm3",
+                        },
+                        new SimulatorUnitEntry {
+                            Label = "Sm³/MSm³",
+                            Name = "Sm3/MSm3",
+                        },
+                    },
+                },
+            },
+            ModelTypes = new List<SimulatorModelType> {
+                new SimulatorModelType {
+                    Name = "Oil and Water Well",
+                    Key = "OilWell",
+                },
+                new SimulatorModelType {
+                    Name = "Dry and Wet Gas Well",
+                    Key = "GasWell",
+                },
+                new SimulatorModelType {
+                    Name = "Retrograde Condensate Well",
+                    Key = "RetrogradeWell",
+                },
+            },
         };
     }
 }

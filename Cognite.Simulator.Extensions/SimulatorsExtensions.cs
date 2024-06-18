@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extensions;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -71,5 +72,44 @@ namespace Cognite.Simulator.Extensions
                 CancellationToken.None
             ).ConfigureAwait(false);
         }
+    
+        /// <summary>
+        /// Updates the simulation model revision status and status message in CDF.
+        /// </summary>
+        /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
+        /// <param name="id">The ID of the simulator model revision.</param>
+        /// <param name="status">The status of the model revision.</param>
+        /// <param name="statusMessage">The status message.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>The updated SimulatorsResource instance.</returns>
+        public static async Task<SimulatorModelRevision> UpdateSimulatorModelRevisionParsingStatus(
+            this SimulatorsResource cdfSimulators,
+            long id,
+            SimulatorModelRevisionStatus status,
+            string statusMessage = null,
+            CancellationToken token = default
+        )
+        {
+            var modelRevisionPatch =
+                new SimulatorModelRevisionUpdateItem(id) {
+                    Update =
+                        new SimulatorModelRevisionUpdate {
+                            Status = new Update<SimulatorModelRevisionStatus>(status),
+                        }
+                };
+
+            if (statusMessage != null)
+            {
+                var msg = statusMessage.LimitUtf8ByteCount(255);
+                modelRevisionPatch.Update.StatusMessage = new Update<string>(msg);
+            }
+
+            var res = await cdfSimulators.UpdateSimulatorModelRevisionsAsync(
+                new List<SimulatorModelRevisionUpdateItem> { modelRevisionPatch },
+                token).ConfigureAwait(false);
+
+            return res.FirstOrDefault();
+        }
+
     }
 }

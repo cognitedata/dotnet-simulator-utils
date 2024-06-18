@@ -17,7 +17,7 @@ namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// Represents the connector's simulation runner process. This base class can
-    /// fetch simulation events from CDF that are ready to run, validate them and find
+    /// fetch simulation runs from CDF that are ready to run, validate them and find
     /// the time range to sample data where the process is in steady state.
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
@@ -130,7 +130,7 @@ namespace Cognite.Simulator.Utils
             return runsResult.Items;
         }
 
-        private async Task<IEnumerable<SimulationRunEvent>> FindSimulationEvents(
+        private async Task<IEnumerable<SimulationRunItem>> FindSimulationRuns(
             Dictionary<string, long> simulatorDataSetMap,
             SimulationRunStatus status,
             CancellationToken token)
@@ -138,7 +138,7 @@ namespace Cognite.Simulator.Utils
             var simulationRuns = await FindSimulationRunsWithStatus(
                 simulatorDataSetMap,
                 status, token).ConfigureAwait(false);
-            return simulationRuns.Select(r => new SimulationRunEvent(r)).ToList();
+            return simulationRuns.Select(r => new SimulationRunItem(r)).ToList();
         }
 
         /// <summary>
@@ -147,45 +147,45 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
-            var interval = TimeSpan.FromSeconds(_connectorConfig.FetchEventsInterval);
+            var interval = TimeSpan.FromSeconds(_connectorConfig.FetchRunsInterval);
             while (!token.IsCancellationRequested)
             {
                 var simulators = _simulators.ToDictionary(s => s.Name, s => s.DataSetId);
-                // Find events that are ready to run
-                var simulationEvents = await FindSimulationEvents(
+                // Find runs that are ready to be executed
+                var simulationRuns = await FindSimulationRuns(
                     simulators,
                     SimulationRunStatus.ready,
                     token).ConfigureAwait(false);
-                if (simulationEvents.Any())
+                if (simulationRuns.Any())
                 {
                     _logger.LogInformation(
-                        "{Number} simulation event(s) ready to run found in CDF",
-                        simulationEvents.Count());
+                        "{Number} simulation runs(s) ready to run found in CDF",
+                        simulationRuns.Count());
                 }
 
-                // Find events that are running. Should not have any, as the connector runs events in sequence.
-                // Any running events indicates that the connector went down during the run, and the event should fail
-                var simulationRunningEvents = await FindSimulationEvents(
+                // Find runs that are in progress. Should not have any, as the connector runs them in sequence.
+                // Any running events indicates that the connector went down during the run, and the run status should be updated to "failure".
+                var simulationRunningItems = await FindSimulationRuns(
                     simulators,
                     SimulationRunStatus.running,
                     token).ConfigureAwait(false);
-                if (simulationRunningEvents.Any())
+                if (simulationRunningItems.Any())
                 {
                     _logger.LogWarning(
-                        "{Number} simulation event(s) that are running (but should have finished) found in CDF",
-                        simulationRunningEvents.Count());
+                        "{Number} simulation run(s) that are in progress (but should have finished) found in CDF",
+                        simulationRunningItems.Count());
                 }
-                var allEvents = new List<SimulationRunEvent>(simulationEvents);
-                allEvents.AddRange(simulationRunningEvents);
+                var allRunItems = new List<SimulationRunItem>(simulationRuns);
+                allRunItems.AddRange(simulationRunningItems);
 
-                // sort by event time
-                allEvents.Sort((e1, e2) =>
+                // sort by created time
+                allRunItems.Sort((e1, e2) =>
                 {
                     return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
                 });
-                foreach (SimulationRunEvent e in allEvents)
+                foreach (SimulationRunItem runItem in allRunItems)
                 {
-                    var runId = e.Run.Id;
+                    var runId = runItem.Run.Id;
                     var startTime = DateTime.UtcNow;
                     T modelState = null;
                     V routineRev = null;
@@ -193,10 +193,10 @@ namespace Cognite.Simulator.Utils
 
                     var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
 
-                    using (LogContext.PushProperty("LogId", e.Run.LogId)) {
+                    using (LogContext.PushProperty("LogId", runItem.Run.LogId)) {
                         try
                         {
-                            (modelState, routineRev) = await GetModelAndRoutine(e, connectorIdList).ConfigureAwait(false);
+                            (modelState, routineRev) = await GetModelAndRoutine(runItem, connectorIdList).ConfigureAwait(false);
                             if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) )
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
@@ -206,19 +206,13 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
 
-                            var metadata = new Dictionary<string, string>();
-                            InitSimulationEventMetadata(
-                                modelState,
-                                routineRev,
-                                metadata);
-                            PublishSimulationRunStatus("RUNNING_CALCULATION", token);
+                            PublishSimulationRunStatus(ConnectorStatus.RUNNING_SIMULATION, token);
 
                             await InitSimulationRun(
-                                e,
+                                runItem,
                                 startTime,
                                 modelState,
                                 routineRev,
-                                metadata,
                                 token)
                                 .ConfigureAwait(false);
                         }
@@ -231,22 +225,22 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogError(error.Message);
                                 }
                             }
-                            _logger.LogError("Calculation run failed with error: {Message}", ex);
-                            e.Run = await UpdateSimulationRunStatus(
+                            _logger.LogError("Simulation run failed with error: {Message}", ex);
+                            runItem.Run = await UpdateSimulationRunStatus(
                                 runId,
                                 SimulationRunStatus.failure,
                                 ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
                                 token,
-                                e.RunConfiguration
+                                runItem.RunConfiguration
                                 ).ConfigureAwait(false);
                         }
                         finally
                         {
-                            // the following check was added because the code below was running even for skipped events
+                            // the following check was added because the code below was running even for skipped runs
                             if (!skipped)
                             {
-                                _logger.LogDebug("Calculation run finished for run {Id}", runId);
-                                PublishSimulationRunStatus("IDLE", token);
+                                _logger.LogDebug("Simulation run finished for run {Id}", runId);
+                                PublishSimulationRunStatus(ConnectorStatus.IDLE, token);
                                 ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
@@ -257,7 +251,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private async Task<(T, V)> GetModelAndRoutine(SimulationRunEvent simEv, List<string> integrations)
+        private async Task<(T, V)> GetModelAndRoutine(SimulationRunItem simEv, List<string> integrations)
         {
             string modelRevExternalId = simEv.Run.ModelRevisionExternalId;
             string runId = simEv.Run.Id.ToString();
@@ -282,25 +276,12 @@ namespace Cognite.Simulator.Utils
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
-                throw new ConnectorException("Calculation failed due to connector error");
+                throw new ConnectorException("Simulation failed due to connector error");
             }
             return (model, calcConfig);
         }
 
-        /// <summary>
-        /// Before running the simulation, the CDF Event that triggered it is changed from
-        /// <see cref="SimulationEventStatusValues.Ready"/> to <see cref="SimulationEventStatusValues.Running"/>.
-        /// At this point, any simulator specific metadata that needs to be added to the event, should be initialized here.
-        /// </summary>
-        /// <param name="modelState">Model state</param>
-        /// <param name="configObj">Simulation configuration object</param>
-        /// <param name="metadata">Metadata to be added to the CDF event</param>
-        protected abstract void InitSimulationEventMetadata(
-            T modelState,
-            V configObj,
-            Dictionary<string, string> metadata);
-
-        async void PublishSimulationRunStatus(string runStatus, CancellationToken token)
+        async void PublishSimulationRunStatus(ConnectorStatus status, CancellationToken token)
         {
             try
             {
@@ -324,7 +305,7 @@ namespace Cognite.Simulator.Utils
                 var now = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 var simulatorIntegrationUpdate = new SimulatorIntegrationUpdate
                     {
-                        ConnectorStatus = new Update<string>(runStatus),
+                        ConnectorStatus = new Update<string>(status.ToString()),
                         ConnectorStatusUpdatedTime = new Update<long>(now)
                     };
                 await _cdfSimulators.UpdateSimulatorIntegrationAsync(
@@ -344,20 +325,18 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Initialize the simulation event execution
+        /// Initialize the simulation run execution
         /// </summary>
-        /// <param name="simEv">Simulation event</param>
+        /// <param name="runItem">Simulation run item</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
         /// <param name="routineRevision">Routine revision object</param>
-        /// <param name="metadata">Metadata to add to the event</param>
         /// <param name="token">Cancellation token</param>
         protected virtual async Task InitSimulationRun(
-            SimulationRunEvent simEv,
+            SimulationRunItem runItem,
             DateTime startTime,
             T modelState,
             V routineRevision,
-            Dictionary<string, string> metadata,
             CancellationToken token)
         {
 
@@ -365,17 +344,17 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-            if (simEv == null)
+            if (runItem == null)
             {
-                throw new ArgumentNullException(nameof(simEv));
+                throw new ArgumentNullException(nameof(runItem));
             }
             if (routineRevision == null)
             {
                 throw new ArgumentNullException(nameof(routineRevision));
             }
 
-            simEv.Run = await UpdateSimulationRunStatus(
-                simEv.Run.Id,
+            runItem.Run = await UpdateSimulationRunStatus(
+                runItem.Run.Id,
                 SimulationRunStatus.running,
                 null,
                 token).ConfigureAwait(false);
@@ -390,11 +369,11 @@ namespace Cognite.Simulator.Utils
                     throw new SimulationException($"Data sampling configuration for {routineRevision.ExternalId} missing");
                 }
                 // Determine the validation end time
-                if (simEv.Run.RunTime.HasValue)
+                if (runItem.Run.RunTime.HasValue)
                 {
-                    // If the event contains a validation end overwrite, use that instead of
+                    // If the run contains a validation end overwrite, use that instead of
                     // the current time
-                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(simEv.Run.RunTime.Value);
+                    validationEnd = CogniteTime.FromUnixTimeMilliseconds(runItem.Run.RunTime.Value);
                 }
 
                 // Find the sampling configuration results
@@ -404,7 +383,7 @@ namespace Cognite.Simulator.Utils
                     validationEnd,
                     token).ConfigureAwait(false);
 
-                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Calculation time: {Time}",
+                _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Simulation time: {Time}",
                     routineRevision.ExternalId,
                     routineRevision.ModelExternalId,
                     CogniteTime.FromUnixTimeMilliseconds(samplingRange.Midpoint));
@@ -419,48 +398,38 @@ namespace Cognite.Simulator.Utils
                 // Create the run configuration dictionary
                 BuildRunConfiguration(
                     samplingRange,
-                    simEv,
+                    runItem,
                     configObj,
                     validationEnd);
             }
             await RunSimulation(
-                simEv,
+                runItem,
                 startTime,
                 modelState,
                 routineRevision,
                 samplingRange,
                 token).ConfigureAwait(false);
 
-                simEv.Run = await UpdateSimulationRunStatus(
-                    simEv.Run.Id,
+                runItem.Run = await UpdateSimulationRunStatus(
+                    runItem.Run.Id,
                     SimulationRunStatus.success,
                     "Simulation ran to completion",
                     token,
-                    simEv.RunConfiguration
+                    runItem.RunConfiguration
                 ).ConfigureAwait(false);
-
-            await EndSimulationRun(simEv, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Called after the simulation run has finished. This method can be used to
-        /// perform any cleanup or other actions that need to be done after the run.
-        /// </summary>
-        protected abstract Task EndSimulationRun(SimulationRunEvent simEv,
-            CancellationToken token) ;
-
         /// <summary>
         /// Run a simulation and saves the results back to CDF. Different simulators
         /// will implement different patterns of interaction when running simulations
         /// </summary>
-        /// <param name="e">Simulation event</param>
+        /// <param name="runItem">Simulation run item</param>
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state object</param>
         /// <param name="configObj">Configuration object</param>
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="token">Cancellation token</param>
         protected abstract Task RunSimulation(
-            SimulationRunEvent e,
+            SimulationRunItem runItem,
             DateTime startTime,
             T modelState,
             V configObj,
@@ -472,20 +441,20 @@ namespace Cognite.Simulator.Utils
         /// At this point we only store the simulation time on the simulation run object
         /// </summary>
         /// <param name="samplingRange">Selected simulation sampling range</param>
-        /// <param name="simEv">Simulation event</param>
+        /// <param name="runItem">Simulation run item</param>
         /// <param name="configObj">Configuration object</param>
         /// <param name="validationEnd">End of the validation period</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are missing</exception>
         protected virtual void BuildRunConfiguration(
             SamplingRange samplingRange,
-            SimulationRunEvent simEv,
+            SimulationRunItem runItem,
             SimulatorRoutineRevisionConfiguration configObj,
             DateTime validationEnd)
         {
-            if (simEv == null)
+            if (runItem == null)
             {
-                throw new ArgumentNullException(nameof(simEv));
+                throw new ArgumentNullException(nameof(runItem));
             }
 
             if (configObj == null)
@@ -493,14 +462,14 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(configObj));
             }
 
-            simEv.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds());
-            simEv.RunConfiguration.Add("validationEnd", validationEnd.ToUnixTimeMilliseconds());
+            runItem.RunConfiguration.Add("validationStart", validationEnd.AddMinutes(-configObj.DataSampling.ValidationWindow).ToUnixTimeMilliseconds());
+            runItem.RunConfiguration.Add("validationEnd", validationEnd.ToUnixTimeMilliseconds());
 
             if (samplingRange != null)
             {
-                simEv.RunConfiguration.Add("simulationTime", samplingRange.Midpoint);
-                simEv.RunConfiguration.Add("samplingStart", samplingRange.Start.Value);
-                simEv.RunConfiguration.Add("samplingEnd", samplingRange.End.Value);
+                runItem.RunConfiguration.Add("simulationTime", samplingRange.Midpoint);
+                runItem.RunConfiguration.Add("samplingStart", samplingRange.Start.Value);
+                runItem.RunConfiguration.Add("samplingEnd", samplingRange.End.Value);
             }
         }
     }
@@ -509,7 +478,7 @@ namespace Cognite.Simulator.Utils
     /// Wrapper class for <see cref="SimulationRun"/> entity.
     /// Contains the simulation run configuration as a dictionary of key-value pairs
     /// </summary>
-    public class SimulationRunEvent
+    public class SimulationRunItem
     {
         /// <summary>
         /// CDF SimulationRun resource representing a simulation run
@@ -522,9 +491,9 @@ namespace Cognite.Simulator.Utils
         public Dictionary<string, long> RunConfiguration { get; } = new Dictionary<string, long>();
 
         /// <summary>
-        /// Creates a new simulation run event based on simulation run CDF resource
+        /// Creates a new simulation run item based on simulation run CDF resource
         /// </summary>
-        public SimulationRunEvent(SimulationRun r)
+        public SimulationRunItem(SimulationRun r)
         {
             Run = r;
         }

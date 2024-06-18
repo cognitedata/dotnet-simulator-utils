@@ -15,6 +15,8 @@ using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
+using Cognite.Simulator.Extensions;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
@@ -39,7 +41,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 // prepopulate models in CDF
-                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisions = revisionsRes.TakeLast(1); // This test only works with the latest revision
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -54,13 +57,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
 
                 Assert.NotEmpty(lib.State);
-
+ 
                 foreach (var revision in revisions)
                 {
                     var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
-                    Assert.Equal("Connector Test Model", modelInState.ModelName);
+                    Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
                     Assert.False(modelInState.Processed);
@@ -117,6 +120,134 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
+        // This tests the situation when the model is marked as parsed before the library starts
+        // In such cases the library should normally not re-parse the model
+        [Fact]
+        public async Task TestModelLibraryWithReparse()
+        {
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<ModelParsingInfo>();
+            StateStoreConfig stateConfig = null;
+            using var provider = services.BuildServiceProvider();
+
+            var cdf = provider.GetRequiredService<Client>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+
+            try
+            {
+                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // prepopulate models in CDF
+                var initialRevisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var initialRevisions = initialRevisionsRes.TakeLast(1); // This test only works with the latest revision
+                
+                // set model revision to be be "pre-parsed"
+                // those should not be parsed again
+                var revisions = new List<SimulatorModelRevision>();
+                foreach (var revision in initialRevisions)
+                {
+                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionParsingStatus(
+                        revision.Id,
+                        SimulatorModelRevisionStatus.failure,
+                        token: CancellationToken.None).ConfigureAwait(false);
+
+                    revisions.Add(res);
+                }
+                var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
+
+                stateConfig = provider.GetRequiredService<StateStoreConfig>();
+                using var source = new CancellationTokenSource();
+
+                var lib = provider.GetRequiredService<ModeLibraryTest>();
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+
+                // Start the library update loop that download the files, should not parse them
+                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF
+                await lib.GetRunTasks(linkedTokenSource.Token)
+                    .RunAll(linkedTokenSource)
+                    .ConfigureAwait(false);
+
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    // only true if the model was processed locally
+                    // which doesn't happen in this test case since the model is marked as parsed before
+                    Assert.False(modelInState.Processed);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+
+                    Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
+                    Assert.False(modelInState.CanRead);
+                    Assert.False(modelInState.ShouldProcess());
+                    Assert.True(modelInState.ParsingInfo.Parsed);
+                    Assert.Equal(SimulatorModelRevisionStatus.failure, modelInState.ParsingInfo.Status);
+                    Assert.True(modelInState.ParsingInfo.Error);
+                    // last updated time should not change
+                    Assert.Equal(revision.LastUpdatedTime, modelInState.ParsingInfo.LastUpdatedTime);
+                }
+
+                var updatedRevisions = new List<SimulatorModelRevision>();
+                foreach (var revision in revisions)
+                {
+                    var res = await cdf.Alpha.Simulators.UpdateSimulatorModelRevisionParsingStatus(
+                        revision.Id,
+                        SimulatorModelRevisionStatus.unknown,
+                        token: CancellationToken.None).ConfigureAwait(false);
+
+                    updatedRevisions.Add(res);
+                }
+                revisions = updatedRevisions;
+                revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
+
+                using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(10));
+                await lib.GetRunTasks(linkedTokenSource2.Token)
+                    .RunAll(linkedTokenSource2)
+                    .ConfigureAwait(false);
+
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    // only true if the model was processed locally
+                    // which exactly what happens in this test case since the model is marked to be re-parsed
+                    Assert.True(modelInState.Processed);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+
+                    Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
+                    Assert.True(modelInState.CanRead);
+                    Assert.False(modelInState.ShouldProcess());
+                    Assert.True(modelInState.ParsingInfo.Parsed);
+                    Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
+                    Assert.False(modelInState.ParsingInfo.Error);
+                    // last updated time should change since status is updated during the test
+                    Assert.True(revision.LastUpdatedTime < modelInState.ParsingInfo.LastUpdatedTime);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+            }
+        }
+
         [Fact]
         public async Task TestModelLibraryHotReload()
         {
@@ -136,7 +267,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 // prepopulate models in CDF
-                var revisions = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisions = revisionsRes.TakeLast(1); // This test only works with the latest revision
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
@@ -369,7 +501,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             FileStorageClient downloadClient,
             IExtractionStateStore store = null) :
             base(
-                new FileLibraryConfig
+                new ModelLibraryConfig
                 {
                     FilesDirectory = "./files",
                     FilesTable = "LibraryFiles",
@@ -383,7 +515,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorConfig
                     {
                         Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = CdfTestClient.TestDataset
+                        DataSetId = SeedData.TestDataSetId
                     }
                 },
                 cdf,
@@ -415,16 +547,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }, token);
         }
 
-        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision, SimulatorModel model)
+        protected override TestFileState StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
             if (modelRevision == null)
             {
                 throw new ArgumentNullException(nameof(modelRevision));
-            }
-
-            if (model == null)
-            {
-                throw new ArgumentNullException(nameof(model));
             }
 
             return new TestFileState(modelRevision.Id.ToString())
@@ -433,7 +560,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,
                 UpdatedTime = modelRevision.LastUpdatedTime,
-                ModelName = model.Name,
                 ModelExternalId = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
                 Processed = false,
@@ -460,7 +586,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorConfig
                     {
                         Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = CdfTestClient.TestDataset
+                        DataSetId = SeedData.TestDataSetId
                     }
                 },
                 cdf, logger)

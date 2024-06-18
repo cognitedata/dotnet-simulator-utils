@@ -46,24 +46,6 @@ namespace Cognite.Simulator.Utils
             Id = id;
         }
 
-        private string _name;
-        
-        /// <summary>
-        /// Name of the model associated with this file. The model is
-        /// typically the object being simulated. Models can consist of several CDF files, including 
-        /// model versions, simulation configurations, etc
-        /// </summary>
-        public string ModelName
-        {
-            get => _name;
-            set
-            {
-                if (value == _name) return;
-                LastTimeModified = DateTime.UtcNow;
-                _name = value;
-            }
-        }
-
         private string _modelExternalId;
         
         /// <summary>
@@ -220,15 +202,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Data type of the file. Typically, one of the <see cref="SimulatorDataType"/> values.
-        /// </summary>
-        /// <returns>File data type</returns>
-        public virtual string GetDataType()
-        {
-            return "none";
-        }
-
-        /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>
         /// <param name="poco">Data object</param>
@@ -238,7 +211,6 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(poco));
             }
-            _name = poco.ModelName;
             _source = poco.Source;
             _dataSetId = poco.DataSetId;
             _filePath = poco.FilePath;
@@ -260,7 +232,6 @@ namespace Cognite.Simulator.Utils
             return new FileStatePoco
             {
                 Id = Id,
-                ModelName = ModelName,
                 Source = Source,
                 DataSetId = DataSetId,
                 FilePath = FilePath,
@@ -284,12 +255,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("external-id")]
         public string ExternalId { get; set; }
-
-        /// <summary>
-        /// Name of the model associated with the file
-        /// </summary>
-        [StateStoreProperty("model-name")]
-        public string ModelName { get; set; }
 
         /// <summary>
         /// External ID of the model associated with the file
