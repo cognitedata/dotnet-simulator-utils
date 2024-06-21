@@ -51,7 +51,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
-                UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
             });
             services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>

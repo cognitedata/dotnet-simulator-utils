@@ -98,7 +98,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
-                UseSimulatorsApi = true
             });
 
             StateStoreConfig stateConfig = null;
@@ -138,7 +137,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
                 // so this should be empty
-                var processedModels = modelLib.State.Values.Where(m => m.FilePath != null && m.Processed);
+                var processedModels = modelLib._state.Values.Where(m => m.FilePath != null && m.Processed);
                 Assert.Empty(processedModels);
 
                 var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
@@ -177,7 +176,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
 
-                Assert.Empty(modelLib.TemporaryState); // temporary state should be empty after running the model as it cleans up automatically
+                Assert.Empty(modelLib._temporaryState); // temporary state should be empty after running the model as it cleans up automatically
                 Assert.Empty(Directory.GetFiles("./files/temp"));
 
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(

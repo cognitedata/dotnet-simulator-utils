@@ -161,7 +161,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new ConnectorConfig
                 {
                     NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
-                    AddMachineNameSuffix = false
+                    AddMachineNameSuffix = false,
+                    StatusInterval = 2
                 },
                 new List<SimulatorConfig>
                 {
@@ -178,11 +179,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public override string GetConnectorVersion()
         {
             return "v0.0.1";
-        }
-
-        public override TimeSpan GetHeartbeatInterval()
-        {
-            return TimeSpan.FromSeconds(2);
         }
 
         public override string GetSimulatorVersion(string simulator)
@@ -207,7 +203,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var linkedToken = linkedTokenSource.Token;
                 var taskList = new List<Task> 
                 { 
-                    Heartbeat(linkedToken),
+                    HeartbeatLoop(linkedToken),
                     _pipeline.PipelineUpdate(linkedToken)
                 };
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
