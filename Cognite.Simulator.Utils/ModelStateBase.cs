@@ -8,6 +8,7 @@ namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// This base class represents the state of a model file
+    /// TODO: See if we can remove FileState completely and move all the variables into this class
     /// </summary>
     public abstract class ModelStateBase : FileState
     {

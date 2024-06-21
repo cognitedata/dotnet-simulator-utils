@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
         /// Fetch routine revisions from CDF and store them in memory and state store
         /// This method is used to populate the local routine library with the latest routine revisions "on demand", i.e. right upon simulation run
         /// </summary>
-        private async Task<V> TryReadRoutineRevisionFromCdf(string routineRevisionExternalId)
+        private async Task<V> TryReadRemoteRoutineRevision(string routineRevisionExternalId)
         {
             _logger.LogInformation("Local routine revision {Id} not found, attempting to fetch from remote", routineRevisionExternalId);
             try {
@@ -99,7 +99,7 @@ namespace Cognite.Simulator.Utils
                 return revisions.First();
             }
 
-            V calcConfig = await TryReadRoutineRevisionFromCdf(routineRevisionExternalId).ConfigureAwait(false);
+            V calcConfig = await TryReadRemoteRoutineRevision(routineRevisionExternalId).ConfigureAwait(false);
 
             return calcConfig;
         }
@@ -107,6 +107,9 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Verifies that the routine revision exists in CDF.
         /// In case it does not, should remove from memory.
+        /// <param name="config">Configuration object</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         /// </summary>
         public async Task<bool> VerifyInMemoryCache(
             V config,
@@ -192,7 +195,6 @@ namespace Cognite.Simulator.Utils
             var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
                 new SimulatorRoutineRevisionQuery()
                 {
-                    // TODO we should only fetch latest revisions here
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
                         // TODO filter by simulatorIntegrationExternalIds
@@ -235,10 +237,10 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Get the simulation configuration object with the given property
         /// </summary>
-        /// <param name="routinerRevisionExternalId">Simulator name</param>
+        /// <param name="routineRevisionExternalId">Simulator name</param>
         /// <returns>Simulation configuration state object</returns>
         Task<V> GetRoutineRevision(
-            string routinerRevisionExternalId);
+            string routineRevisionExternalId);
 
         /// <summary>
         /// Get the tasks that are running in the library

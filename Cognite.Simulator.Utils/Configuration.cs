@@ -122,6 +122,7 @@ namespace Cognite.Simulator.Utils
         /// The connector will run simulation run resource found on CDF that are not older than
         /// this value (in seconds). In case it finds items older than this, the runs will
         /// fail due to timeout
+        /// TODO: We should use this so that our runs dont pile up
         /// </summary>
         public int SimulationRunTolerance { get; set; } = 1800; // 30 min
 
@@ -146,12 +147,6 @@ namespace Cognite.Simulator.Utils
         /// Configure License checking, enable or change frequency
         /// </summary>
         public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
-
-        /// <summary>
-        /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
-        /// capabilities in CDF). Else, the connector will use only core CDF resources
-        /// </summary>
-        public bool UseSimulatorsApi { get; set; }
 
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix

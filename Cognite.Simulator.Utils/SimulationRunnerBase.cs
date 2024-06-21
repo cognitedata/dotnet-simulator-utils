@@ -74,7 +74,16 @@ namespace Cognite.Simulator.Utils
             ModelLibrary = modelLibrary;
             RoutineLibrary = routineLibrary;
         }
-
+        
+        /// <summary>
+        /// Updates the status of a simulation run in CDF
+        /// </summary>
+        /// <param name="runId">Run ID</param>
+        /// <param name="status">Run status</param>
+        /// <param name="statusMessage">Run status message</param>
+        /// <param name="token">Cancellation token</param>
+        /// <param name="runConfiguration">Run configuration</param>
+        /// <returns>Run ID</returns>
         private async Task<SimulationRun> UpdateSimulationRunStatus(
             long runId,
             SimulationRunStatus status,
@@ -332,7 +341,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelState">Model state object</param>
         /// <param name="routineRevision">Routine revision object</param>
         /// <param name="token">Cancellation token</param>
-        protected virtual async Task InitSimulationRun(
+        private async Task InitSimulationRun(
             SimulationRunItem runItem,
             DateTime startTime,
             T modelState,
@@ -402,7 +411,7 @@ namespace Cognite.Simulator.Utils
                     configObj,
                     validationEnd);
             }
-            await RunSimulation(
+            await this.RunRoutine(
                 runItem,
                 startTime,
                 modelState,
@@ -428,7 +437,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="configObj">Configuration object</param>
         /// <param name="samplingRange">Selected simulation sampling range</param>
         /// <param name="token">Cancellation token</param>
-        protected abstract Task RunSimulation(
+        protected abstract Task RunRoutine(
             SimulationRunItem runItem,
             DateTime startTime,
             T modelState,
@@ -437,7 +446,8 @@ namespace Cognite.Simulator.Utils
             CancellationToken token);
 
         /// <summary>
-        /// Builds the run configuration dictionary to be stored in CDF upon simulations is finished
+        /// TODO: Check if this should be made private? do we really need this?
+        /// Builds the run configuration dictionary to be stored in CDF when the simulations run is finished
         /// At this point we only store the simulation time on the simulation run object
         /// </summary>
         /// <param name="samplingRange">Selected simulation sampling range</param>
@@ -446,7 +456,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="validationEnd">End of the validation period</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are missing</exception>
-        protected virtual void BuildRunConfiguration(
+        private void BuildRunConfiguration(
             SamplingRange samplingRange,
             SimulationRunItem runItem,
             SimulatorRoutineRevisionConfiguration configObj,

@@ -81,7 +81,7 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="ArgumentNullException">When one of the arguments is missing</exception>
         /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
         /// <exception cref="ConnectorException">When it was not possible to save the results in CDF</exception>
-        protected override async Task RunSimulation(
+        protected override async Task RunRoutine(
             SimulationRunItem runItem, 
             DateTime startTime, 
             T modelState, 

@@ -211,7 +211,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
         /// <param name="mainToken">The cancellation token.</param>
-        public async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
+        private async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
         {
             if (job == null)
             {
