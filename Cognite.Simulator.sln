@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cognite.Simulator.Tests", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cognite.DataProcessing", "Cognite.DataProcessing\Cognite.DataProcessing.csproj", "{64F2199F-B74C-4AF7-8E5D-3999302F887D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Calculator.Simulator", "Sample.Calculator.Simulator\Sample.Calculator.Simulator.csproj", "{5215DCEF-65BC-4E15-9CC6-919471515127}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{64F2199F-B74C-4AF7-8E5D-3999302F887D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64F2199F-B74C-4AF7-8E5D-3999302F887D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64F2199F-B74C-4AF7-8E5D-3999302F887D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5215DCEF-65BC-4E15-9CC6-919471515127}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5215DCEF-65BC-4E15-9CC6-919471515127}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5215DCEF-65BC-4E15-9CC6-919471515127}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5215DCEF-65BC-4E15-9CC6-919471515127}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -125,15 +125,12 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Returns the first simulator integration.
         /// </summary>
-        /// <returns>The first simulator integration.</returns>
-        public SimulatorIntegration GetSimulatorIntegrations()
+        /// <returns>A list of simulator integrations.</returns>
+        public IEnumerable<CogniteSdk.Alpha.SimulatorIntegration> GetSimulatorIntegrations()
         {
-            if(_simulatorIntegrationsList.Count == 0)
-            {
-                return null;
-            }
-            return _simulatorIntegrationsList.First().Value;
+            return _simulatorIntegrationsList.Values;
         }
+
 
         /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.

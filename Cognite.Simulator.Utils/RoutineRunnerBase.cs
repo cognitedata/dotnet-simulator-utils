@@ -318,5 +318,11 @@ namespace Cognite.Simulator.Utils
             T modelState, 
             V simulationConfiguration, 
             Dictionary<string, SimulatorValueItem> inputData);
+
+        void ExtractModelInformation(ModelStateBase state, CancellationToken _token);
+
+        string GetSimulatorVersion();
+
+        string GetConnectorVersion();
     } 
 }

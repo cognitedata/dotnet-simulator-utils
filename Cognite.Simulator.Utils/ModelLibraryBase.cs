@@ -52,7 +52,6 @@ namespace Cognite.Simulator.Utils
         
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
-        /// /// TODO: Rename this to _cdfFiles
         /// </summary>
         protected FilesResource _cdfFiles { get; private set; }
 
