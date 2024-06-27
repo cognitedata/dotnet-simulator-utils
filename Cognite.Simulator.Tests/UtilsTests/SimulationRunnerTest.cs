@@ -398,6 +398,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
+        public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetConnectorVersion()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetSimulatorVersion()
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             TestFileState modelState, 
             SimulatorRoutineRevision simulationConfiguration, 
