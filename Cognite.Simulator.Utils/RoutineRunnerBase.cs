@@ -338,5 +338,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <returns></returns>
         string GetConnectorVersion();
+
+        /// <summary>
+        /// Get the model file extension
+        /// </summary>
+        /// <returns></returns>
+        string GetModelFileExtension();
     } 
 }

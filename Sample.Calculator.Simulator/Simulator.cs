@@ -19,6 +19,11 @@ public class CalculatorSimulatorClient :
         return CommonUtils.GetAssemblyVersion();
     }
 
+    public string GetModelFileExtension()
+    {
+        return "calculator";
+    }
+
     public string GetSimulatorVersion()
     {
         return "2.0.1";

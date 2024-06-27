@@ -42,6 +42,7 @@ namespace Cognite.Simulator.Utils
                 cdf,
                 logger,
                 client,
+                simulationClient,
                 store)
         {
             __simulationClient = simulationClient;
