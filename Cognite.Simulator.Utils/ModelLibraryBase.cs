@@ -71,7 +71,7 @@ namespace Cognite.Simulator.Utils
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
 
-        private readonly ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> _simulatorClient;
+        private readonly ISimulatorClient<ModelStateBase> _simulatorClient;
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulatorClient,
+            ISimulatorClient<ModelStateBase> simulatorClient,
             IExtractionStateStore store = null) 
         {
             if (cdf == null)

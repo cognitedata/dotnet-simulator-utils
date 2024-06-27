@@ -144,7 +144,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 try
                 {
                     var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig>>();
-                    var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>>();
+                    var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase>>();
 
                     await connector.Init(token).ConfigureAwait(false);
                    

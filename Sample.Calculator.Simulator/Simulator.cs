@@ -1,11 +1,10 @@
 using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using static SampleConnector;
 
 public class CalculatorSimulatorClient : 
-        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
+        ISimulatorClient<ModelStateBase> {
 
     
     private readonly ILogger<CalculatorSimulatorClient> _logger;
@@ -53,7 +52,7 @@ public class CalculatorSimulatorClient :
         
     }
 
-    Task ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>.ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    Task ISimulatorClient<ModelStateBase>.ExtractModelInformation(ModelStateBase state, CancellationToken _token)
     {
         _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
         state.CanRead = false;

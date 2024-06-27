@@ -17,9 +17,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class RoutineRunnerBase<T, V> : SimulationRunnerBase<T, V>
+    public abstract class RoutineRunnerBase<T> : SimulationRunnerBase<T, SimulatorRoutineRevision>
         where T : ModelStateBase
-        where V : SimulatorRoutineRevision
     {
         private readonly CogniteDestination _cdf;
         private readonly ILogger _logger;
@@ -27,7 +26,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Client that implements the connector with a simulator
         /// </summary>
-        protected ISimulatorClient<T, V> SimulatorClient { get; }
+        protected ISimulatorClient<T> SimulatorClient { get; }
 
         /// <summary>
         /// Creates an instance of the runner with the provided parameters
@@ -44,8 +43,8 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf,
             IModelProvider<T> modelLibrary, 
-            IRoutineProvider<V> configLibrary,
-            ISimulatorClient<T, V> simulatorClient,
+            IRoutineProvider<SimulatorRoutineRevision> configLibrary,
+            ISimulatorClient<T> simulatorClient,
             ILogger logger) : 
             base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger)
         {
@@ -85,7 +84,7 @@ namespace Cognite.Simulator.Utils
             SimulationRunItem runItem, 
             DateTime startTime, 
             T modelState, 
-            V routineRevision, 
+            SimulatorRoutineRevision routineRevision, 
             SamplingRange samplingRange, 
             CancellationToken token)
         {
@@ -302,9 +301,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the model state object</typeparam>
     /// <typeparam name="V">Type of the simulation configuration object</typeparam>
-    public interface ISimulatorClient<T, V> 
+    public interface ISimulatorClient<T> 
         where T : ModelStateBase
-        where V : SimulatorRoutineRevision
     {
         /// <summary>
         /// Run a simulation by executing the routine passed as parameter with
@@ -315,8 +313,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="inputData">Input data</param>
         /// <returns></returns>
         Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            T modelState, 
-            V simulationConfiguration, 
+            ModelStateBase modelState, 
+            SimulatorRoutineRevision simulationConfiguration, 
             Dictionary<string, SimulatorValueItem> inputData);
 
         /// <summary>

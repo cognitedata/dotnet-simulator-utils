@@ -7,7 +7,7 @@ await SampleConnector.Run();
 public static class SampleConnector {
     static void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
+        services.AddScoped<ISimulatorClient<ModelStateBase>, CalculatorSimulatorAutomationClient>();
     }
     public class CustomAutomationConfig : AutomationConfig { }
     public static async Task Run() {
