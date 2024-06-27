@@ -1,5 +1,7 @@
 using System;
+using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extractor.Common;
@@ -10,6 +12,7 @@ using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly.Timeout;
 
 public class DefaultConnectorRuntime<TAutomationConfig>
  where TAutomationConfig : AutomationConfig, new()
@@ -75,8 +78,6 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
         ConfigureServices?.Invoke(services);
-        // services.AddScoped<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
-
         services.AddScoped<DefaultConnector<TAutomationConfig>>();
         services.AddScoped<DefaultModelLibrary<TAutomationConfig>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
@@ -103,12 +104,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         catch (Exception e)
         {
             // NewConfigDetected needs to propagate all the way up
-            // TODO: This needs to be fixed
-            if (e is NewConfigDetected)
-            {
-                return;
-            }
-            else
+            if (!(e is NewConfigDetected))
             {
                 logger.LogError(e, "Error testing connection to CDF: {Message}", e.Message);
                 return;
@@ -138,9 +134,62 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 catch (Exception e)
                 {
                     await pipeline.NotifyError(e, token).ConfigureAwait(false);
-                    logger.LogError(e, "An error occurred during connector execution");
+                    if (e is ConnectorException ce)
+                    {
+                        logger.LogError("Connector error: {Message}", ce.Message);
+                        if (ce.InnerException != null)
+                        {
+                            logger.LogError("- {Message}", ce.InnerException.Message);
+                        }
+                        foreach (var err in ce.Errors)
+                        {
+                            logger.LogError("- {Message}", ce.Message);
+                        }
+                    }
+                    else if (e is CogniteSdk.ResponseException re)
+                    {
+                        // CDF request failed but request id and status code are available.
+                        logger.LogError("Request to CDF failed with code {Code}: {Message}. Request id: {RequestId}", re.Code, re.Message, re.RequestId);
+                    }
+                    else if (e is HttpRequestException he)
+                    {
+                        // Did not get response from server (server down or other networking errors).
+                        logger.LogError("The HTTP client failed to contact CDF: {Message}", he.Message);
+                    }
+                    else if (e is JsonException je)
+                    {
+                        // Json decode exception produced by the SDK. Unlikely to happen.
+                        logger.LogError("Response from CDF cannot be parsed: {Message}", je.Message);
+                    }
+                    else if (e is TimeoutRejectedException)
+                    {
+                        // Timeout from the http client policy.
+                        logger.LogError("Request to CDF timeout after retry");
+                    }
+                    else if (e is SimulatorConnectionException sue)
+                    {
+                        // If the simulator is not available, log to Windows events and exit
+                        defaultLogger.LogError(sue.Message);
+                        logger.LogError(sue, sue.Message);
+                        break;
+                    }
+                    else
+                    {
+                        logger.LogError(e, "Unhandled exception: {message}", e.Message);
+                        // sourceProgram.Cancel();
+                    }
+                    // Most errors may be intermittent. Wait and restart.
+                    if (!token.IsCancellationRequested)
+                    {
+                        var delay = TimeSpan.FromSeconds(5);
+                        logger.LogWarning("Restarting connector in {time} seconds", delay.TotalSeconds);
+                        await Task.Delay(delay, token).ConfigureAwait(false);
+                    }
                 }
             }
         }
+        
+        logger.LogInformation("Connector exiting");
+
     }
 }
