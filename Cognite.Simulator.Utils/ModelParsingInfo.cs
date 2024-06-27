@@ -35,6 +35,32 @@ namespace Cognite.Simulator.Utils
         /// Timestamp of when this entry was updated last
         /// </summary>
         public long LastUpdatedTime { get; set; }
+
+        /// <summary>
+        /// Update the model info status to success
+        /// </summary>
+        public void SetSuccess()
+        {
+            this.SetStatus(SimulatorModelRevisionStatus.success, true, false, "Model parsed successfully");
+        }
+
+        /// <summary>
+        /// Update the model info status to failure
+        /// </summary>
+        /// <param name="statusMessage">Status message</param>
+        public void SetFailure( string statusMessage = "Model parsing failed")
+        {
+            this.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
+        }
+
+        private void SetStatus( SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
+        {
+            this.Status = status;
+            this.Parsed = isParsed;
+            this.Error = isError;
+            this.StatusMessage = statusMessage;
+            this.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        }
     }
 
     /// <summary>
@@ -44,32 +70,6 @@ namespace Cognite.Simulator.Utils
     public static class ModelParsingExtensions
     {
 
-        /// <summary>
-        /// Update the model info status to success
-        /// </summary>
-        /// <param name="mpi">Model parsing info object</param>
-        public static void SetSuccess(this ModelParsingInfo mpi)
-        {
-            mpi.SetStatus(SimulatorModelRevisionStatus.success, true, false, "Model parsed successfully");
-        }
 
-        /// <summary>
-        /// Update the model info status to failure
-        /// </summary>
-        /// <param name="mpi">Model parsing info object</param>
-        /// <param name="statusMessage">Status message</param>
-        public static void SetFailure(this ModelParsingInfo mpi, string statusMessage = "Model parsing failed")
-        {
-            mpi.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
-        }
-
-        private static void SetStatus(this ModelParsingInfo mpi, SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
-        {
-            mpi.Status = status;
-            mpi.Parsed = isParsed;
-            mpi.Error = isError;
-            mpi.StatusMessage = statusMessage;
-            mpi.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        }
     }
 }

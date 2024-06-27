@@ -143,7 +143,6 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Implements the connector loop. Should call the <see cref="Heartbeat(CancellationToken)"/> method and any
         /// other thats that are done periodically by the connector
-        /// TODO: We should be able to control the Run method implemented by the connector so that we can handle exceptions thrown internally 
         /// 
         /// </summary>
         /// <param name="token">Cancellation token</param>
@@ -335,7 +334,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetHeartbeatInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
-                await this.UpdateRemoteSimulatorIntegrations(false, token)
+                await UpdateRemoteSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
                 await _remoteApiSink.Flush(Cdf.CogniteClient.Alpha.Simulators, token).ConfigureAwait(false);
             }
@@ -365,7 +364,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 LastLicenseCheckResult = GetLicenseStatus() ;
-                await this.UpdateRemoteSimulatorIntegrations(false, token)
+                await UpdateRemoteSimulatorIntegrations(false, token)
                     .ConfigureAwait(false);
             }
         }

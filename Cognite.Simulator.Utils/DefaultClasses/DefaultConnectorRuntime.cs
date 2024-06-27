@@ -22,6 +22,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
 
     public static ServiceConfiguratorDelegate ConfigureServices;
 
+    public static string ConnectorName = "Default";
     public static async Task RunStandalone()
     {
         var logger = SimulatorLoggingUtils.GetDefault();
@@ -56,7 +57,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         var assembly = Assembly.GetEntryAssembly();
         var services = new ServiceCollection();
         services.AddLogger();
-        services.AddCogniteClient("CalculatorConnector", "CalculatorConnector/v0.0.1 (Cognite)", true);
+        services.AddCogniteClient($"{ConnectorName}Connector", $"{ConnectorName}Connector (Cognite)", true);
 
         DefaultConfig<TAutomationConfig> config;
         try
@@ -64,7 +65,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
             config = await services.AddConfiguration<DefaultConfig<TAutomationConfig>>(
                 path: "./config.yml",
                 types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig) },
-                appId: "CalculatorConnector",
+                appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);
         }
@@ -77,12 +78,16 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
-        ConfigureServices?.Invoke(services);
+        
         services.AddScoped<DefaultConnector<TAutomationConfig>>();
         services.AddScoped<DefaultModelLibrary<TAutomationConfig>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
         services.AddScoped<DefaultSimulationRunner<TAutomationConfig>>();
         services.AddScoped<DefaultSimulationScheduler<TAutomationConfig>>();
+
+        // This part allows connectors to inject their own SimulatorClients to 
+        // the service stack
+        ConfigureServices?.Invoke(services);
         
 
         services.AddExtractionPipeline(config.Connector);
@@ -176,7 +181,6 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                     else
                     {
                         logger.LogError(e, "Unhandled exception: {message}", e.Message);
-                        // sourceProgram.Cancel();
                     }
                     // Most errors may be intermittent. Wait and restart.
                     if (!token.IsCancellationRequested)

@@ -116,6 +116,8 @@ namespace Cognite.Simulator.Utils
                 {
                     if (innerEx is NewConfigDetected)
                     {
+                        // this type of exception needs to be bubbled up 
+                        // so we can restart the connector
                         throw innerEx;
                     }
                     _logger.LogError(innerEx, "An error occurred during task execution");

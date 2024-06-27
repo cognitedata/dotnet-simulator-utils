@@ -12,6 +12,7 @@ public static class SampleConnector {
     public class CustomAutomationConfig : AutomationConfig { }
     public static async Task Run() {
         DefaultConnectorRuntime<CustomAutomationConfig>.ConfigureServices = ConfigureServices;
+        DefaultConnectorRuntime<CustomAutomationConfig>.ConnectorName = "Calculator";
         await DefaultConnectorRuntime<CustomAutomationConfig>.RunStandalone().ConfigureAwait(false);
     }
 }

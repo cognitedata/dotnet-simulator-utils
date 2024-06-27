@@ -640,13 +640,6 @@ namespace Cognite.Simulator.Utils
         Task<T> GetModelRevision(string modelRevisionExternalId);
 
         /// <summary>
-        /// Returns the state objects of all the versions of the given model
-        /// </summary>
-        /// <param name="modelExternalId">Model external id</param>
-        /// <returns>List of state objects</returns>
-        //IEnumerable<T> GetAllModelRevisions(string modelExternalId);
-
-        /// <summary>
         /// Delete all temporary model files stored in memory and on disk
         /// </summary>
         void WipeTemporaryModelFiles();
