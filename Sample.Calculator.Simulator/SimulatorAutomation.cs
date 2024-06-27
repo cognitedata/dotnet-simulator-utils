@@ -17,13 +17,6 @@ public class CalculatorSimulatorAutomationClient :
         _logger = logger;
     }
 
-    public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
-    {
-        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
-        state.CanRead = false;
-        state.ParsingInfo.SetFailure();
-    }
-
     public string GetConnectorVersion()
     {
         return CommonUtils.GetAssemblyVersion();
@@ -61,6 +54,14 @@ public class CalculatorSimulatorAutomationClient :
     protected override void PreShutdown()
     {
         throw new NotImplementedException();
+    }
+
+    Task ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>.ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    {
+        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
+        state.CanRead = false;
+        state.ParsingInfo.SetFailure();
+        return Task.CompletedTask;
     }
 }
 

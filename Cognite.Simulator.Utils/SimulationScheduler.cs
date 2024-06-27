@@ -258,18 +258,4 @@ namespace Cognite.Simulator.Utils
         }
     }
 
-    public class DefaultSimulationScheduler<TAutomationConfig> : SimulationSchedulerBase<SimulatorRoutineRevision>
-    where TAutomationConfig : AutomationConfig, new()
-    {
-
-        public DefaultSimulationScheduler(
-            DefaultConfig<TAutomationConfig> config,
-            DefaultRoutineLibrary<TAutomationConfig> configLib,
-            ILogger<DefaultSimulationScheduler<TAutomationConfig>> logger,
-            IEnumerable<SimulatorConfig> simulatorConfigs,
-            CogniteDestination cdf) 
-            : base(config.Connector, configLib, logger, simulatorConfigs, cdf)
-        {
-        }
-    }
 }

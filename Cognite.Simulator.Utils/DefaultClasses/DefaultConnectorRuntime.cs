@@ -14,15 +14,34 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly.Timeout;
 
+/// <summary>
+/// The default connector runtime, all connectors should use this
+/// </summary>
+/// <typeparam name="TAutomationConfig"></typeparam>
 public class DefaultConnectorRuntime<TAutomationConfig>
  where TAutomationConfig : AutomationConfig, new()
 {
 
+    /// <summary>
+    /// The delegate for injecting services
+    /// </summary>
+    /// <param name="services"></param>
     public delegate void ServiceConfiguratorDelegate(IServiceCollection services);
 
+    /// <summary>
+    /// The function to inject the Simulator client into the service stack
+    /// </summary>
     public static ServiceConfiguratorDelegate ConfigureServices;
 
+    /// <summary>
+    /// The default connector name to be used in calls to the API
+    /// </summary>
     public static string ConnectorName = "Default";
+
+    /// <summary>
+    /// The entry point function to run the connector
+    /// </summary>
+    /// <returns></returns>
     public static async Task RunStandalone()
     {
         var logger = SimulatorLoggingUtils.GetDefault();
