@@ -476,7 +476,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public bool Processed { get; set; }
 
-        public bool IsExtracted => Processed;
+        public override bool IsExtracted => Processed;
 
         public TestFileState(string id) : base(id)
         {

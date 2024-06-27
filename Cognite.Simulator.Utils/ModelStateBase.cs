@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Indicates if information has been extracted from the model file
         /// </summary>
-        public bool IsExtracted { get; }
+        public abstract bool IsExtracted { get; }
         
         /// <summary>
         /// Indicates if the simulator can read the model file and

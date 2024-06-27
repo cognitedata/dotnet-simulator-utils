@@ -20,5 +20,7 @@ namespace Cognite.Simulator.Utils
         public DefaultModelFilestate(string id) : base(id)
         {
         }
+
+        public override bool IsExtracted => false;
     }
 }
