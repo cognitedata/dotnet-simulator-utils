@@ -325,7 +325,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="state"></param>
         /// <param name="_token"></param>
         /// <returns></returns>
-        Task ExtractModelInformation(ModelStateBase state, CancellationToken _token);
+        Task ExtractModelInformation(T state, CancellationToken _token);
 
         /// <summary>
         /// Get the version of the simulator as a string
