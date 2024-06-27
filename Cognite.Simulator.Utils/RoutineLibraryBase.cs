@@ -54,14 +54,14 @@ namespace Cognite.Simulator.Utils
             RoutineRevisions = new Dictionary<string, V>();
             _simulators = simulators;
         }
-
+        
 
         /// <summary>
         /// Initializes the routine library. Finds entities in CDF and caches them in memory.
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
-        {
+        {            
             await ReadRoutineRevisions(token).ConfigureAwait(false);
         }
 
@@ -72,8 +72,7 @@ namespace Cognite.Simulator.Utils
         private async Task<V> TryReadRemoteRoutineRevision(string routineRevisionExternalId)
         {
             _logger.LogInformation("Local routine revision {Id} not found, attempting to fetch from remote", routineRevisionExternalId);
-            try
-            {
+            try {
                 var routineRevisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
                     new List<CogniteSdk.Identity> { new CogniteSdk.Identity(routineRevisionExternalId) }
                 ).ConfigureAwait(false);
@@ -82,9 +81,7 @@ namespace Cognite.Simulator.Utils
                 {
                     return ReadAndSaveRoutineRevision(routineRevision);
                 }
-            }
-            catch (CogniteException e)
-            {
+            } catch (CogniteException e) {
                 _logger.LogError(e, "Cannot find routine revision {Id} on remote", routineRevisionExternalId);
             }
             return null;
@@ -126,16 +123,13 @@ namespace Cognite.Simulator.Utils
 
             bool exists = false;
 
-            try
-            {
+            try {
                 var revisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
                     new List<CogniteSdk.Identity> { new CogniteSdk.Identity(config.Id) },
                     token
                 ).ConfigureAwait(false);
                 exists = revisionRes.Count() == 1;
-            }
-            catch (CogniteException e)
-            {
+            } catch (CogniteException e) {
                 _logger.LogError(e, "Cannot find routine revision {Id} on remote", config.Id);
             }
 
@@ -185,14 +179,12 @@ namespace Cognite.Simulator.Utils
         /// Convert a routine revision to a configuration object of type <typeparamref name="V"/>
         /// Generally not advised on overriding this method.
         /// </summary>
-        protected virtual V LocalConfigurationFromRoutine(SimulatorRoutineRevision routineRevision)
-        {
-            return (V)routineRevision;
+        protected virtual V LocalConfigurationFromRoutine(SimulatorRoutineRevision routineRevision) {
+            return (V) routineRevision;
         }
 
-        private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev)
-        {
-
+        private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
+            
             V localConfiguration = LocalConfigurationFromRoutine(routineRev);
             RoutineRevisions.Add(routineRev.Id.ToString(), localConfiguration);
 
@@ -225,6 +217,25 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+
+    /// <summary>
+    /// A default instance of the routine library.
+    /// </summary>
+    public class DefaultRoutineLibrary<TAutomationConfig> :
+        RoutineLibraryBase<SimulatorRoutineRevision>
+        where TAutomationConfig : AutomationConfig, new()
+    {
+        public DefaultRoutineLibrary(
+            DefaultConfig<TAutomationConfig> config,
+            CogniteDestination cdf,
+            ILogger<DefaultRoutineLibrary<TAutomationConfig>> logger) :
+            base(config.Connector.RoutineLibrary, new List<SimulatorConfig> { config.Simulator }, cdf, logger)
+        {
+        }
+    }
+
+
+
     /// <summary>
     /// Interface for library that can provide routine configuration information
     /// </summary>
@@ -240,7 +251,7 @@ namespace Cognite.Simulator.Utils
         /// Initializes the library
         /// </summary>
         Task Init(CancellationToken token);
-
+    
         /// <summary>
         /// Get the simulation configuration object with the given property
         /// </summary>

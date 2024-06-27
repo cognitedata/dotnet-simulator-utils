@@ -1,10 +1,11 @@
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 using static SampleConnector;
 
 public class CalculatorSimulatorClient : 
-        ISimulatorClient<ModelStateBase> {
+        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
 
     
     private readonly ILogger<CalculatorSimulatorClient> _logger;
@@ -13,14 +14,16 @@ public class CalculatorSimulatorClient :
         _logger = logger;
     }
 
+    public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    {
+        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
+        state.CanRead = false;
+        state.ParsingInfo.SetFailure();
+    }
+
     public string GetConnectorVersion()
     {
         return CommonUtils.GetAssemblyVersion();
-    }
-
-    public string GetModelFileExtension()
-    {
-        return "calculator";
     }
 
     public string GetSimulatorVersion()
@@ -50,14 +53,6 @@ public class CalculatorSimulatorClient :
         {
         }
         
-    }
-
-    Task ISimulatorClient<ModelStateBase>.ExtractModelInformation(ModelStateBase state, CancellationToken _token)
-    {
-        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
-        state.CanRead = false;
-        state.ParsingInfo.SetFailure();
-        return Task.CompletedTask;
     }
 }
 

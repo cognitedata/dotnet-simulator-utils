@@ -6,7 +6,7 @@ using static SampleConnector;
 
 public class CalculatorSimulatorAutomationClient : 
         AutomationClient,
-        ISimulatorClient<ModelStateBase> {
+        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
 
     
     private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;
@@ -17,22 +17,16 @@ public class CalculatorSimulatorAutomationClient :
         _logger = logger;
     }
 
-    public Task ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
     {
         _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
         state.CanRead = false;
         state.ParsingInfo.SetFailure();
-        return Task.CompletedTask;
     }
 
     public string GetConnectorVersion()
     {
         return CommonUtils.GetAssemblyVersion();
-    }
-
-    public string GetModelFileExtension()
-    {
-        return "calculator";
     }
 
     public string GetSimulatorVersion()
@@ -68,7 +62,6 @@ public class CalculatorSimulatorAutomationClient :
     {
         throw new NotImplementedException();
     }
-
 }
 
 internal class CalculatorRoutineAutomation : RoutineImplementationBase

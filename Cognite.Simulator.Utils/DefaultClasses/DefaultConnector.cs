@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
         private readonly string _version;
         private readonly ScopedRemoteApiSink _sink;
 
-        private ISimulatorClient<ModelStateBase> _simulatorClient;
+        private ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> _simulatorClient;
 
         public DefaultConnector(
             CogniteDestination cdf,
@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Utils
             ExtractionPipeline pipeline,
             ILogger<DefaultConnector<TAutomationConfig>> logger,
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
-            ISimulatorClient<ModelStateBase> simulatorClient,
+            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
             : base(cdf, config.Connector, new List<SimulatorConfig> { config.Simulator }, logger, remoteConfigManager, sink)
         {

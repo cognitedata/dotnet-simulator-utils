@@ -71,8 +71,6 @@ namespace Cognite.Simulator.Utils
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
 
-        private readonly ISimulatorClient<ModelStateBase> _simulatorClient;
-
         // Internal objects
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
@@ -93,7 +91,6 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            ISimulatorClient<ModelStateBase> simulatorClient,
             IExtractionStateStore store = null) 
         {
             if (cdf == null)
@@ -112,7 +109,6 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
-            _simulatorClient = simulatorClient;
 
         }
 
@@ -515,7 +511,7 @@ namespace Cognite.Simulator.Utils
                     }
                     var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
                     CreateDirectoryIfNotExists(storageFolder);
-                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{_simulatorClient.GetModelFileExtension()}");
+                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
                     modelState.IsInDirectory = true;
                     
                     bool downloaded = await _downloadClient
