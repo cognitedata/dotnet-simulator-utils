@@ -14,7 +14,7 @@ using Cognite.Simulator.Utils.Automation;
 namespace Cognite.Simulator.Utils
 {
     public class DefaultSimulationRunner<TAutomationConfig> : 
-        RoutineRunnerBase<ModelStateBase>
+        RoutineRunnerBase<ModelStateBase, SimulatorRoutineRevision>
          where TAutomationConfig : AutomationConfig, new()
     {
 
@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             DefaultModelLibrary<TAutomationConfig> modelLibrary, 
             DefaultRoutineLibrary<TAutomationConfig> configLibrary,
-            ISimulatorClient<ModelStateBase> client,
+            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> client,
             ILogger<DefaultSimulationRunner<TAutomationConfig>> logger) : 
             base(config.Connector, new List<SimulatorConfig>() { config.Simulator }, 
             cdf, 

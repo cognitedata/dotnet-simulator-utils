@@ -3,4 +3,3 @@ bin
 files
 obj
 state.db
-state-log.db

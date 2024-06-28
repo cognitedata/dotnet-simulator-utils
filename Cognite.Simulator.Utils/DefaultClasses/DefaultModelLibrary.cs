@@ -15,14 +15,14 @@ namespace Cognite.Simulator.Utils
     ModelLibraryBase<ModelStateBase, DefaultModelFileStatePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
     {
-        private ISimulatorClient<ModelStateBase> __simulationClient;
+        private ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> __simulationClient;
 
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
             ILogger<DefaultModelLibrary<TAutomationConfig>> logger,
             FileStorageClient client,
-            ISimulatorClient<ModelStateBase> simulationClient,
+            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulationClient,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,

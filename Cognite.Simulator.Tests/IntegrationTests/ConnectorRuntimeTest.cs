@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         static void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<ISimulatorClient<ModelStateBase>, CalculatorSimulatorAutomationClient>();
+            services.AddScoped<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
@@ -124,7 +124,7 @@ connector:
                     ).ConfigureAwait(false);
                     var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
                     Assert.True(existing.ExternalId == ConnectorExternalId);
-                    await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId).ConfigureAwait(false);
+                    await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
             await Task.Delay(TimeSpan.FromSeconds(FIVE_SECONDS + 1)).ConfigureAwait(false);
@@ -132,7 +132,7 @@ connector:
 
         public class CalculatorSimulatorAutomationClient :
             AutomationClient,
-            ISimulatorClient<ModelStateBase>
+            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>
         {
 
             private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;

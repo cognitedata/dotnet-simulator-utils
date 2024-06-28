@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using static SampleConnector;
 
 public class CalculatorSimulatorClient : 
-        ISimulatorClient<ModelStateBase> {
+        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
 
     
     private readonly ILogger<CalculatorSimulatorClient> _logger;
