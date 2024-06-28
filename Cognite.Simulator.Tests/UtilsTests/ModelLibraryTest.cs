@@ -54,13 +54,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 bool dirExists = Directory.Exists("./files");
                 Assert.True(dirExists, "Should have created a directory for the files");
 
-                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
 
-                Assert.NotEmpty(lib.State);
+                Assert.NotEmpty(lib._state);
  
                 foreach (var revision in revisions)
                 {
-                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 foreach (var revision in revisions)
                 {
-                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     Assert.True(modelInState.Processed);
@@ -164,7 +164,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var lib = provider.GetRequiredService<ModeLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 
-                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
 
                 // Start the library update loop that download the files, should not parse them
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -175,7 +175,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 foreach (var revision in revisions)
                 {
-                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     // only true if the model was processed locally
@@ -215,7 +215,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 foreach (var revision in revisions)
                 {
-                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     // only true if the model was processed locally
@@ -276,8 +276,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var lib = provider.GetRequiredService<ModeLibraryTest>();
                 await lib.Init(source.Token).ConfigureAwait(false);
 
-                var libState = (IReadOnlyDictionary<string, TestFileState>)lib.State;
-                Assert.NotEmpty(lib.State);
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
+                Assert.NotEmpty(lib._state);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
@@ -289,7 +289,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 foreach (var revision in revisions)
                 {
-                    var modelInState = lib.State.GetValueOrDefault(revision.Id.ToString());
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
                     Assert.NotNull(modelInState);
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
@@ -307,7 +307,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId).ConfigureAwait(false);
 
-                var newModelState = lib.TemporaryState.GetValueOrDefault(revisionNew.Id.ToString());
+                var newModelState = lib._temporaryState.GetValueOrDefault(revisionNew.Id.ToString());
 
                 // Accessed revision should be processed and have a file path
                 if (accessedRevision.ExternalId == revisionNew.ExternalId)
@@ -322,7 +322,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // cleanup temp state
                 lib.WipeTemporaryModelFiles();
                 Assert.Empty(Directory.GetDirectories($"./files/temp"));
-                Assert.Empty(lib.TemporaryState);
+                Assert.Empty(lib._temporaryState);
             }
             finally
             {
