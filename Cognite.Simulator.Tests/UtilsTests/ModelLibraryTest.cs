@@ -481,10 +481,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public TestFileState(string id) : base(id)
         {
         }
-        public override string GetExtension()
-        {
-            return "out";
-        }
 
     }
 

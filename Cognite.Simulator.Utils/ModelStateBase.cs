@@ -14,7 +14,7 @@ namespace Cognite.Simulator.Utils
     public abstract class ModelStateBase : FileState
     {
         private int _version;
-        
+
         /// <summary>
         /// Model version
         /// </summary>
@@ -26,6 +26,22 @@ namespace Cognite.Simulator.Utils
                 if (value == _version) return;
                 LastTimeModified = DateTime.UtcNow;
                 _version = value;
+            }
+        }
+
+        private string _fileExtension;
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        public string FileExtension
+        {
+            get => _fileExtension;
+            set
+            {
+                if (value == _fileExtension) return;
+                LastTimeModified = DateTime.UtcNow;
+                _fileExtension = value;
             }
         }
 
@@ -101,7 +117,8 @@ namespace Cognite.Simulator.Utils
                 CreatedTime = CreatedTime,
                 CdfId = CdfId,
                 Version = Version,
-                IsInDirectory = IsInDirectory
+                IsInDirectory = IsInDirectory,
+                FileExtension = FileExtension
             };
         }
     }
@@ -117,5 +134,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("version")]
         public int Version { get; set; }
+
+        /// <summary>
+        /// File extension
+        /// </summary>
+        [StateStoreProperty("fileext")]
+        public string FileExtension { get; set; }
     }
 }
