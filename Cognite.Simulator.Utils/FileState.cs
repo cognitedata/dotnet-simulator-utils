@@ -190,17 +190,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-
-        /// <summary>
-        /// File extension to use when saving this file locally.
-        /// Should conform with the extension expected by the simulator
-        /// </summary>
-        /// <returns>File extension</returns>
-        public virtual string GetExtension()
-        {
-            return "bin";
-        }
-
         /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>

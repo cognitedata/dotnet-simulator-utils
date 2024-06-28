@@ -75,6 +75,8 @@ namespace Cognite.Simulator.Utils
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
 
+        private List<(string, string)> _simulatorFileExtMap;
+
         
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -109,7 +111,11 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
+        }
 
+        private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
+            var fileExtension = _simulatorFileExtMap.Find(item => item.Item1 == SimulatorExternalId);
+            state.FileExtension = fileExtension.Item2;
         }
 
         /// <summary>
@@ -118,6 +124,14 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {
+            var simulators = await _cdfSimulatorResources.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
+
+
+            _simulatorFileExtMap = simulators.Items.Select(sim => {
+                var ext = sim.FileExtensionTypes.First();
+                return (sim.ExternalId, ext);
+            }).ToList();
+
             _logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
             var dir = Directory.CreateDirectory(_modelFolder);
             _modelFolder = dir.FullName;
@@ -162,6 +176,7 @@ namespace Cognite.Simulator.Utils
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
                 var state = StateFromModelRevision(modelRevision);
+                SetFileExtensionOnState(state, modelRevision.SimulatorExternalId );
                 var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
@@ -386,6 +401,7 @@ namespace Cognite.Simulator.Utils
             SimulatorModelRevision modelRevision)
         {
             T newState = StateFromModelRevision(modelRevision);
+            SetFileExtensionOnState(newState, modelRevision.SimulatorExternalId );
             if (newState == null || modelRevision == null)
             {
                 return null;
@@ -511,7 +527,7 @@ namespace Cognite.Simulator.Utils
                     }
                     var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
                     CreateDirectoryIfNotExists(storageFolder);
-                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.GetExtension()}");
+                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
                     
                     bool downloaded = await _downloadClient
