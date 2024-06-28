@@ -31,6 +31,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
+        public Client TestCdfClient;
+
+        public string ConnectorExternalId = SeedData.TestIntegrationExternalId;
+
         public async Task WriteConfig()
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
@@ -59,6 +63,13 @@ cognite:
 simulator:
   name: {simulatorName}
   data-set-id: {datasetId}
+
+connector:
+  status-interval: 3
+  name-prefix: {ConnectorExternalId}
+  add-machine-name-suffix: false
+  api-logger:
+    level: ""Information""
 ";
 
             // Write the content to the file
@@ -68,17 +79,20 @@ simulator:
             Assert.True(System.IO.File.Exists(filePath), $"Failed to create {filePath}");
         }
 
-        [Fact]
-        public async Task TestConnectorRuntime()
-        {
+        public async Task SetupTest() {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             using var provider = services.BuildServiceProvider();
-            var cdf = provider.GetRequiredService<Client>();
+            TestCdfClient = provider.GetRequiredService<Client>();
 
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate);
-
+            await SeedData.GetOrCreateSimulator(TestCdfClient, SeedData.SimulatorCreate);
             await WriteConfig();
+        }
+
+        [Fact]
+        public async Task TestConnectorRuntime()
+        {
+            await SetupTest();
 
             // Create an ILogger instance
             var logger = LoggingUtils.GetDefault();
@@ -100,7 +114,17 @@ simulator:
                 }
                 finally
                 {
-                    await SeedData.DeleteSimulator(cdf, SeedData.TestSimulatorExternalId);
+                    var integrations = await TestCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                        new SimulatorIntegrationQuery
+                        {
+                            Filter = new SimulatorIntegrationFilter() {
+                                simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
+                            }
+                        }
+                    ).ConfigureAwait(false);
+                    var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
+                    Assert.True(existing.ExternalId == ConnectorExternalId);
+                    await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
             await Task.Delay(TimeSpan.FromSeconds(FIVE_SECONDS + 1)).ConfigureAwait(false);
@@ -149,11 +173,6 @@ simulator:
                     Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
                     var routine = new CalculatorRoutineAutomation(routineRevision, inputData);
                     result = routine.PerformSimulation();
-                    foreach (var kvp in result)
-                    {
-                        Console.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
-                    }
-
                     return Task.FromResult(result);
                 }
                 finally
@@ -176,13 +195,12 @@ simulator:
 
             public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
             {
-                Console.WriteLine("Handling outputs");
                 var resultItem = new SimulatorValueItem()
-                {
-                    SimulatorObjectReference = new Dictionary<string, string> {
-                    { "objectName", "a" },
-                    { "objectProperty", "b" },
-                },
+                    {
+                        SimulatorObjectReference = new Dictionary<string, string> {
+                        { "objectName", "a" },
+                        { "objectProperty", "b" },
+                    },
                     TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
                     ReferenceId = outputConfig.ReferenceId,
                     ValueType = outputConfig.ValueType,
@@ -193,12 +211,10 @@ simulator:
 
             public override void RunCommand(Dictionary<string, string> arguments)
             {
-                Console.WriteLine("Handling run command");
             }
 
             public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
             {
-                Console.WriteLine("Handling inputs");
             }
         }
     }
