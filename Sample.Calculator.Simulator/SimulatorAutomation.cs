@@ -6,7 +6,7 @@ using static SampleConnector;
 
 public class CalculatorSimulatorAutomationClient : 
         AutomationClient,
-        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
+        ISimulatorClient<ModelStateBase> {
 
     
     private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;
