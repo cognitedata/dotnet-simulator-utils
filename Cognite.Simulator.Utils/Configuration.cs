@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using Cognite.Extractor.Logging;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils.Automation;
 using Serilog.Events;
 
 namespace Cognite.Simulator.Utils
@@ -52,27 +54,27 @@ namespace Cognite.Simulator.Utils
         /// Interval for writing the library state to the local store.
         /// </summary>
         public int StateStoreInterval { get; set; } = 10;
-        
+
         /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
         public int LibraryUpdateInterval { get; set; } = 5;
-        
+
         /// <summary>
         /// Id of the library object
         /// </summary>
         public string LibraryId { get; set; }
-        
+
         /// <summary>
         /// Table containing the state of the library itself (extracted range)
         /// </summary>
         public string LibraryTable { get; set; }
-        
+
         /// <summary>
         /// Table containing the state of the downloaded files (last time updated)
         /// </summary>
         public string FilesTable { get; set; }
-        
+
         /// <summary>
         /// Local directory that contains the downloaded files
         /// </summary>
@@ -82,7 +84,8 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Represents configuration for a local routine library. Used to configure <seealso cref="RoutineLibraryBase{V}"/>
     /// </summary>
-    public class RoutineLibraryConfig {
+    public class RoutineLibraryConfig
+    {
         /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
@@ -94,7 +97,7 @@ namespace Cognite.Simulator.Utils
     /// connector properties such as name and intervals for status report and
     /// for fetching events
     /// </summary>
-    public class ConnectorConfig 
+    public class ConnectorConfig
     {
         /// <summary>
         /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
@@ -122,6 +125,7 @@ namespace Cognite.Simulator.Utils
         /// The connector will run simulation run resource found on CDF that are not older than
         /// this value (in seconds). In case it finds items older than this, the runs will
         /// fail due to timeout
+        /// TODO: We should use this so that our runs dont pile up
         /// </summary>
         public int SimulationRunTolerance { get; set; } = 1800; // 30 min
 
@@ -146,12 +150,6 @@ namespace Cognite.Simulator.Utils
         /// Configure License checking, enable or change frequency
         /// </summary>
         public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
-
-        /// <summary>
-        /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
-        /// capabilities in CDF). Else, the connector will use only core CDF resources
-        /// </summary>
-        public bool UseSimulatorsApi { get; set; }
 
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
@@ -205,5 +203,41 @@ namespace Cognite.Simulator.Utils
         /// Only check for license if this is set to true
         /// </summary>
         public bool Enabled { get; set; }
+    }
+
+    public class DefaultConnectorConfig : ConnectorConfig
+    {
+        public ModelLibraryConfig ModelLibrary { get; set; }
+        public RoutineLibraryConfig RoutineLibrary { get; set; }
+    }
+
+    public class DefaultConfig<TAutomationConfig> : BaseConfig 
+    where TAutomationConfig : AutomationConfig, new()
+    {
+        public SimulatorConfig Simulator { get; set; }
+        public DefaultConnectorConfig Connector { get; set; }
+
+        public TAutomationConfig Automation { get; set; }
+
+        public override void GenerateDefaults()
+        {
+            base.GenerateDefaults();
+
+            if (Connector == null) Connector = new DefaultConnectorConfig();
+
+            if (Simulator == null) Simulator = new SimulatorConfig();
+
+            if (Automation == null) Automation = new TAutomationConfig();
+
+            if (Connector.ModelLibrary == null) Connector.ModelLibrary = new ModelLibraryConfig();
+            if (Connector.ModelLibrary.LibraryId == null) Connector.ModelLibrary.LibraryId = "ModelLibraryState";
+            if (Connector.ModelLibrary.LibraryTable == null) Connector.ModelLibrary.LibraryTable = "ModelLibrary";
+            if (Connector.ModelLibrary.FilesTable == null) Connector.ModelLibrary.FilesTable = "ModelLibraryFiles";
+            if (Connector.ModelLibrary.FilesDirectory == null) Connector.ModelLibrary.FilesDirectory = "./files";
+
+            if (Connector.RoutineLibrary == null) Connector.RoutineLibrary = new RoutineLibraryConfig();
+
+            if (Connector.PipelineNotification == null) Connector.PipelineNotification = new PipelineNotificationConfig();
+        }
     }
 }

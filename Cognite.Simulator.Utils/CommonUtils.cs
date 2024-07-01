@@ -7,6 +7,7 @@ using CogniteSdk.Resources;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,16 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class CommonUtils
     {
+        /// <summary>
+        /// Returns the assembly version
+        /// </summary>
+        /// <returns></returns>
+        public static string GetAssemblyVersion() {
+            return Extractor.Metrics.Version.GetVersion(
+                    Assembly.GetExecutingAssembly(),
+                    "0.0.1");
+        }
+
         /// <summary>
         /// Run all of the tasks in this enumeration. If any fail or is canceled, cancel the
         /// remaining tasks and return. The first found exception is thrown

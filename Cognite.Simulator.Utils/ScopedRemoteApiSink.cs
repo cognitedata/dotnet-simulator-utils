@@ -80,7 +80,9 @@ namespace Cognite.Simulator.Utils {
         /// <summary>
         /// Sets the configuration for the remote API.
         /// </summary>
-        /// <param name="config">This configuration sets the minimum log level to report to the APi and wether the remote logging is enabled or not.</param>
+        /// <param name="config">This configuration sets the minimum log level to report to the API and
+        /// whether the remote logging is enabled or not.
+        /// </param>
         public void SetConfig(SimulatorLoggingConfig config)
         {
             if(config == null){
