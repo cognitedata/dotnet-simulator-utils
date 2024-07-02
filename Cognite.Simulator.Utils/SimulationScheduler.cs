@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NCrontab;
 using Cognite.Simulator.Utils.Automation;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
@@ -244,10 +245,13 @@ namespace Cognite.Simulator.Utils
                         _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
                         break;
                     }
+                    var nextOccurrenceTimeEpoch = new DateTime(nextOccurrence.Ticks).ToUnixTimeMilliseconds();
+                    
                     var runEvent = new SimulationRunCreate
                         {
                             RoutineExternalId = routineRev.RoutineExternalId,
-                            RunType = SimulationRunType.scheduled
+                            RunType = SimulationRunType.scheduled,
+                            RunTime = nextOccurrenceTimeEpoch
                         };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
