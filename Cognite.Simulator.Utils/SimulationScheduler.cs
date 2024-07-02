@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NCrontab;
 using Cognite.Simulator.Utils.Automation;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
@@ -248,7 +249,7 @@ namespace Cognite.Simulator.Utils
                         {
                             RoutineExternalId = routineRev.RoutineExternalId,
                             RunType = SimulationRunType.scheduled,
-                            RunTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                            RunTime = nextOccurrence.ToUnixTimeMilliseconds()
                         };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
