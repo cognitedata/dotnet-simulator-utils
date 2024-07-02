@@ -245,11 +245,13 @@ namespace Cognite.Simulator.Utils
                         _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
                         break;
                     }
+                    var nextOccurrenceTimeEpoch = new DateTime(nextOccurrence.Ticks).ToUnixTimeMilliseconds();
+                    
                     var runEvent = new SimulationRunCreate
                         {
                             RoutineExternalId = routineRev.RoutineExternalId,
                             RunType = SimulationRunType.scheduled,
-                            RunTime = nextOccurrence.ToUnixTimeMilliseconds()
+                            RunTime = nextOccurrenceTimeEpoch
                         };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
