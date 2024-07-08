@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,6 +22,13 @@ namespace Cognite.Simulator.Utils.Automation
         private readonly ILogger _logger;
         private readonly AutomationConfig _config;
         private IEnumerable<Process> _processes;
+
+        /// <summary>
+        /// Allows the implementer of this class to override the releasing of the COM object
+        /// For e.g if you want the COM Object / license to be held throughout the execution lifecycle
+        /// of the program set this to false.
+        /// </summary>
+        protected bool _releaseComObjectByDefault = true;
 
         /// <summary>
         /// Creates an instance of the client that instantiates a connection
@@ -75,8 +82,10 @@ namespace Cognite.Simulator.Utils.Automation
             }
             finally
             {
-                Marshal.ReleaseComObject(Server);
-                _logger.LogDebug("Released COM Object");
+                if (_releaseComObjectByDefault) {
+                    Marshal.ReleaseComObject(Server);
+                    _logger.LogDebug("Released COM Object");
+                }
                 Server = null;
                 if (_processes != null && _processes.Any())
                 {
