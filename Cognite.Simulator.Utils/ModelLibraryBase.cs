@@ -20,6 +20,7 @@ using Cognite.Extensions;
 using Cognite.Extractor.Common;
 
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
@@ -31,7 +32,8 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<T, U, V> : IModelProvider<T>
+    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A,T>
+        where A: AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
@@ -646,7 +648,7 @@ namespace Cognite.Simulator.Utils
     /// Interface for libraries that can provide model information
     /// </summary>
     /// <typeparam name="T">Model state type</typeparam>
-    public interface IModelProvider<T>
+    public interface IModelProvider<A,T>
     {
         /// <summary>
         /// Returns the state object of the given version of the given model

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cognite.Extensions;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class RoutineRunnerBase<T, V> : SimulationRunnerBase<T, V>
+    public abstract class RoutineRunnerBase<A, T, V> : SimulationRunnerBase<A, T, V>
+        where A: AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -43,7 +45,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig connectorConfig, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf,
-            IModelProvider<T> modelLibrary, 
+            IModelProvider<A,T> modelLibrary, 
             IRoutineProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
             ILogger logger) : 

@@ -6,23 +6,25 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
 
-    public class DefaultModelLibrary<TAutomationConfig> :
-    ModelLibraryBase<ModelStateBase, DefaultModelFileStatePoco, ModelParsingInfo>
+    public class DefaultModelLibrary<TAutomationConfig,TModelStateBase> :
+    ModelLibraryBase<TAutomationConfig,TModelStateBase, DefaultModelFileStatePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
+    where TModelStateBase: ModelStateBase
     {
-        private ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> __simulationClient;
+        private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
 
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
-            ILogger<DefaultModelLibrary<TAutomationConfig>> logger,
+            ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase>> logger,
             FileStorageClient client,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulationClient,
+            IServiceProvider serviceProvider,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,
@@ -32,11 +34,11 @@ namespace Cognite.Simulator.Utils
                 client,
                 store)
         {
-            __simulationClient = simulationClient;
+            __simulationClient = serviceProvider.GetService<ISimulatorClient<TModelStateBase, SimulatorRoutineRevision>>() ;
         }
 
         protected override async Task ExtractModelInformation(
-        ModelStateBase state,
+        TModelStateBase state,
         CancellationToken token)
         {
 
@@ -48,7 +50,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        protected override ModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
+        protected override TModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
             var modelState = new DefaultModelFilestate(modelRevision.Id.ToString())
             {
@@ -62,7 +64,7 @@ namespace Cognite.Simulator.Utils
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
             };
-            return modelState;
+            return modelState as TModelStateBase;
         }
 
     }

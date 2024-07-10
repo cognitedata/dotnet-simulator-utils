@@ -14,8 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly.Timeout;
 
-public class DefaultConnectorRuntime<TAutomationConfig>
+public class DefaultConnectorRuntime<TAutomationConfig,TModelState>
  where TAutomationConfig : AutomationConfig, new()
+ where TModelState: ModelStateBase
 {
 
     public delegate void ServiceConfiguratorDelegate(IServiceCollection services);
@@ -68,6 +69,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);
+            // config.GenerateDefaults();
         }
         catch (ConfigurationException e)
         {
@@ -78,16 +80,23 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
+        // services.AddScoped<DefaultModelFilestate>();
+        defaultLogger.LogDebug("Injecting services");
+         ConfigureServices?.Invoke(services);
         
-        services.AddScoped<DefaultConnector<TAutomationConfig>>();
-        services.AddScoped<DefaultModelLibrary<TAutomationConfig>>();
+        // services.AddScoped(typeof(DefaultModelLibrary<,>));
+        // services.AddScoped(typeof(DefaultConnector<>), typeof(DefaultConnector<>));
+        defaultLogger.LogDebug("Initializing default connector");
+        services.AddScoped<DefaultConnector<TAutomationConfig,TModelState>>();
+        defaultLogger.LogDebug("Initializing default routine library");
+        // services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
-        services.AddScoped<DefaultSimulationRunner<TAutomationConfig>>();
+        services.AddScoped<DefaultSimulationRunner<TAutomationConfig,TModelState>>();
         services.AddScoped<DefaultSimulationScheduler<TAutomationConfig>>();
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
-        ConfigureServices?.Invoke(services);
+       
         
 
         services.AddExtractionPipeline(config.Connector);
@@ -95,7 +104,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         var provider = services.BuildServiceProvider();
 
 
-        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig>>>();
+        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig,TModelState>>>();
 
         logger.LogInformation("Starting the connector...");
 
@@ -124,8 +133,9 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 
                 try
                 {
-                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig>>();
-                    var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>>();
+                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig,TModelState>>();
+
+                    // var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>>();
 
                     await connector.Init(token).ConfigureAwait(false);
                    
