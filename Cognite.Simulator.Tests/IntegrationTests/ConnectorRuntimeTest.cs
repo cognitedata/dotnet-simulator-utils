@@ -25,9 +25,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeTest
     {
+
+        public class SampleModelFilestate : ModelStateBase
+        {
+            public SampleModelFilestate() : base("")
+            {
+            }
+
+            public override bool IsExtracted => false;
+        }
+
+        public class SampleModelFileStatePoco : ModelStateBasePoco
+        {
+            [StateStoreProperty("info-extracted")]
+            public bool InformationExtracted { get; internal set; }
+        }
         static void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
+            services.AddScoped<ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
@@ -102,11 +117,11 @@ connector:
             {
                 cts.CancelAfter(TimeSpan.FromSeconds(FIVE_SECONDS));
 
-                DefaultConnectorRuntime<CustomAutomationConfig>.ConfigureServices = ConfigureServices;
-                DefaultConnectorRuntime<CustomAutomationConfig>.ConnectorName = "Calculator";
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = ConfigureServices;
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
                 try
                 {
-                    await DefaultConnectorRuntime<CustomAutomationConfig>.Run(logger, cts.Token).ConfigureAwait(false);
+                    await DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -132,7 +147,7 @@ connector:
 
         public class CalculatorSimulatorAutomationClient :
             AutomationClient,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>
+            ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>
         {
 
             private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;
@@ -144,7 +159,7 @@ connector:
                 _logger = logger;
             }
 
-            public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+            public void ExtractModelInformation(SampleModelFilestate state, CancellationToken _token)
             {
                 _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
                 state.CanRead = false;
@@ -162,7 +177,7 @@ connector:
             }
 
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-                ModelStateBase modelState,
+                SampleModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
                 Dictionary<string, SimulatorValueItem> inputData
             )

@@ -398,7 +398,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
-        public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+        public void ExtractModelInformation(TestFileState state, CancellationToken _token)
         {
             throw new NotImplementedException();
         }
@@ -424,7 +424,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class SampleSimulationRunner :
-        RoutineRunnerBase<TestFileState, SimulatorRoutineRevision>
+        RoutineRunnerBase<DefaultAutomationConfig,TestFileState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
         private ILogger<SampleSimulationRunner> _logger;

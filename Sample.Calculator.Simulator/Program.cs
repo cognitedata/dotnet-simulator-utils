@@ -11,9 +11,9 @@ public static class SampleConnector {
     }
     public class CustomAutomationConfig : AutomationConfig { }
     public static async Task Run() {
-        DefaultConnectorRuntime<CustomAutomationConfig>.ConfigureServices = ConfigureServices;
-        DefaultConnectorRuntime<CustomAutomationConfig>.ConnectorName = "Calculator";
-        await DefaultConnectorRuntime<CustomAutomationConfig>.RunStandalone().ConfigureAwait(false);
+        DefaultConnectorRuntime<CustomAutomationConfig,DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = ConfigureServices;
+        DefaultConnectorRuntime<CustomAutomationConfig,DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Calculator";
+        await DefaultConnectorRuntime<CustomAutomationConfig,DefaultModelFilestate, DefaultModelFileStatePoco>.RunStandalone().ConfigureAwait(false);
     }
 }
 

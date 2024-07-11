@@ -17,7 +17,7 @@ namespace Cognite.Simulator.Utils
 
     public class DefaultModelFilestate : ModelStateBase
     {
-        public DefaultModelFilestate(string id) : base(id)
+        public DefaultModelFilestate() : base("")
         {
         }
 

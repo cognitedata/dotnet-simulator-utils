@@ -16,6 +16,7 @@ using CogniteSdk;
 using CogniteSdk.Alpha;
 
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -484,11 +485,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     }
 
+    public class DefaultAutomationConfig : AutomationConfig {
+        
+    }
+
     /// <summary>
     /// File library is abstract. Implement a simple mock library
     /// to test the base functionality
     /// </summary>
-    public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco, ModelParsingInfo>
+    public class ModeLibraryTest : ModelLibraryBase<DefaultAutomationConfig,TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
         private ILogger<ModeLibraryTest> _logger;
         public ModeLibraryTest(
