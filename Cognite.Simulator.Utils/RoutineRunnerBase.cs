@@ -171,6 +171,8 @@ namespace Cognite.Simulator.Utils
                 var dps = await _cdf.CogniteClient.DataPoints.GetSample(
                     inputTs.SourceExternalId,
                     inputTs.Aggregate.ToDataPointAggregate(),
+                    // TODO: add null check as the granularity might be null if data sampling is disabled
+                    // the nullability needs to be updated on the SDK side first
                     configObj.DataSampling.Granularity,
                     samplingConfiguration,
                     token).ConfigureAwait(false);
