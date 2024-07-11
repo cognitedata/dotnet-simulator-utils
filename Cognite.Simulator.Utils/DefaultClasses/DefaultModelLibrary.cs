@@ -24,6 +24,7 @@ namespace Cognite.Simulator.Utils
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
             ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
+            ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
             FileStorageClient client,
             IServiceProvider serviceProvider,
             IExtractionStateStore store = null) :
@@ -35,14 +36,13 @@ namespace Cognite.Simulator.Utils
                 client,
                 store)
         {
-            __simulationClient = serviceProvider.GetService<ISimulatorClient<TModelStateBase, SimulatorRoutineRevision>>() ;
+            __simulationClient = simulatorClient;
         }
 
         protected override async Task ExtractModelInformation(
         TModelStateBase state,
         CancellationToken token)
         {
-
             if (__simulationClient != null) {
                 __simulationClient.ExtractModelInformation(state, token);
             } else {

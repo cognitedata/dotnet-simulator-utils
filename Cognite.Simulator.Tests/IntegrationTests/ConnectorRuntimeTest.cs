@@ -161,7 +161,6 @@ connector:
 
             public void ExtractModelInformation(SampleModelFilestate state, CancellationToken _token)
             {
-                _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
                 state.CanRead = false;
                 state.ParsingInfo.SetFailure();
             }

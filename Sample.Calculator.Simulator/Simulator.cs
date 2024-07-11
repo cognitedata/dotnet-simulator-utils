@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using static SampleConnector;
 
 public class CalculatorSimulatorClient : 
-        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
+        ISimulatorClient<CalculatorModelFilestate, SimulatorRoutineRevision> {
 
     
     private readonly ILogger<CalculatorSimulatorClient> _logger;
@@ -14,10 +14,11 @@ public class CalculatorSimulatorClient :
         _logger = logger;
     }
 
-    public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    public void ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
-        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
+        _logger.LogInformation("ExtractModelInformation ");
         state.CanRead = false;
+        state.Processed = true;
         state.ParsingInfo.SetFailure();
     }
 
@@ -32,7 +33,7 @@ public class CalculatorSimulatorClient :
     }
 
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-        ModelStateBase modelState, 
+        CalculatorModelFilestate modelState, 
         SimulatorRoutineRevision routineRevision, 
         Dictionary<string, SimulatorValueItem> inputData
     ) {

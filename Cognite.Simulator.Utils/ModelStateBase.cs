@@ -13,22 +13,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public abstract class ModelStateBase : FileState
     {
-        private int _version;
-
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public int Version
-        {
-            get => _version;
-            set
-            {
-                if (value == _version) return;
-                LastTimeModified = DateTime.UtcNow;
-                _version = value;
-            }
-        }
-
 
         /// <summary>
         /// Information about model parsing
@@ -80,36 +64,8 @@ namespace Cognite.Simulator.Utils
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
-            if (poco is ModelStateBasePoco mPoco)
-            {
-                _version = mPoco.Version;
-            }
         }
-        /// <summary>
-        /// Get the data object with the model state properties to be persisted by
-        /// the state store
-        /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
-        {
-            return new FileStatePoco
-            {
-                Id = Id,
-                ModelExternalId = ModelExternalId,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                UpdatedTime = UpdatedTime,
-                CdfId = CdfId,
-                Version = Version,
-                IsInDirectory = IsInDirectory,
-                FileExtension = FileExtension,
-                LogId = LogId,
-            };
-        }
-
-        public TTarget FillProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
+        public static TTarget FillProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
         {
             foreach (var sourceProperty in typeof(TSource).GetProperties())
             {

@@ -19,9 +19,15 @@ public class CalculatorSimulatorAutomationClient :
 
     public void ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
-        _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
-        state.CanRead = false;
-        state.ParsingInfo.SetFailure();
+        _logger.LogInformation("Begin model information extraction");
+        if (state == null) {
+            throw new Exception("State is not defined");
+        }
+        state.ModelType = "PARSED";
+        state.CanRead = true;
+        state.Processed = true;
+        _logger.LogInformation($"Model information type : {state.ModelType}");
+        state.ParsingInfo.SetSuccess();
     }
 
     public string GetConnectorVersion()
@@ -40,6 +46,7 @@ public class CalculatorSimulatorAutomationClient :
         Dictionary<string, SimulatorValueItem> inputData
     ) {
         _logger.LogInformation("CalculatorClient Running a simulation");
+        _logger.LogInformation($"Model type : {modelState.ModelType}");
         try
         {
             Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();

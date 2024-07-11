@@ -183,8 +183,12 @@ namespace Cognite.Simulator.Utils
                 if (downloaded)
                 {
                     UpdateModelParsingInfo(state, modelRevision);
-                    await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    return state;
+                    // the following part did not work for older model revisions because
+                    // they are detected in a "parsed" state based upon their status in the API
+                    // so we added a flag to force parsing (second parameter true)
+                    await ExtractModelInformationAndPersist(state, true, token).ConfigureAwait(false);
+                    var updatedState = _state.GetOrAdd(modelRevisionExternalId, state);
+                    return updatedState;
                 }
             }
             catch (Exception e)
@@ -291,9 +295,9 @@ namespace Cognite.Simulator.Utils
             
         }
 
-        private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
+        private async Task ExtractModelInformationAndPersist(T modelState, bool ignoreParseStatus, CancellationToken token)
         {
-            if (modelState.ShouldProcess()) {
+            if (modelState.ShouldProcess() || ignoreParseStatus) {
                 var logId = modelState.LogId;
                 using (LogContext.PushProperty("LogId", logId)) {
                     try
@@ -327,7 +331,7 @@ namespace Cognite.Simulator.Utils
             {
                 // Extract the data for each model file (version) in this group
                 foreach (var item in group){
-                    await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
+                    await ExtractModelInformationAndPersist(item, false, token).ConfigureAwait(false);
                 }
             }
             // Verify that the local version history matches the one in CDF. Else,
@@ -409,9 +413,19 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            var state = _state.GetOrAdd(revisionId, newState);
-            UpdateModelParsingInfo(state, modelRevision);
-            return state;
+            // T existingState;
+            // if (_state.TryGetValue(revisionId, out existingState))
+            // {
+            //     existingState.CreatedTime = newState.CreatedTime;
+            //     existingState.UpdatedTime = newState.UpdatedTime;
+            //     return existingState;
+            // }
+            // else
+            // {
+                var state = _state.GetOrAdd(revisionId, newState);
+                UpdateModelParsingInfo(state, modelRevision);
+                return state;
+            // }
         }
 
         /// <summary>
