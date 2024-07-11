@@ -229,8 +229,6 @@ namespace Cognite.Simulator.Utils
 
             if (Automation == null) Automation = new TAutomationConfig();
 
-            Console.WriteLine($"CREATINGOPENSERVER2 {this.Automation.ProgramId}");
-
             if (Connector.ModelLibrary == null) Connector.ModelLibrary = new ModelLibraryConfig();
             if (Connector.ModelLibrary.LibraryId == null) Connector.ModelLibrary.LibraryId = "ModelLibraryState";
             if (Connector.ModelLibrary.LibraryTable == null) Connector.ModelLibrary.LibraryTable = "ModelLibrary";
