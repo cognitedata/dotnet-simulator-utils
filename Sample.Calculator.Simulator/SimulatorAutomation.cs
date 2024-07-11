@@ -6,7 +6,7 @@ using static SampleConnector;
 
 public class CalculatorSimulatorAutomationClient : 
         AutomationClient,
-        ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> {
+        ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision> {
 
     
     private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;
@@ -17,7 +17,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger = logger;
     }
 
-    public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+    public void ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
         _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
         state.CanRead = false;
@@ -35,7 +35,7 @@ public class CalculatorSimulatorAutomationClient :
     }
 
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-        ModelStateBase modelState, 
+        DefaultModelFilestate modelState, 
         SimulatorRoutineRevision routineRevision, 
         Dictionary<string, SimulatorValueItem> inputData
     ) {
