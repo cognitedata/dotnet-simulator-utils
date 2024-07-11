@@ -4,85 +4,123 @@ using Com.Cognite.V1.Timeseries.Proto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Extensions
 {
     /// <summary>
-    /// Class containing extensions to the CDF Data points resource with utility methods
-    /// for simulator integrations
+    /// Class containing extensions to the CDF Data points resource with utility methods for simulator integrations
     /// </summary>
     public static class DataPointsExtensions
     {
         /// <summary>
-        /// Sample a time series data points with the given time range, granularity and aggregation method 
+        /// Sample a time series data points with the given time samplingConfiguration, granularity and aggregation method 
         /// </summary>
         /// <param name="dataPoints">CDF data points resource</param>
         /// <param name="timeSeriesExternalId">Time series external id</param>
         /// <param name="aggregate">Aggregation method</param>
         /// <param name="granularity">Time granularity in minutes</param>
-        /// <param name="timeRange">Time range (start and end sampling time)</param>
+        /// <param name="samplingConfiguration">Sampling configuration (start and end sampling time)</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>An array with the timestamps and one with the values</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the time range is null</exception>
-        /// <exception cref="DataPointSampleNotFoundException">Thrown when no data points where found within the time range</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the time samplingConfiguration is null</exception>
+        /// <exception cref="DataPointSampleNotFoundException">Thrown when no data points where found based on samplingConfiguration</exception>
         public static async Task<(long[] Timestamps, double[] Values)> GetSample(
             this DataPointsResource dataPoints,
             string timeSeriesExternalId,
             DataPointAggregate aggregate,
             int granularity,
-            SamplingRange timeRange,
+            SamplingConfiguration samplingConfiguration,
             CancellationToken token
             )
         {
-            if (timeRange == null)
+            if (samplingConfiguration == null)
             {
-                throw new ArgumentNullException(nameof(timeRange));
+                throw new ArgumentNullException(nameof(samplingConfiguration));
             }
-            var dps = await dataPoints.ListAsync(
-                new DataPointsQuery
-                {
-                    Items = new[] { new DataPointsQueryItem {
-                        ExternalId = timeSeriesExternalId,
-                        Aggregates = new[] { aggregate.AsString() },
-                        Start = $"{timeRange.Start.Value}",
-                        End = $"{timeRange.End.Value + 1}", // Add 1 because end is exclusive
-                        Granularity = MinutesToGranularity(granularity),
-                        Limit = 10_000 // TODO: Functionality to make sure we get all data points
-                    }},
-                    IgnoreUnknownIds = true
-                }, token
-            ).ConfigureAwait(false);
-            if (dps.Items.Any() && dps.Items.First().DatapointTypeCase == DataPointListItem.DatapointTypeOneofCase.AggregateDatapoints)
+            // If the start time is specified, we sample data points with aggregates
+            if (samplingConfiguration.Start.HasValue)
             {
-                return dps.Items.First().ToTimeSeriesData(aggregate);
-            }
-            else if (aggregate == DataPointAggregate.StepInterpolation)
-            {
-                // If no data point is found before the time range,
-                // search for the first data point forward in time.
-                var firstDp = await dataPoints.ListAsync(
+                var dps = await dataPoints.ListAsync(
                     new DataPointsQuery
                     {
-                        Items = new[] {
-                                new DataPointsQueryItem {
-                                    ExternalId = timeSeriesExternalId,
-                                    Start = $"{timeRange.Start.Value}",
-                                    Limit = 1
-                                }
+                        Items = new[]
+                        {
+                            new DataPointsQueryItem
+                            {
+                                ExternalId = timeSeriesExternalId,
+                                Aggregates = new[] {aggregate.AsString()},
+                                Start = $"{samplingConfiguration.Start.Value}",
+                                End = $"{samplingConfiguration.End + 1}", // Add 1 because end is exclusive
+                                Granularity = MinutesToGranularity(granularity),
+                                Limit = 10_000 // TODO: Functionality to make sure we get all data points
+                            }
                         },
                         IgnoreUnknownIds = true
                     }, token
                 ).ConfigureAwait(false);
-                if (firstDp.Items.Any() && firstDp.Items.First().DatapointTypeCase == DataPointListItem.DatapointTypeOneofCase.NumericDatapoints)
+                if (dps.Items.Any() && dps.Items.First().DatapointTypeCase ==
+                    DataPointListItem.DatapointTypeOneofCase.AggregateDatapoints)
                 {
-                    return firstDp.Items.First().ToTimeSeriesData(aggregate);
+                    return dps.Items.First().ToTimeSeriesData(aggregate);
                 }
 
+                if (aggregate == DataPointAggregate.StepInterpolation)
+                {
+                    // If no data point is found before the time samplingConfiguration,
+                    // search for the first data point forward in time.
+                    var firstDp = await dataPoints.ListAsync(
+                        new DataPointsQuery
+                        {
+                            Items = new[]
+                            {
+                                new DataPointsQueryItem
+                                {
+                                    ExternalId = timeSeriesExternalId,
+                                    Start = $"{samplingConfiguration.Start.Value}",
+                                    Limit = 1
+                                }
+                            },
+                            IgnoreUnknownIds = true
+                        }, token
+                    ).ConfigureAwait(false);
+                    if (firstDp.Items.Any() && firstDp.Items.First().DatapointTypeCase ==
+                        DataPointListItem.DatapointTypeOneofCase.NumericDatapoints)
+                    {
+                        return firstDp.Items.First().ToTimeSeriesData(aggregate);
+                    }
+                }
+                throw new DataPointSampleNotFoundException(
+                    $"No data points were found for time series '{timeSeriesExternalId}' in the sampling window");
             }
-            throw new DataPointSampleNotFoundException($"No data points were found for time series '{timeSeriesExternalId}' in the sampling window");
+            // If start is not specified, we sample data using latest with before set to "end"
+            else
+            {
+                var dps = await dataPoints.LatestAsync(
+                    new DataPointsLatestQuery
+                    {
+                        Items = new List<IdentityWithBefore>
+                        {
+                            new IdentityWithBefore(
+                                externalId: timeSeriesExternalId,
+                                before: $"{samplingConfiguration.End}"
+                            )
+                        }
+                    }, token
+                ).ConfigureAwait(false);
+                if (dps.Any() && dps.First().IsString == false)
+                {
+                    var dp = dps.First().DataPoints.First();
+                    if (dp.Value is MultiValue.Double doubleValue)
+                    {
+                        return (new[] {dp.Timestamp}, new[] {doubleValue.Value});
+                    }
+                }
+                throw new DataPointSampleNotFoundException(
+                    $"No numerical data points were found for time series '{timeSeriesExternalId}' before {new DateTime(samplingConfiguration.End)}");
+            }
+
         }
 
         private static (long[] Timestamps, double[] Values) ToTimeSeriesData(this DataPointListItem dps, DataPointAggregate aggregate)

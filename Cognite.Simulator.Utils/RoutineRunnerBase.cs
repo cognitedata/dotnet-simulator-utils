@@ -76,7 +76,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="startTime">Simulation start time</param>
         /// <param name="modelState">Model state</param>
         /// <param name="routineRevision">Routine revision object</param>
-        /// <param name="samplingRange">Input sampling range</param>
+        /// <param name="samplingConfiguration">Input sampling samplingConfiguration</param>
         /// <param name="token">Cancellation token</param>
         /// <exception cref="ArgumentNullException">When one of the arguments is missing</exception>
         /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
@@ -86,7 +86,7 @@ namespace Cognite.Simulator.Utils
             DateTime startTime, 
             T modelState, 
             V routineRevision, 
-            SamplingRange samplingRange, 
+            SamplingConfiguration samplingConfiguration, 
             CancellationToken token)
         {
             if (modelState == null)
@@ -97,9 +97,9 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(routineRevision));
             }
-            if (samplingRange == null)
+            if (samplingConfiguration == null)
             {
-                throw new ArgumentNullException(nameof(samplingRange));
+                throw new ArgumentNullException(nameof(samplingConfiguration));
             }
             if (runItem == null)
             {
@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Utils
                                 new Identity(simInput.SaveTimeseriesExternalId),
                                 new List<Datapoint> 
                                 { 
-                                    new Datapoint(samplingRange.Midpoint, inputConstValue) 
+                                    new Datapoint(samplingConfiguration.SimulationTime, inputConstValue) 
                                 });
                         } else {
                             throw new SimulationException($"Could not save input value for {originalInput.Name} ({originalInput.ReferenceId}). Only double precision values can be saved to time series.");
@@ -172,7 +172,7 @@ namespace Cognite.Simulator.Utils
                     inputTs.SourceExternalId,
                     inputTs.Aggregate.ToDataPointAggregate(),
                     configObj.DataSampling.Granularity,
-                    samplingRange,
+                    samplingConfiguration,
                     token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
                     configObj.DataSampling.Granularity,
@@ -211,7 +211,7 @@ namespace Cognite.Simulator.Utils
                         new Identity(simInput.SaveTimeseriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingRange.Midpoint, averageValue) 
+                            new Datapoint(samplingConfiguration.SimulationTime, averageValue) 
                         });
                 }
             }
@@ -243,7 +243,7 @@ namespace Cognite.Simulator.Utils
                             new Identity(outputTs.SaveTimeseriesExternalId),
                             new List<Datapoint> 
                             { 
-                                new Datapoint(samplingRange.Midpoint, value) 
+                                new Datapoint(samplingConfiguration.SimulationTime, value) 
                             });  
                     } else {
                         throw new SimulationException($"Could not save output value for {output.Name} ({output.ReferenceId}). Only double precision values can be saved to time series.");
