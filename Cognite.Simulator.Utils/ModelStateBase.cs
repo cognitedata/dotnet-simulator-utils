@@ -29,21 +29,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private string _fileExtension;
-
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public string FileExtension
-        {
-            get => _fileExtension;
-            set
-            {
-                if (value == _fileExtension) return;
-                LastTimeModified = DateTime.UtcNow;
-                _fileExtension = value;
-            }
-        }
 
         /// <summary>
         /// Information about model parsing
@@ -107,7 +92,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>File data object</returns>
         public override FileStatePoco GetPoco()
         {
-            return new ModelStateBasePoco
+            return new FileStatePoco
             {
                 Id = Id,
                 ModelExternalId = ModelExternalId,
@@ -115,11 +100,36 @@ namespace Cognite.Simulator.Utils
                 DataSetId = DataSetId,
                 FilePath = FilePath,
                 CreatedTime = CreatedTime,
+                UpdatedTime = UpdatedTime,
                 CdfId = CdfId,
                 Version = Version,
                 IsInDirectory = IsInDirectory,
-                FileExtension = FileExtension
+                FileExtension = FileExtension,
+                LogId = LogId,
             };
+        }
+
+        public TTarget FillProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
+        {
+            foreach (var sourceProperty in typeof(TSource).GetProperties())
+            {
+                if (sourceProperty.CanWrite)
+                {
+                    try
+                    {
+                        var targetProperty = typeof(TTarget).GetProperty(sourceProperty.Name);
+                        if (targetProperty != null && targetProperty.CanWrite && targetProperty.PropertyType == sourceProperty.PropertyType)
+                        {
+                            targetProperty.SetValue(target, sourceProperty.GetValue(source));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error setting property {sourceProperty.Name}: {ex.Message}");
+                    }
+                }
+            }
+            return target;
         }
     }
 
@@ -129,16 +139,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ModelStateBasePoco : FileStatePoco
     {
-        /// <summary>
-        /// Model version
-        /// </summary>
-        [StateStoreProperty("version")]
-        public int Version { get; set; }
 
-        /// <summary>
-        /// File extension
-        /// </summary>
-        [StateStoreProperty("fileext")]
-        public string FileExtension { get; set; }
     }
 }
