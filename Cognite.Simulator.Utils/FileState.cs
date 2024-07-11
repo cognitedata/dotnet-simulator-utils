@@ -41,9 +41,8 @@ namespace Cognite.Simulator.Utils
         /// Creates a new file state with the provided id
         /// </summary>
         /// <param name="id">File id</param>
-        public FileState(string id)
+        public FileState()
         {
-            Id = id;
         }
 
         private string _modelExternalId;

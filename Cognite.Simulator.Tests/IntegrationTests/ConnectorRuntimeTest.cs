@@ -28,7 +28,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public class SampleModelFilestate : ModelStateBase
         {
-            public SampleModelFilestate() : base("")
+            public SampleModelFilestate() : base()
             {
             }
 

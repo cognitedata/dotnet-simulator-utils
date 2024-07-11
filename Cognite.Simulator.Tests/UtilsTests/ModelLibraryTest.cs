@@ -479,7 +479,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override bool IsExtracted => Processed;
 
-        public TestFileState(string id) : base(id)
+        public TestFileState() : base()
         {
         }
 
@@ -555,8 +555,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new ArgumentNullException(nameof(modelRevision));
             }
 
-            return new TestFileState(modelRevision.Id.ToString())
+            return new TestFileState()
             {
+                Id = modelRevision.Id.ToString(),
                 CdfId = modelRevision.FileId,
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,

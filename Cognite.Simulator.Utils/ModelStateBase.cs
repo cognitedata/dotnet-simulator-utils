@@ -65,7 +65,7 @@ namespace Cognite.Simulator.Utils
         /// Creates a new model file state with the provided id
         /// </summary>
         /// <param name="id"></param>
-        public ModelStateBase(string id) : base(id)
+        public ModelStateBase() : base()
         {
         }
 
