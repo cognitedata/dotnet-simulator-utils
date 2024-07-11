@@ -81,9 +81,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
-        
-        
-
         services.AddScoped<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
