@@ -70,7 +70,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
                 appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);
-            // config.GenerateDefaults();
         }
         catch (ConfigurationException e)
         {
