@@ -81,19 +81,17 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
-        // services.AddScoped<DefaultModelFilestate>();
-        defaultLogger.LogDebug("Injecting services");
-         ConfigureServices?.Invoke(services);
         
-        // services.AddScoped(typeof(DefaultModelLibrary<,>));
-        // services.AddScoped(typeof(DefaultConnector<>), typeof(DefaultConnector<>));
-        defaultLogger.LogDebug("Initializing default connector");
+        
+
         services.AddScoped<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
-        defaultLogger.LogDebug("Initializing default routine library");
-        // services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState>>();
+        services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
         services.AddScoped<DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultSimulationScheduler<TAutomationConfig>>();
+
+        defaultLogger.LogDebug("Injecting services");
+        ConfigureServices?.Invoke(services);
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
