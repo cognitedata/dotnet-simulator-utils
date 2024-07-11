@@ -12,17 +12,18 @@ using Microsoft.Extensions.Logging;
 namespace Cognite.Simulator.Utils
 {
 
-    public class DefaultModelLibrary<TAutomationConfig,TModelStateBase> :
-    ModelLibraryBase<TAutomationConfig,TModelStateBase, DefaultModelFileStatePoco, ModelParsingInfo>
+    public class DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco> :
+    ModelLibraryBase<TAutomationConfig,TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
     where TModelStateBase: ModelStateBase
+    where TModelStateBasePoco : ModelStateBasePoco
     {
         private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
 
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
-            ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase>> logger,
+            ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
             FileStorageClient client,
             IServiceProvider serviceProvider,
             IExtractionStateStore store = null) :
