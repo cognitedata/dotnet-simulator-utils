@@ -136,8 +136,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
                 {
                     var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
 
-                    // var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>>();
-
                     await connector.Init(token).ConfigureAwait(false);
                    
                     await connector.Run(token).ConfigureAwait(false);
