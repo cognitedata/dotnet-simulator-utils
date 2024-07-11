@@ -15,7 +15,7 @@ namespace Cognite.Simulator.Utils
     public class DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco> :
     ModelLibraryBase<TAutomationConfig,TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
-    where TModelStateBase: ModelStateBase
+    where TModelStateBase: ModelStateBase, new()
     where TModelStateBasePoco : ModelStateBasePoco
     {
         private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
@@ -53,6 +53,7 @@ namespace Cognite.Simulator.Utils
 
         protected override TModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
+            Console.WriteLine("4445625: Calling StateFromModelRevision");
             var modelState = new DefaultModelFilestate(modelRevision.Id.ToString())
             {
                 UpdatedTime = modelRevision.LastUpdatedTime,
@@ -65,7 +66,24 @@ namespace Cognite.Simulator.Utils
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
             };
-            return modelState as TModelStateBase;
+            Console.WriteLine("4445625: Created modelFileState");
+            // var output = modelState as TModelStateBase;
+            Console.WriteLine("4445625: Did cast");
+            // string id = modelRevision.FileId.Tostring();
+            var output = new TModelStateBase
+            {
+                Id = modelRevision.Id.ToString(),
+                UpdatedTime = modelRevision.LastUpdatedTime,
+                ModelExternalId = modelRevision.ModelExternalId,
+                Source = modelRevision.SimulatorExternalId,
+                DataSetId = modelRevision.DataSetId,
+                CreatedTime = modelRevision.CreatedTime,
+                CdfId = modelRevision.FileId,
+                LogId = modelRevision.LogId,
+                Version = modelRevision.VersionNumber,
+                ExternalId = modelRevision.ExternalId,
+            };
+            return output;
         }
 
     }

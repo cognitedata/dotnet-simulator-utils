@@ -14,7 +14,7 @@ namespace Cognite.Simulator.Utils
 {
     public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
         where TAutomationConfig : AutomationConfig, new()
-         where TModelState: ModelStateBase
+         where TModelState: ModelStateBase, new()
          where TModelStateBasePoco: ModelStateBasePoco
  
     {

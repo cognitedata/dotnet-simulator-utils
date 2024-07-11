@@ -15,7 +15,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// File id. Typically CDF external id
         /// </summary>
-        public string Id { get; protected set; }
+        public string Id { get; set; }
         
         private string _externalId;
         /// <summary>

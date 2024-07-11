@@ -16,7 +16,7 @@ namespace Cognite.Simulator.Utils
     public class DefaultSimulationRunner<TAutomationConfig,TModelStateBase,TModelStateBasePoco> : 
         RoutineRunnerBase<TAutomationConfig,TModelStateBase, SimulatorRoutineRevision>
          where TAutomationConfig : AutomationConfig, new()
-         where TModelStateBase: ModelStateBase
+         where TModelStateBase: ModelStateBase, new()
          where TModelStateBasePoco: ModelStateBasePoco
     {
 

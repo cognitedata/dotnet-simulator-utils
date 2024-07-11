@@ -16,7 +16,7 @@ using Polly.Timeout;
 
 public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>
  where TAutomationConfig : AutomationConfig, new()
- where TModelState: ModelStateBase
+ where TModelState: ModelStateBase, new()
  where TModelStateBasePoco: ModelStateBasePoco
 {
 
