@@ -183,10 +183,7 @@ namespace Cognite.Simulator.Utils
                 if (downloaded)
                 {
                     UpdateModelParsingInfo(state, modelRevision);
-                    // the following part did not work for older model revisions because
-                    // they are detected in a "parsed" state based upon their status in the API
-                    // so we added a flag to force parsing (second parameter true)
-                    await ExtractModelInformationAndPersist(state, true, token).ConfigureAwait(false);
+                    await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
                     var updatedState = _state.GetOrAdd(modelRevisionExternalId, state);
                     return updatedState;
                 }
@@ -295,9 +292,9 @@ namespace Cognite.Simulator.Utils
             
         }
 
-        private async Task ExtractModelInformationAndPersist(T modelState, bool ignoreParseStatus, CancellationToken token)
+        private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
         {
-            if (modelState.ShouldProcess() || ignoreParseStatus) {
+            if (modelState.ShouldProcess()) {
                 var logId = modelState.LogId;
                 using (LogContext.PushProperty("LogId", logId)) {
                     try
@@ -323,7 +320,6 @@ namespace Cognite.Simulator.Utils
         {
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
-
             var modelGroups = _state.Values
                 .Where(f => !string.IsNullOrEmpty(f.FilePath))
                 .GroupBy(f => new { f.ModelExternalId });
@@ -331,7 +327,7 @@ namespace Cognite.Simulator.Utils
             {
                 // Extract the data for each model file (version) in this group
                 foreach (var item in group){
-                    await ExtractModelInformationAndPersist(item, false, token).ConfigureAwait(false);
+                    await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
                 }
             }
             // Verify that the local version history matches the one in CDF. Else,

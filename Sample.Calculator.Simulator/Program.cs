@@ -26,9 +26,7 @@ public static class SampleConnector {
 
     public class CalculatorModelFilestate : ModelStateBase
     {
-        public CalculatorModelFilestate() : base()
-        {
-        }
+        public CalculatorModelFilestate() : base() { }
 
         public override CalculatorFileStatePoco GetPoco() {
             var poco = base.GetPoco();
@@ -36,6 +34,18 @@ public static class SampleConnector {
             FillProperties(poco, newObj);
             newObj.ModelType = ModelType;
             return newObj;
+        }
+
+        public override bool ShouldProcess()
+        {
+            // Since the ModelType is an extended value it should be saved into the state.db after the 
+            // first extraction and then read from there. If the value is null at this point this means  
+            // that the last extraction state has been lost due to deletion of the state.db so we need 
+            // to return true to reparse it.
+            if (ModelType == null) {
+                return true;
+            }
+            return base.ShouldProcess();
         }
 
         public override void Init(FileStatePoco poco)
