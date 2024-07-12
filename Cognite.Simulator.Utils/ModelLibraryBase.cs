@@ -409,19 +409,9 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            // T existingState;
-            // if (_state.TryGetValue(revisionId, out existingState))
-            // {
-            //     existingState.CreatedTime = newState.CreatedTime;
-            //     existingState.UpdatedTime = newState.UpdatedTime;
-            //     return existingState;
-            // }
-            // else
-            // {
-                var state = _state.GetOrAdd(revisionId, newState);
-                UpdateModelParsingInfo(state, modelRevision);
-                return state;
-            // }
+            var state = _state.GetOrAdd(revisionId, newState);
+            UpdateModelParsingInfo(state, modelRevision);
+            return state;
         }
 
         /// <summary>
