@@ -159,10 +159,11 @@ connector:
                 _logger = logger;
             }
 
-            public void ExtractModelInformation(SampleModelFilestate state, CancellationToken _token)
+            public Task ExtractModelInformation(SampleModelFilestate state, CancellationToken _token)
             {
                 state.CanRead = false;
                 state.ParsingInfo.SetFailure();
+                return Task.CompletedTask;
             }
 
             public string GetConnectorVersion()

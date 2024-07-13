@@ -398,7 +398,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
-        public void ExtractModelInformation(TestFileState state, CancellationToken _token)
+        public Task ExtractModelInformation(TestFileState state, CancellationToken _token)
         {
             throw new NotImplementedException();
         }

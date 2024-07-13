@@ -68,7 +68,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger = logger;
     }
 
-    public void ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
+    public Task ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
         _logger.LogInformation("Begin model information extraction");
         if (state == null)
@@ -81,6 +81,7 @@ public class CalculatorSimulatorAutomationClient :
         state.Processed = true;
         _logger.LogInformation($"Model information type : {state.ModelType}");
         state.ParsingInfo.SetSuccess();
+        return Task.CompletedTask;
     }
 
     public string GetConnectorVersion()

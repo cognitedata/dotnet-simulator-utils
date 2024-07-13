@@ -14,12 +14,13 @@ public class CalculatorSimulatorClient :
         _logger = logger;
     }
 
-    public void ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
+    public Task ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
         _logger.LogInformation("ExtractModelInformation ");
         state.CanRead = false;
         state.Processed = true;
         state.ParsingInfo.SetFailure();
+        return Task.CompletedTask;
     }
 
     public string GetConnectorVersion()

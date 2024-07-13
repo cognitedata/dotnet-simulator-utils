@@ -26,7 +26,6 @@ namespace Cognite.Simulator.Utils
             ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
             FileStorageClient client,
-            IServiceProvider serviceProvider,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,
@@ -44,7 +43,7 @@ namespace Cognite.Simulator.Utils
         CancellationToken token)
         {
             if (__simulationClient != null) {
-                __simulationClient.ExtractModelInformation(state, token);
+                await __simulationClient.ExtractModelInformation(state, token).ConfigureAwait(false);
             } else {
                 state.CanRead = true;
                 state.ParsingInfo.SetSuccess();
