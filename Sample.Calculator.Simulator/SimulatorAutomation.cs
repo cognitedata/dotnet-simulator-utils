@@ -68,7 +68,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger = logger;
     }
 
-    public Task ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
+    public async Task ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
         _logger.LogInformation("Begin model information extraction");
         if (state == null)
@@ -76,12 +76,14 @@ public class CalculatorSimulatorAutomationClient :
             throw new Exception("State is not defined");
         }
         Random random = new Random();
-        state.ModelType = "PARSED" + random.Next().ToString() + "c";
+        await Task.Run(() => {
+            Thread.Sleep(5000);
+        }).ConfigureAwait(false);
+        state.ModelType = "PARSED" + random.Next().ToString() + "zf";
         state.CanRead = true;
         state.Processed = true;
         _logger.LogInformation($"Model information type : {state.ModelType}");
         state.ParsingInfo.SetSuccess();
-        return Task.CompletedTask;
     }
 
     public string GetConnectorVersion()

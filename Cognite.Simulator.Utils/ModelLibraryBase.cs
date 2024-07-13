@@ -489,7 +489,8 @@ namespace Cognite.Simulator.Utils
         /// <returns>List of tasks</returns>
         public IEnumerable<Task> GetRunTasks(CancellationToken token)
         {
-            return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
+            // return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
+            return new List<Task> { SearchAndDownloadFiles(token) };
         }
 
         private void CreateDirectoryIfNotExists(string directoryPath)
@@ -615,6 +616,8 @@ namespace Cognite.Simulator.Utils
                         maxUpdatedDt,
                         maxUpdatedDt);
                 }
+
+                await SaveStates(token);
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token)
