@@ -21,6 +21,7 @@ using Cognite.Extractor.Common;
 
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
+using System.Reflection;
 
 namespace Cognite.Simulator.Utils
 {
@@ -124,15 +125,36 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        private T GetOrUpdateState(string key, T inputValue) {
-            if (!_state.TryGetValue(key, out var value))
+        private void CopyNonBaseProperties(T source, T target)
+        {
+            Type type = typeof(T);
+            Type baseType = type.BaseType;
+
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                _state[key] = inputValue;
-                return inputValue;
-            } else {
-                _state[key] = inputValue;
-                return GetState(key);
+                if (property.CanRead && property.CanWrite && property.DeclaringType != baseType)
+                {
+                    var value = property.GetValue(source);
+                    property.SetValue(target, value);
+                }
             }
+        }
+
+        private T GetOrUpdateState(string key, T inputValue) {
+            if (!_state.TryGetValue(key, out var existingValue))
+            {
+                // The key does not exist, so add inputValue to the dictionary
+                _state[key] = inputValue;
+            }
+            else
+            {
+                // Copy non-base properties from existingValue to inputValue
+                CopyNonBaseProperties(existingValue, inputValue);
+            }
+
+            // Update the dictionary with inputValue
+            _state[key] = inputValue;
+            return GetState(key);
         }
 
         private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
