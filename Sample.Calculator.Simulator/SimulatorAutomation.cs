@@ -77,9 +77,9 @@ public class CalculatorSimulatorAutomationClient :
         }
         Random random = new Random();
         await Task.Run(() => {
-            Thread.Sleep(5000);
+            Thread.Sleep(200);
         }, _token).ConfigureAwait(false);
-        state.ModelType = "PARSED" + random.Next().ToString() + "zf";
+        state.ModelType = "PARSED" + random.Next().ToString() + "abc";
         state.CanRead = true;
         state.Processed = true;
         _logger.LogInformation($"Model information type : {state.ModelType}");

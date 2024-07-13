@@ -116,15 +116,6 @@ namespace Cognite.Simulator.Utils
             _downloadClient = downloadClient;
         }
 
-        private T GetState(string key)
-        {
-            if (_state.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-            return null;
-        }
-
         private void CopyNonBaseProperties(T source, T target)
         {
             Type type = typeof(T);
@@ -141,22 +132,19 @@ namespace Cognite.Simulator.Utils
         }
 
         private T GetOrUpdateState(string key, T inputValue) {
-            if (!_state.TryGetValue(key, out var existingValue))
-            {
-                // The key does not exist, so add inputValue to the dictionary
-                _state[key] = inputValue;
-            }
-            else
-            {
-                // Copy non-base properties from existingValue to inputValue.
-                // This ensures that any properties saved by an extension of the ModelStateBase class
-                // are set back into the state.
-                CopyNonBaseProperties(existingValue, inputValue);
-            }
+            var updatedValue = _state.AddOrUpdate(
+                key,
+                inputValue, // Value to add if key does not exist
+                (existingKey, existingValue) => {
+                    // Copy non-base properties from existingValue to inputValue.
+                    // This ensures that any properties saved by an extension of the ModelStateBase class
+                    // are set back into the state.
+                    CopyNonBaseProperties(existingValue, inputValue);
+                    return inputValue;
+                } // Value to update if key exists
+            );
 
-            // Update the dictionary with inputValue
-            _state[key] = inputValue;
-            return GetState(key);
+            return updatedValue;
         }
 
         private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
@@ -304,8 +292,8 @@ namespace Cognite.Simulator.Utils
                     {
                         if (!revisionsInCdf.ContainsKey(revision.Id))
                         {
-                            if (GetState(revision.Id) != null) {
-                                _state.TryRemove(revision.Id, out T _);
+                            if (_state.TryRemove(revision.Id, out _))
+                            {
                                 statesToDelete.Add(revision);
                             }
                         }
@@ -641,7 +629,7 @@ namespace Cognite.Simulator.Utils
                         maxUpdatedDt);
                 }
 
-                await SaveStates(token);
+                await SaveStates(token).ConfigureAwait(false);
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token)
@@ -678,10 +666,6 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-
-            // The following functions were failing with the state
-            // being a concurrent dictionary. They ran fine the first time
-            // but after that they would not actually save state.
             await _store.StoreExtractionState(
                 new[] { _libState },
                 _config.LibraryTable,

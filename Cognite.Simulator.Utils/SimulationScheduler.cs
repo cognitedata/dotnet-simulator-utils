@@ -203,7 +203,7 @@ namespace Cognite.Simulator.Utils
                         _ = Task.WhenAll(tasks);
                     } 
                     // Wait for interval seconds before checking again
-                    await Task.Delay(interval).ConfigureAwait(false);
+                    await Task.Delay(interval, token).ConfigureAwait(false);
                 }
             }, token).ConfigureAwait(false);
         }
