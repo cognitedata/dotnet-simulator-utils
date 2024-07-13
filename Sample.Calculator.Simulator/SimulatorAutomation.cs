@@ -11,11 +11,11 @@ public class CalculatorModelFilestate : ModelStateBase
 
     public override CalculatorFileStatePoco GetPoco()
     {
-        var poco = base.GetPoco();
-        var newObj = new CalculatorFileStatePoco { };
-        FillProperties(poco, newObj);
-        newObj.ModelType = ModelType;
-        return newObj;
+        var basePoco = base.GetPoco();
+        var extendedPoco = new CalculatorFileStatePoco { };
+        SyncProperties(basePoco, extendedPoco);
+        extendedPoco.ModelType = ModelType;
+        return extendedPoco;
     }
 
     public override bool ShouldProcess()
@@ -50,7 +50,7 @@ public class CalculatorModelFilestate : ModelStateBase
 public class CalculatorFileStatePoco : ModelStateBasePoco
 {
     [StateStoreProperty("extra-model-type")]
-    public string ModelType { get; internal set; }
+    public string? ModelType { get; internal set; }
 }
 
 public class CalculatorSimulatorAutomationClient :
@@ -78,7 +78,7 @@ public class CalculatorSimulatorAutomationClient :
         Random random = new Random();
         await Task.Run(() => {
             Thread.Sleep(5000);
-        }).ConfigureAwait(false);
+        }, _token).ConfigureAwait(false);
         state.ModelType = "PARSED" + random.Next().ToString() + "zf";
         state.CanRead = true;
         state.Processed = true;

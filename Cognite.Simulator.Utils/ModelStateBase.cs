@@ -65,7 +65,12 @@ namespace Cognite.Simulator.Utils
         {
             base.Init(poco);
         }
-        public static TTarget FillProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
+
+        /// <summary>
+        /// Copies matching properties from the source object to the target object.
+        /// Only properties with the same name and type are copied.
+        /// </summary>
+        public static TTarget SyncProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
         {
             foreach (var sourceProperty in typeof(TSource).GetProperties())
             {

@@ -148,7 +148,9 @@ namespace Cognite.Simulator.Utils
             }
             else
             {
-                // Copy non-base properties from existingValue to inputValue
+                // Copy non-base properties from existingValue to inputValue.
+                // This ensures that any properties saved by an extension of the ModelStateBase class
+                // are set back into the state.
                 CopyNonBaseProperties(existingValue, inputValue);
             }
 
