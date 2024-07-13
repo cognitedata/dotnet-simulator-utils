@@ -16,9 +16,9 @@ public static class SampleConnector {
     public class CustomAutomationConfig : AutomationConfig { }
     public static async Task Run() {
         
-        //var currentProcess = Process.GetCurrentProcess();
-        //Console.WriteLine($"ProcessId: {currentProcess.Id} . Launch the debugger...");
-        //Thread.Sleep(6000);
+        // var currentProcess = Process.GetCurrentProcess();
+        // Console.WriteLine($"ProcessId: {currentProcess.Id} . Launch the debugger...");
+        // Thread.Sleep(6000);
         DefaultConnectorRuntime<CustomAutomationConfig,CalculatorModelFilestate, CalculatorFileStatePoco>.ConfigureServices = ConfigureServices;
         DefaultConnectorRuntime<CustomAutomationConfig,CalculatorModelFilestate, CalculatorFileStatePoco>.ConnectorName = "Calculator";
         await DefaultConnectorRuntime<CustomAutomationConfig,CalculatorModelFilestate, CalculatorFileStatePoco>.RunStandalone().ConfigureAwait(false);

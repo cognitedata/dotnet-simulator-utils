@@ -75,7 +75,8 @@ public class CalculatorSimulatorAutomationClient :
         {
             throw new Exception("State is not defined");
         }
-        state.ModelType = "PARSED";
+        Random random = new Random();
+        state.ModelType = "PARSED" + random.Next().ToString() + "c";
         state.CanRead = true;
         state.Processed = true;
         _logger.LogInformation($"Model information type : {state.ModelType}");

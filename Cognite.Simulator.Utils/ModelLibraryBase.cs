@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils
         /// CDF simulator model revisions and the values are the state objects of type <typeparamref name="T"/>
         /// Should only be modified from a single thread to avoid multi-threading issues.
         /// </summary>
-        public ConcurrentDictionary<string, T> _state { get; private set; }
+        public Dictionary<string, T> _state { get; private set; }
 
         /// <summary>
         /// Temporary model states that are used once and then deleted after the run.
@@ -108,11 +108,31 @@ namespace Cognite.Simulator.Utils
             _cdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             _logger = logger;
-            _state = new ConcurrentDictionary<string, T>();
+            _state = new Dictionary<string, T>();
             _temporaryState = new Dictionary<string, T>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
+        }
+
+        private T GetState(string key)
+        {
+            if (_state.TryGetValue(key, out var value))
+            {
+                return value;
+            }
+            return null;
+        }
+
+        private T GetOrUpdateState(string key, T inputValue) {
+            if (!_state.TryGetValue(key, out var value))
+            {
+                _state[key] = inputValue;
+                return inputValue;
+            } else {
+                _state[key] = inputValue;
+                return GetState(key);
+            }
         }
 
         private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
@@ -184,7 +204,7 @@ namespace Cognite.Simulator.Utils
                 {
                     UpdateModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    var updatedState = _state.GetOrAdd(modelRevisionExternalId, state);
+                    var updatedState = GetOrUpdateState(modelRevisionExternalId, state);
                     return updatedState;
                 }
             }
@@ -260,8 +280,8 @@ namespace Cognite.Simulator.Utils
                     {
                         if (!revisionsInCdf.ContainsKey(revision.Id))
                         {
-                            if (_state.TryRemove(revision.Id, out _))
-                            {
+                            if (GetState(revision.Id) != null) {
+                                _state.Remove(revision.Id);
                                 statesToDelete.Add(revision);
                             }
                         }
@@ -321,7 +341,7 @@ namespace Cognite.Simulator.Utils
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
             var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath))
+                .Where(f => !string.IsNullOrEmpty(f.FilePath)) 
                 .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
@@ -409,7 +429,7 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            var state = _state.GetOrAdd(revisionId, newState);
+            var state = GetOrUpdateState(revisionId, newState);
             UpdateModelParsingInfo(state, modelRevision);
             return state;
         }
@@ -631,6 +651,10 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
+
+            // The following functions were failing with the state
+            // being a concurrent dictionary. They ran fine the first time
+            // but after that they would not actually save state.
             await _store.StoreExtractionState(
                 new[] { _libState },
                 _config.LibraryTable,
@@ -638,8 +662,11 @@ namespace Cognite.Simulator.Utils
             await _store.StoreExtractionState(
                 _state.Values,
                 _config.FilesTable,
-                (state) => state.GetPoco(),
-                token).ConfigureAwait(false);
+                (state) => {
+                    var poco = state.GetPoco();
+                    return poco;
+                },
+            token).ConfigureAwait(false);
         }
 
     }
