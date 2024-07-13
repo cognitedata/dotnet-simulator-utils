@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils
         /// CDF simulator model revisions and the values are the state objects of type <typeparamref name="T"/>
         /// Should only be modified from a single thread to avoid multi-threading issues.
         /// </summary>
-        public Dictionary<string, T> _state { get; private set; }
+        public ConcurrentDictionary<string, T> _state { get; private set; }
 
         /// <summary>
         /// Temporary model states that are used once and then deleted after the run.
@@ -108,7 +108,7 @@ namespace Cognite.Simulator.Utils
             _cdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             _store = store;
             _logger = logger;
-            _state = new Dictionary<string, T>();
+            _state = new ConcurrentDictionary<string, T>();
             _temporaryState = new Dictionary<string, T>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
@@ -281,7 +281,7 @@ namespace Cognite.Simulator.Utils
                         if (!revisionsInCdf.ContainsKey(revision.Id))
                         {
                             if (GetState(revision.Id) != null) {
-                                _state.Remove(revision.Id);
+                                _state.TryRemove(revision.Id, out T _);
                                 statesToDelete.Add(revision);
                             }
                         }
