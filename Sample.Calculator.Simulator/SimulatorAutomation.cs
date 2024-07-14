@@ -24,10 +24,10 @@ public class CalculatorModelFilestate : ModelStateBase
         // first extraction and then read from there. If the value is null at this point this means  
         // that the last extraction state has been lost due to deletion of the state.db so we need 
         // to return true to reparse it.
-        if (ModelType == null)
-        {
-            return true;
-        }
+        // if (ModelType == null)
+        // {
+        //     return true;
+        // }
         return base.ShouldProcess();
     }
 

@@ -648,11 +648,12 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-            while (!token.IsCancellationRequested)
+            StoreLibraryState(token);
+            //while (!token.IsCancellationRequested)
             {
-                var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
-                var storeTask = StoreLibraryState(token);
-                await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
+                //var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
+                //var storeTask = StoreLibraryState(token);
+                //await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
             }
         }
 
