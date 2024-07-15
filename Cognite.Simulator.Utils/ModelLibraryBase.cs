@@ -20,6 +20,8 @@ using Cognite.Extensions;
 using Cognite.Extractor.Common;
 
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
+using System.Reflection;
 
 namespace Cognite.Simulator.Utils
 {
@@ -31,7 +33,8 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<T, U, V> : IModelProvider<T>
+    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A,T>
+        where A: AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
@@ -113,6 +116,37 @@ namespace Cognite.Simulator.Utils
             _downloadClient = downloadClient;
         }
 
+        private void CopyNonBaseProperties(T source, T target)
+        {
+            Type type = typeof(T);
+            Type baseType = type.BaseType;
+
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (property.CanRead && property.CanWrite && property.DeclaringType != baseType)
+                {
+                    var value = property.GetValue(source);
+                    property.SetValue(target, value);
+                }
+            }
+        }
+
+        private T GetOrUpdateState(string key, T inputValue) {
+            var updatedValue = _state.AddOrUpdate(
+                key,
+                inputValue, // Value to add if key does not exist
+                (existingKey, existingValue) => {
+                    // Copy non-base properties from existingValue to inputValue.
+                    // This ensures that any properties saved by an extension of the ModelStateBase class
+                    // are set back into the state.
+                    CopyNonBaseProperties(existingValue, inputValue);
+                    return inputValue;
+                } // Value to update if key exists
+            );
+
+            return updatedValue;
+        }
+
         private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
             var fileExtension = _simulatorFileExtMap.Find(item => item.Item1 == SimulatorExternalId);
             state.FileExtension = fileExtension.Item2;
@@ -182,7 +216,8 @@ namespace Cognite.Simulator.Utils
                 {
                     UpdateModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    return state;
+                    var updatedState = GetOrUpdateState(modelRevisionExternalId, state);
+                    return updatedState;
                 }
             }
             catch (Exception e)
@@ -317,9 +352,8 @@ namespace Cognite.Simulator.Utils
         {
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
-
             var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath))
+                .Where(f => !string.IsNullOrEmpty(f.FilePath)) 
                 .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
@@ -407,7 +441,7 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
             var revisionId = modelRevision.Id.ToString();
-            var state = _state.GetOrAdd(revisionId, newState);
+            var state = GetOrUpdateState(revisionId, newState);
             UpdateModelParsingInfo(state, modelRevision);
             return state;
         }
@@ -467,7 +501,8 @@ namespace Cognite.Simulator.Utils
         /// <returns>List of tasks</returns>
         public IEnumerable<Task> GetRunTasks(CancellationToken token)
         {
-            return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
+            // return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
+            return new List<Task> { SearchAndDownloadFiles(token) };
         }
 
         private void CreateDirectoryIfNotExists(string directoryPath)
@@ -594,6 +629,8 @@ namespace Cognite.Simulator.Utils
                         maxUpdatedDt);
                 }
 
+                await SaveStates(token).ConfigureAwait(false);
+
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token)
                     .ConfigureAwait(false);
@@ -611,11 +648,12 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-            while (!token.IsCancellationRequested)
+            StoreLibraryState(token);
+            //while (!token.IsCancellationRequested)
             {
-                var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
-                var storeTask = StoreLibraryState(token);
-                await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
+                //var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
+                //var storeTask = StoreLibraryState(token);
+                //await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
             }
         }
 
@@ -636,8 +674,11 @@ namespace Cognite.Simulator.Utils
             await _store.StoreExtractionState(
                 _state.Values,
                 _config.FilesTable,
-                (state) => state.GetPoco(),
-                token).ConfigureAwait(false);
+                (state) => {
+                    var poco = state.GetPoco();
+                    return poco;
+                },
+            token).ConfigureAwait(false);
         }
 
     }
@@ -646,7 +687,7 @@ namespace Cognite.Simulator.Utils
     /// Interface for libraries that can provide model information
     /// </summary>
     /// <typeparam name="T">Model state type</typeparam>
-    public interface IModelProvider<T>
+    public interface IModelProvider<A,T>
     {
         /// <summary>
         /// Returns the state object of the given version of the given model

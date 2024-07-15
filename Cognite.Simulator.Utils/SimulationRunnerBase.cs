@@ -1,6 +1,7 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
@@ -22,7 +23,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class SimulationRunnerBase<T, V>
+    public abstract class SimulationRunnerBase<A, T, V>
+        where A: AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -35,7 +37,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulator model files
         /// </summary>
-        protected IModelProvider<T> ModelLibrary { get; }
+        protected IModelProvider<A,T> ModelLibrary { get; }
 
         /// <summary>
         /// Library containing the simulation configuration files
@@ -58,7 +60,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig connectorConfig,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
-            IModelProvider<T> modelLibrary,
+            IModelProvider<A,T> modelLibrary,
             IRoutineProvider<V> routineLibrary,
             ILogger logger)
         {

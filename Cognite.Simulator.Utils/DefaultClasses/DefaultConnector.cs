@@ -12,39 +12,41 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
-    public class DefaultConnector<TAutomationConfig> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
+    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
         where TAutomationConfig : AutomationConfig, new()
+         where TModelState: ModelStateBase, new()
+         where TModelStateBasePoco: ModelStateBasePoco
+ 
     {
         private readonly DefaultConfig<TAutomationConfig> _config;
-        private readonly ILogger<DefaultConnector<TAutomationConfig>> _logger;
-        private readonly DefaultModelLibrary<TAutomationConfig> _modelLibrary;
+        private readonly ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> _logger;
+        private readonly DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco> _modelLibrary;
         private readonly DefaultRoutineLibrary<TAutomationConfig> _routineLibrary;
-        private readonly DefaultSimulationRunner<TAutomationConfig> _simulationRunner;
+        private readonly DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco> _simulationRunner;
         private readonly DefaultSimulationScheduler<TAutomationConfig> _scheduler;
         private readonly ExtractionPipeline _pipeline;
         private readonly string _version;
         private readonly ScopedRemoteApiSink _sink;
 
-        private ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> _simulatorClient;
+        private ISimulatorClient<TModelState, SimulatorRoutineRevision> _simulatorClient;
 
         public DefaultConnector(
             CogniteDestination cdf,
             DefaultConfig<TAutomationConfig> config,
-            DefaultModelLibrary<TAutomationConfig> modelLibrary,
+            DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco> modelLibrary,
             DefaultRoutineLibrary<TAutomationConfig> routineLibrary,
-            DefaultSimulationRunner<TAutomationConfig> runner,
+            DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco> runner,
             DefaultSimulationScheduler<TAutomationConfig> scheduler,
             ExtractionPipeline pipeline,
-            ILogger<DefaultConnector<TAutomationConfig>> logger,
+            ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> logger,
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulatorClient,
+            ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
             : base(cdf, config.Connector, new List<SimulatorConfig> { config.Simulator }, logger, remoteConfigManager, sink)
         {
             _config = config;
             _logger = logger;
             _sink = sink;
-
             _modelLibrary = modelLibrary;
             _routineLibrary = routineLibrary;
             _simulationRunner = runner;

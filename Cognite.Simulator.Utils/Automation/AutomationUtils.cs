@@ -75,6 +75,8 @@ namespace Cognite.Simulator.Utils.Automation
             }
             finally
             {
+                Marshal.ReleaseComObject(Server);
+                _logger.LogDebug("Released COM Object");
                 Server = null;
                 if (_processes != null && _processes.Any())
                 {
