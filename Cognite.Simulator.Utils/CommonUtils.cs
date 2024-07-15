@@ -24,7 +24,8 @@ namespace Cognite.Simulator.Utils
         /// Returns the assembly version
         /// </summary>
         /// <returns></returns>
-        public static string GetAssemblyVersion() {
+        public static string GetAssemblyVersion()
+        {
             return Extractor.Metrics.Version.GetVersion(
                     Assembly.GetExecutingAssembly(),
                     "0.0.1");
@@ -73,22 +74,27 @@ namespace Cognite.Simulator.Utils
         public static List<string> ConnectorsToExternalIds(Dictionary<string, long> simulators, string baseConnectorName)
         {
             var connectorIdList = new List<string>();
-            if (simulators != null) {
+            if (simulators != null)
+            {
                 foreach (var simulator in simulators.Select((value, i) => new { i, value }))
                 {
                     var value = simulator.value;
-                    if (simulator.i > 0){
+                    if (simulator.i > 0)
+                    {
                         connectorIdList.Add($"{value.Key}-{baseConnectorName}");
-                    } else {
+                    }
+                    else
+                    {
                         connectorIdList.Add(baseConnectorName);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 connectorIdList.Add(baseConnectorName);
             }
             return connectorIdList;
         }
-        
     }
 
     /// <summary>
@@ -96,9 +102,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulationUtils
     {
-
         /// <summary>
-        /// Run logical check and steady state detection based on a simulation configuration. 
+        /// Run logical check and steady state detection based on a simulation configuration.
         /// </summary>
         /// <param name="dataPoints">CDF data points resource</param>
         /// <param name="config">Simulation configuration</param>
@@ -111,18 +116,16 @@ namespace Cognite.Simulator.Utils
             DateTime validationEnd,
             CancellationToken token)
         {
-            if (config == null || config.DataSampling == null)
-            {
-                throw new SimulationException("Data sampling configuration is missing");
-            }
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
+            
             var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow);
-            var validationRange = new TimeRange
-            {
-                Min = validationStart.ToUnixTimeMilliseconds(),
-                Max = validationEnd.ToUnixTimeMilliseconds()
-            };
+            var validationConfiguration = new SamplingConfiguration(
+                end: validationEnd.ToUnixTimeMilliseconds(),
+                start: validationStart.ToUnixTimeMilliseconds()
+            );
 
-            // Check for sensor status, if enabled
+            // Perform logical check, if enabled
             TimeSeriesData validationDps = null;
             var logicalCheck = config.LogicalCheck.FirstOrDefault();
             if (logicalCheck != null && logicalCheck.Enabled)
@@ -131,12 +134,12 @@ namespace Cognite.Simulator.Utils
                     logicalCheck.TimeseriesExternalId,
                     logicalCheck.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
-                    validationRange,
+                    validationConfiguration,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
                     config.DataSampling.Granularity,
                     logicalCheck.Aggregate.ToDataPointAggregate());
-                validationDps = LogicalCheckInternal(validationDps, validationRange, logicalCheck, config.DataSampling);
+                validationDps = LogicalCheckInternal(validationDps, validationConfiguration, logicalCheck);
             }
 
             // Check for steady state, if enabled
@@ -148,7 +151,7 @@ namespace Cognite.Simulator.Utils
                     steadyStateDetection.TimeseriesExternalId,
                     steadyStateDetection.Aggregate.ToDataPointAggregate(),
                     config.DataSampling.Granularity,
-                    validationRange,
+                    validationConfiguration,
                     token).ConfigureAwait(false);
 
                 if (!steadyStateDetection.MinSectionSize.HasValue || !steadyStateDetection.VarThreshold.HasValue || !steadyStateDetection.SlopeThreshold.HasValue)
@@ -181,7 +184,7 @@ namespace Cognite.Simulator.Utils
             }
 
             // Find sampling start/end
-            var samplingEnd = validationRange.Max;
+            long? samplingEnd = validationConfiguration.End;
             var samplingWindowMs = (long)TimeSpan.FromMinutes(config.DataSampling.SamplingWindow).TotalMilliseconds;
             if (feasibleTimestamps != null)
             {
@@ -192,7 +195,7 @@ namespace Cognite.Simulator.Utils
                 }
             }
 
-            var samplingStart = samplingEnd - samplingWindowMs;
+            var samplingStart = samplingEnd.Value - samplingWindowMs;
             return new TimeRange
             {
                 Min = samplingStart,
@@ -200,7 +203,10 @@ namespace Cognite.Simulator.Utils
             };
         }
 
-        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, SimulatorRoutineRevisionLogicalCheck lcConfig, SimulatorRoutineRevisionDataSampling sampling)
+        private static TimeSeriesData LogicalCheckInternal(
+            TimeSeriesData ts,
+            SamplingConfiguration samplingConfiguration,
+            SimulatorRoutineRevisionLogicalCheck lcConfig)
         {
             if (!Enum.TryParse(lcConfig.Operator, true, out DataSampling.LogicOperator op))
             {
@@ -211,7 +217,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentException("Logical check value is missing", nameof(lcConfig));
             }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max);
+            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, samplingConfiguration.End);
         }
 
         /// <summary>

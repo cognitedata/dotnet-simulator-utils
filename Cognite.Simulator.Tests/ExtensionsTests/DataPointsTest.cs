@@ -1,11 +1,7 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Simulator.Extensions;
+﻿using Cognite.Simulator.Extensions;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -19,10 +15,10 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [InlineData(1648026240000, 1648029840001, 1648028040000)]
         public void TestSamplingRange(long start, long end, long mid)
         {
-            SamplingRange range = new CogniteSdk.TimeRange { Min = start, Max = end };
-            Assert.Equal(start, range.Start);
-            Assert.Equal(end, range.End);
-            Assert.Equal(mid, range.Midpoint);
+            var samplingConfiguration = new SamplingConfiguration(start: start, end: end, samplingPosition: SamplingPosition.Midpoint);
+            Assert.Equal(start, samplingConfiguration.Start);
+            Assert.Equal(end, samplingConfiguration.End);
+            Assert.Equal(mid, samplingConfiguration.SimulationTime);
         }
 
         [Theory]
@@ -55,29 +51,21 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             // Tests assume the given time series exists in the test project and
             // that it contains data points in this time range
-            CogniteSdk.TimeRange range = new()
-            {
-                Min = 1631294940000,
-                Max = 1631296740000
-            };
+            var samplingConfiguration = new SamplingConfiguration(start: 1631294940000, end: 1631296740000);
             
             // Test max aggregation. A single data point should be returned
             var (timestamps, values) = await dataPoints.GetSample(
                 "SimConnect-IntegrationTests-OnOffValues",
                 Extensions.DataPointAggregate.Max,
                 800,
-                range,
+                samplingConfiguration,
                 System.Threading.CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(timestamps);
             Assert.NotNull(values);
             Assert.Single(values);
             Assert.Equal(1, values[0]);
 
-            CogniteSdk.TimeRange range2 = new()
-            {
-                Min = 0,
-                Max = 0
-            };
+            var range2 = new SamplingConfiguration(start: 0, end: 0);
 
             // No data points in the range. Throw exception
             _ = Assert.ThrowsAsync<DataPointSampleNotFoundException>(
