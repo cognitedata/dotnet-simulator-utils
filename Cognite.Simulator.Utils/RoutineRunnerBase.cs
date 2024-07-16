@@ -72,6 +72,46 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Load the input time series data point for the given input configuration.
+        /// </summary>
+        private async Task<SimulatorValueItem> LoadTimeseriesSimulationInput(
+            SimulatorRoutineRevisionInput inputTs,
+            SimulatorRoutineRevisionConfiguration routineConfiguration, 
+            SamplingRange samplingRange, 
+            CancellationToken token)
+        {
+            var dps = await _cdf.CogniteClient.DataPoints.GetSample(
+                inputTs.SourceExternalId,
+                inputTs.Aggregate.ToDataPointAggregate(),
+                routineConfiguration.DataSampling.Granularity,
+                samplingRange,
+                token).ConfigureAwait(false);
+            var inputDps = dps.ToTimeSeriesData(
+                routineConfiguration.DataSampling.Granularity,
+                inputTs.Aggregate.ToDataPointAggregate());
+
+            if (inputDps.Count == 0)
+            {
+                throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+            }
+
+            // This assumes the unit specified in the configuration is the same as the time series unit
+            // No unit conversion is made
+            var averageValue = inputDps.GetAverage();
+            return new SimulatorValueItem()
+            {
+                Value = new SimulatorValue.Double(averageValue),
+                Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
+                    Name = inputTs.Unit.Name
+                } : null,
+                Overridden = false,
+                ReferenceId = inputTs.ReferenceId,
+                TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                ValueType = SimulatorValueType.DOUBLE,
+            };
+        }
+
+        /// <summary>
         /// Run the given simulation run by parsing and executing the simulation routine associated with it
         /// </summary>
         /// <param name="runItem">Simulation run item</param>
@@ -170,50 +210,31 @@ namespace Cognite.Simulator.Utils
             // Collect sampled inputs, to run simulations and to store as time series and data points
             foreach (var inputTs in configObj.Inputs.Where(i => i.IsTimeSeries))
             {
-                var dps = await _cdf.CogniteClient.DataPoints.GetSample(
-                    inputTs.SourceExternalId,
-                    inputTs.Aggregate.ToDataPointAggregate(),
-                    configObj.DataSampling.Granularity,
-                    samplingRange,
-                    token).ConfigureAwait(false);
-                var inputDps = dps.ToTimeSeriesData(
-                    configObj.DataSampling.Granularity,
-                    inputTs.Aggregate.ToDataPointAggregate());
-                if (inputDps.Count == 0)
-                {
-                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+                // time series inputs could be overridden per run, in these cases the constant value should be read from the run data
+                if (!inputDataOverrides.TryGetValue(inputTs.ReferenceId, out var inputValue)) {
+                    inputValue = await LoadTimeseriesSimulationInput(inputTs, configObj, samplingRange, token).ConfigureAwait(false);
                 }
 
-                // This assumes the unit specified in the configuration is the same as the time series unit
-                // No unit conversion is made
-                var averageValue = inputDps.GetAverage();
-                inputData[inputTs.ReferenceId] = new SimulatorValueItem()
-                {
-                    Value = new SimulatorValue.Double(averageValue),
-                    Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
-                        Name = inputTs.Unit.Name
-                    } : null,
-                    Overridden = false,
-                    ReferenceId = inputTs.ReferenceId,
-                    TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
-                    ValueType = SimulatorValueType.DOUBLE,
-                };
+                inputData[inputTs.ReferenceId] = inputValue;
+
                 var simInput = new SimulationInput
                 {
                     RoutineRevisionInfo = routineRevisionInfo,
                     Name = inputTs.Name,
                     ReferenceId = inputTs.ReferenceId,
-                    Unit = inputTs.Unit?.Name,
+                    Unit = inputValue?.Unit?.Name,
                     SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
                 if (simInput.ShouldSaveToTimeSeries) {
+                    var inputRawValue = (inputValue.Value as SimulatorValue.Double).Value;
+
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.SaveTimeseriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingRange.Midpoint, averageValue) 
+                            new Datapoint(samplingRange.Midpoint, inputRawValue) 
                         });
                 }
             }

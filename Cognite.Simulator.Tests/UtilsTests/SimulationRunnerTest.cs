@@ -72,7 +72,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<SimulationInputOverride>(),
                     SimulatorValue.Create("42"),
                     false
-                }
+                },
+                // 5. timeseries inputs with override
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
+                    new List<SimulationInputOverride> {
+                        new SimulationInputOverride {
+                            ReferenceId = "IT1",
+                            Value = new SimulatorValue.Double(2345),
+                        },
+                    },
+                    SimulatorValue.Create(2345),
+                    true
+                },
             };
 
         private const long validationEndOverwrite = 1631304000000L;
@@ -83,7 +96,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             SimulatorRoutineCreateCommandItem createRoutineItem, 
             SimulatorRoutineRevisionCreate createRevisionItem,
             IEnumerable<SimulationInputOverride> inputOverrides,
-            SimulatorValue result,
+            SimulatorValue expectedResult,
             bool checkTs
         ) {
             var services = new ServiceCollection();
@@ -233,8 +246,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotEmpty(runDataRes.First().Outputs);
 
                 var resultValue = runDataRes.First().Outputs.First().Value;
-                Assert.Equal(resultValue.Type, result?.Type);
-                Assert.Equal(resultValue, result);
+                Assert.Equal(expectedResult?.Type, resultValue.Type);
+                Assert.Equal(expectedResult, resultValue);
 
                 if (checkTs) {
                     Assert.True(outTsIds.Any());
