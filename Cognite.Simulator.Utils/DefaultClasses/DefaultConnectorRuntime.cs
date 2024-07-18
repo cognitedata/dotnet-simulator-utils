@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -9,6 +11,7 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,12 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
     public delegate void ServiceConfiguratorDelegate(IServiceCollection services);
 
     public static ServiceConfiguratorDelegate ConfigureServices;
+
+    /// <summary>
+    /// The simulator definition. This will be used to create a simulator if the simulator definition
+    /// is not found on CDF.
+    /// </summary>
+    public static SimulatorCreate SimulatorDefinition;
 
     public static string ConnectorName = "Default";
     public static async Task RunStandalone()
@@ -51,7 +60,27 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
                 }
             }
         }
+    }
 
+    private static async Task GetOrCreateSimulator( Client cdfClient, DefaultConfig<TAutomationConfig> config, 
+    ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token) {
+        var definition = SimulatorDefinition;
+        var simulatorExternalId = config.Simulator.Name;
+        var simQuery = new SimulatorQuery { };
+        var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(simQuery, token).ConfigureAwait(false);
+        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorExternalId);
+        if (definition == null && existingSimulator == null) {
+            throw new Exception("Simulator definition not found in either the remote API or locally.");
+        }
+        if (definition != null) {
+            logger.LogDebug("Simulator definition found locally");
+            if (existingSimulator == null) {
+                logger.LogDebug("Simulator definition not found on CDF, will create one remotely");
+                var res = await cdfClient.Alpha.Simulators.CreateAsync(new List<SimulatorCreate> { definition }, token).ConfigureAwait(false);
+            } else {
+                logger.LogDebug("Simulator definition already exists on CDF");
+            }
+        } 
     }
 
     public static async Task Run(ILogger defaultLogger, CancellationToken token)
@@ -104,11 +133,15 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         logger.LogInformation("Starting the connector...");
 
         var destination = provider.GetRequiredService<CogniteDestination>();
-        
+        var cdfClient = provider.GetRequiredService<Client>();
+
         try
         {
             await destination.TestCogniteConfig(token).ConfigureAwait(false);
             logger.LogInformation("Connector can reach CDF!");
+
+            await GetOrCreateSimulator(cdfClient, config, logger, token).ConfigureAwait(false);
+
         }
         catch (Exception e)
         {
