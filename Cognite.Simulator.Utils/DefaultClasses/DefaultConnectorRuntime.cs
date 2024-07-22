@@ -63,107 +63,34 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
     }
 
 
-    private static bool AreCollectionsEqual<T>(IEnumerable<T> col1, IEnumerable<T> col2) where T : class
-    {
-        if (col1 == null || col2 == null)
-            return col1 == col2; // Both null is true, one null is false
-
-        // Convert collections to lists for easier manipulation
-        var list1 = col1.ToList();
-        var list2 = col2.ToList();
-
-        if (list1.Count != list2.Count)
-            return false;
-
-        // Compare each item in the collections
-        for (int i = 0; i < list1.Count; i++)
-        {
-            if (!AreObjectsEqual(list1[i], list2[i]))
-                return false;
-        }
-
-        return true;
-    }
-
-    private static bool AreObjectsEqual<T>(T obj1, T obj2) where T : class
-    {
-        if (obj1 == null || obj2 == null)
-            return obj1 == obj2; // Both null is true, one null is false
-
-        var properties = typeof(T).GetProperties();
-
-        foreach (var property in properties)
-        {
-            if (property.CanWrite) {
-                var value1 = property.GetValue(obj1);
-                var value2 = property.GetValue(obj2);
-                if (property.PropertyType == typeof(IEnumerable<SimulatorUnitEntry>)) {
-                    return AreObjectsEqual(value1, value2);
-                } else if (property.PropertyType == typeof(IEnumerable<SimulatorStepFieldParam>)) {
-                    return AreObjectsEqual(value1, value2);
-                }{
-                    if (!object.Equals(value1, value2)){
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
     /// <summary>
-    /// An method for creating a new simulator definition if anything was changed in the existing one
+    /// Prepares the simulator object for update
     /// </summary>
     /// <param name="existingSimulatorDefinition"></param>
     /// <param name="newSimulatorDefinition"></param>
     /// <param name="logger"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public static SimulatorUpdateItem CreateUpdateItemIfChanged(Simulator existingSimulatorDefinition, 
+    public static SimulatorUpdateItem PrepareUpdateSimulatorObject(Simulator existingSimulatorDefinition, 
     SimulatorCreate newSimulatorDefinition, ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger )
     {
         if (existingSimulatorDefinition == null) {
-            throw new Exception("Simulator definition (from CDF) is null");
+            throw new Exception("Simulator definition from remote is null");
         }
 
         if (newSimulatorDefinition == null) {
             throw new Exception("New simulator definition is null");
         }
 
-        var update = new SimulatorUpdate();
-        bool hasChanges = false;
-
-        // Check each property for changes
-        if (!AreCollectionsEqual(existingSimulatorDefinition.FileExtensionTypes, newSimulatorDefinition.FileExtensionTypes))
-        {
-            update.FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes };
-            hasChanges = true;
-            logger.LogInformation("Updating FileExtensionTypes");
-        }
-
-        if (!AreCollectionsEqual(existingSimulatorDefinition.ModelTypes, newSimulatorDefinition.ModelTypes))
-        {
-            update.ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes };
-            hasChanges = true;
-            logger.LogInformation("Updating ModelTypes");
-        }
-
-        if (!AreCollectionsEqual(existingSimulatorDefinition.StepFields, newSimulatorDefinition.StepFields))
-        {
-            update.StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields };
-            hasChanges = true;
-            logger.LogInformation("Updating StepFields");
-        }
-
-        if (!AreCollectionsEqual(existingSimulatorDefinition.UnitQuantities, newSimulatorDefinition.UnitQuantities))
-        {
-            update.UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities };
-            hasChanges = true;
-            logger.LogInformation("Updating UnitQuantities");
-        }
+        var update = new SimulatorUpdate {
+            FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes },
+            ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes },
+            StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields },
+            UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities }
+        };
 
         // Create and return the update item if there are changes
-        return hasChanges ? new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update } : null;
+        return new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update };
     }
 
     private static async Task GetOrCreateSimulator( Client cdfClient, DefaultConfig<TAutomationConfig> config, 
@@ -182,14 +109,10 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
                 logger.LogDebug("Simulator definition not found on CDF, will create one remotely");
                 var res = await cdfClient.Alpha.Simulators.CreateAsync(new List<SimulatorCreate> { definition }, token).ConfigureAwait(false);
             } else {
-                var updateItem = CreateUpdateItemIfChanged(existingSimulator, definition, logger);
-                if (updateItem != null) {
-                    logger.LogDebug("Updating simulator definition");
-                    var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
-                    await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);
-                } else {
-                    logger.LogDebug("Simulator definition already exists on CDF");
-                }
+                var updateItem = PrepareUpdateSimulatorObject(existingSimulator, definition, logger);
+                logger.LogDebug("Updating simulator definition");
+                var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
+                await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);                
             }
         } 
     }
