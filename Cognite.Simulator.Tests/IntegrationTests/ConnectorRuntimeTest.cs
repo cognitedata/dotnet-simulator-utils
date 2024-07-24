@@ -100,7 +100,10 @@ connector:
             using var provider = services.BuildServiceProvider();
             TestCdfClient = provider.GetRequiredService<Client>();
 
-            await SeedData.GetOrCreateSimulator(TestCdfClient, SeedData.SimulatorCreate);
+            // if the following call is not made before starting the test, we get an exception in the first test
+            // related to the sdk client not being initialized.
+            var simulators = await TestCdfClient.Alpha.Simulators.ListAsync(
+                new SimulatorQuery()).ConfigureAwait(false);
             await WriteConfig();
         }
 
@@ -119,6 +122,7 @@ connector:
 
                 DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = ConfigureServices;
                 DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
                 try
                 {
                     await DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
@@ -137,8 +141,24 @@ connector:
                             }
                         }
                     ).ConfigureAwait(false);
+
+                    var simulator = await TestCdfClient.Alpha.Simulators.ListAsync(
+                        new SimulatorQuery
+                        {
+                           
+                        }
+                    ).ConfigureAwait(false);
+
+                    var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
                     var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    Assert.True(existing.ExternalId == ConnectorExternalId);
+                    Assert.True( existing.ExternalId == ConnectorExternalId);
+                    
+                    var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
+                    Assert.NotNull(simulatorDefinition);
+
+                    // Simply checking the unit quantities created
+                    Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
+                    
                     await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
