@@ -53,7 +53,7 @@ namespace GapConnector{
                                 new SimulatorStepFieldParam {
                                     Name = "command",
                                     Label = "A Command",
-                                    Info = "Enter the command to send to the simulator,
+                                    Info = "Enter the command to send to the simulator",
                                 },
                             },
                         },
