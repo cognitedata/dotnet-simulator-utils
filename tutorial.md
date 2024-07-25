@@ -13,6 +13,65 @@ public static class YourConnector
     // We'll add methods here later
 }
 ```
+
+### Create a simulator definition
+
+Use the following as a template:
+
+```csharp
+using CogniteSdk.Alpha;
+using SimulatorCommon;
+
+namespace GapConnector{
+    static class SimulatorDefinition {
+        public static SimulatorCreate Get() {
+            return new SimulatorCreate()
+                {
+                    ExternalId = "GAP",
+                    Name = "GAP",
+                    FileExtensionTypes = new List<string> { "gar" },
+                    ModelTypes = new List<SimulatorModelType> {
+                        new SimulatorModelType {
+                            Name = "Oil and Water Well",
+                            Key = "OilWell",
+                        }
+                    },
+                    StepFields = new List<SimulatorStepField> {
+                        new SimulatorStepField {
+                            StepType = "get/set",
+                            Fields = new List<SimulatorStepFieldParam> {
+                                new SimulatorStepFieldParam {
+                                    Name = "address",
+                                    Label = "Address",
+                                    Info = "Enter the address to set",
+                                },
+                            },
+                        },
+                        new SimulatorStepField {
+                            StepType = "command",
+                            Fields = new List<SimulatorStepFieldParam> {
+                                new SimulatorStepFieldParam {
+                                    Name = "command",
+                                    Label = "A Command",
+                                    Info = "Enter the command to send to the simulator,
+                                },
+                            },
+                        },
+                    },
+                    UnitQuantities = new List<SimulatorUnitQuantity> {
+                        new SimulatorUnitQuantity {
+                            Label= "Pressure",
+                            Name = "Pressure",
+                            Units = {
+                                new SimulatorUnitEntry {}
+                            }
+                        }
+                    }
+                };
+        }
+    }
+}
+```
 ### Implement ISimulatorClient
 Create a class that implements ISimulatorClient:
 
