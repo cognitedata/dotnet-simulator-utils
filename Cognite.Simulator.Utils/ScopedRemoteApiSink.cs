@@ -9,6 +9,7 @@ using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
 using Oryx.Cognite;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils {
 
@@ -16,12 +17,25 @@ namespace Cognite.Simulator.Utils {
     /// Represents a sink for emitting log events to a remote API.
     /// </summary>
     /// 
-    public class ScopedRemoteApiSink : ILogEventSink
+    public class ScopedRemoteApiSink<TAutomationConfig> : ILogEventSink
+    where TAutomationConfig : AutomationConfig, new()
+    
     {
         private SimulatorLoggingConfig apiLoggerConfig;
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
         private long? defaultLogId;
+        
+        /// <summary>
+        /// Create a scoped api sink
+        /// </summary>
+        /// <param name="config"></param>
+        public ScopedRemoteApiSink(DefaultConfig<TAutomationConfig> config) : base(){
+            if (config == null) {
+                throw new Exception("Default config has not been instantiated");
+            }
+            apiLoggerConfig = config.Connector.ApiLogger;
+        }
 
 
         /// <summary>
@@ -75,24 +89,6 @@ namespace Cognite.Simulator.Utils {
                 return oldValue;
             });
             
-        }
-
-        /// <summary>
-        /// Sets the configuration for the remote API.
-        /// </summary>
-        /// <param name="config">This configuration sets the minimum log level to report to the API and
-        /// whether the remote logging is enabled or not.
-        /// </param>
-        public void SetConfig(SimulatorLoggingConfig config)
-        {
-            if(config == null){
-                apiLoggerConfig = new SimulatorLoggingConfig{
-                    Level = LogEventLevel.Information,
-                    Enabled = true
-                };
-            } else {
-                apiLoggerConfig = config;
-            }
         }
 
         /// <summary>
