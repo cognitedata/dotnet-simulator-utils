@@ -153,9 +153,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
-       
-        Console.WriteLine("API LOGGER LOG LEVEL : " + config.Connector.ApiLogger.Level);
-
 
         services.AddExtractionPipeline(config.Connector);
 
