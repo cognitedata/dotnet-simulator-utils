@@ -186,14 +186,11 @@ namespace Cognite.Simulator.Utils
                         "{Number} simulation run(s) that are in progress (but should have finished) found in CDF",
                         simulationRunningItems.Count());
                 }
-                var allRunItems = new List<SimulationRunItem>(simulationRuns);
-                allRunItems.AddRange(simulationRunningItems);
+                // Process the "running" events first. Those will be saved as "failed" in CDF
+                // and then process the "ready" events in the older-first order.
+                var allRunItems = new List<SimulationRunItem>(simulationRunningItems);
+                allRunItems.AddRange(simulationRuns);
 
-                // sort by created time
-                allRunItems.Sort((e1, e2) =>
-                {
-                    return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
-                });
                 foreach (SimulationRunItem runItem in allRunItems)
                 {
                     var runId = runItem.Run.Id;
@@ -287,7 +284,8 @@ namespace Cognite.Simulator.Utils
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
-                throw new ConnectorException("Simulation failed due to connector error");
+                _logger.LogWarning("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
+                throw new ConnectorException("Simulation entered unrecoverable state failed");
             }
             return (model, calcConfig);
         }
