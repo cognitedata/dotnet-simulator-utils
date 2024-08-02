@@ -284,7 +284,7 @@ namespace Cognite.Simulator.Utils
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
-                _logger.LogWarning("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
+                _logger.LogError("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
                 throw new ConnectorException("Simulation entered unrecoverable state failed");
             }
             return (model, calcConfig);
