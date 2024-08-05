@@ -296,10 +296,6 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
 
             }
-            catch (SimulationModelVersionCreationException ex)
-            {
-                throw new ConnectorException(ex.Message, ex.CogniteErrors);
-            }
             catch (SimulationTimeSeriesCreationException ex)
             {
                 throw new ConnectorException(ex.Message, ex.CogniteErrors);

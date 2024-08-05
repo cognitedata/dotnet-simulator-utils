@@ -62,14 +62,4 @@ namespace Cognite.Simulator.Utils
             this.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
     }
-
-    /// <summary>
-    /// Extension utilities for the model parsing info
-    /// TODO: move the methods to model parsing info 
-    /// </summary>
-    public static class ModelParsingExtensions
-    {
-
-
-    }
 }
