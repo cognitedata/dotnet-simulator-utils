@@ -41,7 +41,7 @@ automation:
   program-id: "COMDLLExample.MyCOMClass"
 ```
 
-Create an simulator connector by subclassing the `ISimulatorClient<YourModelFilestate, SimulatorRoutineRevision>` class:
+Create a simulator connector by subclassing the `ISimulatorClient<YourModelFilestate, SimulatorRoutineRevision>` class:
     
 ```csharp
 public class YourSimulatorClient : 
