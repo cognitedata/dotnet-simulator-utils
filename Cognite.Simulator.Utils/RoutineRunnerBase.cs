@@ -63,7 +63,7 @@ namespace Cognite.Simulator.Utils
                 new List<long> { runId },
                 token: token).ConfigureAwait(false);
             var dataResItem = dataRes.FirstOrDefault();
-            if (dataResItem != null && dataResItem.Inputs != null)
+            if (dataResItem != null && dataResItem.Inputs != null && dataResItem.Inputs.Any())
             {
                 inputDataOverrides = dataResItem.Inputs.ToDictionarySafe(i => i.ReferenceId, i => i);
             }
@@ -170,7 +170,7 @@ namespace Cognite.Simulator.Utils
             var configObj = routineRevision.Configuration;
 
             // Collect constant inputs, to run simulations and to store as time series and data points
-            if (configObj.Inputs != null) {
+            if (configObj.Inputs != null && configObj.Inputs.Any()) {
                 foreach (var originalInput in configObj.Inputs.Where(i => i.IsConstant))
                 {
                     // constant values should be read directly from the run data as they may be overridden per run

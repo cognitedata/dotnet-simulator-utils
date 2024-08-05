@@ -86,6 +86,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SimulatorValue.Create(2345),
                     true
                 },
+                // 1. routine without inputs
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithoutInputs,
+                    SeedData.SimulatorRoutineRevisionWithoutInputs,
+                    new List<SimulationInputOverride>(),
+                    SimulatorValue.Create("42"),
+                    false // check for timeseries
+                },
             };
 
         private const long validationEndOverwrite = 1631304000000L;

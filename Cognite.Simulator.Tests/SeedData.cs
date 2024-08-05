@@ -25,6 +25,8 @@ namespace Cognite.Simulator.Tests
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
+
+        public static string TestRoutineExternalIdWithoutInputs = "Test Routine without Inputs " + Now;
         public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -334,6 +336,78 @@ namespace Cognite.Simulator.Tests
             ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Scheduled Routine",
+        };
+
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithoutInputs = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    Enabled = true,
+                    ValidationWindow = 1440,
+                    SamplingWindow = 60,
+                    Granularity = 1,
+                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
+                Inputs = new List<SimulatorRoutineRevisionInput>(),
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        ValueType = SimulatorValueType.DOUBLE,
+                        Unit = new SimulatorValueUnit() {
+                            Name = "STB/MMscf",
+                            Quantity = "LiqRate/GasRate",
+                        },
+                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                    },
+                },
+            },
+            ExternalId = $"{TestRoutineExternalIdWithoutInputs} - 1",
+            RoutineExternalId = TestRoutineExternalIdWithoutInputs,
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 1,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "command", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 2,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "OT1" },
+                                { "address", "42" },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithoutInputs = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevisionWithoutInputs.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test Without Inputs",
         };
 
         public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithExtendedIO = new SimulatorRoutineRevisionCreate()
