@@ -11,6 +11,9 @@ Cognite Simulator Integration Utils
 
 Utilities for developing simulator integrations within CDF 
 
+
+[Documentation](https://cognitedata.github.io/dotnet-simulator-utils/index.html)
+
 # Code of Conduct
 
 This project follows https://www.contributor-covenant.org

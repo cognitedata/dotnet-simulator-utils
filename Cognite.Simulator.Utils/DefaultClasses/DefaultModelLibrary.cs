@@ -12,7 +12,13 @@ using Microsoft.Extensions.Logging;
 namespace Cognite.Simulator.Utils
 {
 
-    public class DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco> :
+    /// <summary>
+    /// Default implementation of a model library for a simulator
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">Type of the automation configuration</typeparam>
+    /// <typeparam name="TModelStateBase">Type of the model state</typeparam>
+    /// <typeparam name="TModelStateBasePoco">Type of the model state POCO</typeparam>
+    public class DefaultModelLibrary<TAutomationConfig, TModelStateBase, TModelStateBasePoco> :
     ModelLibraryBase<TAutomationConfig,TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
     where TModelStateBase: ModelStateBase, new()
@@ -20,6 +26,9 @@ namespace Cognite.Simulator.Utils
     {
         private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
 
+        /// <summary>
+        /// Creates an instance of the model library
+        /// </summary>
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,

@@ -30,11 +30,12 @@ namespace Cognite.Simulator.Utils
     /// It fetches simulator model files from CDF, save a local copy and process the model (extract information).
     /// This library only keeps the latest version of a given model file
     /// </summary>
+    /// <typeparam name="A">Type of the automation configuration object</typeparam>
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
     public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A,T>
-        where A: AutomationConfig
+        where A : AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
