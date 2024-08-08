@@ -95,7 +95,6 @@ namespace Cognite.Simulator.Utils
             {
                 var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink<TAutomationConfig>>();
                 var config = p.GetService<LoggerConfig>();
-                var defaultConfig = p.GetService<DefaultConfig<TAutomationConfig>>();
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
                     // No logging configuration
