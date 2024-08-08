@@ -2,6 +2,7 @@
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,6 +103,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<RoutineLibraryTest>();
@@ -141,7 +144,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var modelLib = provider.GetRequiredService<ModeLibraryTest>();
                 var configLib = provider.GetRequiredService<RoutineLibraryTest>();
                 var runner = provider.GetRequiredService<SampleSimulationRunner>();
-                var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+                var sink = provider.GetRequiredService<ScopedRemoteApiSink<AutomationConfig>>();
 
                 // Run model and configuration libraries to fetch the test model and
                 // test simulation configuration from CDF

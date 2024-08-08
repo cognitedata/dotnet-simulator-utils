@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -63,6 +64,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             });
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
 
             StateStoreConfig stateConfig = null;
 

@@ -31,11 +31,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
             var cdf = provider.GetRequiredService<Client>();
-            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink<AutomationConfig>>();
 
             try
             {
@@ -131,11 +133,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
             var cdf = provider.GetRequiredService<Client>();
-            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink<AutomationConfig>>();
 
             try
             {
@@ -257,11 +261,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
             var cdf = provider.GetRequiredService<Client>();
-            var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            var sink = provider.GetRequiredService<ScopedRemoteApiSink<AutomationConfig>>();
 
             try
             {
@@ -346,7 +352,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
-
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -406,6 +413,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();

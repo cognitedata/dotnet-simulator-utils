@@ -239,5 +239,9 @@ namespace Cognite.Simulator.Utils
 
             if (Connector.PipelineNotification == null) Connector.PipelineNotification = new PipelineNotificationConfig();
         }
+
+        public DefaultConfig() : base(){
+            this.GenerateDefaults();
+        }
     }
 }

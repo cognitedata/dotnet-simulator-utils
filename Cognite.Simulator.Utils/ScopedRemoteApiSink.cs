@@ -34,6 +34,12 @@ namespace Cognite.Simulator.Utils {
             if (config == null) {
                 throw new Exception("Default config has not been instantiated");
             }
+            if (config.Connector == null) {
+                throw new Exception("Connector config has not been instantiated");
+            }
+            if (config.Connector.ApiLogger == null) {
+                throw new Exception("Api Logger config has not been instantiated");
+            }
             apiLoggerConfig = config.Connector.ApiLogger;
         }
 

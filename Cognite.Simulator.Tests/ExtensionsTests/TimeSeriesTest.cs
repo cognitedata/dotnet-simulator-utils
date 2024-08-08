@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.ExtensionsTests
 {
@@ -19,7 +21,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             long dataSetId = SeedData.TestDataSetId;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;
