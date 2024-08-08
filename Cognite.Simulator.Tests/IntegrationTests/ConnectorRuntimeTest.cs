@@ -97,6 +97,8 @@ connector:
         public async Task SetupTest() {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             TestCdfClient = provider.GetRequiredService<Client>();
 
@@ -150,14 +152,24 @@ connector:
                     ).ConfigureAwait(false);
 
                     var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
-                    var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    Assert.True( existing.ExternalId == ConnectorExternalId);
+                    var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
+                    Assert.True( existingIntegration.ExternalId == ConnectorExternalId);
                     
                     var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
                     Assert.NotNull(simulatorDefinition);
 
                     // Simply checking the unit quantities created
                     Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
+
+                    var cancellationToken = new CancellationToken();
+                    var logsRes = await TestCdfClient.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                        new List<Identity> { new Identity(existingIntegration.LogId) }, cancellationToken).ConfigureAwait(false);    
+                    var logItems = logsRes.First().Data;
+
+                    /*logItems.Select(item => {
+                        Console.WriteLine("Item : " + item.Message);
+                        return item;
+                    });*/
                     
                     await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
                 }

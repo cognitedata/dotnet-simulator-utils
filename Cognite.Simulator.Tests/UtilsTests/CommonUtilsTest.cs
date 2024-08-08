@@ -1,5 +1,6 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +30,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;

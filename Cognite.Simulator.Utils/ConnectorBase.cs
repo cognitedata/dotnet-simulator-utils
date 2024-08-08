@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cognite.Extractor.Configuration;
 using CogniteSdk.Alpha;
 using CogniteSdk;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
@@ -56,7 +57,9 @@ namespace Cognite.Simulator.Utils
     /// Base class for simulator connectors. Implements heartbeat reporting.
     /// The connector information is stored in the simulator integration resource in CDF.
     /// </summary>
-    public abstract class ConnectorBase<T> where T : BaseConfig
+    public abstract class ConnectorBase<T,TAutomationConfig> where T : BaseConfig
+            where TAutomationConfig : AutomationConfig, new()
+
     {
         /// <summary>
         /// CDF client wrapper
@@ -70,7 +73,7 @@ namespace Cognite.Simulator.Utils
         private ConnectorConfig Config { get; }
 
         private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
-        private readonly ILogger<ConnectorBase<T>> _logger;
+        private readonly ILogger<ConnectorBase<T,TAutomationConfig>> _logger;
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
@@ -79,7 +82,7 @@ namespace Cognite.Simulator.Utils
         private const int ONE_HOUR = 3600;
 
         private readonly RemoteConfigManager<T> _remoteConfigManager;
-        private readonly ScopedRemoteApiSink _remoteApiSink;
+        private readonly ScopedRemoteApiSink<TAutomationConfig> _remoteApiSink;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -94,9 +97,9 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ILogger<ConnectorBase<T>> logger,
+            ILogger<ConnectorBase<T,TAutomationConfig>> logger,
             RemoteConfigManager<T> remoteConfigManager,
-            ScopedRemoteApiSink remoteSink)
+            ScopedRemoteApiSink<TAutomationConfig> remoteSink)
         {
             Cdf = cdf;
             Simulators = simulators;

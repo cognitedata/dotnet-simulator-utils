@@ -121,7 +121,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
     {
         var assembly = Assembly.GetEntryAssembly();
         var services = new ServiceCollection();
-        services.AddLogger();
         services.AddCogniteClient($"{ConnectorName}Connector", $"{ConnectorName}Connector (Cognite)", true);
 
         DefaultConfig<TAutomationConfig> config;
@@ -139,7 +138,8 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
             defaultLogger.LogError("Failed to load configuration file: {Message}", e.Message);
             return;
         }
-
+        services.AddSingleton<ScopedRemoteApiSink<TAutomationConfig>>();
+        services.AddLogger<TAutomationConfig>();
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
@@ -154,8 +154,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
-       
-        
 
         services.AddExtractionPipeline(config.Connector);
 

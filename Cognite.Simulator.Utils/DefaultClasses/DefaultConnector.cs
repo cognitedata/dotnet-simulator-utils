@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
-    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
+    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>,TAutomationConfig>  
         where TAutomationConfig : AutomationConfig, new()
          where TModelState: ModelStateBase, new()
          where TModelStateBasePoco: ModelStateBasePoco
@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Utils
         private readonly DefaultSimulationScheduler<TAutomationConfig> _scheduler;
         private readonly ExtractionPipeline _pipeline;
         private readonly string _version;
-        private readonly ScopedRemoteApiSink _sink;
+        private readonly ScopedRemoteApiSink<TAutomationConfig> _sink;
 
         private ISimulatorClient<TModelState, SimulatorRoutineRevision> _simulatorClient;
 
@@ -41,7 +41,7 @@ namespace Cognite.Simulator.Utils
             ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> logger,
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
             ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
-            ScopedRemoteApiSink sink)
+            ScopedRemoteApiSink<TAutomationConfig> sink)
             : base(cdf, config.Connector, new List<SimulatorConfig> { config.Simulator }, logger, remoteConfigManager, sink)
         {
             _config = config;
@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
                 {
                     var linkedToken = linkedTokenSource.Token;
                     var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
-                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
+                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken); 
                     var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
                     taskList.AddRange(modelLibTasks);
                     taskList.AddRange(configLibTasks);
