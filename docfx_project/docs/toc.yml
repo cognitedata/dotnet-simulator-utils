@@ -1,2 +1,6 @@
-- name: Getting Started
-  href: getting-started.md
+- name: Create a new connector
+  href: create-connector.md
+- name: Implement a routine
+  href: implement-routine.md
+- name: Testing & Extras
+  href: testing-and-extras.md
