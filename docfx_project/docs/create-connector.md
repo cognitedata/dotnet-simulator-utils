@@ -12,9 +12,8 @@ To create a console application and add the latest version of the library:
 
 Using .NET CLI:
 ```sh
-mkdir NewSimConnector
+dotnet new console -o NewSimConnector
 cd NewSimConnector
-dotnet new console
 dotnet add package Cognite.Simulator.Utils --prerelease
 ```
 NB: The `--prerelease` flag is required to install the latest version of the library (alpha).
@@ -136,7 +135,7 @@ Steps can be of type `get`, "set`, or "command".
 
 We may fill these fields with the actual values later, but for now, we can use placeholders.
 
-### Implement a simulator clientz
+### Implement a simulator client
 Create a class that implements `ISimulatorClient`:
 
 ```csharp
