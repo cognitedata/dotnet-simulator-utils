@@ -122,7 +122,7 @@ public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFi
     }
 ```
 
-Not we can call the API and create aa new routine and routine revision. We can then call the `RunSimulation` method to perform the simulation.
+Not we can call the API and create a new routine and routine revision. We can then call the `RunSimulation` method to perform the simulation.
 
 Routine:
 ```
