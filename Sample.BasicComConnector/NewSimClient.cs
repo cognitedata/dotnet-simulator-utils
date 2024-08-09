@@ -69,8 +69,27 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return _version;
     }
 
-    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision simulationConfiguration, Dictionary<string, SimulatorValueItem> inputData)
+    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
     {
-        throw new NotImplementedException();
+        lock (simulatorLock)
+        {
+            dynamic workbook = null;
+            try
+            {
+                Initialize();
+                workbook = OpenBook(modelState.FilePath);
+
+                var routine = new NewSimRoutine(workbook, routineRev, inputData);
+                return Task.FromResult(routine.PerformSimulation());
+            }
+            finally
+            {
+                if (workbook != null)
+                {
+                    workbook.Close(false);
+                }
+                Shutdown();
+            }
+        }
     }
 }

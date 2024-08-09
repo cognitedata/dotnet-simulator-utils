@@ -15,13 +15,15 @@ public dynamic OpenBook(string path)
 }
 ```
 
-### Implement the ExtractModelInformation method in the NewSimClient class:
+### Implement the ExtractModelInformation method
 
 This method is used to extract the model information from the simulator.
 For the sake of this example we will only open the Excel `.xlsx` file.
 
 If the file is opened successfully, we will set the parsing info to `success`, otherwise to `failure`.
 
+
+In the `NewSimClient` class:
 ```csharp
 public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {

@@ -5,8 +5,10 @@ Routine is an entity that contains configuration of the input and output paramet
 It also contains a list of instructions for the connector to pass into the simulation model.
 In this tutorial we will implement the actual communication between the connector and a simulator using COM interface.
 
-First, create a class that inherits from `RoutineImplementationBase`:
+First, create a class that inherits from `RoutineImplementationBase`.
 
+
+NewSimRoutine.cs:
 ```csharp
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
@@ -65,17 +67,8 @@ public class NewSimRoutine : RoutineImplementationBase
             throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
         }
 
-        var rawValue = cell.Value;
-        SimulatorValue value;
-
-        if (rawValue is double || rawValue is int)
-        {
-            value = new SimulatorValue.Double((double) rawValue);
-        }
-        else
-        {
-            throw new NotImplementedException($"Type of the value with the reference {outputConfig.ReferenceId} is not supported");
-        }
+        var rawValue = (double) cell.Value;
+        SimulatorValue value = new SimulatorValue.Double(rawValue);
 
         var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
 
@@ -95,9 +88,8 @@ public class NewSimRoutine : RoutineImplementationBase
     }
 }
 ```
-This class will be used to perform the simulation. The `SetInput` method is used to set the input values for the simulation. The `GetOutput` method is used to get the output values from the simulation. The `RunCommand` method is used to run commands in the simulation.
-
-Currently, `SetInput`, `GetOutput`, and `RunCommand` are mocked implementations. We will show how to implement these methods in the next tutorial.
+This class will be used to perform the simulation.
+The `SetInput` method is used to set the input values for the simulation. The `GetOutput` method is used to get the output values from the simulation. The `RunCommand` method is used to run commands in the simulation, but it is not needed for this simulator as the results are calculated immediatelly on the worksheet.
 
 #### Implement `RunSimulation` method in `NewSimClient`
 
@@ -147,85 +139,99 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
 
 Routine revision:
 ```
+POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines/revisions
+
 {
-    "items": [
-{
-            "externalId": "simple-computations-6",
-            "routineExternalId": "simple-computations",
-            "configuration": {
-                "schedule": {
-                    "enabled": false
+    "items": [{
+        "externalId": "simple-computations-1",
+        "routineExternalId": "simple-computations",
+        "configuration": {
+            "schedule": {
+                "enabled": false
+            },
+            "dataSampling": {
+                "enabled": false
+            },
+            "logicalCheck": [],
+            "steadyStateDetection": [],
+            "inputs": [
+                {
+                    "name": "Number",
+                    "referenceId": "I1",
+                    "value": 10.0,
+                    "valueType": "DOUBLE"
                 },
-                "dataSampling": {
-                    "enabled": false
-                },
-                "logicalCheck": [],
-                "steadyStateDetection": [],
-                "inputs": [
+                {
+                    "name": "Formula",
+                    "referenceId": "F1",
+                    "value": "=A1 * 2",
+                    "valueType": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "Formula Result",
+                    "referenceId": "FR1",
+                    "valueType": "DOUBLE"
+                }
+            ]
+        },
+        "script": [
+            {
+                "order": 1,
+                "description": "Set Inputs",
+                "steps": [
                     {
-                        "name": "Number",
-                        "referenceId": "I1",
-                        "value": 10.0,
-                        "valueType": "DOUBLE"
+                        "order": 1,
+                        "stepType": "Set",
+                        "arguments": {
+                            "referenceId": "I1",
+                            "row": "1",
+                            "col": "1"
+                        }
                     },
                     {
-                        "name": "Formula",
-                        "referenceId": "F1",
-                        "value": "=A1 * 2",
-                        "valueType": "STRING"
-                    }
-                ],
-                "outputs": [
-                    {
-                        "name": "Formula Result",
-                        "referenceId": "FR1",
-                        "valueType": "DOUBLE"
+                        "order": 2,
+                        "stepType": "Set",
+                        "arguments": {
+                            "referenceId": "F1",
+                            "row": "1",
+                            "col": "2"
+                        }
                     }
                 ]
             },
-            "script": [
-                {
-                    "order": 1,
-                    "description": "Set Inputs",
-                    "steps": [
-                        {
-                            "order": 1,
-                            "stepType": "Set",
-                            "arguments": {
-                                "referenceId": "I1",
-                                "row": "1",
-                                "col": "1"
-                            }
-                        },
-                        {
-                            "order": 2,
-                            "stepType": "Set",
-                            "arguments": {
-                                "referenceId": "F1",
-                                "row": "1",
-                                "col": "2"
-                            }
+            {
+                "order": 3,
+                "description": "Set outputs",
+                "steps": [
+                    {
+                        "order": 1,
+                        "stepType": "Get",
+                        "arguments": {
+                            "referenceId": "FR1",
+                            "row": "1",
+                            "col": "2"
                         }
-                    ]
-                },
-                {
-                    "order": 3,
-                    "description": "Set outputs",
-                    "steps": [
-                        {
-                            "order": 1,
-                            "stepType": "Get",
-                            "arguments": {
-                                "referenceId": "FR1",
-                                "row": "1",
-                                "col": "2"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+                    }
+                ]
+            }
+        ]
+    }]
 }
 ```
+
+Let's try to run the simulation and see the results.
+
+Click on the routine and then click on the `Run now` button.
+
+[Running simulation](./images/run-simulation.png)
+
+When the simulation is finished, you can see the details in the `Run browser` tab.
+
+[Simulation details](./images/simulation-details.png)
+
+Click `View data` to see the results of the simulation.
+
+[Simulation results](./images/simulation-results.png)
 
