@@ -225,13 +225,13 @@ Let's try to run the simulation and see the results.
 
 Click on the routine and then click on the `Run now` button.
 
-[Running simulation](./images/run-simulation.png)
+![Running simulation](../images/running-simulation.png)
 
 When the simulation is finished, you can see the details in the `Run browser` tab.
 
-[Simulation details](./images/simulation-details.png)
+![Simulation details](../images/simulation-details.png)
 
 Click `View data` to see the results of the simulation.
 
-[Simulation results](./images/simulation-results.png)
+![Simulation results](../images/simulation-data.png)
 
