@@ -66,8 +66,8 @@ Make sure to populate the environment variables with the correct values. Alterna
 
 Now we to have to define a contract between the simulator and the Cognite Data Fusion platform. This contract is defined in the API as a `Simulator` object.
 
-Create a class that returns a `SimulatorCreate` object,
-you can just copy the following code and replace the values with your own:
+Create a new file called `SimulatorDefinition.cs`.
+The copy the following code into it and replace the values with your own:
 
 ```csharp
 using CogniteSdk.Alpha;
@@ -124,10 +124,10 @@ static class SimulatorDefinition {
 }
 ```
 
-`UnitQuantities`, `ModelTypes`, and `StepFields` are used to define the simulator capabilities and the types of data it can handle.
+`UnitQuantities`, `ModelTypes`, and `StepFields` are used to define the simulator units, models, and fields that the simulator can handle.
 
 `StepFields` are used to define how simulator object fields can be accessed in order to both send values into the simulator and read results of a simulation.
-Steps can be of type `get`, "set`, or "command".
+Steps can be of type `get`, `set`, or `command`.
 
 `UnitQuantities` are used to define the units of measurement that the simulator can handle.
 
@@ -136,8 +136,9 @@ Steps can be of type `get`, "set`, or "command".
 We may fill these fields with the actual values later, but for now, we can use placeholders.
 
 ### Implement a simulator client
-Create a class that implements `ISimulatorClient`:
+Create a class that implements `ISimulatorClient`.
 
+NewSimClient.cs:
 ```csharp
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
@@ -170,14 +171,14 @@ We will implement the methods in the `NewSimClient` class later.
 
 #### Create a ConnectorRuntime class
 We need to configure the services via Dependency Injection and boilerplate code to run the connector.
-Create a class using `DefaultConnectorRuntime` helper class:
+Create a class using `DefaultConnectorRuntime` helper class.
 
+ConnectorRuntime.cs:
 ```csharp
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 public static class ConnectorRuntime {
 
