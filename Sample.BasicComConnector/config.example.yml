@@ -1,9 +1,3 @@
-# Getting Started
-
-
-Create a ```config.yml``` file containing the simulator configuration
-
-```yaml
 version: 1
 
 logger:
@@ -12,7 +6,7 @@ logger:
 
 cognite:
     project: ${COGNITE_PROJECT}
-    # This is for microsoft as IdP, to use a different provider,
+    # This is for Microsoft Entra as an IdP, to use a different provider,
     # set implementation: Basic, and use token-url instead of tenant.
     # See the example config for the full list of options.
     idp-authentication:
@@ -24,30 +18,15 @@ cognite:
         secret: ${COGNITE_CLIENT_SECRET}
         # List of resource scopes, ex:
         # scopes:
-        #   - scopeA
-        #   - scopeB
+        #   - https://api.cognitedata.com/.default
         scopes:
           - ${COGNITE_SCOPE}
 
 
 simulator:
-  name: "NEWSIMULATOR"
+  name: "NewSim"
+  # Data set id to keep all the simulator resources
   data-set-id: ${COGNITE_DATA_SET_ID}
     
 connector:
-  name-prefix: "test-connector@"
-
-automation:
-  program-id: "COMDLLExample.MyCOMClass"
-```
-
-Create a simulator connector by subclassing the `ISimulatorClient<YourModelFilestate, SimulatorRoutineRevision>` class:
-    
-```csharp
-public class YourSimulatorClient : 
-        ISimulatorClient<YourModelFilestate, SimulatorRoutineRevision> {
-
-    
-    // TBD
-}
-```
+  name-prefix: "new-sim-connector@"
