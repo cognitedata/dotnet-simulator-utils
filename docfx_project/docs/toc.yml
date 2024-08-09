@@ -1,5 +1,7 @@
 - name: Create a new connector
   href: create-connector.md
+- name: Model parsing
+  href: model-parsing.md
 - name: Implement a routine
   href: implement-routine.md
 - name: Testing & Extras

@@ -1,4 +1,5 @@
-### Error Handling and Logging
+# Error Handling and Logging
+
 Implement proper error handling and logging throughout your connector. Use the ILogger interface for consistent logging.
 
 A logger is available in the ISimulatorClient and can be accessed as follows:
