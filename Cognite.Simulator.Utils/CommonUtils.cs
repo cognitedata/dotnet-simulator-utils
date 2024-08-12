@@ -104,6 +104,7 @@ namespace Cognite.Simulator.Utils
     {
         /// <summary>
         /// Run logical check and steady state detection based on a simulation configuration.
+        /// Runs only if data sampling is enabled
         /// </summary>
         /// <param name="dataPoints">CDF data points resource</param>
         /// <param name="config">Simulation configuration</param>
@@ -230,13 +231,16 @@ namespace Cognite.Simulator.Utils
         /// <returns>Time series data</returns>
         public static TimeSeriesData ToTimeSeriesData(
             this (long[] Timestamps, double[] Values) dataPoints,
-            int granularity,
+            int? granularity,
             Extensions.DataPointAggregate aggreagate)
         {
+            if (granularity == null) {
+                throw new ArgumentNullException("ToTimeSeriesData: Granularity is not defined");
+            }
             return new TimeSeriesData(
                 dataPoints.Timestamps,
                 dataPoints.Values,
-                granularity * 60_000,
+                (int)granularity * 60_000,
                 aggreagate == Extensions.DataPointAggregate.StepInterpolation);
         }
 

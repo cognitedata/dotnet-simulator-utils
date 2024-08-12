@@ -168,16 +168,17 @@ namespace Cognite.Simulator.Utils
             // Collect sampled inputs, to run simulations and to store as time series and data points
             foreach (var inputTs in configObj.Inputs.Where(i => i.IsTimeSeries))
             {
+                // set granularity to null if data sampling is disabled
+                int? granularity = configObj.DataSampling.Enabled ? configObj.DataSampling.Granularity : (int?)null;
+
                 var dps = await _cdf.CogniteClient.DataPoints.GetSample(
                     inputTs.SourceExternalId,
                     inputTs.Aggregate.ToDataPointAggregate(),
-                    // TODO: add null check as the granularity might be null if data sampling is disabled
-                    // the nullability needs to be updated on the SDK side first
-                    configObj.DataSampling.Granularity,
+                    granularity,
                     samplingConfiguration,
                     token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
-                    configObj.DataSampling.Granularity,
+                    granularity,
                     inputTs.Aggregate.ToDataPointAggregate());
                 if (inputDps.Count == 0)
                 {

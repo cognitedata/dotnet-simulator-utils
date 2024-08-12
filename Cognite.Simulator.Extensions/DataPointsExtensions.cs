@@ -30,7 +30,7 @@ namespace Cognite.Simulator.Extensions
             this DataPointsResource dataPoints,
             string timeSeriesExternalId,
             DataPointAggregate aggregate,
-            int granularity,
+            int? granularity,
             SamplingConfiguration samplingConfiguration,
             CancellationToken token
             )
@@ -42,6 +42,10 @@ namespace Cognite.Simulator.Extensions
             // If the start time is specified, we sample data points with aggregates
             if (samplingConfiguration.Start.HasValue)
             {
+                if (granularity == null)
+                {
+                    throw new ArgumentNullException("Granularity not defined : " + nameof(granularity));
+                }
                 var dps = await dataPoints.ListAsync(
                     new DataPointsQuery
                     {
@@ -53,7 +57,7 @@ namespace Cognite.Simulator.Extensions
                                 Aggregates = new[] {aggregate.AsString()},
                                 Start = $"{samplingConfiguration.Start.Value}",
                                 End = $"{samplingConfiguration.End + 1}", // Add 1 because end is exclusive
-                                Granularity = MinutesToGranularity(granularity),
+                                Granularity = MinutesToGranularity((int)granularity),
                                 Limit = 10_000 // TODO: Functionality to make sure we get all data points
                             }
                         },

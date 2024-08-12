@@ -2,6 +2,7 @@
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -89,6 +90,21 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             Assert.NotNull(values2);
             Assert.Single(values2);
             Assert.Equal(1, values2[0]);
+
+
+            // DataSampling disabled range
+            var currentTimeEpoch = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var disabledDataSampling = new SamplingConfiguration( end: currentTimeEpoch );
+            var (timestamps3, values3) = await dataPoints.GetSample(
+                "SimConnect-IntegrationTests-OnOffValues",
+                Extensions.DataPointAggregate.StepInterpolation,
+                1,
+                range2,
+                System.Threading.CancellationToken.None).ConfigureAwait(false);
+            Assert.NotNull(timestamps3);
+            Assert.NotNull(values3);
+            Assert.Single(values3);
+            Assert.Equal(1, values3[0]);
         }
     }
 }
