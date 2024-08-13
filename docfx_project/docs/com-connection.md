@@ -1,14 +1,14 @@
 # Implement COM connection
 
-To be able to run simulations using the Cognite simulator integration, we need to be able to connect to a simulator using COM interface.
+To be able to run simulations using the Cognite simulator integration, we need to be able to connect to a simulator using `COM` interface.
 In this example, we will use Excel a simple "simulator" and will try to read its version number.
 
 ### Create a class that inherits from AutomationConfig
 
-This is needed to set the COM program ID, so the connector knows which program to connect to.
+This is needed to set the `COM` program ID, so the connector knows which program to connect to.
 For the sake of this example, we will use Excel.
 
-NewSimAutomationConfig.cs:
+`NewSimAutomationConfig.cs`:
 ```csharp
 using Cognite.Simulator.Utils.Automation;
 
@@ -51,7 +51,7 @@ public static class ConnectorRuntime {
 
 ### Extend the NewSimClient class to inherit from AutomationClient
 
-This is needed to access the COM object.
+This is needed to access the `COM` object.
 We need to add the `using Cognite.Simulator.Utils.Automation;` namespace to the `NewSimClient` class.
 Also, extend the class to inherit from `AutomationClient` and implement a new constructor that calls the base constructor with the AutomationConfig type.
 
@@ -97,10 +97,10 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     }
     // rest of the class
 ```
-In the constructor, we initialize the COM connection and get the version number of the Excel application. We also added a field `_version` to store the version number. While communicating with the simulator, we lock the connection to avoid multiple threads accessing the COM object at the same time.
+In the constructor, we initialize the `COM` connection and get the version number of the Excel application. We also added a field `_version` to store the version number. While communicating with the simulator, we lock the connection to avoid multiple threads accessing the `COM` object at the same time.
 
 
-We also need to add a method that closes the Excel application when COM connection is closed.
+We also need to add a method that closes the Excel application when `COM` connection is closed.
 ```csharp
 protected override void PreShutdown()
 {

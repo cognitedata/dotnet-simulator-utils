@@ -8,7 +8,7 @@ In this tutorial we will implement the actual communication between the connecto
 First, create a class that inherits from `RoutineImplementationBase`.
 
 
-NewSimRoutine.cs:
+`NewSimRoutine.cs`:
 ```csharp
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
@@ -93,7 +93,7 @@ The `SetInput` method is used to set the input values for the simulation. The `G
 
 #### Implement `RunSimulation` method in `NewSimClient`
 
-At this point we need to call the `PerformSimulation` method in the `NewSimRoutine` class. This method will perform the simulation and return the results.
+At this point we need to call the `PerformSimulation` method in the `NewSimRoutine` class. This method will run through the instructions in the routine revision and return the results of the simulation.
 We aquire the lock to ensure only a single connection to the simulator is made at a time.
 
 ```csharp
@@ -122,7 +122,7 @@ public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFi
     }
 ```
 
-Not we can call the API and create a new routine and routine revision. We can then call the `RunSimulation` method to perform the simulation.
+Not we can call the API and create a new routine and routine revision. Once that is done, we are ready for the first simulation.
 
 Routine:
 ```
@@ -136,6 +136,9 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
     }]
 }
 ```
+
+In the following example we create a routine revision for the routine we just created.
+The script contains the instructions for the simulation. In this case we set the value of the cell `A1` to `10` and the value of the cell `B1` to the formula `=A1 * 2`, which should result in `20`.
 
 Routine revision:
 ```

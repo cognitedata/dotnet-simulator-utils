@@ -8,9 +8,7 @@
 
 The Cognite Simulator Utils can be downloaded from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
 
-To create a console application and add the latest version of the library:
-
-Using .NET CLI:
+To create a console application and add the latest version of the library, open the terminal and run the following commands:
 ```sh
 dotnet new console -o NewSimConnector
 cd NewSimConnector
@@ -57,7 +55,7 @@ connector:
   name-prefix: "new-sim-connector@"
 ```
 
-This file contains the configuration needed to connect to the Cognite Data Fusion project and the simulator.
+This file contains the configuration needed to connect to the Cognite Data Fusion project, define the target data set id, and set the connector name.
 
 Make sure to populate the environment variables with the correct values. Alternatively, you can hardcode the values in the configuration file for the development environment.
 
@@ -67,7 +65,7 @@ Make sure to populate the environment variables with the correct values. Alterna
 Now we to have to define a contract between the simulator and the Cognite Data Fusion platform. This contract is defined in the API as a `Simulator` object.
 
 Create a new file called `SimulatorDefinition.cs`.
-The copy the following code into it and replace the values with your own:
+The copy the following code into it, you can adjust the values later:
 
 ```csharp
 using CogniteSdk.Alpha;
@@ -138,7 +136,7 @@ We may fill these fields with the actual values later, but for now, we can use p
 ### Implement a simulator client
 Create a class that implements `ISimulatorClient`.
 
-NewSimClient.cs:
+`NewSimClient.cs`:
 ```csharp
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
@@ -173,7 +171,7 @@ We will implement the methods in the `NewSimClient` class later.
 We need to configure the services via Dependency Injection and boilerplate code to run the connector.
 Create a class using `DefaultConnectorRuntime` helper class.
 
-ConnectorRuntime.cs:
+`ConnectorRuntime.cs`:
 ```csharp
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
