@@ -119,8 +119,16 @@ namespace Cognite.Simulator.Utils
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
+            if (config.DataSampling == null)
+                throw new ArgumentException("DataSampling configuration is missing", nameof(config));
+            if (config.DataSampling.ValidationWindow == null)
+                throw new ArgumentException("Validation window is missing", nameof(config));
+            if (config.DataSampling.SamplingWindow == null)
+                throw new ArgumentException("Sampling window is missing", nameof(config));
+            if (config.DataSampling.Granularity == null)
+                throw new ArgumentException("Granularity is missing", nameof(config));
             
-            var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow);
+            var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow.Value);
             var validationConfiguration = new SamplingConfiguration(
                 end: validationEnd.ToUnixTimeMilliseconds(),
                 start: validationStart.ToUnixTimeMilliseconds()
@@ -134,11 +142,11 @@ namespace Cognite.Simulator.Utils
                 var dps = await dataPoints.GetSample(
                     logicalCheck.TimeseriesExternalId,
                     logicalCheck.Aggregate.ToDataPointAggregate(),
-                    config.DataSampling.Granularity,
+                    config.DataSampling.Granularity.Value,
                     validationConfiguration,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
-                    config.DataSampling.Granularity,
+                    config.DataSampling.Granularity.Value,
                     logicalCheck.Aggregate.ToDataPointAggregate());
                 validationDps = LogicalCheckInternal(validationDps, validationConfiguration, logicalCheck);
             }
@@ -151,7 +159,7 @@ namespace Cognite.Simulator.Utils
                 var ssDps = await dataPoints.GetSample(
                     steadyStateDetection.TimeseriesExternalId,
                     steadyStateDetection.Aggregate.ToDataPointAggregate(),
-                    config.DataSampling.Granularity,
+                    config.DataSampling.Granularity.Value,
                     validationConfiguration,
                     token).ConfigureAwait(false);
 
@@ -162,7 +170,7 @@ namespace Cognite.Simulator.Utils
 
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
-                        config.DataSampling.Granularity,
+                        config.DataSampling.Granularity.Value,
                         steadyStateDetection.Aggregate.ToDataPointAggregate()),
                     steadyStateDetection.MinSectionSize.Value,
                     steadyStateDetection.VarThreshold.Value,
@@ -186,7 +194,7 @@ namespace Cognite.Simulator.Utils
 
             // Find sampling start/end
             long? samplingEnd = validationConfiguration.End;
-            var samplingWindowMs = (long)TimeSpan.FromMinutes(config.DataSampling.SamplingWindow).TotalMilliseconds;
+            var samplingWindowMs = (long)TimeSpan.FromMinutes(config.DataSampling.SamplingWindow.Value).TotalMilliseconds;
             if (feasibleTimestamps != null)
             {
                 samplingEnd = DataSampling.FindSamplingTime(feasibleTimestamps, samplingWindowMs);
@@ -231,12 +239,9 @@ namespace Cognite.Simulator.Utils
         /// <returns>Time series data</returns>
         public static TimeSeriesData ToTimeSeriesData(
             this (long[] Timestamps, double[] Values) dataPoints,
-            int? granularity,
+            int granularity,
             Extensions.DataPointAggregate aggreagate)
         {
-            if (granularity == null) {
-                throw new ArgumentNullException("ToTimeSeriesData: Granularity is not defined");
-            }
             return new TimeSeriesData(
                 dataPoints.Timestamps,
                 dataPoints.Values,
@@ -244,5 +249,74 @@ namespace Cognite.Simulator.Utils
                 aggreagate == Extensions.DataPointAggregate.StepInterpolation);
         }
 
+        /// <summary>
+        /// Load the input time series data point for the given input configuration.
+        /// </summary>
+        public static async Task<SimulatorValueItem> LoadTimeseriesSimulationInput(
+            this Client _cdf,
+            SimulatorRoutineRevisionInput inputTs,
+            SimulatorRoutineRevisionConfiguration routineConfiguration, 
+            SamplingConfiguration samplingConfiguration,
+            CancellationToken token)
+        {
+            if (inputTs == null)
+            {
+                throw new ArgumentNullException(nameof(inputTs));
+            }
+            if (routineConfiguration == null)
+            {
+                throw new ArgumentNullException(nameof(routineConfiguration));
+            }
+            if (samplingConfiguration == null)
+            {
+                throw new ArgumentNullException(nameof(samplingConfiguration));
+            }
+            if (_cdf == null)
+            {
+                throw new ArgumentNullException(nameof(_cdf));
+            }
+
+            var dps = await _cdf.DataPoints.GetSample(
+                inputTs.SourceExternalId,
+                inputTs.Aggregate.ToDataPointAggregate(),
+                routineConfiguration.DataSampling.Granularity.Value,
+                samplingConfiguration,
+                token).ConfigureAwait(false);
+            double sampledValue;
+
+            if (routineConfiguration.DataSampling.Enabled)
+            {
+                if (routineConfiguration.DataSampling.Granularity == null)
+                {
+                    throw new ArgumentException("Granularity is missing in the configuration", nameof(routineConfiguration));
+                }
+                var inputDps = dps.ToTimeSeriesData(
+                    routineConfiguration.DataSampling.Granularity.Value,
+                    inputTs.Aggregate.ToDataPointAggregate());
+                
+                if (inputDps.Count == 0)
+                {
+                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+                }
+
+                // This assumes the unit specified in the configuration is the same as the time series unit
+                // No unit conversion is made
+                sampledValue = inputDps.GetAverage();
+            } else {
+                sampledValue = dps.Values.First();
+            }
+
+            return new SimulatorValueItem()
+            {
+                Value = new SimulatorValue.Double(sampledValue),
+                Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
+                    Name = inputTs.Unit.Name
+                } : null,
+                Overridden = false,
+                ReferenceId = inputTs.ReferenceId,
+                TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                ValueType = SimulatorValueType.DOUBLE,
+            };
+        }
     }
 }
