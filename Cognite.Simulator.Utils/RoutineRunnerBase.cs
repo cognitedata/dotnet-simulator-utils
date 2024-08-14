@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cognite.Extensions;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class RoutineRunnerBase<T, V> : SimulationRunnerBase<T, V>
+    public abstract class RoutineRunnerBase<A, T, V> : SimulationRunnerBase<A, T, V>
+        where A: AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -43,7 +45,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig connectorConfig, 
             IList<SimulatorConfig> simulators, 
             CogniteDestination cdf,
-            IModelProvider<T> modelLibrary, 
+            IModelProvider<A,T> modelLibrary, 
             IRoutineProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
             ILogger logger) : 
@@ -67,6 +69,48 @@ namespace Cognite.Simulator.Utils
             }
 
             return inputDataOverrides;
+        }
+
+        /// <summary>
+        /// Load the input time series data point for the given input configuration.
+        /// </summary>
+        private async Task<SimulatorValueItem> LoadTimeseriesSimulationInput(
+            SimulatorRoutineRevisionInput inputTs,
+            SimulatorRoutineRevisionConfiguration routineConfiguration, 
+            SamplingConfiguration samplingConfiguration,
+            CancellationToken token)
+        {
+            int? granularity = routineConfiguration.DataSampling.Enabled ? routineConfiguration.DataSampling.Granularity : (int?)null;
+
+            var dps = await _cdf.CogniteClient.DataPoints.GetSample(
+                inputTs.SourceExternalId,
+                inputTs.Aggregate.ToDataPointAggregate(),
+                granularity,
+                samplingConfiguration,
+                token).ConfigureAwait(false);
+            var inputDps = dps.ToTimeSeriesData(
+                granularity,
+                inputTs.Aggregate.ToDataPointAggregate());
+
+            if (inputDps.Count == 0)
+            {
+                throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+            }
+
+            // This assumes the unit specified in the configuration is the same as the time series unit
+            // No unit conversion is made
+            var averageValue = inputDps.GetAverage();
+            return new SimulatorValueItem()
+            {
+                Value = new SimulatorValue.Double(averageValue),
+                Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
+                    Name = inputTs.Unit.Name
+                } : null,
+                Overridden = false,
+                ReferenceId = inputTs.ReferenceId,
+                TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                ValueType = SimulatorValueType.DOUBLE,
+            };
         }
 
         /// <summary>
@@ -168,53 +212,31 @@ namespace Cognite.Simulator.Utils
             // Collect sampled inputs, to run simulations and to store as time series and data points
             foreach (var inputTs in configObj.Inputs.Where(i => i.IsTimeSeries))
             {
-                // set granularity to null if data sampling is disabled
-                int? granularity = configObj.DataSampling.Enabled ? configObj.DataSampling.Granularity : (int?)null;
-
-                var dps = await _cdf.CogniteClient.DataPoints.GetSample(
-                    inputTs.SourceExternalId,
-                    inputTs.Aggregate.ToDataPointAggregate(),
-                    granularity,
-                    samplingConfiguration,
-                    token).ConfigureAwait(false);
-                var inputDps = dps.ToTimeSeriesData(
-                    granularity,
-                    inputTs.Aggregate.ToDataPointAggregate());
-                if (inputDps.Count == 0)
-                {
-                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+                // time series inputs could be overridden per run, in these cases the constant value should be read from the run data
+                if (!inputDataOverrides.TryGetValue(inputTs.ReferenceId, out var inputValue)) {
+                    inputValue = await LoadTimeseriesSimulationInput(inputTs, configObj, samplingConfiguration, token).ConfigureAwait(false);
                 }
 
-                // This assumes the unit specified in the configuration is the same as the time series unit
-                // No unit conversion is made
-                var averageValue = inputDps.GetAverage();
-                inputData[inputTs.ReferenceId] = new SimulatorValueItem()
-                {
-                    Value = new SimulatorValue.Double(averageValue),
-                    Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
-                        Name = inputTs.Unit.Name
-                    } : null,
-                    Overridden = false,
-                    ReferenceId = inputTs.ReferenceId,
-                    TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
-                    ValueType = SimulatorValueType.DOUBLE,
-                };
+                inputData[inputTs.ReferenceId] = inputValue;
+
                 var simInput = new SimulationInput
                 {
                     RoutineRevisionInfo = routineRevisionInfo,
                     Name = inputTs.Name,
                     ReferenceId = inputTs.ReferenceId,
-                    Unit = inputTs.Unit?.Name,
+                    Unit = inputValue?.Unit?.Name,
                     SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
                 if (simInput.ShouldSaveToTimeSeries) {
+                    var inputRawValue = (inputValue.Value as SimulatorValue.Double).Value;
+
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.SaveTimeseriesExternalId),
                         new List<Datapoint> 
                         { 
-                            new Datapoint(samplingConfiguration.SimulationTime, averageValue) 
+                            new Datapoint(samplingConfiguration.SimulationTime, inputRawValue) 
                         });
                 }
             }
@@ -276,10 +298,6 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
 
             }
-            catch (SimulationModelVersionCreationException ex)
-            {
-                throw new ConnectorException(ex.Message, ex.CogniteErrors);
-            }
             catch (SimulationTimeSeriesCreationException ex)
             {
                 throw new ConnectorException(ex.Message, ex.CogniteErrors);
@@ -322,7 +340,7 @@ namespace Cognite.Simulator.Utils
             V simulationConfiguration, 
             Dictionary<string, SimulatorValueItem> inputData);
 
-        void ExtractModelInformation(ModelStateBase state, CancellationToken _token);
+        Task ExtractModelInformation(T state, CancellationToken _token);
 
         string GetSimulatorVersion();
 

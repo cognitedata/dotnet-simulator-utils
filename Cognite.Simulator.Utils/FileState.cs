@@ -15,7 +15,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// File id. Typically CDF external id
         /// </summary>
-        public string Id { get; protected set; }
+        public string Id { get; set; }
         
         private string _externalId;
         /// <summary>
@@ -41,9 +41,8 @@ namespace Cognite.Simulator.Utils
         /// Creates a new file state with the provided id
         /// </summary>
         /// <param name="id">File id</param>
-        public FileState(string id)
+        public FileState()
         {
-            Id = id;
         }
 
         private string _modelExternalId;
@@ -190,6 +189,39 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+
+        private string _fileExtension;
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        public string FileExtension
+        {
+            get => _fileExtension;
+            set
+            {
+                if (value == _fileExtension) return;
+                LastTimeModified = DateTime.UtcNow;
+                _fileExtension = value;
+            }
+        }
+
+        private int _version;
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        public int Version
+        {
+            get => _version;
+            set
+            {
+                if (value == _version) return;
+                LastTimeModified = DateTime.UtcNow;
+                _version = value;
+            }
+        }
+
         /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>
@@ -209,6 +241,9 @@ namespace Cognite.Simulator.Utils
             _isInDirectory = poco.IsInDirectory;
             _externalId = poco.ExternalId;
             _logId = poco.LogId;
+            _fileExtension = poco.FileExtension;
+            _version = poco.Version;
+
         }
 
         /// <summary>
@@ -229,6 +264,9 @@ namespace Cognite.Simulator.Utils
                 UpdatedTime = UpdatedTime,
                 IsInDirectory = IsInDirectory,
                 ExternalId = ExternalId,
+                LogId = LogId,
+                FileExtension = FileExtension,
+                Version = Version
             };
         }
     }
@@ -239,6 +277,18 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class FileStatePoco : BaseStorableState
     {
+        /// <summary>
+        /// Model File extension
+        /// </summary>
+        [StateStoreProperty("fileext")]
+        public string FileExtension { get; set; }
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        [StateStoreProperty("version")]
+        public int Version { get; set; }
+
         /// <summary>
         /// External Id of the entity represented by this object
         /// </summary>

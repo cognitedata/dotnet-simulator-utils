@@ -13,37 +13,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public abstract class ModelStateBase : FileState
     {
-        private int _version;
-
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public int Version
-        {
-            get => _version;
-            set
-            {
-                if (value == _version) return;
-                LastTimeModified = DateTime.UtcNow;
-                _version = value;
-            }
-        }
-
-        private string _fileExtension;
-
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public string FileExtension
-        {
-            get => _fileExtension;
-            set
-            {
-                if (value == _fileExtension) return;
-                LastTimeModified = DateTime.UtcNow;
-                _fileExtension = value;
-            }
-        }
 
         /// <summary>
         /// Information about model parsing
@@ -65,7 +34,7 @@ namespace Cognite.Simulator.Utils
         /// Creates a new model file state with the provided id
         /// </summary>
         /// <param name="id"></param>
-        public ModelStateBase(string id) : base(id)
+        public ModelStateBase() : base()
         {
         }
 
@@ -95,31 +64,33 @@ namespace Cognite.Simulator.Utils
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
-            if (poco is ModelStateBasePoco mPoco)
-            {
-                _version = mPoco.Version;
-            }
         }
+
         /// <summary>
-        /// Get the data object with the model state properties to be persisted by
-        /// the state store
+        /// Copies matching properties from the source object to the target object.
+        /// Only properties with the same name and type are copied.
         /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
+        public static TTarget SyncProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
         {
-            return new ModelStateBasePoco
+            foreach (var sourceProperty in typeof(TSource).GetProperties())
             {
-                Id = Id,
-                ModelExternalId = ModelExternalId,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                CdfId = CdfId,
-                Version = Version,
-                IsInDirectory = IsInDirectory,
-                FileExtension = FileExtension
-            };
+                if (sourceProperty.CanWrite)
+                {
+                    try
+                    {
+                        var targetProperty = typeof(TTarget).GetProperty(sourceProperty.Name);
+                        if (targetProperty != null && targetProperty.CanWrite && targetProperty.PropertyType == sourceProperty.PropertyType)
+                        {
+                            targetProperty.SetValue(target, sourceProperty.GetValue(source));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error setting property {sourceProperty.Name}: {ex.Message}");
+                    }
+                }
+            }
+            return target;
         }
     }
 
@@ -129,16 +100,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ModelStateBasePoco : FileStatePoco
     {
-        /// <summary>
-        /// Model version
-        /// </summary>
-        [StateStoreProperty("version")]
-        public int Version { get; set; }
 
-        /// <summary>
-        /// File extension
-        /// </summary>
-        [StateStoreProperty("fileext")]
-        public string FileExtension { get; set; }
     }
 }

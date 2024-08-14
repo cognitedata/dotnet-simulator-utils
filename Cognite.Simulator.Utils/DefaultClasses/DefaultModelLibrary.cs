@@ -6,23 +6,35 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
 
-    public class DefaultModelLibrary<TAutomationConfig> :
-    ModelLibraryBase<ModelStateBase, DefaultModelFileStatePoco, ModelParsingInfo>
+    /// <summary>
+    /// Default implementation of a model library for a simulator
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">Type of the automation configuration</typeparam>
+    /// <typeparam name="TModelStateBase">Type of the model state</typeparam>
+    /// <typeparam name="TModelStateBasePoco">Type of the model state POCO</typeparam>
+    public class DefaultModelLibrary<TAutomationConfig, TModelStateBase, TModelStateBasePoco> :
+    ModelLibraryBase<TAutomationConfig,TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
+    where TModelStateBase: ModelStateBase, new()
+    where TModelStateBasePoco : ModelStateBasePoco
     {
-        private ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> __simulationClient;
+        private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
 
+        /// <summary>
+        /// Creates an instance of the model library
+        /// </summary>
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
-            ILogger<DefaultModelLibrary<TAutomationConfig>> logger,
+            ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
+            ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
             FileStorageClient client,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision> simulationClient,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,
@@ -32,26 +44,26 @@ namespace Cognite.Simulator.Utils
                 client,
                 store)
         {
-            __simulationClient = simulationClient;
+            __simulationClient = simulatorClient;
         }
 
         protected override async Task ExtractModelInformation(
-        ModelStateBase state,
+        TModelStateBase state,
         CancellationToken token)
         {
-
             if (__simulationClient != null) {
-                __simulationClient.ExtractModelInformation(state, token);
+                await __simulationClient.ExtractModelInformation(state, token).ConfigureAwait(false);
             } else {
                 state.CanRead = true;
                 state.ParsingInfo.SetSuccess();
             }
         }
 
-        protected override ModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
+        protected override TModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
-            var modelState = new DefaultModelFilestate(modelRevision.Id.ToString())
+            var output = new TModelStateBase
             {
+                Id = modelRevision.Id.ToString(),
                 UpdatedTime = modelRevision.LastUpdatedTime,
                 ModelExternalId = modelRevision.ModelExternalId,
                 Source = modelRevision.SimulatorExternalId,
@@ -62,7 +74,7 @@ namespace Cognite.Simulator.Utils
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
             };
-            return modelState;
+            return output;
         }
 
     }

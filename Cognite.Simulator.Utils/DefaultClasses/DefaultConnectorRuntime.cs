@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -9,18 +11,27 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly.Timeout;
 
-public class DefaultConnectorRuntime<TAutomationConfig>
+public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>
  where TAutomationConfig : AutomationConfig, new()
+ where TModelState: ModelStateBase, new()
+ where TModelStateBasePoco: ModelStateBasePoco
 {
 
     public delegate void ServiceConfiguratorDelegate(IServiceCollection services);
 
     public static ServiceConfiguratorDelegate ConfigureServices;
+
+    /// <summary>
+    /// The simulator definition. This will be used to create a simulator if the simulator definition
+    /// is not found on CDF.
+    /// </summary>
+    public static SimulatorCreate SimulatorDefinition;
 
     public static string ConnectorName = "Default";
     public static async Task RunStandalone()
@@ -49,7 +60,61 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 }
             }
         }
+    }
 
+
+    /// <summary>
+    /// Prepares the simulator object for update
+    /// </summary>
+    /// <param name="existingSimulatorDefinition"></param>
+    /// <param name="newSimulatorDefinition"></param>
+    /// <param name="logger"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static SimulatorUpdateItem PrepareUpdateSimulatorObject(Simulator existingSimulatorDefinition, 
+    SimulatorCreate newSimulatorDefinition, ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger )
+    {
+        if (existingSimulatorDefinition == null) {
+            throw new Exception("Simulator definition from remote is null");
+        }
+
+        if (newSimulatorDefinition == null) {
+            throw new Exception("New simulator definition is null");
+        }
+
+        var update = new SimulatorUpdate {
+            FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes },
+            ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes },
+            StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields },
+            UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities }
+        };
+
+        // Create and return the update item if there are changes
+        return new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update };
+    }
+
+    private static async Task GetOrCreateSimulator( Client cdfClient, DefaultConfig<TAutomationConfig> config, 
+    ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token) {
+        var definition = SimulatorDefinition ;
+        var simulatorExternalId = config.Simulator.Name;
+        var simQuery = new SimulatorQuery { };
+        var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(simQuery, token).ConfigureAwait(false);
+        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorExternalId);
+        if (definition == null && existingSimulator == null) {
+            throw new Exception("Simulator definition not found in either the remote API or locally.");
+        }
+        if (definition != null) {
+            logger.LogDebug("Simulator definition found locally");
+            if (existingSimulator == null) {
+                logger.LogDebug("Simulator definition not found on CDF, will create one remotely");
+                var res = await cdfClient.Alpha.Simulators.CreateAsync(new List<SimulatorCreate> { definition }, token).ConfigureAwait(false);
+            } else {
+                var updateItem = PrepareUpdateSimulatorObject(existingSimulator, definition, logger);
+                logger.LogDebug("Updating simulator definition");
+                var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
+                await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);                
+            }
+        } 
     }
 
     public static async Task Run(ILogger defaultLogger, CancellationToken token)
@@ -78,16 +143,18 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
-        
-        services.AddScoped<DefaultConnector<TAutomationConfig>>();
-        services.AddScoped<DefaultModelLibrary<TAutomationConfig>>();
+        services.AddScoped<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
+        services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
-        services.AddScoped<DefaultSimulationRunner<TAutomationConfig>>();
+        services.AddScoped<DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultSimulationScheduler<TAutomationConfig>>();
+
+        defaultLogger.LogDebug("Injecting services");
+        ConfigureServices?.Invoke(services);
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
-        ConfigureServices?.Invoke(services);
+       
         
 
         services.AddExtractionPipeline(config.Connector);
@@ -95,16 +162,20 @@ public class DefaultConnectorRuntime<TAutomationConfig>
         var provider = services.BuildServiceProvider();
 
 
-        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig>>>();
+        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>>>();
 
         logger.LogInformation("Starting the connector...");
 
         var destination = provider.GetRequiredService<CogniteDestination>();
-        
+        var cdfClient = provider.GetRequiredService<Client>();
+
         try
         {
             await destination.TestCogniteConfig(token).ConfigureAwait(false);
             logger.LogInformation("Connector can reach CDF!");
+
+            await GetOrCreateSimulator(cdfClient, config, logger, token).ConfigureAwait(false);
+
         }
         catch (Exception e)
         {
@@ -124,8 +195,7 @@ public class DefaultConnectorRuntime<TAutomationConfig>
                 
                 try
                 {
-                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig>>();
-                    var simulatorClient = scope.ServiceProvider.GetRequiredService<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>>();
+                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
 
                     await connector.Init(token).ConfigureAwait(false);
                    

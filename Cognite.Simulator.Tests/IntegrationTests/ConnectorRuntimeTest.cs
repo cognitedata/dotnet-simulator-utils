@@ -25,9 +25,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeTest
     {
+
+        public class SampleModelFilestate : ModelStateBase
+        {
+            public SampleModelFilestate() : base()
+            {
+            }
+
+            public override bool IsExtracted => false;
+        }
+
+        public class SampleModelFileStatePoco : ModelStateBasePoco
+        {
+            [StateStoreProperty("info-extracted")]
+            public bool InformationExtracted { get; internal set; }
+        }
         static void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
+            services.AddScoped<ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
@@ -85,7 +100,10 @@ connector:
             using var provider = services.BuildServiceProvider();
             TestCdfClient = provider.GetRequiredService<Client>();
 
-            await SeedData.GetOrCreateSimulator(TestCdfClient, SeedData.SimulatorCreate);
+            // if the following call is not made before starting the test, we get an exception in the first test
+            // related to the sdk client not being initialized.
+            var simulators = await TestCdfClient.Alpha.Simulators.ListAsync(
+                new SimulatorQuery()).ConfigureAwait(false);
             await WriteConfig();
         }
 
@@ -102,11 +120,12 @@ connector:
             {
                 cts.CancelAfter(TimeSpan.FromSeconds(FIVE_SECONDS));
 
-                DefaultConnectorRuntime<CustomAutomationConfig>.ConfigureServices = ConfigureServices;
-                DefaultConnectorRuntime<CustomAutomationConfig>.ConnectorName = "Calculator";
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = ConfigureServices;
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
                 try
                 {
-                    await DefaultConnectorRuntime<CustomAutomationConfig>.Run(logger, cts.Token).ConfigureAwait(false);
+                    await DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -122,8 +141,24 @@ connector:
                             }
                         }
                     ).ConfigureAwait(false);
+
+                    var simulator = await TestCdfClient.Alpha.Simulators.ListAsync(
+                        new SimulatorQuery
+                        {
+                           
+                        }
+                    ).ConfigureAwait(false);
+
+                    var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
                     var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    Assert.True(existing.ExternalId == ConnectorExternalId);
+                    Assert.True( existing.ExternalId == ConnectorExternalId);
+                    
+                    var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
+                    Assert.NotNull(simulatorDefinition);
+
+                    // Simply checking the unit quantities created
+                    Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
+                    
                     await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
@@ -132,7 +167,7 @@ connector:
 
         public class CalculatorSimulatorAutomationClient :
             AutomationClient,
-            ISimulatorClient<ModelStateBase, SimulatorRoutineRevision>
+            ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>
         {
 
             private readonly ILogger<CalculatorSimulatorAutomationClient> _logger;
@@ -144,11 +179,11 @@ connector:
                 _logger = logger;
             }
 
-            public void ExtractModelInformation(ModelStateBase state, CancellationToken _token)
+            public Task ExtractModelInformation(SampleModelFilestate state, CancellationToken _token)
             {
-                _logger.LogCritical("ExtractModelInformation WAS CALLED IN SIMULATORAUTOMATION");
                 state.CanRead = false;
                 state.ParsingInfo.SetFailure();
+                return Task.CompletedTask;
             }
 
             public string GetConnectorVersion()
@@ -162,7 +197,7 @@ connector:
             }
 
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-                ModelStateBase modelState,
+                SampleModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
                 Dictionary<string, SimulatorValueItem> inputData
             )

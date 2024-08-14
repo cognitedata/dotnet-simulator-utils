@@ -1,6 +1,7 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
@@ -22,7 +23,8 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
-    public abstract class SimulationRunnerBase<T, V>
+    public abstract class SimulationRunnerBase<A, T, V>
+        where A: AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -35,7 +37,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulator model files
         /// </summary>
-        protected IModelProvider<T> ModelLibrary { get; }
+        protected IModelProvider<A,T> ModelLibrary { get; }
 
         /// <summary>
         /// Library containing the simulation configuration files
@@ -58,7 +60,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig connectorConfig,
             IList<SimulatorConfig> simulators,
             CogniteDestination cdf,
-            IModelProvider<T> modelLibrary,
+            IModelProvider<A,T> modelLibrary,
             IRoutineProvider<V> routineLibrary,
             ILogger logger)
         {
@@ -185,14 +187,11 @@ namespace Cognite.Simulator.Utils
                         "{Number} simulation run(s) that are in progress (but should have finished) found in CDF",
                         simulationRunningItems.Count());
                 }
-                var allRunItems = new List<SimulationRunItem>(simulationRuns);
-                allRunItems.AddRange(simulationRunningItems);
+                // Process the "running" events first. Those will be saved as "failed" in CDF
+                // and then process the "ready" events in the older-first order.
+                var allRunItems = new List<SimulationRunItem>(simulationRunningItems);
+                allRunItems.AddRange(simulationRuns);
 
-                // sort by created time
-                allRunItems.Sort((e1, e2) =>
-                {
-                    return e1.Run.CreatedTime > e2.Run.CreatedTime ? -1 : 1;
-                });
                 foreach (SimulationRunItem runItem in allRunItems)
                 {
                     var runId = runItem.Run.Id;
@@ -287,7 +286,8 @@ namespace Cognite.Simulator.Utils
             }
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
-                throw new ConnectorException("Simulation failed due to connector error");
+                _logger.LogError("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
+                throw new ConnectorException("Simulation entered unrecoverable state failed");
             }
             return (model, calcConfig);
         }

@@ -16,6 +16,7 @@ using CogniteSdk;
 using CogniteSdk.Alpha;
 
 using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -478,17 +479,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override bool IsExtracted => Processed;
 
-        public TestFileState(string id) : base(id)
+        public TestFileState() : base()
         {
         }
 
+    }
+
+    public class DefaultAutomationConfig : AutomationConfig {
+        
     }
 
     /// <summary>
     /// File library is abstract. Implement a simple mock library
     /// to test the base functionality
     /// </summary>
-    public class ModeLibraryTest : ModelLibraryBase<TestFileState, ModelStateBasePoco, ModelParsingInfo>
+    public class ModeLibraryTest : ModelLibraryBase<DefaultAutomationConfig,TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
         private ILogger<ModeLibraryTest> _logger;
         public ModeLibraryTest(
@@ -550,8 +555,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new ArgumentNullException(nameof(modelRevision));
             }
 
-            return new TestFileState(modelRevision.Id.ToString())
+            return new TestFileState()
             {
+                Id = modelRevision.Id.ToString(),
                 CdfId = modelRevision.FileId,
                 DataSetId = modelRevision.DataSetId,
                 CreatedTime = modelRevision.CreatedTime,
