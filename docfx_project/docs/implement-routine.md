@@ -89,7 +89,7 @@ public class NewSimRoutine : RoutineImplementationBase
 }
 ```
 This class will be used to perform the simulation.
-The `SetInput` method is used to set the input values for the simulation. The `GetOutput` method is used to get the output values from the simulation. The `RunCommand` method is used to run commands in the simulation, but it is not needed for this simulator as the results are calculated immediatelly on the worksheet.
+The `SetInput` method is used to set the input values for the simulation. The `GetOutput` method is used to get the output values from the simulation. The `RunCommand` method is used to run commands in the simulation, but it is not needed for this simulator as the results are calculated immediately on the worksheet.
 
 #### Implement `RunSimulation` method in `NewSimClient`
 

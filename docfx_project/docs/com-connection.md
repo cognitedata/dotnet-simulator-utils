@@ -1,7 +1,7 @@
 # Implement COM connection
 
 To be able to run simulations using the Cognite simulator integration, we need to be able to connect to a simulator using `COM` interface.
-In this example, we will use Excel a simple "simulator" and will try to read its version number.
+In this example, we will use Excel as a simple "simulator" and will try to read its version number.
 
 ### Create a class that inherits from AutomationConfig
 
@@ -49,7 +49,7 @@ public static class ConnectorRuntime {
 }
 ```
 
-### Extend the NewSimClient class to inherit from AutomationClient
+### Extend the NewSimClient class to inherit from the AutomationClient class
 
 This is needed to access the `COM` object.
 We need to add the `using Cognite.Simulator.Utils.Automation;` namespace to the `NewSimClient` class.
