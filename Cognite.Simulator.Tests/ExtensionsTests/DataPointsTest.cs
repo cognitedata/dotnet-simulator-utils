@@ -104,16 +104,12 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             // DataSampling disabled range
             var currentTimeEpoch = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var disabledDataSampling = new SamplingConfiguration( end: currentTimeEpoch );
-            var (timestamps, values) = await dataPoints.GetSample(
+            var (timestamp, value) = await dataPoints.GetLatestValue(
                 "SimConnect-IntegrationTests-OnOffValues",
-                Extensions.DataPointAggregate.StepInterpolation,
-                null,
                 disabledDataSampling,
                 System.Threading.CancellationToken.None).ConfigureAwait(false);
-            Assert.NotNull(timestamps);
-            Assert.NotNull(values);
-            Assert.Single(values);
-            Assert.Equal(1, values[0]);
+            
+            Assert.Equal(1, value);
         }
     }
 }

@@ -121,14 +121,25 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(config));
             if (config.DataSampling == null)
                 throw new ArgumentException("DataSampling configuration is missing", nameof(config));
-            if (config.DataSampling.ValidationWindow == null)
-                throw new ArgumentException("Validation window is missing", nameof(config));
             if (config.DataSampling.SamplingWindow == null)
                 throw new ArgumentException("Sampling window is missing", nameof(config));
             if (config.DataSampling.Granularity == null)
                 throw new ArgumentException("Granularity is missing", nameof(config));
             
-            var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow.Value);
+            var validationWindow = config.DataSampling.ValidationWindow;
+            var logicalCheck = config.LogicalCheck.FirstOrDefault();
+            var logicalCheckEnabled = logicalCheck != null && logicalCheck.Enabled;
+            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
+            var steadyStateDetectionEnabled = steadyStateDetection != null && steadyStateDetection.Enabled;
+
+            if ((logicalCheckEnabled || steadyStateDetectionEnabled) && validationWindow == null)
+            {
+                // Validation window only required if logical check or steady state detection is enabled
+                // This is already validated on the API side
+                throw new SimulationException("Validation window is required for logical check and steady state detection");
+            }
+
+            var validationStart = validationEnd - TimeSpan.FromMinutes(validationWindow ?? 0);
             var validationConfiguration = new SamplingConfiguration(
                 end: validationEnd.ToUnixTimeMilliseconds(),
                 start: validationStart.ToUnixTimeMilliseconds()
@@ -136,8 +147,7 @@ namespace Cognite.Simulator.Utils
 
             // Perform logical check, if enabled
             TimeSeriesData validationDps = null;
-            var logicalCheck = config.LogicalCheck.FirstOrDefault();
-            if (logicalCheck != null && logicalCheck.Enabled)
+            if (logicalCheckEnabled)
             {
                 var dps = await dataPoints.GetSample(
                     logicalCheck.TimeseriesExternalId,
@@ -153,8 +163,8 @@ namespace Cognite.Simulator.Utils
 
             // Check for steady state, if enabled
             TimeSeriesData ssdMap = null;
-            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
-            if (steadyStateDetection != null && steadyStateDetection.Enabled)
+            
+            if (steadyStateDetectionEnabled)
             {
                 var ssDps = await dataPoints.GetSample(
                     steadyStateDetection.TimeseriesExternalId,
@@ -276,12 +286,6 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(_cdf));
             }
 
-            var dps = await _cdf.DataPoints.GetSample(
-                inputTs.SourceExternalId,
-                inputTs.Aggregate.ToDataPointAggregate(),
-                routineConfiguration.DataSampling.Granularity.Value,
-                samplingConfiguration,
-                token).ConfigureAwait(false);
             double sampledValue;
 
             if (routineConfiguration.DataSampling.Enabled)
@@ -290,6 +294,12 @@ namespace Cognite.Simulator.Utils
                 {
                     throw new ArgumentException("Granularity is missing in the configuration", nameof(routineConfiguration));
                 }
+                var dps = await _cdf.DataPoints.GetSample(
+                    inputTs.SourceExternalId,
+                    inputTs.Aggregate.ToDataPointAggregate(),
+                    routineConfiguration.DataSampling.Granularity.Value,
+                    samplingConfiguration,
+                    token).ConfigureAwait(false);
                 var inputDps = dps.ToTimeSeriesData(
                     routineConfiguration.DataSampling.Granularity.Value,
                     inputTs.Aggregate.ToDataPointAggregate());
@@ -303,7 +313,8 @@ namespace Cognite.Simulator.Utils
                 // No unit conversion is made
                 sampledValue = inputDps.GetAverage();
             } else {
-                sampledValue = dps.Values.First();
+                var dp = await _cdf.DataPoints.GetLatestValue(inputTs.SourceExternalId, samplingConfiguration, token).ConfigureAwait(false);
+                sampledValue = dp.Value;
             }
 
             return new SimulatorValueItem()

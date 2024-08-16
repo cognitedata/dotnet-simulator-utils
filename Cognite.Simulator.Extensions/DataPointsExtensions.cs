@@ -30,7 +30,7 @@ namespace Cognite.Simulator.Extensions
             this DataPointsResource dataPoints,
             string timeSeriesExternalId,
             DataPointAggregate aggregate,
-            int? granularity,
+            int granularity,
             SamplingConfiguration samplingConfiguration,
             CancellationToken token
             )
@@ -40,13 +40,39 @@ namespace Cognite.Simulator.Extensions
                 throw new ArgumentNullException(nameof(samplingConfiguration));
             }
             // If the start time is specified, we sample data points with aggregates
-            if (samplingConfiguration.Start.HasValue)
+            if (samplingConfiguration.Start == null)
             {
-                if (granularity == null)
+                throw new ArgumentException("Start time must be specified", nameof(samplingConfiguration));
+            }
+            var dps = await dataPoints.ListAsync(
+                new DataPointsQuery
                 {
-                    throw new ArgumentNullException("Granularity not defined : " + nameof(granularity));
-                }
-                var dps = await dataPoints.ListAsync(
+                    Items = new[]
+                    {
+                        new DataPointsQueryItem
+                        {
+                            ExternalId = timeSeriesExternalId,
+                            Aggregates = new[] {aggregate.AsString()},
+                            Start = $"{samplingConfiguration.Start.Value}",
+                            End = $"{samplingConfiguration.End + 1}", // Add 1 because end is exclusive
+                            Granularity = MinutesToGranularity((int) granularity),
+                            Limit = 10_000 // TODO: Functionality to make sure we get all data points
+                        }
+                    },
+                    IgnoreUnknownIds = true
+                }, token
+            ).ConfigureAwait(false);
+            if (dps.Items.Any() && dps.Items.First().DatapointTypeCase ==
+            DataPointListItem.DatapointTypeOneofCase.AggregateDatapoints)
+            {
+                return dps.Items.First().ToTimeSeriesData(aggregate);
+            }
+
+            if (aggregate == DataPointAggregate.StepInterpolation)
+            {
+                // If no data point is found before the time samplingConfiguration,
+                // search for the first data point forward in time.
+                var firstDp = await dataPoints.ListAsync(
                     new DataPointsQuery
                     {
                         Items = new[]
@@ -54,53 +80,21 @@ namespace Cognite.Simulator.Extensions
                             new DataPointsQueryItem
                             {
                                 ExternalId = timeSeriesExternalId,
-                                Aggregates = new[] {aggregate.AsString()},
                                 Start = $"{samplingConfiguration.Start.Value}",
-                                End = $"{samplingConfiguration.End + 1}", // Add 1 because end is exclusive
-                                Granularity = MinutesToGranularity((int) granularity),
-                                Limit = 10_000 // TODO: Functionality to make sure we get all data points
+                                Limit = 1
                             }
                         },
                         IgnoreUnknownIds = true
                     }, token
                 ).ConfigureAwait(false);
-                if (dps.Items.Any() && dps.Items.First().DatapointTypeCase ==
-                    DataPointListItem.DatapointTypeOneofCase.AggregateDatapoints)
+                if (firstDp.Items.Any() && firstDp.Items.First().DatapointTypeCase ==
+                DataPointListItem.DatapointTypeOneofCase.NumericDatapoints)
                 {
-                    return dps.Items.First().ToTimeSeriesData(aggregate);
+                    return firstDp.Items.First().ToTimeSeriesData(aggregate);
                 }
-
-                if (aggregate == DataPointAggregate.StepInterpolation)
-                {
-                    // If no data point is found before the time samplingConfiguration,
-                    // search for the first data point forward in time.
-                    var firstDp = await dataPoints.ListAsync(
-                        new DataPointsQuery
-                        {
-                            Items = new[]
-                            {
-                                new DataPointsQueryItem
-                                {
-                                    ExternalId = timeSeriesExternalId,
-                                    Start = $"{samplingConfiguration.Start.Value}",
-                                    Limit = 1
-                                }
-                            },
-                            IgnoreUnknownIds = true
-                        }, token
-                    ).ConfigureAwait(false);
-                    if (firstDp.Items.Any() && firstDp.Items.First().DatapointTypeCase ==
-                        DataPointListItem.DatapointTypeOneofCase.NumericDatapoints)
-                    {
-                        return firstDp.Items.First().ToTimeSeriesData(aggregate);
-                    }
-                }
-                throw new DataPointSampleNotFoundException(
-                    $"No data points were found for time series '{timeSeriesExternalId}' in the sampling window");
-            } else {
-                var dp = await dataPoints.GetLatestValue(timeSeriesExternalId, samplingConfiguration, token).ConfigureAwait(false);
-                return (new long[] { dp.Timestamp }, new double[] { dp.Value });
             }
+            throw new DataPointSampleNotFoundException(
+                $"No data points were found for time series '{timeSeriesExternalId}' in the sampling window");
         }
 
         /// <summary>
@@ -113,7 +107,7 @@ namespace Cognite.Simulator.Extensions
         /// <returns>An array with the timestamps and one with the values</returns>
         /// <exception cref="ArgumentNullException">Thrown when the time samplingConfiguration is null</exception>
         /// <exception cref="DataPointSampleNotFoundException">Thrown when no data points where found based on samplingConfiguration</exception>
-        private static async Task<(long Timestamp, double Value)> GetLatestValue(
+        public static async Task<(long Timestamp, double Value)> GetLatestValue(
             this DataPointsResource dataPoints,
             string timeSeriesExternalId,
             SamplingConfiguration samplingConfiguration,
