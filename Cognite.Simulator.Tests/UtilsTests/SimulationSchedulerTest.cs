@@ -46,20 +46,27 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<SeedData>();
             services.AddSingleton<RoutineLibraryTest>();
-            services.AddSingleton(new ConnectorConfig
-            {
-                NamePrefix = SeedData.TestIntegrationExternalId,
-                AddMachineNameSuffix = false,
-                SchedulerUpdateInterval = 2,
-            });
-            services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>
-            {
-                new SimulatorConfig
+            services.AddSingleton(services => {
+                var seed = services.GetRequiredService<SeedData>();
+                return new ConnectorConfig
                 {
-                    Name = SeedData.TestSimulatorExternalId,
-                    DataSetId = SeedData.TestDataSetId
-                }
+                    NamePrefix = seed.TestIntegrationExternalId,
+                    AddMachineNameSuffix = false,
+                    SchedulerUpdateInterval = 2,
+                };
+            });
+            services.AddSingleton<IEnumerable<SimulatorConfig>>(services => {
+                var seed = services.GetRequiredService<SeedData>();
+                return new List<SimulatorConfig>
+                {
+                    new SimulatorConfig
+                    {
+                        Name = seed.TestSimulatorExternalId,
+                        DataSetId = SeedData.TestDataSetId
+                    }
+                };
             });
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
@@ -72,21 +79,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
-            var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = provider.GetRequiredService<SeedData>();
+            // var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
             
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+            // await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+            // await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
 
             /// prepopulate the routine revision
-            var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                cdf,
-                FileStorageClient,
-                SeedData.SimulatorRoutineCreateScheduled,
-                SeedData.SimulatorRoutineRevisionCreateScheduled
+            var revision = await seed.GetOrCreateSimulatorRoutineRevision(
+                // cdf,
+                // FileStorageClient,
+                seed.SimulatorRoutineCreateScheduled,
+                seed.SimulatorRoutineRevisionCreateScheduled
             ).ConfigureAwait(false);
 
             // this helps diagnose issues where the above function is giving an old revision
-            Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
+            Assert.Equal(seed.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
             try
             {
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -111,9 +119,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Filter = new SimulationRunFilter
                         {
-                            SimulatorIntegrationExternalIds = new List<string> { SeedData.TestIntegrationExternalId },
-                            SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
-                            Status = SimulationRunStatus.ready,
+                            SimulatorIntegrationExternalIds = new List<string> { seed.TestIntegrationExternalId },
+                            SimulatorExternalIds = new List<string> { seed.TestSimulatorExternalId },
+                            // Status = SimulationRunStatus.ready,
                             // ModelRevisionExternalIds = new List<string> { "PETEX-Connector_Test_Model" },
                         },
                         Sort = new List<SimulatorSortItem>
@@ -124,13 +132,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                                 Order = SimulatorSortOrder.desc,
                             }
                         },
-                        Limit = 20,
+                        Limit = 50,
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(simRuns.Items);
 
                 var firstEvent = simRuns.Items.First();
 
-                Assert.Equal(SeedData.TestModelExternalId, firstEvent.ModelExternalId);
+                Assert.Equal(seed.TestModelExternalId, firstEvent.ModelExternalId);
 
                 // check if there are any simulation runs in the time span of the test
                 // with the run type set to scheduled
@@ -143,7 +151,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
+                await seed.DeleteSimulator().ConfigureAwait(false);
 
                 if (eventIds.Any())
                 {
