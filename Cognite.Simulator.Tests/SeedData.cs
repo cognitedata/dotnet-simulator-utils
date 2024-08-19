@@ -25,6 +25,7 @@ namespace Cognite.Simulator.Tests
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
+        public static string TestRoutineExternalIdWithTsNoDataSampling = "Test Routine with no data sampling " + Now;
         public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -313,10 +314,7 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
-                    Enabled = true,
-                    ValidationWindow = 1440,
-                    SamplingWindow = 60,
-                    Granularity = 1,
+                    Enabled = false,
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
@@ -485,7 +483,7 @@ namespace Cognite.Simulator.Tests
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
                     Enabled = true,
-                    ValidationWindow = 1440,
+                    ValidationWindow = null,
                     SamplingWindow = 60,
                     Granularity = 1,
                 },
@@ -711,6 +709,95 @@ namespace Cognite.Simulator.Tests
             ModelExternalId = TestModelExternalId,
             SimulatorIntegrationExternalId = TestIntegrationExternalId,
             Name = "Simulation Runner Test With TS and Extended IO",
+        };
+
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithTsNoDataSampling = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    Enabled = false,
+                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        ValueType = SimulatorValueType.DOUBLE,
+                    },
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 2",
+                        ReferenceId = "OT2",
+                        ValueType = SimulatorValueType.DOUBLE
+                    },
+                },
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Test 1",
+                        ReferenceId = "IT1",
+                        SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                    },
+                },
+            },
+            ExternalId = $"{TestRoutineExternalIdWithTsNoDataSampling} - 1",
+            RoutineExternalId = TestRoutineExternalIdWithTsNoDataSampling,
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 1,
+                    Description = "Set simulation inputs",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "IT1" },
+                                { "address", "42" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "command", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "OT1" },
+                                { "address", "42" },
+                            },
+                        }
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithTsNoDataSampling = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevisionWithTsNoDataSampling.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test with disabled Data Sampling",
         };
 
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
