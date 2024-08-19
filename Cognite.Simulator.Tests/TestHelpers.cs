@@ -1,53 +1,24 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Cognite.Extractor.Common;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Tests {
     public class TestHelpers {
-        
-        public static async Task SimulateASimulatorRunning(Client cdf, string connectorName = "scheduler-test-connector" ) {
-            var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
-                new SimulatorIntegrationQuery
-                {
-                    Filter = new SimulatorIntegrationFilter() {
-                        simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
-                    }
-                }
-            ).ConfigureAwait(false);
-            var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName);
-            if (existing == null) {
-                await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
-                    new List<SimulatorIntegrationCreate>
-                    {
-                        new SimulatorIntegrationCreate
-                        {
-                            ExternalId = connectorName,
-                            SimulatorExternalId = SeedData.TestSimulatorExternalId,
-                            DataSetId = SeedData.TestDataSetId,
-                            Heartbeat = DateTime.UtcNow.ToUnixTimeMilliseconds(),
-                            ConnectorVersion = "N/A",
-                            SimulatorVersion = "N/A",
-                        }
-                    }
+        public static async Task<SimulationRun> WaitUntilFinalStatus(Client cdf, long simulationTaskId) {
+            IEnumerable<SimulationRun> runsRes = null;
+            SimulationRun? run = null;
+            while (run == null || (run.Status != SimulationRunStatus.success && run.Status != SimulationRunStatus.failure)) {
+                await Task.Delay(1000).ConfigureAwait(false);
+                runsRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
+                    new [] { simulationTaskId }
                 ).ConfigureAwait(false);
-            } else {
-                await cdf.Alpha.Simulators.UpdateSimulatorIntegrationAsync(
-                    new List<SimulatorIntegrationUpdateItem>
-                    {
-                        new SimulatorIntegrationUpdateItem(existing.Id)
-                        {
-                            Update = new SimulatorIntegrationUpdate
-                            {
-                                Heartbeat = new Update<long>(DateTime.UtcNow.ToUnixTimeMilliseconds()),
-                            }
-                        }
-                    }
-                ).ConfigureAwait(false);
+                run = runsRes.First();
             }
+            return runsRes.First();
         }
     }
+
+
 }

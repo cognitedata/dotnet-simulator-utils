@@ -29,6 +29,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<SeedData>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             StateStoreConfig stateConfig = null;
@@ -36,13 +37,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var cdf = provider.GetRequiredService<Client>();
             var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            // var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = provider.GetRequiredService<SeedData>();
 
             try
             {
-                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 // prepopulate models in CDF
-                var revisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionsRes = await seed.GetOrCreateSimulatorModelRevisions().ConfigureAwait(false);
                 var revisions = revisionsRes.TakeLast(1); // This test only works with the latest revision
                 var revisionMap = revisions.ToDictionary(r => r.ExternalId, r => r);
 
@@ -65,7 +66,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
-                    Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
+                    Assert.Equal(seed.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
                     Assert.False(modelInState.Processed);
                 }
@@ -92,7 +93,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
                 }
 
-                var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
+                var modelExternalIdV2 = $"{seed.TestModelExternalId}-2";
                 var v2 = Assert.Contains(
                     revisionMap[modelExternalIdV2].Id.ToString(),
                     libState);
@@ -117,7 +118,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
             }
         }
 
@@ -136,13 +137,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var cdf = provider.GetRequiredService<Client>();
             var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = new SeedData(cdf, fileStorageClient);
 
             try
             {
-                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 // prepopulate models in CDF
-                var initialRevisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var initialRevisionsRes = await seed.GetOrCreateSimulatorModelRevisions().ConfigureAwait(false);
                 var initialRevisions = initialRevisionsRes.TakeLast(1); // This test only works with the latest revision
                 
                 // set model revision to be be "pre-parsed"
@@ -245,7 +247,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
             }
         }
 
@@ -262,13 +264,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var cdf = provider.GetRequiredService<Client>();
             var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
+            var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = new SeedData(cdf, fileStorageClient);
 
             try
             {
-                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // await seed.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
                 // prepopulate models in CDF
-                var revisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionsRes = await seed.GetOrCreateSimulatorModelRevisions().ConfigureAwait(false);
                 var revisions = revisionsRes.TakeLast(1); // This test only works with the latest revision
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -299,12 +302,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // delete current models
                 var modelExternalIdToDelete = revisions.First().ModelExternalId;
-                await SeedData.DeleteSimulatorModel(cdf, modelExternalIdToDelete).ConfigureAwait(false);
+                await seed.DeleteSimulatorModel(modelExternalIdToDelete).ConfigureAwait(false);
 
-                var revisionNewCreate = SeedData.GenerateSimulatorModelRevisionCreate("hot-reload", version: 1);
-                await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
+                var revisionNewCreate = seed.GenerateSimulatorModelRevisionCreate("hot-reload", version: 1);
+                await seed.GetOrCreateSimulatorModelRevisionWithFile(SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
 
-                var revisionNew = await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
+                var revisionNew = await seed.GetOrCreateSimulatorModelRevisionWithFile(SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
 
                 var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId).ConfigureAwait(false);
 
@@ -335,7 +338,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
             }
         }
 
@@ -352,17 +355,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             // prepopulate routine in CDF
             var cdf = provider.GetRequiredService<CogniteDestination>();
+            var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = new SeedData(cdf.CogniteClient, fileStorageClient);
             try
             {
 
-                var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
-                await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
-                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
-                var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf.CogniteClient,
-                    FileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
+                // await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
+                // await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+                var revision = await seed.GetOrCreateSimulatorRoutineRevision(
+                    // cdf.CogniteClient,
+                    // FileStorageClient,
+                    seed.SimulatorRoutineCreateWithTsAndExtendedIO,
+                    seed.SimulatorRoutineRevisionWithTsAndExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -381,7 +385,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var simConf = await lib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 Assert.NotNull(simConf);
-                Assert.Equal(SeedData.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
+                Assert.Equal(seed.TestRoutineExternalIdWithTs, simConf.RoutineExternalId);
                 foreach (var input in simConf.Configuration.Inputs)
                 {
                     Assert.True(input.IsTimeSeries);
@@ -395,7 +399,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
             }
         }
 
@@ -409,21 +413,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
-            // prepopulate routine in CDF
+
             var cdf = provider.GetRequiredService<CogniteDestination>();
+            var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = new SeedData(cdf.CogniteClient, fileStorageClient);
             try
             {  
-                
-                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
-                
-                await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
-
-                await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
-                var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                    cdf.CogniteClient,
-                    fileStorageClient,
-                    SeedData.SimulatorRoutineCreateWithExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithExtendedIO
+                // await seed.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
+                // await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+                var revision = await seed.GetOrCreateSimulatorRoutineRevision(
+                    // cdf.CogniteClient,
+                    // fileStorageClient,
+                    seed.SimulatorRoutineCreateWithExtendedIO,
+                    seed.SimulatorRoutineRevisionWithExtendedIO
                 ).ConfigureAwait(false);
 
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -445,8 +447,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var simConf = routineRevision.Configuration;
                 Assert.NotNull(simConf);
 
-                Assert.Equal(SeedData.TestRoutineExternalId, routineRevision.RoutineExternalId);
-                Assert.Equal($"{SeedData.TestRoutineExternalId} - 1", routineRevision.ExternalId);
+                Assert.Equal(seed.TestRoutineExternalId, routineRevision.RoutineExternalId);
+                Assert.Equal($"{seed.TestRoutineExternalId} - 1", routineRevision.ExternalId);
                 
                 Assert.NotEmpty(simConf.Inputs);
                 foreach (var input in simConf.Inputs)
@@ -464,7 +466,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
 
             }
         }
@@ -500,6 +502,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
+            SeedData seed,
             IExtractionStateStore store = null) :
             base(
                 new ModelLibraryConfig
@@ -515,7 +518,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = SeedData.TestSimulatorExternalId,
+                        Name = seed.TestSimulatorExternalId,
                         DataSetId = SeedData.TestDataSetId
                     }
                 },
@@ -577,6 +580,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public RoutineLibraryTest(
             CogniteDestination cdf, 
+            SeedData seed,
             ILogger<RoutineLibraryTest> logger) : 
             base(
                 new RoutineLibraryConfig
@@ -587,7 +591,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = SeedData.TestSimulatorExternalId,
+                        Name = seed.TestSimulatorExternalId,
                         DataSetId = SeedData.TestDataSetId
                     }
                 },

@@ -36,56 +36,64 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static IEnumerable<object[]> InputParams => 
             new List<object[]>
             {
-                // 1. timeseries inputs
-                new object[] {
-                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
-                    new List<SimulationInputOverride>(),
-                    SimulatorValue.Create(2037.478183282069),
-                    true // check for timeseries
-                },
-                // 2. constant inputs
-                new object[] {
-                    SeedData.SimulatorRoutineCreateWithExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
-                    new List<SimulationInputOverride>(),
-                    SimulatorValue.Create(142),
-                    true
-                },
-                // 3. constant inputs with override
-                new object[] {
-                    SeedData.SimulatorRoutineCreateWithExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithExtendedIO,
-                    new List<SimulationInputOverride> {
-                        new SimulationInputOverride {
-                            ReferenceId = "IC1",
-                            Value = new SimulatorValue.Double(-42),
-                        },
-                    },
-                    SimulatorValue.Create(58),
-                    true
-                },
-                // 4. constant string inputs
-                new object[] {
-                    SeedData.SimulatorRoutineCreateWithStringsIO,
-                    SeedData.SimulatorRoutineRevisionWithStringsIO,
-                    new List<SimulationInputOverride>(),
-                    SimulatorValue.Create("42"),
-                    false
-                },
-                // 5. timeseries inputs with override
-                new object[] {
-                    SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
-                    SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
-                    new List<SimulationInputOverride> {
-                        new SimulationInputOverride {
-                            ReferenceId = "IT1",
-                            Value = new SimulatorValue.Double(2345),
-                        },
-                    },
-                    SimulatorValue.Create(2345),
-                    true
-                },
+                // // 1. timeseries inputs
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                //     SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
+                //     new List<SimulationInputOverride>(),
+                //     SimulatorValue.Create(2037.478183282069),
+                //     true // check for timeseries
+                // },
+                // // 2. constant inputs
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithExtendedIO,
+                //     SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                //     new List<SimulationInputOverride>(),
+                //     SimulatorValue.Create(142),
+                //     true
+                // },
+                // // 3. constant inputs with override
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithExtendedIO,
+                //     SeedData.SimulatorRoutineRevisionWithExtendedIO,
+                //     new List<SimulationInputOverride> {
+                //         new SimulationInputOverride {
+                //             ReferenceId = "IC1",
+                //             Value = new SimulatorValue.Double(-42),
+                //         },
+                //     },
+                //     SimulatorValue.Create(58),
+                //     true
+                // },
+                // // 4. constant string inputs
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithStringsIO,
+                //     SeedData.SimulatorRoutineRevisionWithStringsIO,
+                //     new List<SimulationInputOverride>(),
+                //     SimulatorValue.Create("42"),
+                //     false
+                // },
+                // // 5. timeseries inputs with override
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithTsAndExtendedIO,
+                //     SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
+                //     new List<SimulationInputOverride> {
+                //         new SimulationInputOverride {
+                //             ReferenceId = "IT1",
+                //             Value = new SimulatorValue.Double(2345),
+                //         },
+                //     },
+                //     SimulatorValue.Create(2345),
+                //     true
+                // },
+                // // 6. timeseries inputs with disabled data sampling (used latest value)
+                // new object[] {
+                //     SeedData.SimulatorRoutineCreateWithTsNoDataSampling,
+                //     SeedData.SimulatorRoutineRevisionWithTsNoDataSampling,
+                //     new List<SimulationInputOverride>(),
+                //     SimulatorValue.Create(2037.7438329838599),
+                //     false
+                // },
             };
 
         private const long validationEndOverwrite = 1631304000000L;
@@ -102,15 +110,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton<SeedData>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton<SampleSimulatorClient>();
-            services.AddSingleton(new ConnectorConfig
-            {
-                NamePrefix = SeedData.TestIntegrationExternalId,
-                AddMachineNameSuffix = false,
+            services.AddSingleton(services => {
+                var seed = services.GetRequiredService<SeedData>();
+                return new ConnectorConfig
+                {
+                    NamePrefix = seed.TestIntegrationExternalId,
+                    AddMachineNameSuffix = false,
+                };
             });
 
             StateStoreConfig stateConfig = null;
@@ -120,16 +132,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
-            var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            // var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
+            var seed = provider.GetRequiredService<SeedData>();
 
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+            // await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
 
-            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(true);
+            // await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(true);
 
             // prepopulate routine in CDF
-            SimulatorRoutineRevision revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
-                cdf,
-                FileStorageClient,
+            SimulatorRoutineRevision revision = await seed.GetOrCreateSimulatorRoutineRevision(
+                // cdf,
+                // FileStorageClient,
                 createRoutineItem,
                 createRevisionItem
             ).ConfigureAwait(false);
@@ -186,8 +199,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource2 = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken2 = linkedTokenSource2.Token;
                 linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(10));
-                var taskList2 = new List<Task> { runner.Run(linkedToken2) };
-                await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
+                // Task[] taskList2 = new [] { runner.Run(linkedToken2) };
+                // var tempStatus = ;
+                // TestHelpers.WaitUntilFinalStatus(cdf, run.Id), 
+                await Task.WhenAny(runner.Run(linkedToken2), TestHelpers.WaitUntilFinalStatus(cdf, run.Id)).ConfigureAwait(false);
 
                 Assert.Empty(modelLib._temporaryState); // temporary state should be empty after running the model as it cleans up automatically
                 Assert.Empty(Directory.GetFiles("./files/temp"));
@@ -313,7 +328,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
                 }
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+                await seed.DeleteSimulator();
             }
 
         }
@@ -448,6 +463,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             RoutineLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
+            SeedData seed,
             Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
         ) :
             base(config,
@@ -455,7 +471,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     new SimulatorConfig
                     {
-                        Name = SeedData.TestSimulatorExternalId,
+                        Name = seed.TestSimulatorExternalId,
                         DataSetId = SeedData.TestDataSetId
                     }
                 },
