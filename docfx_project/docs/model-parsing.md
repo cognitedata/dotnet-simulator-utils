@@ -27,24 +27,23 @@ In the `NewSimClient` class:
 ```csharp
 public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
-        lock (simulatorLock)
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
+        try
         {
-            try
+            Initialize();
+            dynamic workbook = OpenBook(state.FilePath);
+            if (workbook != null)
             {
-                Initialize();
-                dynamic workbook = OpenBook(state.FilePath);
-                if (workbook != null)
-                {
-                    workbook.Close(false);
-                    state.ParsingInfo.SetSuccess();
-                    return;
-                }
-                state.ParsingInfo.SetFailure();
+                workbook.Close(false);
+                state.ParsingInfo.SetSuccess();
+                return;
             }
-            finally
-            {
-                Shutdown();
-            }
+            state.ParsingInfo.SetFailure();
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
 ```
@@ -63,23 +62,22 @@ using Microsoft.Extensions.Logging;
 
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
-    private readonly object simulatorLock = new object();
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
     private readonly string _version = "N/A";
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config.Automation)
     {
-        lock (simulatorLock)
+        semaphore.Wait();
+        try
         {
-            try
-            {
-                Initialize();
-                _version = Server.Version;
-            }
-            finally
-            {
-                Shutdown();
-            }
+            Initialize();
+            _version = Server.Version;
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
 
@@ -91,24 +89,23 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
-        lock (simulatorLock)
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
+        try
         {
-            try
+            Initialize();
+            dynamic workbook = OpenBook(state.FilePath);
+            if (workbook != null)
             {
-                Initialize();
-                dynamic workbook = OpenBook(state.FilePath);
-                if (workbook != null)
-                {
-                    workbook.Close(false);
-                    state.ParsingInfo.SetSuccess();
-                    return;
-                }
-                state.ParsingInfo.SetFailure();
+                workbook.Close(false);
+                state.ParsingInfo.SetSuccess();
+                return;
             }
-            finally
-            {
-                Shutdown();
-            }
+            state.ParsingInfo.SetFailure();
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
 

@@ -5,23 +5,22 @@ using Microsoft.Extensions.Logging;
 
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
-    private readonly object simulatorLock = new object();
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
     private readonly string _version = "N/A";
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config.Automation)
     {
-        lock (simulatorLock)
+        semaphore.Wait();
+        try
         {
-            try
-            {
-                Initialize();
-                _version = Server.Version;
-            }
-            finally
-            {
-                Shutdown();
-            }
+            Initialize();
+            _version = Server.Version;
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
 
@@ -38,24 +37,23 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
-        lock (simulatorLock)
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
+        try
         {
-            try
+            Initialize();
+            dynamic workbook = OpenBook(state.FilePath);
+            if (workbook != null)
             {
-                Initialize();
-                dynamic workbook = OpenBook(state.FilePath);
-                if (workbook != null)
-                {
-                    workbook.Close(false);
-                    state.ParsingInfo.SetSuccess();
-                    return;
-                }
-                state.ParsingInfo.SetFailure();
+                workbook.Close(false);
+                state.ParsingInfo.SetSuccess();
+                return;
             }
-            finally
-            {
-                Shutdown();
-            }
+            state.ParsingInfo.SetFailure();
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
 
@@ -69,27 +67,26 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return _version;
     }
 
-    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
+    public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
     {
-        lock (simulatorLock)
+        await semaphore.WaitAsync().ConfigureAwait(false);
+        dynamic? workbook = null;
+        try
         {
-            dynamic workbook = null;
-            try
-            {
-                Initialize();
-                workbook = OpenBook(modelState.FilePath);
+            Initialize();
+            workbook = OpenBook(modelState.FilePath);
 
-                var routine = new NewSimRoutine(workbook, routineRev, inputData);
-                return Task.FromResult(routine.PerformSimulation());
-            }
-            finally
+            var routine = new NewSimRoutine(workbook, routineRev, inputData);
+            return routine.PerformSimulation();
+        }
+        finally
+        {
+            if (workbook != null)
             {
-                if (workbook != null)
-                {
-                    workbook.Close(false);
-                }
-                Shutdown();
+                workbook.Close(false);
             }
+            Shutdown();
+            semaphore.Release();
         }
     }
 }

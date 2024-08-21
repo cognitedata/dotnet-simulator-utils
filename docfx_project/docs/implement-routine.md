@@ -94,30 +94,29 @@ The `SetInput` method is used to set the input values for the simulation. The `G
 #### Implement `RunSimulation` method in `NewSimClient`
 
 At this point we need to call the `PerformSimulation` method in the `NewSimRoutine` class. This method will run through the instructions in the routine revision and return the results of the simulation.
-We aquire the lock to ensure only a single connection to the simulator is made at a time.
+We use a semaphore to ensure only a single connection to the simulator is made at a time.
 
 ```csharp
 public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
     {
-        lock (simulatorLock)
+        await semaphore.WaitAsync().ConfigureAwait(false);
+        dynamic? workbook = null;
+        try
         {
-            dynamic workbook = null;
-            try
-            {
-                Initialize();
-                workbook = OpenBook(modelState.FilePath);
+            Initialize();
+            workbook = OpenBook(modelState.FilePath);
 
-                var routine = new NewSimRoutine(workbook, routineRev, inputData);
-                return Task.FromResult(routine.PerformSimulation());
-            }
-            finally
+            var routine = new NewSimRoutine(workbook, routineRev, inputData);
+            return routine.PerformSimulation();
+        }
+        finally
+        {
+            if (workbook != null)
             {
-                if (workbook != null)
-                {
-                    workbook.Close(false);
-                }
-                Shutdown();
+                workbook.Close(false);
             }
+            Shutdown();
+            semaphore.Release();
         }
     }
 ```

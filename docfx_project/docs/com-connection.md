@@ -76,28 +76,27 @@ using Microsoft.Extensions.Logging;
 
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
-    private readonly object simulatorLock = new object();
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
     private readonly string _version = "N/A";
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config.Automation)
     {
-        lock (simulatorLock)
+        semaphore.Wait();
+        try
         {
-            try
-            {
-                Initialize();
-                _version = Server.Version;
-            }
-            finally
-            {
-                Shutdown();
-            }
+            Initialize();
+            _version = Server.Version;
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
         }
     }
     // rest of the class
 ```
-In the constructor, we initialize the `COM` connection and get the version number of the Excel application. We also added a field `_version` to store the version number. While communicating with the simulator, we lock the connection to avoid multiple threads accessing the `COM` object at the same time.
+In the constructor, we initialize the `COM` connection and get the version number of the Excel application. We also added a field `_version` to store the version number. While communicating with the simulator, we use a semaphore to avoid multiple threads accessing the `COM` object at the same time.
 
 
 We also need to add a method that closes the Excel application when `COM` connection is closed.
