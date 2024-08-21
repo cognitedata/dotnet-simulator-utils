@@ -1,5 +1,4 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.StateStorage;
+﻿using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
@@ -13,7 +12,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -85,6 +83,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     },
                     SimulatorValue.Create(2345),
                     true
+                },
+                // 6. timeseries inputs with disabled data sampling (used latest value)
+                new object[] {
+                    SeedData.SimulatorRoutineCreateWithTsNoDataSampling,
+                    SeedData.SimulatorRoutineRevisionWithTsNoDataSampling,
+                    new List<SimulationInputOverride>(),
+                    SimulatorValue.Create(2037.7438329838599),
+                    false
                 },
             };
 
