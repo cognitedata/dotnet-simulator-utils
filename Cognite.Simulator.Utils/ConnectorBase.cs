@@ -144,7 +144,7 @@ namespace Cognite.Simulator.Utils
         public abstract Task Init(CancellationToken token);
         
         /// <summary>
-        /// Implements the connector loop. Should call the <see cref="Heartbeat(CancellationToken)"/> method and any
+        /// Implements the connector loop. Should call the <see cref="HeartbeatLoop(CancellationToken)"/> method and any
         /// other thats that are done periodically by the connector
         /// 
         /// </summary>

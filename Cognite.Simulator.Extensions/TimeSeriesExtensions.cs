@@ -150,18 +150,4 @@ namespace Cognite.Simulator.Extensions
         {
         }
     }
-
-    /// <summary>
-    /// Represent errors related to read/write simulation model version time series in CDF
-    /// </summary>
-    public class SimulationModelVersionCreationException : CogniteException
-    {
-        /// <summary>
-        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
-        /// </summary>
-        public SimulationModelVersionCreationException(string message, IEnumerable<CogniteError> errors)
-            : base(message, errors)
-        {
-        }
-    }
 }
