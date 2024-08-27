@@ -75,9 +75,11 @@ namespace Cognite.Simulator.Utils.Automation
             }
             finally
             {
-                Marshal.ReleaseComObject(Server);
-                _logger.LogDebug("Released COM Object");
-                Server = null;
+                if (Server != null) {
+                    Marshal.ReleaseComObject(Server);
+                    _logger.LogDebug("Released COM Object");
+                    Server = null;
+                }
                 if (_processes != null && _processes.Any())
                 {
                     // This is not ideal but in some cases, activating a simulator instance creates
