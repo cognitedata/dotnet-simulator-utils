@@ -1,14 +1,14 @@
-# Error Handling and Logging
+# Error handling and logging
 
-Implement proper error handling and logging throughout your connector. Use the `ILogger` interface for consistent logging.
+Use the `ILogger` interface for error handling and logging throughout your connector. 
 
-A logger is available in the `ISimulatorClient` and can be accessed as follows:
+You can access the logger in the `ISimulatorClient` as shown below:
+
 ```csharp
-_logger.LogDebug("Your message here");
+_logger.LogDebug("Insert your message here");
 ```
 
 ### Testing
-Create unit tests for your connector to ensure it works as expected. 
+To ensure the connector works as expected, create unit tests.
 
-
-By following these steps, you should be able to create a custom connector for your simulator that integrates with the Cognite simulator integration framework. Remember to adjust the code examples to fit your specific simulator requirements and to handle any simulator-specific operations in the `NewSimRoutine` and `NewSimClient` classes.
+Follow the above steps to create a custom connector for your simulator that integrates with the Cognite simulator integration framework. Adjust the code examples to fit the specific simulator requirements and handle any simulator-specific operations in the `NewSimRoutine` and `NewSimClient` classes.
