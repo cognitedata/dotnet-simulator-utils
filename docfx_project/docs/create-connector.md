@@ -1,24 +1,24 @@
-# Creating your first simulator connector
+# Create your first simulator connector
 
-#### Prerequisites
+## Prerequisites
   - .NET LTS version
-  - Cognite Data Fusion project 
+  - You require a Cognite Data Fusion (CDF) project.
 
-#### Create a new simulator connector project
+## Create a new simulator connector project
 
-The Cognite Simulator Utils can be downloaded from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
+Download the Cognite Simulator Utils from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
 
-To create a console application and add the latest version of the library, open the terminal and run the following commands:
+To create a console application and add the latest version of the library, open the terminal and run the commands below:
 ```sh
 dotnet new console -o NewSimConnector
 cd NewSimConnector
 dotnet add package Cognite.Simulator.Utils --prerelease
 ```
-NB: The `--prerelease` flag is required to install the latest version of the library (alpha).
+> Note: The `--prerelease` flag is required to install the latest version of the library (alpha).
 
-#### Create a configuration file
+### Create a configuration file
 
-Create a `config.yml` file containing the simulator configuration
+To create a `config.yml` file containing the simulator configuration, use the YAML code below:
 
 ```yaml
 version: 1
@@ -29,17 +29,17 @@ logger:
 
 cognite:
     project: ${COGNITE_PROJECT}
-    # This is for Microsoft Entra as an IdP, to use a different provider,
+    # This is for Microsoft Entra as an IdP. To use a different provider:
     # set implementation: Basic, and use token-url instead of tenant.
     # See the example config for the full list of options.
     idp-authentication:
         # Directory tenant
         tenant: ${COGNITE_TENANT_ID}
-        # Application Id
+        # Application ID
         client-id: ${COGNITE_CLIENT_ID}
         # Client secret
         secret: ${COGNITE_CLIENT_SECRET}
-        # List of resource scopes, ex:
+        # List of resource scopes. Example:
         # scopes:
         #   - https://api.cognitedata.com/.default
         scopes:
@@ -48,24 +48,25 @@ cognite:
 
 simulator:
   name: "NewSim"
-  # Data set id to keep all the simulator resources
+  # Data set ID to keep all the simulator resources
   data-set-id: ${COGNITE_DATA_SET_ID}
     
 connector:
   name-prefix: "new-sim-connector@"
 ```
 
-This file contains the configuration needed to connect to the Cognite Data Fusion project, define the target data set id, and set the connector name.
+This file contains the configuration required to:
+- Connect to the CDF project,
+- Define the target data set ID, and 
+- Set the connector name.
 
-Make sure to populate the environment variables with the correct values. Alternatively, you can hardcode the values in the configuration file for the development environment.
-
+Make sure you populate the environment variables with the correct values. You can also hardcode the values in the configuration file for the development environment.
 
 ### Create a simulator definition
 
-Now we to have to define a contract between the simulator and the Cognite Data Fusion platform. This contract is defined in the API as a `Simulator` object.
+Now, define a contract between the simulator and CDF. This contract is defined in the API as a `Simulator` object.
 
-Create a new file called `SimulatorDefinition.cs`.
-The copy the following code into it, you can adjust the values later:
+Create a new file called `SimulatorDefinition.cs` and copy the code into it. You can adjust the values later.
 
 ```csharp
 using CogniteSdk.Alpha;
@@ -122,18 +123,20 @@ static class SimulatorDefinition {
 }
 ```
 
-`UnitQuantities`, `ModelTypes`, and `StepFields` are used to define the simulator units, models, and fields that the simulator can handle.
+`UnitQuantities`, `ModelTypes`, and `StepFields` define the simulator units, models, and fields that the simulator can handle.
 
-`StepFields` are used to define how simulator object fields can be accessed in order to both send values into the simulator and read results of a simulation.
+`StepFields` defines how to access simulator object fields, send values into the simulator, and read the simulation results.
+
 Steps can be of type `get`, `set`, or `command`.
 
-`UnitQuantities` are used to define the units of measurement that the simulator can handle.
+`UnitQuantities` defines the measurement units that the simulator can handle.
 
-`ModelTypes` can be used to define different types of models that the simulator can handle.
+`ModelTypes` defines the different types of models that the simulator can handle.
 
-We may fill these fields with the actual values later, but for now, we can use placeholders.
+Now, we've used placeholders for the fields. Fill in the actual values when you use them.
 
 ### Implement a simulator client
+
 Create a class that implements `ISimulatorClient`.
 
 `NewSimClient.cs`:
@@ -164,11 +167,12 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
     }
 }
 ```
-We will implement the methods in the `NewSimClient` class later.
-
+<!--We will implement the methods in the `NewSimClient` class later.-->
 
 #### Create a ConnectorRuntime class
-We need to configure the services via Dependency Injection and boilerplate code to run the connector.
+
+Configure the services via Dependency Injection and boilerplate code to run the connector.
+
 Create a class using `DefaultConnectorRuntime` helper class.
 
 `ConnectorRuntime.cs`:
@@ -200,8 +204,8 @@ public static class ConnectorRuntime {
 
 #### Program entry point
 
-The only thing left is to run the connector in the `Main` method of the console application.
-Replace the contents of the `Program.cs` file with the following code:
+The final step is to run the connector in the `Main` method of the console application.
+Replace the contents of the `Program.cs` file with the code below
 
 ```csharp
 public class Program
@@ -219,7 +223,7 @@ public class Program
 }
 ```
 
-Once you run the application, you should see the connector in the Fusion GUI.
-The connector can't do much yet, but it reports its "heartbeat" to the Cognite Data Fusion platform.
+Once you run the application, you'll see the connector in CDF.
+<!--Change this line The connector can't do much yet, but it reports its "heartbeat" to the Cognite Data Fusion platform.-->
 
 ![Heartbeat in Fusion](../images/screenshot-heartbeat.png)
