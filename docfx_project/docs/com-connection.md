@@ -1,12 +1,11 @@
 # Implement COM connection
 
-To be able to run simulations using the Cognite simulator integration, we need to be able to connect to a simulator using `COM` interface.
-In this example, we will use Excel as a simple "simulator" and will try to read its version number.
+To run simulations using the Cognite simulator integration, connect to a simulator using the `COM` interface.
+In the example, we use Excel as a `simulator` and fetch its version number.
 
-### Create a class that inherits from AutomationConfig
+## Create a class that inherits from AutomationConfig
 
-This is needed to set the `COM` program ID, so the connector knows which program to connect to.
-For the sake of this example, we will use Excel.
+Set the `COM` program ID so the connector knows which program to connect to.
 
 `NewSimAutomationConfig.cs`:
 ```csharp
@@ -51,11 +50,10 @@ public static class ConnectorRuntime {
 
 ### Extend the NewSimClient class to inherit from the AutomationClient class
 
-This is needed to access the `COM` object.
-We need to add the `using Cognite.Simulator.Utils.Automation;` namespace to the `NewSimClient` class.
-Also, extend the class to inherit from `AutomationClient` and implement a new constructor that calls the base constructor with the AutomationConfig type.
+To access the `COM` object, extend the `NewSimClient` class to inherit from the `AutomationClient` class. 
+Add `using Cognite.Simulator.Utils.Automation;` namespace to `NewSimClient` class and extend the class to inherit from `AutomationClient`. Then, add a new constructor that calls the base constructor with the AutomationConfig type.
 
-Simply replace these top lines in the `NewSimClient` class:
+Replace the lines in the `NewSimClient` class:
 
 ```csharp
 using Cognite.Simulator.Utils;
@@ -66,7 +64,7 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
 // rest of the class
 ```
 
-With these lines:
+with the lines below:
 
 ```csharp
 using Cognite.Simulator.Utils;
@@ -96,10 +94,10 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     }
     // rest of the class
 ```
-In the constructor, we initialize the `COM` connection and get the version number of the Excel application. We also added a field `_version` to store the version number. While communicating with the simulator, we use a semaphore to avoid multiple threads accessing the `COM` object at the same time.
+In the constructor, initialize the `COM` connection and get the Excel application's version number. The field `_version` stores the version number. When you connect to the simulator, use a semaphore to avoid using multiple threads to access the `COM` object at the same time.
 
+Also, add a method that closes the Excel application when the `COM` connection is closed.
 
-We also need to add a method that closes the Excel application when `COM` connection is closed.
 ```csharp
 protected override void PreShutdown()
 {
@@ -107,16 +105,13 @@ protected override void PreShutdown()
 }
 ```
 
-And update the `GetSimulatorVersion` method to return the version number.
+Update the `GetSimulatorVersion` method to return the version number.
 ```csharp
 public string GetSimulatorVersion()
 {
     return _version;
 }
 ```
-
-
-
-Try to run the connector, you should see the version number in Fusion.
+When you run the connector, you'll see the version number in [CDF](https://fusion.cognite.com/).
 
 ![Simulator version](../images/simulator-version.png)
