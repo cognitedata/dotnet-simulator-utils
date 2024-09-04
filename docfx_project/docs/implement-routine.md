@@ -1,12 +1,11 @@
-
 # Implement RoutineImplementationBase
 
-Routine is an entity that contains configuration of the input and output parameters needed for the simulation.
+A routine is an entity that contains the input and output parameter configuration required for simulation.
 It also contains a list of instructions for the connector to pass into the simulation model.
-In this tutorial we will implement the actual communication between the connector and a simulator using COM interface.
 
-First, create a class that inherits from `RoutineImplementationBase`.
+In this tutorial, you'll use the COM interface to connect the connector to a simulator.
 
+Create a class that inherits from `RoutineImplementationBase`.
 
 `NewSimRoutine.cs`:
 ```csharp
@@ -84,17 +83,20 @@ public class NewSimRoutine : RoutineImplementationBase
 
     public override void RunCommand(Dictionary<string, string> arguments)
     {
-        // No implementation needed for this simulator
+        // No implementation is required for this simulator.
     }
 }
 ```
-This class will be used to perform the simulation.
-The `SetInput` method is used to set the input values for the simulation. The `GetOutput` method is used to get the output values from the simulation. The `RunCommand` method is used to run commands in the simulation, but it is not needed for this simulator as the results are calculated immediately on the worksheet.
+The newly created class will perform the simulation.
+
+- The `SetInput` method sets the input values for the simulation. 
+- The `GetOutput` method gets the output values from the simulation. 
+- The `RunCommand` method runs commands in the simulation. You don't need this method for the simulator because the results are calculated right away on the worksheet.
 
 #### Implement `RunSimulation` method in `NewSimClient`
 
-At this point we need to call the `PerformSimulation` method in the `NewSimRoutine` class. This method will run through the instructions in the routine revision and return the results of the simulation.
-We use a semaphore to ensure only a single connection to the simulator is made at a time.
+Call the `PerformSimulation` method in the `NewSimRoutine` class. The `PerformSimulation` method will run through the instructions in the routine revision and return the results of the simulation.
+Use a semaphore to ensure only one connection to the simulator is made at a time.
 
 ```csharp
 public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
@@ -121,10 +123,11 @@ public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFi
     }
 ```
 
-Not we can call the API and create a new routine and routine revision. Once that is done, we are ready for the first simulation.
+Now, call the API and create a new routine and a routine revision. When done, you're ready for the first simulation.
 
 Routine:
-```
+
+```json
 POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
 {
   "items": [{
@@ -136,11 +139,12 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
 }
 ```
 
-In the following example we create a routine revision for the routine we just created.
-The script contains the instructions for the simulation. In this case we set the value of the cell `A1` to `10` and the value of the cell `B1` to the formula `=A1 * 2`, which should result in `20`.
+In the following example, create a routine revision for the routine that you've already created.
+The script contains the instructions for the simulation. In this case, set the value of the cell `A1` to `10` and the value of the cell `B1` to the formula `=A1 * 2`, which should result in `20`.
 
 Routine revision:
-```
+
+```json
 POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines/revisions
 
 {
@@ -223,17 +227,16 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines/revisions
 }
 ```
 
-Let's try to run the simulation and see the results.
+Now, run the simulation and view the results.
 
-Click on the routine and then click on the `Run now` button.
+Select the routine and then select `Run now`.
 
 ![Running simulation](../images/running-simulation.png)
 
-When the simulation is finished, you can see the details in the `Run browser` tab.
+When the simulation is completed, you can view the details in the `Run browser` tab.
 
 ![Simulation details](../images/simulation-details.png)
 
-Click `View data` to see the results of the simulation.
+Select `View data` to view the simulation results.
 
 ![Simulation results](../images/simulation-data.png)
-
