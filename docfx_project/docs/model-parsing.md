@@ -1,11 +1,12 @@
 # Implement model parsing
 
-To be able to run simulations using the Cognite simulator integration, we need to be able to open the model file and extract the necessary information from it first.
-We will use an empty Excel sheet as a model file for this example.
+To run simulations using the Cognite simulator integration, open the model file and extract the necessary information from it.
+
+In the below example, you use an empty Excel sheet as a model file.
 
 ### Implement COM call to open the Excel file:
 
-Simply copy the following method to the `NewSimClient` class.
+Copy the below method to the `NewSimClient` class.
 
 ```csharp
 public dynamic OpenBook(string path)
@@ -17,13 +18,13 @@ public dynamic OpenBook(string path)
 
 ### Implement the ExtractModelInformation method
 
-This method is used to extract the model information from the simulator.
-For the sake of this example we will only open the Excel `.xlsx` file.
+The `ExtractModelInformation` method extracts the model information from the simulator.
+In the example below, we'll open the Excel `.xlsx` file.
 
-If the file is opened successfully, we will set the parsing info to `success`, otherwise to `failure`.
-
+If the file is opened successfully, set the parsing information to `success`; otherwise, set it to `failure`.
 
 In the `NewSimClient` class:
+
 ```csharp
 public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
@@ -47,8 +48,9 @@ public async Task ExtractModelInformation(DefaultModelFilestate state, Cancellat
         }
     }
 ```
-Note that we are closing the workbook after opening it.
-The boolean parameter in `workbook.Close(false);` also ensures that the workbook changes are not saved.
+Note: Make sure to close the workbook after opening it.
+
+The boolean parameter in `workbook.Close(false)` ensures that workbook changes aren't saved.
 If we fail to close the file, it won't be possible to run multiple simulations with the same model.
 
 
@@ -131,10 +133,10 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 }
 ```
 
-Now, using the Fusion interface we can upload an empty Excel file and observe its status.
+Now, use CDF to upload an empty Excel file and monitor its status.
 
-Upload the file:
+To upload the file, see the image below:
 ![Model upload](../images/model-upload.png)
 
-Model has been successfully parsed:
+You have parsed the model.
 ![Model parsing](../images/model-parsing.png)
