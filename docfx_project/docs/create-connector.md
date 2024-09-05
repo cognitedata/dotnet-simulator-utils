@@ -59,9 +59,7 @@ connector:
 
 This file contains the configuration required to connect to the CDF project, define the target data set ID, and set the connector name.
 
-:::info tip
 Make sure you populate the environment variables with the correct values. You can also hardcode the values in the configuration file for the development environment.
-:::
 
 ### Create a simulator definition
 
