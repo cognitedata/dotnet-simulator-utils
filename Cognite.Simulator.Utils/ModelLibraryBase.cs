@@ -205,6 +205,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         private async Task<T> TryReadRemoteModelRevision(string modelRevisionExternalId, CancellationToken token)
         {
+            _logger.LogDebug("Model file not found locally, will try to download from CDF: {ModelRevisionExternalId}", modelRevisionExternalId);
             try
             {
                 var modelRevisionRes = await _cdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
@@ -217,8 +218,7 @@ namespace Cognite.Simulator.Utils
                 {
                     UpdateModelParsingInfo(state, modelRevision);
                     await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    var updatedState = GetOrUpdateState(modelRevisionExternalId, state);
-                    return updatedState;
+                    return state;
                 }
             }
             catch (Exception e)
@@ -521,6 +521,7 @@ namespace Cognite.Simulator.Utils
         {
             foreach (var state in _temporaryState.Values)
             {
+                _logger.LogDebug("Deleting temporary file: {FilePath}", state.FilePath);
                 StateUtils.DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
             }
             _temporaryState.Clear();
@@ -571,6 +572,10 @@ namespace Cognite.Simulator.Utils
                         .ConfigureAwait(false);
                     if (downloaded)
                     {
+                        _logger.LogDebug("File downloaded: {Id}. Model revision external id: {ExternalId}. File path: {FilePath}",
+                            modelState.CdfId,
+                            modelState.ExternalId,
+                            filename);
                         modelState.FilePath = filename;
                         return true;
                     }
