@@ -271,11 +271,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                     // Check that the correct output was added as a data point
                     var outDps = await cdf.DataPoints.ListAsync(
-                        new DataPointsQuery
+                        new CogniteSdk.DataPointsQuery
                         {
                             Start = simulationTime.ToString(),
                             End = (simulationTime + 1).ToString(),
-                            Items = outTs.Select(o => new DataPointsQueryItem
+                            Items = outTs.Select(o => new CogniteSdk.DataPointsQueryItem
                             {
                                 ExternalId = o.ExternalId
                             })
@@ -286,11 +286,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                     // Check that the correct input sample was added as a data point
                     var inDps = await cdf.DataPoints.ListAsync(
-                        new DataPointsQuery
+                        new CogniteSdk.DataPointsQuery
                         {
                             Start = simulationTime.ToString(),
                             End = (simulationTime + 1).ToString(),
-                            Items = inTs.Select(i => new DataPointsQueryItem
+                            Items = inTs.Select(i => new CogniteSdk.DataPointsQueryItem
                             {
                                 ExternalId = i.ExternalId
                             })
