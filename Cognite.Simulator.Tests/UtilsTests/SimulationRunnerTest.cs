@@ -13,6 +13,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
+using DataPointsQuery = CogniteSdk.DataPointsQuery;
+using DataPointsQueryItem = CogniteSdk.DataPointsQueryItem;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     public class FactIfAttribute : FactAttribute
@@ -271,11 +274,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                     // Check that the correct output was added as a data point
                     var outDps = await cdf.DataPoints.ListAsync(
-                        new CogniteSdk.DataPointsQuery
+                        new DataPointsQuery
                         {
                             Start = simulationTime.ToString(),
                             End = (simulationTime + 1).ToString(),
-                            Items = outTs.Select(o => new CogniteSdk.DataPointsQueryItem
+                            Items = outTs.Select(o => new DataPointsQueryItem
                             {
                                 ExternalId = o.ExternalId
                             })
@@ -286,11 +289,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                     // Check that the correct input sample was added as a data point
                     var inDps = await cdf.DataPoints.ListAsync(
-                        new CogniteSdk.DataPointsQuery
+                        new DataPointsQuery
                         {
                             Start = simulationTime.ToString(),
                             End = (simulationTime + 1).ToString(),
-                            Items = inTs.Select(i => new CogniteSdk.DataPointsQueryItem
+                            Items = inTs.Select(i => new DataPointsQueryItem
                             {
                                 ExternalId = i.ExternalId
                             })
