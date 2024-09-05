@@ -140,6 +140,7 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
 ```
 
 In the following example, create a routine revision for the routine that you've already created.
+
 The script contains the instructions for the simulation. In this case, set the value of the cell `A1` to `10` and the value of the cell `B1` to the formula `=A1 * 2`, which should result in `20`.
 
 Routine revision:
@@ -227,9 +228,7 @@ POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines/revisions
 }
 ```
 
-Now, run the simulation and view the results.
-
-Select the routine and then select `Run now`.
+Now, run the simulation and view the results. Select the routine and then select `Run now`.
 
 ![Running simulation](../images/running-simulation.png)
 

@@ -53,7 +53,6 @@ Note: Make sure to close the workbook after opening it.
 The boolean parameter in `workbook.Close(false)` ensures that workbook changes aren't saved.
 If we fail to close the file, it won't be possible to run multiple simulations with the same model.
 
-
 Updated `NewSimClient` class:
 
 ```csharp
@@ -135,7 +134,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
 Now, use CDF to upload an empty Excel file and monitor its status.
 
-To upload the file, see the image below:
+To upload the file, see below:
 ![Model upload](../images/model-upload.png)
 
 You have parsed the model.

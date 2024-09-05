@@ -20,8 +20,7 @@ public class NewSimAutomationConfig : AutomationConfig
 }
 ```
 
-Adjust the `ConnectorRuntime` class to use the `NewSimAutomationConfig` class.
-Replace every instance of `AutomationConfig` with `NewSimAutomationConfig`.
+Adjust the `ConnectorRuntime` class to use the `NewSimAutomationConfig` class. Replace every instance of `AutomationConfig` with `NewSimAutomationConfig`.
 
 ```csharp
 using Cognite.Simulator.Utils;
@@ -94,6 +93,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     }
     // rest of the class
 ```
+
 In the constructor, initialize the `COM` connection and get the Excel application's version number. The field `_version` stores the version number. When you connect to the simulator, use a semaphore to avoid using multiple threads to access the `COM` object at the same time.
 
 Also, add a method that closes the Excel application when the `COM` connection is closed.
@@ -106,6 +106,7 @@ protected override void PreShutdown()
 ```
 
 Update the `GetSimulatorVersion` method to return the version number.
+
 ```csharp
 public string GetSimulatorVersion()
 {

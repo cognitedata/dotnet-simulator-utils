@@ -30,4 +30,3 @@ simulator:
     
 connector:
   name-prefix: "new-sim-connector@"
-  

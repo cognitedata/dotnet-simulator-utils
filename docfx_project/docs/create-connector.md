@@ -1,6 +1,7 @@
 # Create your first simulator connector
 
 ## Prerequisites
+
   - .NET LTS version
   - You require a Cognite Data Fusion (CDF) project.
 
@@ -9,6 +10,7 @@
 Download the Cognite Simulator Utils from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
 
 To create a console application and add the latest version of the library, open the terminal and run the commands below:
+
 ```sh
 dotnet new console -o NewSimConnector
 cd NewSimConnector
@@ -55,12 +57,11 @@ connector:
   name-prefix: "new-sim-connector@"
 ```
 
-This file contains the configuration required to:
-- Connect to the CDF project,
-- Define the target data set ID, and 
-- Set the connector name.
+This file contains the configuration required to connect to the CDF project, define the target data set ID, and set the connector name.
 
+:::info tip
 Make sure you populate the environment variables with the correct values. You can also hardcode the values in the configuration file for the development environment.
+:::
 
 ### Create a simulator definition
 
@@ -171,7 +172,7 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
 
 #### Create a ConnectorRuntime class
 
-Configure the services via Dependency Injection and boilerplate code to run the connector.
+Configure the services via `Dependency Injection` and boilerplate code to run the connector.
 
 Create a class using `DefaultConnectorRuntime` helper class.
 
@@ -205,7 +206,7 @@ public static class ConnectorRuntime {
 #### Program entry point
 
 The final step is to run the connector in the `Main` method of the console application.
-Replace the contents of the `Program.cs` file with the code below
+Replace the contents of the `Program.cs` file with the code below:
 
 ```csharp
 public class Program
