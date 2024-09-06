@@ -30,25 +30,21 @@ public class NewSimRoutine : RoutineImplementationBase
         var col = int.Parse(colStr);
 
         dynamic worksheet = _workbook.ActiveSheet;
-        SimulatorValue value;
 
         if (input.ValueType == SimulatorValueType.DOUBLE)
         {
             var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
             worksheet.Cells[row, col].Value = rawValue;
-            value = SimulatorValue.Create(rawValue);
         } else if (input.ValueType == SimulatorValueType.STRING)
         {
             var rawValue = (input.Value as SimulatorValue.String)?.Value;
             worksheet.Cells[row, col].Formula = rawValue;
-            value = SimulatorValue.Create(rawValue);
         } else {
             throw new NotImplementedException($"{input.ValueType} not implemented");
         }
 
         var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
         input.SimulatorObjectReference = simulationObjectRef;
-        input.Value = value;
     }
 
     public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
