@@ -86,8 +86,12 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
             FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes },
             ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes },
             StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields },
-            UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities }
         };
+
+        // Optional fields
+        if (newSimulatorDefinition.UnitQuantities != null) {
+            update.UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities };
+        }
 
         // Create and return the update item if there are changes
         return new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update };
