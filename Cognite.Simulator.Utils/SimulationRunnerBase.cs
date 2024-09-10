@@ -31,7 +31,7 @@ namespace Cognite.Simulator.Utils
         private readonly ConnectorConfig _connectorConfig;
         private readonly IList<SimulatorConfig> _simulators;
         private readonly SimulatorsResource _cdfSimulators;
-        private readonly DataPointsResource _cdfDataPoints;
+        private readonly CogniteSdk.Resources.DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
 
         /// <summary>
