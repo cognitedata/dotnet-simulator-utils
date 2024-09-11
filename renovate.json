@@ -3,5 +3,5 @@
   "extends": [
     "local>cognitedata/renovate-config-public",
     ":automergeMinor"
-  ],
+  ]
 }
