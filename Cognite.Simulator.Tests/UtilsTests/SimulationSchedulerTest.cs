@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
+using NCrontab;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -37,9 +38,27 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationSchedulerTest
     {
+        [Fact(DisplayName = "Test Basic Working of Scheduler")]
+        public void TestBasicWorkingofExternalLibrary()
+        {
+            var job = new ScheduledJob<SimulatorRoutineRevision>() { };
+            job.SetSchedule("*/5 * * * *");
+            var nextOccurence = job.Schedule.GetNextOccurrence(DateTime.Now);
+            Assert.True(nextOccurence > DateTime.Now);
+
+
+            Assert.Throws<CrontabException>(() =>
+            {
+                job = new ScheduledJob<SimulatorRoutineRevision>() { };
+                job.SetSchedule("0 0 0 0 0");
+            });
+
+        }
+
         [Fact]
         public async Task TestSimulationSchedulerBase()
         {
