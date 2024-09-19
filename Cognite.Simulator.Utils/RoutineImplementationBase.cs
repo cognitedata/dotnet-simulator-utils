@@ -144,7 +144,7 @@ namespace Cognite.Simulator.Utils
 
         private void ParseCommand(Dictionary<string, string> arguments)
         {
-            _logger.LogInformation("Running command: {Command}", LogHelper.FlattenDictionary(arguments));
+            _logger.LogInformation("Running command: {Command}", SimulatorLoggingUtils.FlattenDictionary(arguments));
             // Perform command
             RunCommand(arguments);
         }
@@ -162,7 +162,7 @@ namespace Cognite.Simulator.Utils
             if (matchingOutputs.Any())
                 {
                     var output = matchingOutputs.First();
-                    string flattenedArguments = LogHelper.FlattenDictionary(extraArgs);
+                    string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                     _logger.LogInformation("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
                     _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
                 }
@@ -184,7 +184,7 @@ namespace Cognite.Simulator.Utils
             var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();
             if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
             {
-                string flattenedArguments = LogHelper.FlattenDictionary(extraArgs);
+                string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                 _logger.LogInformation("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
                 SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
             }
@@ -192,31 +192,6 @@ namespace Cognite.Simulator.Utils
             {
                 throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
             }
-        }
-    }
-
-    /// <summary>
-    /// Helper class for the RoutineImplementationBase class.
-    /// </summary>
-    public static class LogHelper
-    {
-        /// <summary>
-        /// Flattens a dictionary into a string representation.
-        /// </summary>
-        /// <param name="dict">The dictionary to flatten.</param>
-        /// <returns>A string representation of the dictionary.</returns>
-        public static string FlattenDictionary(Dictionary<string, string> dict)
-        {
-            if (dict == null)
-            {
-                throw new ArgumentNullException(nameof(dict));
-            }
-            var sb = new StringBuilder();
-            foreach (var kvp in dict)
-            {
-                sb.Append($"{kvp.Key}={kvp.Value};");
-            }
-            return sb.ToString();
         }
     }
 
