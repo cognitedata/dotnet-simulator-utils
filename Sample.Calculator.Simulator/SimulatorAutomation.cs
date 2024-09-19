@@ -109,7 +109,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger.LogInformation($"Model type : {modelState.ModelType}");
         try
         {
-            var routine = new CalculatorRoutine(routineRevision, inputData);
+            var routine = new CalculatorRoutine(routineRevision, inputData, _logger);
             var result = routine.PerformSimulation();
             return Task.FromResult(result);
         }
@@ -127,7 +127,7 @@ public class CalculatorSimulatorAutomationClient :
 
 internal class CalculatorRoutineAutomation : RoutineImplementationBase
 {
-    public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
+    public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
     }
 

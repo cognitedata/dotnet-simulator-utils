@@ -206,7 +206,7 @@ connector:
                 try
                 {
                     Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
-                    var routine = new CalculatorRoutineAutomation(routineRevision, inputData);
+                    var routine = new CalculatorRoutineAutomation(routineRevision, inputData, _logger);
                     result = routine.PerformSimulation();
                     return Task.FromResult(result);
                 }
@@ -224,7 +224,7 @@ connector:
 
         internal class CalculatorRoutineAutomation : RoutineImplementationBase
         {
-            public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
+            public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
             {
             }
 
