@@ -1,5 +1,6 @@
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,6 +22,8 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, SimulatorValueItem> _inputData;
         private readonly Dictionary<string, SimulatorValueItem> _simulationResults;
 
+        private readonly ILogger _logger;
+
         /// <summary>
         /// Creates a new simulation routine with the given routine revision
         /// </summary>
@@ -28,7 +31,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="inputData">Data to use as input</param>
         public RoutineImplementationBase(
             SimulatorRoutineRevision routineRevision,
-            Dictionary<string, SimulatorValueItem> inputData)
+            Dictionary<string, SimulatorValueItem> inputData,
+            ILogger logger )
         {
             if (routineRevision == null)
             {
@@ -38,6 +42,7 @@ namespace Cognite.Simulator.Utils
             _config = routineRevision.Configuration;
             _simulationResults = new Dictionary<string, SimulatorValueItem>();
             _inputData = inputData;
+            _logger = logger;
         }
 
         /// <summary>
@@ -139,6 +144,7 @@ namespace Cognite.Simulator.Utils
 
         private void ParseCommand(Dictionary<string, string> arguments)
         {
+            _logger.LogInformation("Running command: {Command}", LogHelper.FlattenDictionary(arguments));
             // Perform command
             RunCommand(arguments);
         }
@@ -156,6 +162,8 @@ namespace Cognite.Simulator.Utils
             if (matchingOutputs.Any())
                 {
                     var output = matchingOutputs.First();
+                    string flattenedArguments = LogHelper.FlattenDictionary(extraArgs);
+                    _logger.LogInformation("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
                     _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
                 }
             else
@@ -176,12 +184,39 @@ namespace Cognite.Simulator.Utils
             var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();
             if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
             {
+                string flattenedArguments = LogHelper.FlattenDictionary(extraArgs);
+                _logger.LogInformation("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
                 SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
             }
             else
             {
                 throw new SimulationException($"Set error: Input time series with key {argRefId} not found");
             }
+        }
+    }
+
+    /// <summary>
+    /// Helper class for the RoutineImplementationBase class.
+    /// </summary>
+    public static class LogHelper
+    {
+        /// <summary>
+        /// Flattens a dictionary into a string representation.
+        /// </summary>
+        /// <param name="dict">The dictionary to flatten.</param>
+        /// <returns>A string representation of the dictionary.</returns>
+        public static string FlattenDictionary(Dictionary<string, string> dict)
+        {
+            if (dict == null)
+            {
+                throw new ArgumentNullException(nameof(dict));
+            }
+            var sb = new StringBuilder();
+            foreach (var kvp in dict)
+            {
+                sb.Append($"{kvp.Key}={kvp.Value};");
+            }
+            return sb.ToString();
         }
     }
 
