@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cognite.Extensions;
 
 namespace Cognite.Simulator.Utils
 {
@@ -29,6 +30,11 @@ namespace Cognite.Simulator.Utils
         private IList<SimulatorConfig> _simulators;
         /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
+
+        /// <summary>
+        ///     Limit for pagination when fetching routine revisions from CDF.
+        /// </summary>
+        public int? PaginationLimit { get; set; } = 100;
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -193,19 +199,20 @@ namespace Cognite.Simulator.Utils
 
         private async Task ReadRoutineRevisions(CancellationToken token)
         {
-            var routineRevisionsRes = await CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync(
+            var routineRevisionsRes = ApiUtils.FollowCursor(
                 new SimulatorRoutineRevisionQuery()
                 {
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
                         // TODO filter by simulatorIntegrationExternalIds
                         SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
-                    }
+                    },
+                    Limit = PaginationLimit
                 },
-                token
-            ).ConfigureAwait(false);
+                CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync,
+                token);
 
-            var routineRevisions = routineRevisionsRes.Items;
+            var routineRevisions = await routineRevisionsRes.ToListAsync(token).ConfigureAwait(false);
 
             foreach (var routineRev in routineRevisions)
             {

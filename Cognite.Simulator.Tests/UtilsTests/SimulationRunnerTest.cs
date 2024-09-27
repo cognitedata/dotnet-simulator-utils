@@ -14,6 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
+using DataPointsQuery = CogniteSdk.DataPointsQuery;
+using DataPointsQueryItem = CogniteSdk.DataPointsQueryItem;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     public class FactIfAttribute : FactAttribute

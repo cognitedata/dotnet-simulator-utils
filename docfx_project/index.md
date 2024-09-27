@@ -3,18 +3,6 @@ _layout: landing
 ---
 
 # .NET Simulator Utils for Cognite Data Fusion
-This is a collection of libraries to simplify the creation of simulator connectors in .NET.
+To simplify the creation of simulator connectors in .NET, use the collection of libraries `.NET Simulator Utils`. <!--This is a collection of libraries to simplify the creation of simulator connectors in .NET.-->
 
-## Installation
-
-The Cognite Simulator Utils can be downloaded from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
-
-To create a console application and add the latest version of the library:
-
-Using .NET CLI:
-```sh
-mkdir NewSimulatorConnector
-cd NewSimulatorConnector
-dotnet new console
-dotnet add package Cognite.Simulator.Utils
-```
+See [Create a simulator connector](./docs/create-connector.html) for more information on how to create a simulator connector. To learn more about Simulator Utils, see [Cognite Simulator Utils](./api/Cognite.Simulator.Utils.html).

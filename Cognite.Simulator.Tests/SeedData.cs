@@ -159,29 +159,20 @@ namespace Cognite.Simulator.Tests
 
         public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevision(Client sdk, SimulatorModelCreate model, SimulatorModelRevisionCreate revision)
         {
-            var modelRes = await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
+            await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
 
-            var revisions = await sdk.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
-                new SimulatorModelRevisionQuery
-                {
-                    Filter = new SimulatorModelRevisionFilter
-                    {
-                        ModelExternalIds = new List<string> { modelRes.ExternalId },
-                    },
-                }).ConfigureAwait(false);
-
-            var revisionRes = revisions.Items.Where(r => r.ExternalId == revision.ExternalId);
-            if (revisionRes.Count() > 0)
-            {
-                return revisionRes.First();
-            }
-
-            var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
+            try {
+                var rev = await sdk.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
+                    new List<Identity> { new Identity(revision.ExternalId) }).ConfigureAwait(false);
+                return rev.First();
+            } catch {
+                var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
                 new List<SimulatorModelRevisionCreate>
                 {
                     revision
                 }).ConfigureAwait(false);
-            return res.First();
+                return res.First();
+            }
         }
 
         public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevisionWithFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file, SimulatorModelRevisionCreate revision)

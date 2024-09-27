@@ -1,0 +1,32 @@
+version: 1
+
+logger:
+    console:
+        level: "debug"
+
+cognite:
+    project: ${COGNITE_PROJECT}
+    # This is for Microsoft Entra as an IdP. To use a different provider:
+    # Set implementation: Basic, and use token-url instead of tenant.
+    # See the example config for the full list of options.
+    idp-authentication:
+        # Directory tenant
+        tenant: ${COGNITE_TENANT_ID}
+        # Application ID
+        client-id: ${COGNITE_CLIENT_ID}
+        # Client secret
+        secret: ${COGNITE_CLIENT_SECRET}
+        # List of resource scopes, ex:
+        # scopes:
+        #   - https://api.cognitedata.com/.default
+        scopes:
+          - ${COGNITE_SCOPE}
+
+
+simulator:
+  name: "NewSim"
+  # Data set ID to keep all the simulator resources
+  data-set-id: ${COGNITE_DATA_SET_ID}
+    
+connector:
+  name-prefix: "new-sim-connector@"

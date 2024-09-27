@@ -365,6 +365,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
                 await SeedData.GetOrCreateSimulator(cdf.CogniteClient, SeedData.SimulatorCreate).ConfigureAwait(false);
                 await TestHelpers.SimulateASimulatorRunning(cdf.CogniteClient, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+                
                 var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
                     cdf.CogniteClient,
                     FileStorageClient,
@@ -372,10 +373,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO
                 ).ConfigureAwait(false);
 
+                var revision2 = await SeedData.GetOrCreateSimulatorRoutineRevision(
+                    cdf.CogniteClient,
+                    FileStorageClient,
+                    SeedData.SimulatorRoutineCreateScheduled,
+                    SeedData.SimulatorRoutineRevisionCreateScheduled
+                ).ConfigureAwait(false);
+
                 stateConfig = provider.GetRequiredService<StateStoreConfig>();
                 using var source = new CancellationTokenSource();
                 var lib = provider.GetRequiredService<RoutineLibraryTest>();
+
+                // Creating 2 revisions and setting the limit to 1 to test cursor pagination
+                lib.PaginationLimit = 1;
                 await lib.Init(source.Token).ConfigureAwait(false);
+
+                Assert.Contains(revision.Id.ToString(), lib.RoutineRevisions);
+                Assert.Contains(revision2.Id.ToString(), lib.RoutineRevisions);
+                Assert.Equal(2, lib.RoutineRevisions.Count);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
