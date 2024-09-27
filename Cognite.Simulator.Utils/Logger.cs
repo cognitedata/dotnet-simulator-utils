@@ -80,13 +80,13 @@ namespace Cognite.Simulator.Utils
         /// This is a Simulator specific logger as it writes logs to the remote sink (Simulators Logs resource in CDF).
         /// A configuration object of type <see cref="LoggerConfig"/> is required, and should have been added to the
         /// collection as well.
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="apiLoggerConfig">Sets the logger configuration, minimum log level and if it is enabled or not.</param>
-        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
+        /// 
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
-        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
+        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/>
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
         public static void AddLogger<TAutomationConfig>(this IServiceCollection services,  bool alternativeLogger = false) 
         where TAutomationConfig : AutomationConfig, new()
         {
