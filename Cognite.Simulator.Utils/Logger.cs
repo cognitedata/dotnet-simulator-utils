@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Utils
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton(p =>
             {
-                var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink<TAutomationConfig>>();
+                var remoteApiSink = p.GetService<ScopedRemoteApiSink<TAutomationConfig>>();
                 var config = p.GetService<LoggerConfig>();
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {

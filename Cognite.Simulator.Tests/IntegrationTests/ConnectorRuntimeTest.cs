@@ -10,14 +10,11 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 
 using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
-using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Logging;
 
 namespace Cognite.Simulator.Tests.UtilsTests
@@ -46,11 +43,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
-        public Client TestCdfClient;
-
         public string ConnectorExternalId = SeedData.TestIntegrationExternalId;
 
-        public async Task WriteConfig()
+        private void WriteConfig()
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -94,25 +89,13 @@ connector:
             Assert.True(System.IO.File.Exists(filePath), $"Failed to create {filePath}");
         }
 
-        public async Task SetupTest() {
-            var services = new ServiceCollection();
-            services.AddCogniteTestClient();
-            services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
-            using var provider = services.BuildServiceProvider();
-            TestCdfClient = provider.GetRequiredService<Client>();
-
-            // if the following call is not made before starting the test, we get an exception in the first test
-            // related to the sdk client not being initialized.
-            var simulators = await TestCdfClient.Alpha.Simulators.ListAsync(
-                new SimulatorQuery()).ConfigureAwait(false);
-            await WriteConfig();
-        }
-
         [Fact]
         public async Task TestConnectorRuntime()
         {
-            await SetupTest();
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            var testCdfClient = services.BuildServiceProvider().GetRequiredService<Client>();
+            WriteConfig();
 
             // Create an ILogger instance
             var logger = LoggingUtils.GetDefault();
@@ -135,7 +118,7 @@ connector:
                 }
                 finally
                 {
-                    var integrations = await TestCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                    var integrations = await testCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                         new SimulatorIntegrationQuery
                         {
                             Filter = new SimulatorIntegrationFilter() {
@@ -144,7 +127,7 @@ connector:
                         }
                     ).ConfigureAwait(false);
 
-                    var simulator = await TestCdfClient.Alpha.Simulators.ListAsync(
+                    var simulator = await testCdfClient.Alpha.Simulators.ListAsync(
                         new SimulatorQuery
                         {
                            
@@ -162,7 +145,7 @@ connector:
                     Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
 
                     var cancellationToken = new CancellationToken();
-                    var logsRes = await TestCdfClient.Alpha.Simulators.RetrieveSimulatorLogsAsync(
+                    var logsRes = await testCdfClient.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                         new List<Identity> { new Identity(existingIntegration.LogId) }, cancellationToken).ConfigureAwait(false);    
                     var logItems = logsRes.First().Data;
 
@@ -171,7 +154,7 @@ connector:
                         return item;
                     });*/
                     
-                    await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
+                    await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
             await Task.Delay(TimeSpan.FromSeconds(FIVE_SECONDS + 1)).ConfigureAwait(false);

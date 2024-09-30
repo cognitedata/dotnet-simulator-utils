@@ -31,8 +31,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
-            services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            services.AddSingleton(p => {
+                var config = new DefaultConfig<AutomationConfig>();
+                config.Connector.ApiLogger.Level = Serilog.Events.LogEventLevel.Information;
+                return config;
+            });
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
