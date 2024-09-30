@@ -65,7 +65,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
 
             StateStoreConfig stateConfig = null;
 

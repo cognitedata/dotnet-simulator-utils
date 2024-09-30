@@ -90,6 +90,7 @@ namespace Cognite.Simulator.Utils
         public static void AddLogger<TAutomationConfig>(this IServiceCollection services,  bool alternativeLogger = false) 
         where TAutomationConfig : AutomationConfig, new()
         {
+            services.AddSingleton<ScopedRemoteApiSink<TAutomationConfig>>();
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton(p =>
             {

@@ -22,7 +22,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;

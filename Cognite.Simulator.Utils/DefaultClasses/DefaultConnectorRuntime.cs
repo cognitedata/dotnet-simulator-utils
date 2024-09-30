@@ -142,7 +142,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
             defaultLogger.LogError("Failed to load configuration file: {Message}", e.Message);
             return;
         }
-        services.AddSingleton<ScopedRemoteApiSink<TAutomationConfig>>();
         services.AddLogger<TAutomationConfig>();
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();

@@ -356,7 +356,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -432,7 +432,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();

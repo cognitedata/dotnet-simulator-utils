@@ -49,7 +49,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
@@ -99,6 +99,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Fact]
         public async Task TestGetSampleNoDataSampling() {
             var services = new ServiceCollection();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             services.AddCogniteTestClient();
 
             using var provider = services.BuildServiceProvider();

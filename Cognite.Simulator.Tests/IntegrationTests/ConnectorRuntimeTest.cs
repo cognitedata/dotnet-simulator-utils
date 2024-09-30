@@ -93,6 +93,7 @@ connector:
         public async Task TestConnectorRuntime()
         {
             var services = new ServiceCollection();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             services.AddCogniteTestClient();
             var testCdfClient = services.BuildServiceProvider().GetRequiredService<Client>();
             WriteConfig();
@@ -143,16 +144,6 @@ connector:
 
                     // Simply checking the unit quantities created
                     Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
-
-                    var cancellationToken = new CancellationToken();
-                    var logsRes = await testCdfClient.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                        new List<Identity> { new Identity(existingIntegration.LogId) }, cancellationToken).ConfigureAwait(false);    
-                    var logItems = logsRes.First().Data;
-
-                    /*logItems.Select(item => {
-                        Console.WriteLine("Item : " + item.Message);
-                        return item;
-                    });*/
                     
                     await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
                 }
