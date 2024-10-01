@@ -9,7 +9,7 @@ using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
 
-using Cognite.Simulator.Utils.Automation;
+using System.Linq;
 
 namespace Cognite.Simulator.Utils {
 
@@ -25,6 +25,8 @@ namespace Cognite.Simulator.Utils {
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
         private long? defaultLogId;
+        private static readonly LogEventLevel DefaultMinimumLevel = LogEventLevel.Warning;
+        private static readonly LogEventLevel[] AllowedLogLevels = new[] { LogEventLevel.Debug, LogEventLevel.Information, LogEventLevel.Warning, LogEventLevel.Error };
         
         /// <summary>
         /// Create a scoped api sink
@@ -34,30 +36,21 @@ namespace Cognite.Simulator.Utils {
             if (loggerConfig != null) {
                 enabled = loggerConfig.Remote == null || loggerConfig.Remote.Enabled;
                 if (enabled) {
-                    minLevel = ToSerilogLevel(loggerConfig.Remote?.Level);
+                    minLevel = ParseLogLevel(loggerConfig.Remote?.Level);
                 }
             }
         }
 
-        private static LogEventLevel ToSerilogLevel(string level)
+        private static LogEventLevel ParseLogLevel(string level)
         {
             if (string.IsNullOrEmpty(level))
             {
-                return LogEventLevel.Warning;
+                return DefaultMinimumLevel;
             }
-            switch (level)
-            {
-                case "debug":
-                    return LogEventLevel.Debug;
-                case "error":
-                    return LogEventLevel.Error;
-                case "information":
-                    return LogEventLevel.Information;
-                case "warning":
-                    return LogEventLevel.Warning;
-                default:
-                    throw new ArgumentException($"Unknown log level: {level}");
+            if(!Enum.TryParse(level, true, out LogEventLevel logLevel)) {
+                throw new ArgumentException($"Unknown minimum log level for remote API: {level}");
             }
+            return logLevel;
         }
 
         /// <summary>
@@ -87,6 +80,14 @@ namespace Cognite.Simulator.Utils {
 
             if (logEvent.Level < minLevel)
             {
+                return;
+            }
+
+            if (!AllowedLogLevels.Contains(logEvent.Level))
+            {
+                // Fatal and Verbose are not supported by the remote API.
+                // In case of Verbose, we can just ignore it.
+                // In case of Fatal, we will most likely not be able to send the logs to the remote API anyway.
                 return;
             }
 
