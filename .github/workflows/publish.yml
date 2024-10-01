@@ -35,7 +35,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 7
+        dotnet-version: 8
     
     - name: Get version
       id: get-version
@@ -96,7 +96,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 7
+          dotnet-version: 8
       - name: Download nuget packages
         uses: actions/download-artifact@v3
         with:
@@ -144,7 +144,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 7
+        dotnet-version: 8
       
     - name: Restore docfx
       run: dotnet tool restore
