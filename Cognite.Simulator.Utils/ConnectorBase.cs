@@ -80,7 +80,7 @@ namespace Cognite.Simulator.Utils
         private const int ONE_HOUR = 3600;
 
         private readonly RemoteConfigManager<T> _remoteConfigManager;
-        private readonly ScopedRemoteApiSink<TAutomationConfig> _remoteApiSink;
+        private readonly ScopedRemoteApiSink _remoteApiSink;
 
         /// <summary>
         /// Initialize the connector with the given parameters
@@ -97,7 +97,7 @@ namespace Cognite.Simulator.Utils
             IList<SimulatorConfig> simulators,
             ILogger<ConnectorBase<T,TAutomationConfig>> logger,
             RemoteConfigManager<T> remoteConfigManager,
-            ScopedRemoteApiSink<TAutomationConfig> remoteSink)
+            ScopedRemoteApiSink remoteSink)
         {
             Cdf = cdf;
             Simulators = simulators;

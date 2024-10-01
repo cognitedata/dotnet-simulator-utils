@@ -142,7 +142,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
             defaultLogger.LogError("Failed to load configuration file: {Message}", e.Message);
             return;
         }
-        services.AddLogger<TAutomationConfig>();
+        services.AddLogger();
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();

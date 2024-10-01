@@ -17,9 +17,7 @@ namespace Cognite.Simulator.Utils {
     /// Represents a sink for emitting log events to a remote API.
     /// </summary>
     /// 
-    public class ScopedRemoteApiSink<TAutomationConfig> : ILogEventSink
-    where TAutomationConfig : AutomationConfig, new()
-    
+    public class ScopedRemoteApiSink : ILogEventSink
     {
         private bool enabled;
         private LogEventLevel minLevel;

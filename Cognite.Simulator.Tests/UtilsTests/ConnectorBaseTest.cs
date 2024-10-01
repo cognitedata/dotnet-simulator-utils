@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink>();
             var simConfig = new SimulatorConfig
             {
                 Name = simulatorName,
@@ -158,7 +158,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             SimulatorConfig config,
             Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
             RemoteConfigManager<Utils.BaseConfig> remoteConfigManager,
-            ScopedRemoteApiSink<AutomationConfig> remoteSink) :
+            ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,
                 new ConnectorConfig

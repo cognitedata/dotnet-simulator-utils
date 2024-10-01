@@ -151,7 +151,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var modelLib = provider.GetRequiredService<ModeLibraryTest>();
                 var configLib = provider.GetRequiredService<RoutineLibraryTest>();
                 var runner = provider.GetRequiredService<SampleSimulationRunner>();
-                var sink = provider.GetRequiredService<ScopedRemoteApiSink<AutomationConfig>>();
+                var sink = provider.GetRequiredService<ScopedRemoteApiSink>();
 
                 // Run model and configuration libraries to fetch the test model and
                 // test simulation configuration from CDF

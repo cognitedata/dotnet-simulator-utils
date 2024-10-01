@@ -21,8 +21,6 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             long dataSetId = SeedData.TestDataSetId;
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            //services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;

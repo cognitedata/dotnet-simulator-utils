@@ -87,14 +87,13 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
-        public static void AddLogger<TAutomationConfig>(this IServiceCollection services,  bool alternativeLogger = false) 
-        where TAutomationConfig : AutomationConfig, new()
+        public static void AddLogger(this IServiceCollection services,  bool alternativeLogger = false) 
         {
-            services.AddSingleton<ScopedRemoteApiSink<TAutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
             services.AddSingleton(p =>
             {
-                var remoteApiSink = p.GetService<ScopedRemoteApiSink<TAutomationConfig>>();
+                var remoteApiSink = p.GetService<ScopedRemoteApiSink>();
                 var config = p.GetService<LoggerConfig>();
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
