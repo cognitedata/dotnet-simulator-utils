@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests
                 }
             };
 
-            var loggerConfig = new Extractor.Logging.LoggerConfig
+            var loggerConfig = new LoggerConfig
             {
                 Console = new Extractor.Logging.ConsoleConfig
                 {

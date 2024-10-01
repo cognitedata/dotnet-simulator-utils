@@ -469,7 +469,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             RoutineLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
+            ILogger<SampleSimulationRunner> logger
         ) :
             base(config,
                 new List<SimulatorConfig>

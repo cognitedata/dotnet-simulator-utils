@@ -8,7 +8,7 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
-using Oryx.Cognite;
+
 using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils {
@@ -21,7 +21,9 @@ namespace Cognite.Simulator.Utils {
     where TAutomationConfig : AutomationConfig, new()
     
     {
-        private SimulatorLoggingConfig apiLoggerConfig;
+        private bool enabled;
+        private LogEventLevel minLevel;
+
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
         private long? defaultLogId;
@@ -34,15 +36,28 @@ namespace Cognite.Simulator.Utils {
             if (config == null) {
                 throw new Exception("Default config has not been instantiated");
             }
-            if (config.Connector == null) {
-                throw new Exception("Connector config has not been instantiated");
+            enabled = config.Logger.Remote != null && config.Logger.Remote.Enabled;
+            if (enabled) {
+                minLevel = ToSerilogLevel(config.Logger.Remote.Level);
             }
-            if (config.Connector.ApiLogger == null) {
-                throw new Exception("Api Logger config has not been instantiated");
-            }
-            apiLoggerConfig = config.Connector.ApiLogger;
         }
 
+        private static LogEventLevel ToSerilogLevel(string level)
+        {
+            switch (level)
+            {
+                case "debug":
+                    return LogEventLevel.Debug;
+                case "error":
+                    return LogEventLevel.Error;
+                case "information":
+                    return LogEventLevel.Information;
+                case "warning":
+                    return LogEventLevel.Warning;
+                default:
+                    throw new ArgumentException($"Unknown log level: {level}");
+            }
+        }
 
         /// <summary>
         /// Sets the default log ID.
@@ -59,7 +74,7 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
-            if(apiLoggerConfig == null || !apiLoggerConfig.Enabled)
+            if(!enabled)
             {
                 return;
             }
@@ -69,7 +84,7 @@ namespace Cognite.Simulator.Utils {
                 throw new ArgumentNullException(nameof(logEvent));
             }
 
-            if (logEvent.Level < apiLoggerConfig.Level)
+            if (logEvent.Level < minLevel)
             {
                 return;
             }

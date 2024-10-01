@@ -132,7 +132,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         {
             config = await services.AddConfiguration<DefaultConfig<TAutomationConfig>>(
                 path: "./config.yml",
-                types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig) },
+                types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig), typeof(LoggerConfig), typeof(Cognite.Simulator.Utils.BaseConfig) },
                 appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);

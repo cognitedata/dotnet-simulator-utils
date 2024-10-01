@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using Cognite.Extractor.Configuration;
 using Cognite.Extractor.Logging;
+using Cognite.Extractor.Metrics;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
-using Serilog.Events;
 
 namespace Cognite.Simulator.Utils
 {
@@ -28,20 +28,92 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
-    /// Represents the simulator logging configuration.
-    /// This sets the minimum logging level and whether logging is enabled or not.
+    /// Configuration for remote logging (logs are stored in CDF)
     /// </summary>
-    public class SimulatorLoggingConfig
+    public class RemoteLogConfig: LogConfig
     {
         /// <summary>
-        /// Gets or sets the minimum log event level.
+        /// Whether remote logging is enabled
         /// </summary>
-        public LogEventLevel Level { get; set; } = LogEventLevel.Warning;
+        public bool Enabled { get; set; }
+    }
+
+    /// <summary>
+    /// Logging configuration object
+    /// </summary>
+    public class LoggerConfig: Extractor.Logging.LoggerConfig
+    {
+        /// <summary>
+        /// Remote (CDF) logging configuration (optional)
+        /// </summary>
+        public RemoteLogConfig Remote { get; set; }
+    }
+
+    /// <summary>
+    /// Base configuration object for simulators.
+    /// </summary>
+    public class BaseConfig : VersionedConfig
+    {
+        /// <summary>
+        /// Type of configuration this represents, local or remote. Will generally always
+        /// be local.
+        /// </summary>
+        public ConfigurationMode Type { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether logging to the API is enabled.
+        /// Logging configuration (optional)
         /// </summary>
-        public bool Enabled { get; set; } = true;
+        public LoggerConfig Logger { get; set; }
+
+        /// <summary>
+        /// Metrics configuration (optional)
+        /// </summary>
+        public MetricsConfig Metrics { get; set; }
+
+        /// <summary>
+        /// Cognite configuration (optional)
+        /// </summary>
+        public CogniteConfig Cognite { get; set; }
+
+        /// <summary>
+        /// State store configuration (optional)
+        /// </summary>
+        public StateStoreConfig StateStore { get; set; }
+
+        /// <summary>
+        /// Generate default configuration objects if the corresponding tags are not present
+        /// in the yaml config file/string
+        /// </summary>
+        public override void GenerateDefaults()
+        {
+            if (Cognite == null)
+            {
+                Cognite = new CogniteConfig();
+            }
+
+            if (Metrics == null)
+            {
+                Metrics = new MetricsConfig();
+            }
+
+            if (Logger == null)
+            {
+                Logger = new LoggerConfig();
+            }
+
+            if (Logger.Remote == null)
+            {
+                Logger.Remote = new RemoteLogConfig() {
+                    Enabled = true,
+                    Level = "warning"
+                };
+            }
+
+            if (StateStore == null)
+            {
+                StateStore = new StateStoreConfig();
+            }
+        }
     }
 
     /// <summary>
@@ -163,11 +235,6 @@ namespace Cognite.Simulator.Utils
             }
             return $"{NamePrefix}{Environment.MachineName}";
         }
-
-        /// <summary>
-        /// Configuration for the simulator API logger.
-        /// </summary>
-        public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
     }
 
     /// <summary>

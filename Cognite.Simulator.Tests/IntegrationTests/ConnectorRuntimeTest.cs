@@ -61,6 +61,9 @@ version: 1
 logger:
   console:
     level: ""debug""
+  remote:
+    level: ""information""
+    enabled: true
 cognite:
   project:  {project}
   host: {host}
@@ -78,8 +81,6 @@ connector:
   status-interval: 3
   name-prefix: {ConnectorExternalId}
   add-machine-name-suffix: false
-  api-logger:
-    level: ""Information""
 ";
 
             // Write the content to the file
@@ -136,8 +137,8 @@ connector:
                     ).ConfigureAwait(false);
 
                     var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
+                    Assert.Contains(ConnectorExternalId, integrations.Items.Select(i => i.ExternalId));
                     var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    Assert.True( existingIntegration.ExternalId == ConnectorExternalId);
                     
                     var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
                     Assert.NotNull(simulatorDefinition);
