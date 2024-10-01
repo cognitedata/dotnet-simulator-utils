@@ -33,17 +33,20 @@ namespace Cognite.Simulator.Utils {
         /// </summary>
         /// <param name="loggerConfig">The logger configuration</param>
         public ScopedRemoteApiSink(LoggerConfig loggerConfig) : base(){
-            // if (loggerConfig == null) {
-            //     throw new Exception("Default config has not been instantiated");
-            // }
-            enabled = loggerConfig?.Remote != null && loggerConfig.Remote.Enabled;
-            if (enabled) {
-                minLevel = ToSerilogLevel(loggerConfig.Remote.Level);
+            if (loggerConfig != null) {
+                enabled = loggerConfig.Remote == null || loggerConfig.Remote.Enabled;
+                if (enabled) {
+                    minLevel = ToSerilogLevel(loggerConfig.Remote?.Level);
+                }
             }
         }
 
         private static LogEventLevel ToSerilogLevel(string level)
         {
+            if (string.IsNullOrEmpty(level))
+            {
+                return LogEventLevel.Warning;
+            }
             switch (level)
             {
                 case "debug":

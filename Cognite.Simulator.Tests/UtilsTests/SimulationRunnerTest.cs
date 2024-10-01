@@ -112,8 +112,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
-            services.AddSingleton<ScopedRemoteApiSink<AutomationConfig>>();
-            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<RoutineLibraryTest>();
