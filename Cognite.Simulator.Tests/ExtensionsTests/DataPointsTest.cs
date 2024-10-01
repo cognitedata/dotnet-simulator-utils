@@ -44,8 +44,8 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            using var provider = services.BuildServiceProvider();
 
+            using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
 

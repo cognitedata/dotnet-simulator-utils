@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CogniteSdk.Alpha;
-using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
