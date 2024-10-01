@@ -147,7 +147,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector : ConnectorBase<Utils.BaseConfig, AutomationConfig>
+    internal class TestConnector : ConnectorBase<Utils.BaseConfig>
     {
         private readonly ExtractionPipeline _pipeline;
         private readonly SimulatorConfig _config;

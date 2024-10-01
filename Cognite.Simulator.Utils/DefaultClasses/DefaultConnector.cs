@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
-    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>,TAutomationConfig>  
+    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
         where TAutomationConfig : AutomationConfig, new()
          where TModelState: ModelStateBase, new()
          where TModelStateBasePoco: ModelStateBasePoco
@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
                 {
                     var linkedToken = linkedTokenSource.Token;
                     var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
-                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken); 
+                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
                     var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
                     taskList.AddRange(modelLibTasks);
                     taskList.AddRange(configLibTasks);

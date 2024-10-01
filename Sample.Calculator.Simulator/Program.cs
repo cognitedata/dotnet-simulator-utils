@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using Cognite.Extractor.StateStorage;
-using Cognite.Simulator.Utils;
+﻿using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,5 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;

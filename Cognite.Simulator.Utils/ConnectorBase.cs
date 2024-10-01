@@ -57,9 +57,7 @@ namespace Cognite.Simulator.Utils
     /// Base class for simulator connectors. Implements heartbeat reporting.
     /// The connector information is stored in the simulator integration resource in CDF.
     /// </summary>
-    public abstract class ConnectorBase<T,TAutomationConfig> where T : BaseConfig
-            where TAutomationConfig : AutomationConfig, new()
-
+    public abstract class ConnectorBase<T> where T : BaseConfig
     {
         /// <summary>
         /// CDF client wrapper
@@ -71,7 +69,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         protected IList<SimulatorConfig> Simulators { get; }
         private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
-        private readonly ILogger<ConnectorBase<T,TAutomationConfig>> _logger;
+        private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
         private long LastLicenseCheckTimestamp { get; set; }
@@ -95,7 +93,7 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ConnectorConfig config,
             IList<SimulatorConfig> simulators,
-            ILogger<ConnectorBase<T,TAutomationConfig>> logger,
+            ILogger<ConnectorBase<T>> logger,
             RemoteConfigManager<T> remoteConfigManager,
             ScopedRemoteApiSink remoteSink)
         {

@@ -44,7 +44,9 @@ namespace Cognite.Simulator.Utils
     public class LoggerConfig: Extractor.Logging.LoggerConfig
     {
         /// <summary>
-        /// Remote (CDF) logging configuration (optional)
+        /// Remote logging configuration (optional)
+        /// Enabled by default, with warning level
+        /// Writes logs to CDF simulator logs
         /// </summary>
         public RemoteLogConfig Remote { get; set; }
     }
@@ -305,10 +307,6 @@ namespace Cognite.Simulator.Utils
             if (Connector.RoutineLibrary == null) Connector.RoutineLibrary = new RoutineLibraryConfig();
 
             if (Connector.PipelineNotification == null) Connector.PipelineNotification = new PipelineNotificationConfig();
-        }
-
-        public DefaultConfig() : base(){
-            this.GenerateDefaults();
         }
     }
 }

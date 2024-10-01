@@ -8,8 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Tests.ExtensionsTests
 {
