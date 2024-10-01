@@ -31,6 +31,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            var loggerConfig = new LoggerConfig
+            {
+                Console = new Extractor.Logging.ConsoleConfig
+                {
+                    Level = "debug"
+                },
+                Remote = new RemoteLogConfig
+                {
+                    Enabled = true,
+                    Level = "information"
+                }
+            };
+            services.AddSingleton(loggerConfig);
+
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -131,6 +145,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<ScopedRemoteApiSink>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -257,6 +273,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<ScopedRemoteApiSink>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -346,7 +364,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
-
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 

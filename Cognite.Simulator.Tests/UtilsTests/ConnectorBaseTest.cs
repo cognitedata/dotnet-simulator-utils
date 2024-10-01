@@ -1,6 +1,7 @@
 ﻿using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,10 +28,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var simulatorName = $"TestSim {timestamp}";
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
-            services.AddSingleton<BaseConfig>();
+            services.AddSingleton<RemoteConfigManager<Utils.BaseConfig>>(provider => null!);
+            services.AddSingleton<Utils.BaseConfig>();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink>();
             var simConfig = new SimulatorConfig
             {
                 Name = simulatorName,
@@ -144,7 +147,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector : ConnectorBase<BaseConfig>
+    internal class TestConnector : ConnectorBase<Utils.BaseConfig>
     {
         private readonly ExtractionPipeline _pipeline;
         private readonly SimulatorConfig _config;
@@ -154,7 +157,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ExtractionPipeline pipeline,
             SimulatorConfig config,
             Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
-            RemoteConfigManager<BaseConfig> remoteConfigManager,
+            RemoteConfigManager<Utils.BaseConfig> remoteConfigManager,
             ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,

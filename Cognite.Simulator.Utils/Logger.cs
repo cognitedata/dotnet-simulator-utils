@@ -6,6 +6,7 @@ using Serilog.Extensions.Logging;
 using Cognite.Extractor.Logging;
 using Serilog.Core;
 using Serilog.Events;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
@@ -79,23 +80,21 @@ namespace Cognite.Simulator.Utils
         /// This is a Simulator specific logger as it writes logs to the remote sink (Simulators Logs resource in CDF).
         /// A configuration object of type <see cref="LoggerConfig"/> is required, and should have been added to the
         /// collection as well.
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="apiLoggerConfig">Sets the logger configuration, minimum log level and if it is enabled or not.</param>
-        /// <param name="buildLogger">Method to build the logger.
-        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
+        /// 
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
-        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static void AddLogger(this IServiceCollection services, SimulatorLoggingConfig apiLoggerConfig = null, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
+        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/>
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
+        public static void AddLogger(this IServiceCollection services,  bool alternativeLogger = false) 
         {
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
-            services.AddSingleton<Serilog.ILogger>(p =>
+            services.AddSingleton(p =>
             {
-                var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink>();
+                var remoteApiSink = p.GetService<ScopedRemoteApiSink>();
                 var config = p.GetService<LoggerConfig>();
-                remoteApiSink.SetConfig(apiLoggerConfig);
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
                     // No logging configuration

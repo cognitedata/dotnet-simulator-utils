@@ -10,14 +10,11 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 
 using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
-using Microsoft.Extensions.Logging;
 using Cognite.Extractor.Logging;
 
 namespace Cognite.Simulator.Tests.UtilsTests
@@ -46,11 +43,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
         public class CustomAutomationConfig : AutomationConfig { }
 
-        public Client TestCdfClient;
-
         public string ConnectorExternalId = SeedData.TestIntegrationExternalId;
 
-        public async Task WriteConfig()
+        private void WriteConfig()
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -66,6 +61,9 @@ version: 1
 logger:
   console:
     level: ""debug""
+  remote:
+    level: ""information""
+    enabled: true
 cognite:
   project:  {project}
   host: {host}
@@ -83,8 +81,6 @@ connector:
   status-interval: 3
   name-prefix: {ConnectorExternalId}
   add-machine-name-suffix: false
-  api-logger:
-    level: ""Information""
 ";
 
             // Write the content to the file
@@ -94,23 +90,14 @@ connector:
             Assert.True(System.IO.File.Exists(filePath), $"Failed to create {filePath}");
         }
 
-        public async Task SetupTest() {
-            var services = new ServiceCollection();
-            services.AddCogniteTestClient();
-            using var provider = services.BuildServiceProvider();
-            TestCdfClient = provider.GetRequiredService<Client>();
-
-            // if the following call is not made before starting the test, we get an exception in the first test
-            // related to the sdk client not being initialized.
-            var simulators = await TestCdfClient.Alpha.Simulators.ListAsync(
-                new SimulatorQuery()).ConfigureAwait(false);
-            await WriteConfig();
-        }
-
         [Fact]
         public async Task TestConnectorRuntime()
         {
-            await SetupTest();
+            var services = new ServiceCollection();
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddCogniteTestClient();
+            var testCdfClient = services.BuildServiceProvider().GetRequiredService<Client>();
+            WriteConfig();
 
             // Create an ILogger instance
             var logger = LoggingUtils.GetDefault();
@@ -133,7 +120,7 @@ connector:
                 }
                 finally
                 {
-                    var integrations = await TestCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                    var integrations = await testCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                         new SimulatorIntegrationQuery
                         {
                             Filter = new SimulatorIntegrationFilter() {
@@ -142,7 +129,7 @@ connector:
                         }
                     ).ConfigureAwait(false);
 
-                    var simulator = await TestCdfClient.Alpha.Simulators.ListAsync(
+                    var simulator = await testCdfClient.Alpha.Simulators.ListAsync(
                         new SimulatorQuery
                         {
                            
@@ -150,8 +137,8 @@ connector:
                     ).ConfigureAwait(false);
 
                     var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
-                    var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    Assert.True( existing.ExternalId == ConnectorExternalId);
+                    Assert.Contains(ConnectorExternalId, integrations.Items.Select(i => i.ExternalId));
+                    var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
                     
                     var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
                     Assert.NotNull(simulatorDefinition);
@@ -159,7 +146,7 @@ connector:
                     // Simply checking the unit quantities created
                     Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
                     
-                    await SeedData.DeleteSimulator(TestCdfClient, SeedData.TestSimulatorExternalId);
+                    await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
                 }
             }
             await Task.Delay(TimeSpan.FromSeconds(FIVE_SECONDS + 1)).ConfigureAwait(false);

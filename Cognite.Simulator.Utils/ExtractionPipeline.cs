@@ -5,11 +5,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extractor.Configuration;
-using System.IO;
 
 namespace Cognite.Simulator.Utils
 {
@@ -239,6 +237,7 @@ namespace Cognite.Simulator.Utils
             services.AddSingleton(config.PipelineNotification);
             services.AddScoped<ExtractionPipeline>();
         }
+        
         /// <summary>
         /// Use `type: remote` to fetch the config from Fusion, or use `type: local` to use the local file instead
         /// Example from config.yml using the remote config from Fusion
@@ -268,7 +267,16 @@ namespace Cognite.Simulator.Utils
             int version = 1,
             int[] acceptedConfigVersions = null) where T : BaseConfig
         {
-            var localConfig = services.AddConfig<T>(path, version);
+            var configTypes = new [] {
+                typeof(CogniteConfig),
+                typeof(LoggerConfig),
+                typeof(HighAvailabilityConfig),
+                typeof(Extractor.Metrics.MetricsConfig),
+                typeof(Extractor.StateStorage.StateStoreConfig),
+                typeof(BaseConfig)
+            };
+            var localConfig = services.AddConfig<T>(path, configTypes, new [] { version });
+
             var remoteConfig = new RemoteConfig
             {
                 Type = localConfig.Type,

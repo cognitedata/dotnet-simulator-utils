@@ -226,7 +226,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
 
                 logData = logsRes.First().Data;
-                Assert.NotNull(logData.First().Message);
+                Assert.NotEmpty(logData);
+                Assert.Equal("Running a sample routine, not a real simulation", logData.First().Message);
 
                 // check inputs/outputs from the /runs/data/list endpoint
                 var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(
@@ -420,6 +421,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleSimulatorClient : ISimulatorClient<TestFileState, SimulatorRoutineRevision>
     {
+        private ILogger<SampleSimulatorClient> _logger;
+
+        public SampleSimulatorClient(ILogger<SampleSimulatorClient> logger)
+        {
+            _logger = logger;
+        }
+
         public Task ExtractModelInformation(TestFileState state, CancellationToken _token)
         {
             throw new NotImplementedException();
@@ -441,6 +449,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Dictionary<string, SimulatorValueItem> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData);
+            _logger.LogWarning("Running a sample routine, not a real simulation");
             return Task.FromResult(routine.PerformSimulation());
         }
     }
@@ -457,7 +466,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             RoutineLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
-            Microsoft.Extensions.Logging.ILogger<SampleSimulationRunner> logger
+            ILogger<SampleSimulationRunner> logger
         ) :
             base(config,
                 new List<SimulatorConfig>
