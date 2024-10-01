@@ -31,14 +31,14 @@ namespace Cognite.Simulator.Utils {
         /// <summary>
         /// Create a scoped api sink
         /// </summary>
-        /// <param name="config"></param>
-        public ScopedRemoteApiSink(DefaultConfig<TAutomationConfig> config) : base(){
-            if (config == null) {
-                throw new Exception("Default config has not been instantiated");
-            }
-            enabled = config.Logger.Remote != null && config.Logger.Remote.Enabled;
+        /// <param name="loggerConfig">The logger configuration</param>
+        public ScopedRemoteApiSink(LoggerConfig loggerConfig) : base(){
+            // if (loggerConfig == null) {
+            //     throw new Exception("Default config has not been instantiated");
+            // }
+            enabled = loggerConfig?.Remote != null && loggerConfig.Remote.Enabled;
             if (enabled) {
-                minLevel = ToSerilogLevel(config.Logger.Remote.Level);
+                minLevel = ToSerilogLevel(loggerConfig.Remote.Level);
             }
         }
 
