@@ -87,7 +87,7 @@ namespace Cognite.Simulator.Tests
             // Configure CDF Client
             services.AddHttpClient<Client.Builder>()
                 .AddPolicyHandler((provider, message) => {
-                    return CogniteExtensions.GetRetryPolicy(provider.GetService<ILogger<Client>>(), 5, 5000);
+                    return CogniteExtensions.GetRetryPolicy(null, 5, 5000);
                 });
             services.AddSingleton(p => {
                 var auth = p.GetRequiredService<IAuthenticator>();
