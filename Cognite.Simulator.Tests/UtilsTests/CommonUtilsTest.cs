@@ -33,6 +33,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
 
+            await SeedData.GetOrCreateTestTimeseries(cdf).ConfigureAwait(false);
+
             var config = NewRoutineConfig();
             config.LogicalCheck.First().Enabled = runLogicCheck;
             config.SteadyStateDetection.First().Enabled = runSsdCheck;
@@ -51,8 +53,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         private static SimulatorRoutineRevisionConfiguration NewRoutineConfig()
         {
-            // Assumes a time series in CDF with the id SimConnect-IntegrationTests-OnOffValues and
-            // one with id SimConnect-IntegrationTests-SsdSensorData.
+            // Assumes a time series in CDF with the id utils-tests-OnOffValues and
+            // one with id utils-tests-SsdSensorData.
             // The time stamps and values for these time series match the ones used in the DataProcessing
             // library tests
             return new()
@@ -69,7 +71,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorRoutineRevisionLogicalCheck
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        TimeseriesExternalId = "utils-tests-OnOffValues",
                         Aggregate = "stepInterpolation",
                         Operator = "eq",
                         Value = 1.0
@@ -80,7 +82,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     new SimulatorRoutineRevisionSteadyStateDetection
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        TimeseriesExternalId = "utils-tests-SsdSensorData",
                         Aggregate = "average",
                         MinSectionSize = 60,
                         VarThreshold = 1.0,

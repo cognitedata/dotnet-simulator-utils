@@ -26,6 +26,7 @@ namespace Cognite.Simulator.Tests
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
         public static string TestRoutineExternalIdWithTsNoDataSampling = "Test Routine with no data sampling " + Now;
+        public static string TestRoutineTsPrefix = "utils-tests-" + Now;
         public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -213,31 +214,34 @@ namespace Cognite.Simulator.Tests
 
         public static TimeSeriesCreate OnOffValuesTimeSeries = new TimeSeriesCreate()
         {
-            ExternalId = "SimConnect-IntegrationTests-OnOffValues",
+            ExternalId = "utils-tests-OnOffValues",
             Name = "On/Off Values",
             DataSetId = TestDataSetId,
         };
 
         public static TimeSeriesCreate SsdSensorDataTimeSeries = new TimeSeriesCreate()
         {
-            ExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+            ExternalId = "utils-tests-SsdSensorData",
             Name = "SSD Sensor Data",
             DataSetId = TestDataSetId,
         };
 
-        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
-        {
-            var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
-                new List<string>() { timeSeries.ExternalId }, true
-            ).ConfigureAwait(false);
-
-            if (timeSeriesRes.Count() > 0)
-            {
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries) {
+            try {
+                var res = await sdk.TimeSeries.CreateAsync(
+                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+                return res.First();
+            } catch (ResponseException e) when (e.Code == 409) {
+                var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
+                    new List<string>() { timeSeries.ExternalId }, true
+                ).ConfigureAwait(false);
                 return timeSeriesRes.First();
             }
+        }
 
-            var res = await sdk.TimeSeries.CreateAsync(
-                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
+        {
+            var res = await GetOrCreateTimeSeries(sdk, timeSeries).ConfigureAwait(false);
 
             var dataPoints = new NumericDatapoints();
 
@@ -259,15 +263,23 @@ namespace Cognite.Simulator.Tests
 
             await sdk.DataPoints.CreateAsync(points).ConfigureAwait(false);
 
-            return res.First();
+            return res;
+        }
+
+        public static async Task<IEnumerable<TimeSeries>> GetOrCreateTestTimeseries(Client sdk)
+        {
+            var testValues = new TestValues();
+            var task1 = GetOrCreateTimeSeries(sdk, OnOffValuesTimeSeries, testValues.TimeLogic, testValues.DataLogic);
+            var task2 = GetOrCreateTimeSeries(sdk, SsdSensorDataTimeSeries, testValues.TimeSsd, testValues.DataSsd);
+            var res = await Task.WhenAll(task1, task2).ConfigureAwait(false);
+            return res.ToList();
         }
 
 
         public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, FileStorageClient fileStorageClient, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
         {
             var testValues = new TestValues();
-            await GetOrCreateTimeSeries(sdk, OnOffValuesTimeSeries, testValues.TimeLogic, testValues.DataLogic).ConfigureAwait(false);
-            await GetOrCreateTimeSeries(sdk, SsdSensorDataTimeSeries, testValues.TimeSsd, testValues.DataSsd).ConfigureAwait(false);
+            await GetOrCreateTestTimeseries(sdk).ConfigureAwait(false);
             await GetOrCreateSimulatorModelRevisions(sdk, fileStorageClient).ConfigureAwait(false);
             var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
 
@@ -345,7 +357,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionLogicalCheck
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        TimeseriesExternalId = "utils-tests-OnOffValues",
                         Aggregate = "stepInterpolation",
                         Operator = "eq",
                         Value = 1
@@ -356,7 +368,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionSteadyStateDetection
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        TimeseriesExternalId = "utils-tests-SsdSensorData",
                         Aggregate = "average",
                         MinSectionSize = 60,
                         VarThreshold = 1.0,
@@ -373,7 +385,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IC1-SampledSsd",
                     },
                     new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 2",
@@ -384,7 +396,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IC2-SampledSsd",
                     },
                 },
                 Outputs = new List<SimulatorRoutineRevisionOutput>() {
@@ -396,7 +408,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-OT1-Output",
                     },
                 },
             },
@@ -584,7 +596,7 @@ namespace Cognite.Simulator.Tests
                 {
                     new SimulatorRoutineRevisionLogicalCheck {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        TimeseriesExternalId = "utils-tests-OnOffValues",
                         Aggregate = "stepInterpolation",
                         Operator = "eq",
                         Value = 1,
@@ -595,7 +607,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionSteadyStateDetection 
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        TimeseriesExternalId = "utils-tests-SsdSensorData",
                         Aggregate = "average",
                         MinSectionSize = 60,
                         VarThreshold = 1.0,
@@ -611,7 +623,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-OT1-Output",
                     },
                     new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 2",
@@ -628,14 +640,14 @@ namespace Cognite.Simulator.Tests
                             Quantity = "LiqRate/GasRate",
                         },
                         Aggregate = "average",
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
-                        SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IT1-SampledSsd",
+                        SourceExternalId = "utils-tests-SsdSensorData",
                     },
                     new SimulatorRoutineRevisionInput() {
                         Name = "Input Test 2",
                         ReferenceId = "IT2",
                         Aggregate = "average",
-                        SourceExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        SourceExternalId =  "utils-tests-OnOffValues",
                     },
                 },
             },
@@ -732,7 +744,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionInput() {
                         Name = "Input Test 1",
                         ReferenceId = "IT1",
-                        SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        SourceExternalId = "utils-tests-SsdSensorData",
                     },
                 },
             },
