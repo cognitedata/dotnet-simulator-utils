@@ -227,19 +227,16 @@ namespace Cognite.Simulator.Tests
         };
 
         public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries) {
-            var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
-                new List<string>() { timeSeries.ExternalId }, true
-            ).ConfigureAwait(false);
-
-            if (timeSeriesRes.Count() > 0)
-            {
+            try {
+                var res = await sdk.TimeSeries.CreateAsync(
+                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+                return res.First();
+            } catch (ResponseException e) when (e.Code == 400) {
+                var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
+                    new List<string>() { timeSeries.ExternalId }, true
+                ).ConfigureAwait(false);
                 return timeSeriesRes.First();
             }
-
-            var res = await sdk.TimeSeries.CreateAsync(
-                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
-
-            return res.First();
         }
 
         public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
