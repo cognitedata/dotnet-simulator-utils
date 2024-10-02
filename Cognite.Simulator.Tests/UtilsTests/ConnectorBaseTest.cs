@@ -85,9 +85,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                await cdf.Alpha.Simulators.DeleteAsync(
-                    new [] { new Identity(SeedData.TestSimulatorExternalId) },
-                    source.Token).ConfigureAwait(false);
+                await SeedData.DeleteSimulator(cdf, SeedData.TestSimulatorExternalId).ConfigureAwait(false);
                 await cdf.ExtPipes
                     .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
             }
