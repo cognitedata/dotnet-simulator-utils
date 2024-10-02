@@ -70,7 +70,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var range2 = new SamplingConfiguration(start: 0, end: 0);
 
             // No data points in the range. Throw exception
-            _ = Assert.ThrowsAsync<DataPointSampleNotFoundException>(
+            _ = await Assert.ThrowsAsync<DataPointSampleNotFoundException>(
                 async () => await dataPoints.GetSample(
                   "utils-tests-OnOffValues",
                   Extensions.DataPointAggregate.Max,
