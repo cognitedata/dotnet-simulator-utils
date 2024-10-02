@@ -487,7 +487,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.NotNull(input.ReferenceId);
                     Assert.True(input.IsConstant);
                     Assert.NotNull(input.Name);
-                    Assert.StartsWith("SimConnect-IntegrationTests-IC", input.SaveTimeseriesExternalId);
+                    Assert.StartsWith(SeedData.TestRoutineTsPrefix + "-IC", input.SaveTimeseriesExternalId);
                 }
             }
             finally
