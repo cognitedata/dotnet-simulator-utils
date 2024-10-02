@@ -231,7 +231,7 @@ namespace Cognite.Simulator.Tests
                 var res = await sdk.TimeSeries.CreateAsync(
                 new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
                 return res.First();
-            } catch (ResponseException e) when (e.Code == 400) {
+            } catch (ResponseException e) when (e.Code == 409) {
                 var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
                     new List<string>() { timeSeries.ExternalId }, true
                 ).ConfigureAwait(false);
