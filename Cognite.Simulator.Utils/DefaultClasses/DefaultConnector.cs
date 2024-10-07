@@ -102,7 +102,7 @@ namespace Cognite.Simulator.Utils
                     taskList.AddRange(configLibTasks);
                     taskList.Add(_simulationRunner.Run(linkedToken));
                     taskList.Add(_scheduler.Run(linkedToken));
-                    taskList.Add(_pipeline.PipelineUpdate(token));
+                    taskList.Add(_pipeline.PipelineUpdate(linkedToken));
                     taskList.Add(RestartOnNewRemoteConfigLoop(linkedToken));
                     await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
                 }
