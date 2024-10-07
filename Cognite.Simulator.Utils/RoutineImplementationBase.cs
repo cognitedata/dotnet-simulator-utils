@@ -185,7 +185,7 @@ namespace Cognite.Simulator.Utils
             if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
             {
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
-                _logger.LogInformation("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
+                _logger.LogDebug("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
                 SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
             }
             else
