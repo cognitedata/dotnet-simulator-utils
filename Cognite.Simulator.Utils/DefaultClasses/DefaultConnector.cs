@@ -73,6 +73,7 @@ namespace Cognite.Simulator.Utils
         public override async Task Init(CancellationToken token)
         {
 
+            await _pipeline.Init(_config.Simulator, token).ConfigureAwait(false);
             await InitRemoteSimulatorIntegrations(token).ConfigureAwait(false);
             var integration = GetSimulatorIntegrations().FirstOrDefault();
             if(integration != null){
@@ -81,7 +82,6 @@ namespace Cognite.Simulator.Utils
             await UpdateRemoteSimulatorIntegrations(true, token).ConfigureAwait(false);
             await _modelLibrary.Init(token).ConfigureAwait(false);
             await _routineLibrary.Init(token).ConfigureAwait(false);
-            await _pipeline.Init(_config.Simulator, token).ConfigureAwait(false);
         }
 
         public override async Task Run(CancellationToken token)
