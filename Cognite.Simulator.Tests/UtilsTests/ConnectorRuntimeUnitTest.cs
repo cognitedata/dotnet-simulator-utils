@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         };
 
         // We need to mock the HttpClientFactory to return the mocked responses
-        // First few requests will return the mocked responses, then we will return a 403 Forbidden
+        // First few requests return the mocked responses, then we return a 403 Forbidden
         // This should cause a "soft" restart of the connector
         [Fact]
         public async Task TestConnectorRuntimeWithRestart()
