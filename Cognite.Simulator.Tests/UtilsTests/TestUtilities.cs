@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -13,8 +14,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public static class TestUtilities
     {
-        private static int requestCount;
-
         public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) GetMockedHttpClientFactory(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
@@ -83,45 +82,65 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        private static readonly Dictionary<Func<string, bool>, Func<HttpResponseMessage>> endpointMappings = new Dictionary<Func<string, bool>, Func<HttpResponseMessage>>
-    {
-        { uri => uri.Contains("/extpipes"), MockExtPipesEndpoint },
-        { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), MockSimulatorsEndpoint },
-        { uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint }
-    };
+        private static HttpResponseMessage ForbiddenResponse =
+            CreateResponse(HttpStatusCode.Forbidden, "{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}");
 
-        public static async Task<HttpResponseMessage> mockSimintRequestsAsync(HttpRequestMessage message, CancellationToken token)
+        /// <summary>
+        /// Mocks the HttpClientFactory to return the mocked responses
+        /// Example format for endpointMappings:
+        ///     { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, 2) },
+        ///     2 is the number of times the response function will be called before returning a 403 Forbidden
+        ///     if maxCalls is null, the response function will return the same response indefinitely
+        /// </summary>
+        /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
+        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(Dictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
         {
-            var uri = message.RequestUri?.ToString();
-            if (uri == null)
+            
+            return async (HttpRequestMessage message, CancellationToken token) =>
             {
-                throw new ArgumentNullException(nameof(uri));
-            }
-
-            foreach (var mapping in endpointMappings)
-            {
-                if (mapping.Key(uri))
+                var uri = message.RequestUri?.ToString();
+                if (uri == null)
                 {
-                    return mapping.Value();
+                    throw new ArgumentNullException(nameof(uri));
                 }
-            }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":[]}") };
+                foreach (var mapping in endpointMappings)
+                {
+                    if (mapping.Key(uri))
+                    {
+                        var (responseFunc, callCount, maxCalls) = mapping.Value;
+                        if (maxCalls.HasValue) {
+                            if (callCount < maxCalls)
+                            {
+                                endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
+                            } else {
+                                return ForbiddenResponse;
+                            }
+                        }
+                        return responseFunc();
+                    }
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":[]}") };
+            };
         }
 
-        private static HttpResponseMessage MockExtPipesEndpoint()
+        public static HttpResponseMessage MockExtPipesEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestExtPipelineId}"",
+                ""name"": ""Test connector extraction pipeline"",
                 ""dataSetId"": 123,
                 ""schedule"": ""Continuous"",
                 ""source"": ""Test"",
+                ""createdBy"": ""unknown"",
                 ""id"": 123,
+                ""lastMessage"": ""Connector available""
             }}";
             return OkItemsResponse(item);
         }
 
-        private static HttpResponseMessage MockSimulatorsEndpoint()
+        public static HttpResponseMessage MockSimulatorsEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestSimulatorExternalId}"",
@@ -131,17 +150,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        private static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
+        public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
         {
-            if (requestCount > 0)
-            {
-                return CreateResponse(HttpStatusCode.Forbidden, "{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}");
-            }
-            requestCount++;
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()
+        {
+            var item = $@"{{
+                ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""name"": ""Test connector integration"",
+                ""dataSetId"": 123,
             }}";
             return OkItemsResponse(item);
         }

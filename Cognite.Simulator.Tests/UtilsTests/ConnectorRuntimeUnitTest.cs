@@ -15,78 +15,26 @@ using CogniteSdk.Alpha;
 using Cognite.Simulator.Utils.Automation;
 using Cognite.Extractor.Logging;
 using System.Net.Http;
-using System.Net;
+
+using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeUnitTest
     {
-
-        public string ConnectorExternalId = SeedData.TestIntegrationExternalId;
-
-        private static int requestCount = 0;
-
-        private static async Task<HttpResponseMessage> mockSimintRequestsAsync(HttpRequestMessage message, CancellationToken token)
+        private static readonly Dictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings = new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
         {
+            // Format: (url matcher, (response function, current call count, max calls))
+            { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, null) },
+            { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), (MockSimulatorsEndpoint, 0, null) },
+            { uri => uri.Contains("/simulators/integrations"), (MockSimulatorsIntegrationsEndpoint, 0, null) },
+            { uri => uri.Contains("/simulators/routines/revisions/list"), (MockSimulatorRoutineRevEndpoint, 0, 1) }
+        };
 
-            var uri = message.RequestUri?.ToString();
-            if (uri != null && uri.Contains($"/extpipes"))
-            {
-                var item = $@"{{
-                    ""externalId"": ""{SeedData.TestExtPipelineId}"",
-                    ""name"": ""Test connector extraction pipeline"",
-                    ""dataSetId"": 123,
-                    ""schedule"": ""Continuous"",
-                    ""source"": ""Test"",
-                    ""createdBy"": ""unknown"",
-                    ""id"": 123,
-                    ""lastMessage"": ""Connector available"",
-                }}";
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"{{\"items\":[{item}]}}") };
-            }
-
-            if (uri != null && (uri.EndsWith($"/simulators/list") || uri.EndsWith($"/simulators")))
-            {
-                var item = $@"{{
-                    ""externalId"": ""{SeedData.TestSimulatorExternalId}"",
-                    ""name"": ""{SeedData.TestSimulatorExternalId}"",
-                    ""fileExtensionTypes"": [""csv""],
-                }}";
-                    
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"{{\"items\":[{item}]}}") };
-            }
-
-            if (uri != null && uri.Contains($"/simulators/integrations"))
-            {
-                // throw error if not the first time
-                // if (requestCount > 0)
-                // {
-                //     return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}") };
-                // }
-                // requestCount++;
-                var item = $@"{{
-                    ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
-                    ""name"": ""Test connector integration"",
-                    ""dataSetId"": 123,
-                }}";
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"{{\"items\":[{item}]}}") };
-            }
-
-            if (uri != null && uri.Contains($"/simulators/routines/revisions/list"))
-            {
-                if (requestCount > 0)
-                {
-                    return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}") };
-                }
-                requestCount++;
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"{{\"items\":[]}}") };
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":[]}") };
-        }
-    
-
+        // We need to mock the HttpClientFactory to return the mocked responses
+        // First few requests will return the mocked responses, then we will return a 403 Forbidden
+        // This should cause a "soft" restart of the connector
         [Fact]
         public async Task TestConnectorRuntimeWithRestart()
         {
@@ -95,7 +43,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 .AddCogniteTestClient()
                 .BuildServiceProvider();
             var testCdfClient = services.GetRequiredService<Client>();
-            TestUtilities.WriteConfig();
+            WriteConfig();
 
             var logger = LoggingUtils.GetDefault();
             var mockedLogger = new Mock<ILogger<DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
@@ -103,7 +51,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
-            var mocks = TestUtilities.GetMockedHttpClientFactory(mockSimintRequestsAsync);
+            var mocks = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
             var mockHttpMessageHandler = mocks.handler;
             var mockFactory = mocks.factory;
 
@@ -119,11 +67,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
             } catch (OperationCanceledException) {}
         
-            // check if restart happened by reading the "Restarting connector in" log message
-            TestUtilities.VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
-            TestUtilities.VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
-            TestUtilities.VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
-            TestUtilities.VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 5 seconds", Times.AtLeastOnce());
+            // check if restart happened
+            VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 5 seconds", Times.AtLeastOnce());
         }
 
         private class EmptySimulatorAutomationClient :
