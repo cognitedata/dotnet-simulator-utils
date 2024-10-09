@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Tests
         private static int _configIdx;
         private static string? _statePath;
 
-        public static void AddCogniteTestClient(this IServiceCollection services)
+        public static IServiceCollection AddCogniteTestClient(this IServiceCollection services)
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -116,7 +116,7 @@ namespace Cognite.Simulator.Tests
                 return new CogniteDestination(client, logger, config);
             });
 
-            // Configure state store
+            return services;
         }
     }
 }
