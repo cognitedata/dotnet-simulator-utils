@@ -225,14 +225,15 @@ namespace Cognite.Simulator.Utils
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
                 var routineRev = job.RoutineRevision;
-                var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
-                var delay = nextOccurrence - DateTime.Now;
+                var now = DateTime.UtcNow;
+                var nextOccurrence = job.Schedule.GetNextOccurrence(now);
+                var delay = nextOccurrence - now;
                 if (delay.TotalMilliseconds > 0)
                 {
                     try
                     {
                         await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
+                        _logger.LogDebug($"Job executed at: {DateTime.UtcNow} for routine revision: {routineRev.ExternalId}");
                     }
                     catch (TaskCanceledException)
                     {
