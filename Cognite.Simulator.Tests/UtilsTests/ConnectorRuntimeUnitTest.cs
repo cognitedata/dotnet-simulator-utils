@@ -51,7 +51,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) => {
                 services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, EmptySimulatorAutomationClient>();
-                services.AddSingleton(mockFactory.Object); // inject the mock factory
+                services.AddSingleton(mockFactory.Object);
                 services.AddSingleton(mockedLogger.Object);
             };
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
@@ -61,10 +61,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
             } catch (OperationCanceledException) {}
         
-            // check if restart happened
+            // Check the logs, it should first succeed on the startup, then fail and restart
             VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Error, "Request to CDF failed with code 403", Times.Once(), true);
             VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 5 seconds", Times.AtLeastOnce());
         }
 
