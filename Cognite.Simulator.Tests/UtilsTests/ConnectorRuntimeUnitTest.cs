@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 
 using Cognite.Simulator.Utils;
-using CogniteSdk;
 using CogniteSdk.Alpha;
 
 using Cognite.Simulator.Utils.Automation;
@@ -38,11 +37,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestConnectorRuntimeWithRestart()
         {
-            var services = new ServiceCollection()
-                .AddSingleton<DefaultConfig<AutomationConfig>>()
-                .AddCogniteTestClient()
-                .BuildServiceProvider();
-            var testCdfClient = services.GetRequiredService<Client>();
             WriteConfig();
 
             var logger = LoggingUtils.GetDefault();
