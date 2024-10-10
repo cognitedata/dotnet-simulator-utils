@@ -73,6 +73,19 @@ namespace Cognite.Simulator.Utils
         /// Routine revision.
         /// </summary>
         public V RoutineRevision { get; set; }
+
+        /// <summary>
+        /// Set schedule
+        /// </summary>
+        /// <param name="schedule">Crontab schedule</param>
+        /// <returns>Self</returns>
+        /// <exception cref="CrontabException">If the schedule is invalid</exception>
+        /// 
+        public ScheduledJob<V> SetSchedule(string CronExpression)
+        {
+            Schedule = CrontabSchedule.Parse(CronExpression);
+            return this;
+        }
     }
     /// <summary>
     /// This class implements a basic simulation scheduler. It runs a loop on a configurable interval.
@@ -171,14 +184,13 @@ namespace Cognite.Simulator.Utils
                                 {
                                     continue;
                                 }
-                                var schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
                                 var newJob = new ScheduledJob<V>
                                 {
-                                    Schedule = schedule,
                                     TokenSource = new CancellationTokenSource(),
                                     CreatedTime = routineRev.CreatedTime,
                                     RoutineRevision = routineRev,
                                 };
+                                newJob.SetSchedule(routineRev.Configuration.Schedule.CronExpression);
                                 _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
                                 scheduledJobs.Add(routineRev.RoutineExternalId, newJob);
                             }
