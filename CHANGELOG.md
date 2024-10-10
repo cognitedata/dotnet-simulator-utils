@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## Release v1.0.0-beta-005 (2024-10-10)
+
+### Bug Fixes
+
+* Fix the target framework to be netstandard2.0 to support older .NET versions (introduced in v1.0.0-beta-003)
+
 
 ## Release v1.0.0-beta-004 (2024-10-10)
 
