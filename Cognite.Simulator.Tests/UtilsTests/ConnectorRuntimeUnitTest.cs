@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,14 +23,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeUnitTest
     {
-        private static readonly Dictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings = new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
-        {
-            // Format: (url matcher, (response function, current call count, max calls))
-            { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, null) },
-            { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), (MockSimulatorsEndpoint, 0, null) },
-            { uri => uri.Contains("/simulators/integrations"), (MockSimulatorsIntegrationsEndpoint, 0, null) },
-            { uri => uri.Contains("/simulators/routines/revisions/list"), (MockSimulatorRoutineRevEndpoint, 0, 1) }
-        };
+        private static readonly IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
+            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
+                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
+                {
+                    { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, null) },
+                    { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), (MockSimulatorsEndpoint, 0, null) },
+                    { uri => uri.Contains("/simulators/integrations"), (MockSimulatorsIntegrationsEndpoint, 0, null) },
+                    { uri => uri.Contains("/simulators/routines/revisions/list"), (MockSimulatorRoutineRevEndpoint, 0, 1) }
+                }
+            );
 
         // We need to mock the HttpClientFactory to return the mocked responses
         // First few requests return the mocked responses, then we return a 403 Forbidden

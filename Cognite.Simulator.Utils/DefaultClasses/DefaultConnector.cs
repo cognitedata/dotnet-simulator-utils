@@ -84,29 +84,34 @@ namespace Cognite.Simulator.Utils
             await _routineLibrary.Init(token).ConfigureAwait(false);
         }
 
+        private Task RunAllTasks(CancellationTokenSource linkedTokenSource) {
+            var linkedToken = linkedTokenSource.Token;
+            var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
+            var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
+            var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
+            taskList.AddRange(modelLibTasks);
+            taskList.AddRange(configLibTasks);
+            taskList.Add(_simulationRunner.Run(linkedToken));
+            taskList.Add(_scheduler.Run(linkedToken));
+            taskList.Add(_pipeline.PipelineUpdate(linkedToken));
+            taskList.Add(RestartOnNewRemoteConfigLoop(linkedToken));
+            return taskList.RunAll(linkedTokenSource);
+        }
+
+        /// <summary>
+        /// Run the main loop of the connector
+        /// </summary>
         public override async Task Run(CancellationToken token)
         {
             _logger.LogInformation("Connector started, sending status to CDF every {Interval} seconds",
                 _config.Connector.StatusInterval);
                 
-
             try
             {
                 using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-                    var linkedToken = linkedTokenSource.Token;
-                    var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
-                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
-                    var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
-                    taskList.AddRange(modelLibTasks);
-                    taskList.AddRange(configLibTasks);
-                    taskList.Add(_simulationRunner.Run(linkedToken));
-                    taskList.Add(_scheduler.Run(linkedToken));
-                    taskList.Add(_pipeline.PipelineUpdate(linkedToken));
-                    taskList.Add(RestartOnNewRemoteConfigLoop(linkedToken));
-                    await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+                    await RunAllTasks(linkedTokenSource).ConfigureAwait(false);
                 }
-
             }
             catch (OperationCanceledException)
             {

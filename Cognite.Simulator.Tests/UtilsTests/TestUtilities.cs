@@ -93,7 +93,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         ///     if maxCalls is null, the response function will return the same response indefinitely
         /// </summary>
         /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
-        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(Dictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
+        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
         {
             
             return async (HttpRequestMessage message, CancellationToken token) =>
@@ -109,14 +109,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     if (mapping.Key(uri))
                     {
                         var (responseFunc, callCount, maxCalls) = mapping.Value;
-                        if (maxCalls.HasValue) {
-                            if (callCount < maxCalls)
-                            {
-                                endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
-                            } else {
-                                return ForbiddenResponse;
-                            }
+                        if (maxCalls.HasValue && callCount >= maxCalls)
+                        {
+                            return ForbiddenResponse;
                         }
+                        endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
                         return responseFunc();
                     }
                 }
