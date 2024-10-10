@@ -87,10 +87,10 @@ namespace Cognite.Simulator.Utils
         private Task RunAllTasks(CancellationTokenSource linkedTokenSource) {
             var linkedToken = linkedTokenSource.Token;
             var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
-            var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
+            var routineLibTasks = _routineLibrary.GetRunTasks(linkedToken);
             var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
             taskList.AddRange(modelLibTasks);
-            taskList.AddRange(configLibTasks);
+            taskList.AddRange(routineLibTasks);
             taskList.Add(_simulationRunner.Run(linkedToken));
             taskList.Add(_scheduler.Run(linkedToken));
             taskList.Add(_pipeline.PipelineUpdate(linkedToken));
