@@ -216,7 +216,7 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
 
-                            PublishSimulationRunStatus(ConnectorStatus.RUNNING_SIMULATION, token);
+                            PublishConnectorStatus(ConnectorStatus.RUNNING_SIMULATION, token);
 
                             await InitSimulationRun(
                                 runItem,
@@ -250,7 +250,7 @@ namespace Cognite.Simulator.Utils
                             if (!skipped)
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
-                                PublishSimulationRunStatus(ConnectorStatus.IDLE, token);
+                                PublishConnectorStatus(ConnectorStatus.IDLE, token);
                                 ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
@@ -292,7 +292,7 @@ namespace Cognite.Simulator.Utils
             return (model, calcConfig);
         }
 
-        async void PublishSimulationRunStatus(ConnectorStatus status, CancellationToken token)
+        async void PublishConnectorStatus(ConnectorStatus status, CancellationToken token)
         {
             try
             {
@@ -330,10 +330,9 @@ namespace Cognite.Simulator.Utils
                     token
                 ).ConfigureAwait(false);
             }
-
-            catch (Exception e)
+            catch (ResponseException e)
             {
-                // throw new ConnectorException(e.Message);
+                _logger.LogWarning("Failed to update simulator integration status: {Message}", e.Message);
             }
         }
 

@@ -54,6 +54,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var secret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
             var simulatorName = SeedData.TestSimulatorExternalId;
             var datasetId = SeedData.TestDataSetId;
+            var pipelineId = SeedData.TestExtPipelineId;
             string directory = Directory.GetCurrentDirectory();
             string filePath = Path.Combine(directory, "config.yml");
             string yamlContent = $@"
@@ -73,6 +74,8 @@ cognite:
     secret: {secret}
     scopes:
       - ""{host}/.default""
+  extraction-pipeline:
+    pipeline-id: {pipelineId}
 simulator:
   name: {simulatorName}
   data-set-id: {datasetId}
@@ -93,63 +96,54 @@ connector:
         [Fact]
         public async Task TestConnectorRuntime()
         {
-            var services = new ServiceCollection();
-            services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddCogniteTestClient();
-            var testCdfClient = services.BuildServiceProvider().GetRequiredService<Client>();
+            var services = new ServiceCollection()
+                .AddCogniteTestClient()
+                .BuildServiceProvider();
+
+            var testCdfClient = services.GetRequiredService<Client>();
             WriteConfig();
 
             // Create an ILogger instance
             var logger = LoggingUtils.GetDefault();
 
-            var FIVE_SECONDS = 5;
-            using (var cts = new CancellationTokenSource())
-            {
-                cts.CancelAfter(TimeSpan.FromSeconds(FIVE_SECONDS));
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = ConfigureServices;
+            try {
+                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = (services) => {
+                    services.AddScoped<ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
+                };
                 DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
                 DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
-                try
-                {
-                    await DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("Operation was cancelled.");
-                }
-                finally
-                {
-                    var integrations = await testCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
-                        new SimulatorIntegrationQuery
-                        {
-                            Filter = new SimulatorIntegrationFilter() {
-                                simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
-                            }
+                
+                try {
+                    await DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
+                } catch (OperationCanceledException) {}
+                
+                var integrations = await testCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
+                    new SimulatorIntegrationQuery
+                    {
+                        Filter = new SimulatorIntegrationFilter() {
+                            simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                         }
-                    ).ConfigureAwait(false);
+                    }
+                ).ConfigureAwait(false);
 
-                    var simulator = await testCdfClient.Alpha.Simulators.ListAsync(
-                        new SimulatorQuery
-                        {
-                           
-                        }
-                    ).ConfigureAwait(false);
+                var simulators = await testCdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery()).ConfigureAwait(false);
 
-                    var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
-                    Assert.Contains(ConnectorExternalId, integrations.Items.Select(i => i.ExternalId));
-                    var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                    
-                    var simulatorDefinition = simulator.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
-                    Assert.NotNull(simulatorDefinition);
+                var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
+                Assert.Contains(ConnectorExternalId, integrations.Items.Select(i => i.ExternalId));
+                var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
+                
+                var simulatorDefinition = simulators.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
+                Assert.NotNull(simulatorDefinition);
 
-                    // Simply checking the unit quantities created
-                    Assert.True( simulatorDefinition.UnitQuantities.Count() == SeedData.SimulatorCreate.UnitQuantities.Count() );
-                    
-                    await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
-                }
+                // Simply checking the unit quantities created
+                Assert.Equal(simulatorDefinition.UnitQuantities.ToString(), unitQuantities.ToString());
+            } finally {
+                await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
+                await testCdfClient.ExtPipes.DeleteAsync(new List<string> { SeedData.TestExtPipelineId });
             }
-            await Task.Delay(TimeSpan.FromSeconds(FIVE_SECONDS + 1)).ConfigureAwait(false);
         }
 
         public class CalculatorSimulatorAutomationClient :

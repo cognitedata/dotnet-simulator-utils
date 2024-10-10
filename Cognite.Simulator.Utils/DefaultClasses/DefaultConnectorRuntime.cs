@@ -192,7 +192,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         {
             using (var scope = provider.CreateScope())
             {
-                var pipeline = provider.GetRequiredService<ExtractionPipeline>();
+                var pipeline = scope.ServiceProvider.GetRequiredService<ExtractionPipeline>();
                 
                 try
                 {
