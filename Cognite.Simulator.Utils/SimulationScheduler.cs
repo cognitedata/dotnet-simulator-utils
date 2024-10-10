@@ -1,14 +1,17 @@
-﻿using Cognite.Extractor.Utils;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
 using NCrontab;
-using Cognite.Simulator.Utils.Automation;
+
 using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils.Automation;
+using CogniteSdk.Alpha;
+
 
 namespace Cognite.Simulator.Utils
 {
@@ -211,6 +214,30 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Gets the next job delay and run time in milliseconds.
+        /// Delay is the actual time until the next job should run.
+        /// Run time is the "official" time job is considered to run at (used for inputs data sampling, etc).
+        /// Run time is floored to the nearest minute.
+        /// </summary>
+        public static (TimeSpan, long) GetNextJobDelayAndRunTimeMs(CrontabSchedule schedule)
+        {
+            if (schedule == null)
+            {
+                throw new ArgumentNullException(nameof(schedule));
+            }
+            var now = DateTime.UtcNow;
+            var nextOccurrence = schedule.GetNextOccurrence(now);
+            var delay = nextOccurrence - now;
+            
+            // Get the next occurrence time. Since cron expressions can go as far as minutes, we floor it to the
+            // nearest minute, just to make sure the cron is respected
+            var nextOccurrenceMs = nextOccurrence.ToUnixTimeMilliseconds();
+            var nextJobRunTimeMs = nextOccurrenceMs - (nextOccurrenceMs % 60000);
+
+            return (delay, nextJobRunTimeMs);
+        }
+
+        /// <summary>
         /// Runs a scheduled job.
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
@@ -225,9 +252,8 @@ namespace Cognite.Simulator.Utils
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
                 var routineRev = job.RoutineRevision;
-                var now = DateTime.UtcNow;
-                var nextOccurrence = job.Schedule.GetNextOccurrence(now);
-                var delay = nextOccurrence - now;
+                var (delay, nextJobTimeMs) = GetNextJobDelayAndRunTimeMs(job.Schedule);
+
                 if (delay.TotalMilliseconds > 0)
                 {
                     try
@@ -248,23 +274,12 @@ namespace Cognite.Simulator.Utils
                         _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
                         break;
                     }
-                    // Get the next occurrence time. Since cron expressions can go as far as minutes, we floor it to the
-                    // nearest minute, just to make sure the cron is respected
-                    var nextOccurrenceDateTime = new DateTime(
-                        nextOccurrence.Year,
-                        nextOccurrence.Month,
-                        nextOccurrence.Day,
-                        nextOccurrence.Hour,
-                        nextOccurrence.Minute,
-                        0
-                    );
-                    var nextOccurrenceTimeEpoch = nextOccurrenceDateTime.ToUnixTimeMilliseconds();
 
                     var runEvent = new SimulationRunCreate
                     {
                         RoutineExternalId = routineRev.RoutineExternalId,
                         RunType = SimulationRunType.scheduled,
-                        RunTime = nextOccurrenceTimeEpoch
+                        RunTime = nextJobTimeMs,
                     };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
