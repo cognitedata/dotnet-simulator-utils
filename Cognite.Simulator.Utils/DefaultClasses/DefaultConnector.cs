@@ -73,6 +73,7 @@ namespace Cognite.Simulator.Utils
         public override async Task Init(CancellationToken token)
         {
 
+            await _pipeline.Init(_config.Simulator, token).ConfigureAwait(false);
             await InitRemoteSimulatorIntegrations(token).ConfigureAwait(false);
             var integration = GetSimulatorIntegrations().FirstOrDefault();
             if(integration != null){
@@ -81,32 +82,36 @@ namespace Cognite.Simulator.Utils
             await UpdateRemoteSimulatorIntegrations(true, token).ConfigureAwait(false);
             await _modelLibrary.Init(token).ConfigureAwait(false);
             await _routineLibrary.Init(token).ConfigureAwait(false);
-            await _pipeline.Init(_config.Simulator, token).ConfigureAwait(false);
         }
 
+        private Task RunAllTasks(CancellationTokenSource linkedTokenSource) {
+            var linkedToken = linkedTokenSource.Token;
+            var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
+            var routineLibTasks = _routineLibrary.GetRunTasks(linkedToken);
+            var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
+            taskList.AddRange(modelLibTasks);
+            taskList.AddRange(routineLibTasks);
+            taskList.Add(_simulationRunner.Run(linkedToken));
+            taskList.Add(_scheduler.Run(linkedToken));
+            taskList.Add(_pipeline.PipelineUpdate(linkedToken));
+            taskList.Add(RestartOnNewRemoteConfigLoop(linkedToken));
+            return taskList.RunAll(linkedTokenSource);
+        }
+
+        /// <summary>
+        /// Run the main loop of the connector
+        /// </summary>
         public override async Task Run(CancellationToken token)
         {
             _logger.LogInformation("Connector started, sending status to CDF every {Interval} seconds",
                 _config.Connector.StatusInterval);
                 
-
             try
             {
                 using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-                    var linkedToken = linkedTokenSource.Token;
-                    var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
-                    var configLibTasks = _routineLibrary.GetRunTasks(linkedToken);
-                    var taskList = new List<Task> { HeartbeatLoop(linkedToken) };
-                    taskList.AddRange(modelLibTasks);
-                    taskList.AddRange(configLibTasks);
-                    taskList.Add(_simulationRunner.Run(linkedToken));
-                    taskList.Add(_scheduler.Run(linkedToken));
-                    taskList.Add(_pipeline.PipelineUpdate(token));
-                    taskList.Add(RestartOnNewRemoteConfigLoop(linkedToken));
-                    await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+                    await RunAllTasks(linkedTokenSource).ConfigureAwait(false);
                 }
-
             }
             catch (OperationCanceledException)
             {

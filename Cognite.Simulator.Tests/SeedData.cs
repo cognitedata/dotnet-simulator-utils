@@ -20,6 +20,7 @@ namespace Cognite.Simulator.Tests
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
         public static string TestSimulatorExternalIdPrefix = "UTILS_TEST_SIMULATOR_";
         public static string TestSimulatorExternalId = TestSimulatorExternalIdPrefix + Now;
+        public static string TestExtPipelineId = "utils-tests-pipeline-" + Now;
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;

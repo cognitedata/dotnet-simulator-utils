@@ -488,9 +488,9 @@ namespace Cognite.Simulator.Utils
                     UpsertModelRevisionInState(revision);
                 }
             }
-            catch (System.Exception e)
+            catch (ResponseException e)
             {
-                _logger.LogDebug("Failed to fetch model revisions from CDF: {Message}", e.Message);
+                _logger.LogWarning("Failed to fetch model revisions from CDF: {Message}", e.Message);
             }
         }
 
