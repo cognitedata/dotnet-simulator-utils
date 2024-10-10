@@ -1,15 +1,19 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NCrontab;
 using Xunit;
+
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+using CogniteSdk;
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Tests.UtilsTests
@@ -37,9 +41,79 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+    /// <summary>
+    /// Fake local time zone for testing purposes
+    /// </summary>
+    public class FakeLocalTimeZone : IDisposable
+    {
+        private readonly TimeZoneInfo _actualLocalTimeZoneInfo;
+        private static void SetLocalTimeZone(TimeZoneInfo timeZoneInfo)
+        {
+            var cachedDataField = typeof(TimeZoneInfo).GetField("s_cachedData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var cachedData = cachedDataField?.GetValue(null);
+            var localTimeZoneField = cachedData?.GetType().GetField("_localTimeZone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            localTimeZoneField?.SetValue(cachedData, timeZoneInfo);
+        }
+
+        public FakeLocalTimeZone(TimeZoneInfo timeZoneInfo)
+        {
+            _actualLocalTimeZoneInfo = TimeZoneInfo.Local;
+            SetLocalTimeZone(timeZoneInfo);
+        }
+
+        public void Dispose()
+        {
+            SetLocalTimeZone(_actualLocalTimeZoneInfo);
+        }
+    }
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationSchedulerTest
     {
+
+        [Fact]
+        public void TestNextRunTimeAndDelay_Midnight() {
+            using (new FakeLocalTimeZone(TimeZoneInfo.FindSystemTimeZoneById("US/Eastern"))) {
+                // every day at 00:00
+                var schedule = CrontabSchedule.Parse("0 0 * * *");
+                var (delay, runTimeMs) = SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextJobDelayAndRunTimeMs(schedule);
+
+                // get the next midnight
+                var now = DateTime.UtcNow;
+                var nowDate = DateTime.UtcNow.Date;
+                var nextMidnight =  nowDate.AddDays(1);
+                var nextMidnightMs = nextMidnight.ToUnixTimeMilliseconds();
+                var expectedDelay = nextMidnight - now;
+
+                var diffBetweenExpectedAndActual = (expectedDelay - delay).TotalMilliseconds;
+                
+                Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 60 * 1000); // less than a minute
+                Assert.Equal(nextMidnightMs, runTimeMs);
+            }
+        }
+
+        [Fact]
+        public void TestNextRunTimeAndDelay_In15Minutes() {
+            using (new FakeLocalTimeZone(TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"))) {
+                // get current time
+                var now = DateTime.UtcNow;
+                var nowPlus15Minutes = now.AddMinutes(15);
+                
+                // cron expression at every day current UTC time + 15 minutes
+                var schedule = CrontabSchedule.Parse($"{nowPlus15Minutes.Minute} {nowPlus15Minutes.Hour} * * *");
+                var (delay, runTimeMs) = SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextJobDelayAndRunTimeMs(schedule);
+
+                // get the next midnight
+                var expectedRunTime = nowPlus15Minutes.ToUnixTimeMilliseconds() / 60000 * 60000; // round to the nearest minute
+                var expectedDelay = nowPlus15Minutes - now;
+
+                var diffBetweenExpectedAndActual = (expectedDelay - delay).TotalMilliseconds;
+                
+                Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 1000 * 60); // less than a minute
+                Assert.Equal(expectedRunTime, runTimeMs);
+            }
+        }
+
         [Fact]
         public async Task TestSimulationSchedulerBase()
         {
