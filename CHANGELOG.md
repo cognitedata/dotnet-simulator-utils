@@ -9,7 +9,6 @@ All notable changes to this project will be documented in this file.
 ### Bug Fixes
 
 * Fix the scheduler issue where the simulation was not getting correct run time when being executed in non-UTC time zone environments.
-
 * Fix the issue which caused the connector with enabled extraction pipeline to get stuck in a loop upon any API error.
 
 
