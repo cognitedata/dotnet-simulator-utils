@@ -41,7 +41,7 @@ public class CalculatorSimulatorClient :
         try
         {
             Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
-            var routine = new CalculatorRoutine(routineRevision, inputData);
+            var routine = new CalculatorRoutine(routineRevision, inputData, _logger);
             result = routine.PerformSimulation();
             foreach (var kvp in result)
             {
@@ -59,7 +59,7 @@ public class CalculatorSimulatorClient :
 
 internal class CalculatorRoutine : RoutineImplementationBase
 {
-    public CalculatorRoutine(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
+    public CalculatorRoutine(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
     }
 
