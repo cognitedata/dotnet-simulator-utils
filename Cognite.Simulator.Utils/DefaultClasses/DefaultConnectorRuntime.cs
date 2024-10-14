@@ -125,7 +125,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
     {
         var assembly = Assembly.GetEntryAssembly();
         var services = new ServiceCollection();
-        services.AddLogger();
         services.AddCogniteClient($"{ConnectorName}Connector", $"{ConnectorName}Connector (Cognite)", true);
 
         DefaultConfig<TAutomationConfig> config;
@@ -133,7 +132,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         {
             config = await services.AddConfiguration<DefaultConfig<TAutomationConfig>>(
                 path: "./config.yml",
-                types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig) },
+                types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig), typeof(LoggerConfig), typeof(Cognite.Simulator.Utils.BaseConfig) },
                 appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);
@@ -143,7 +142,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
             defaultLogger.LogError("Failed to load configuration file: {Message}", e.Message);
             return;
         }
-
+        services.AddLogger();
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
@@ -158,8 +157,6 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
 
         // This part allows connectors to inject their own SimulatorClients to 
         // the service stack
-       
-        
 
         services.AddExtractionPipeline(config.Connector);
 
@@ -195,7 +192,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         {
             using (var scope = provider.CreateScope())
             {
-                var pipeline = provider.GetRequiredService<ExtractionPipeline>();
+                var pipeline = scope.ServiceProvider.GetRequiredService<ExtractionPipeline>();
                 
                 try
                 {

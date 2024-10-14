@@ -8,7 +8,8 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
 using System.Collections.Concurrent;
 using System.Threading;
-using Oryx.Cognite;
+
+using System.Linq;
 
 namespace Cognite.Simulator.Utils {
 
@@ -18,11 +19,39 @@ namespace Cognite.Simulator.Utils {
     /// 
     public class ScopedRemoteApiSink : ILogEventSink
     {
-        private SimulatorLoggingConfig apiLoggerConfig;
+        private bool enabled;
+        private LogEventLevel minLevel;
+
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
         private long? defaultLogId;
+        private static readonly LogEventLevel DefaultMinimumLevel = LogEventLevel.Warning;
+        private static readonly LogEventLevel[] AllowedLogLevels = new[] { LogEventLevel.Debug, LogEventLevel.Information, LogEventLevel.Warning, LogEventLevel.Error };
+        
+        /// <summary>
+        /// Create a scoped api sink
+        /// </summary>
+        /// <param name="loggerConfig">The logger configuration</param>
+        public ScopedRemoteApiSink(LoggerConfig loggerConfig) : base(){
+            if (loggerConfig != null) {
+                enabled = loggerConfig.Remote == null || loggerConfig.Remote.Enabled;
+                if (enabled) {
+                    minLevel = ParseLogLevel(loggerConfig.Remote?.Level);
+                }
+            }
+        }
 
+        private static LogEventLevel ParseLogLevel(string level)
+        {
+            if (string.IsNullOrEmpty(level))
+            {
+                return DefaultMinimumLevel;
+            }
+            if(!Enum.TryParse(level, true, out LogEventLevel logLevel)) {
+                throw new ArgumentException($"Unknown minimum log level for remote API: {level}");
+            }
+            return logLevel;
+        }
 
         /// <summary>
         /// Sets the default log ID.
@@ -39,7 +68,7 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
-            if(apiLoggerConfig == null || !apiLoggerConfig.Enabled)
+            if(!enabled)
             {
                 return;
             }
@@ -49,8 +78,16 @@ namespace Cognite.Simulator.Utils {
                 throw new ArgumentNullException(nameof(logEvent));
             }
 
-            if (logEvent.Level < apiLoggerConfig.Level)
+            if (logEvent.Level < minLevel)
             {
+                return;
+            }
+
+            if (!AllowedLogLevels.Contains(logEvent.Level))
+            {
+                // Fatal and Verbose are not supported by the remote API.
+                // In case of Verbose, we can just ignore it.
+                // In case of Fatal, we will most likely not be able to send the logs to the remote API anyway.
                 return;
             }
 
@@ -75,24 +112,6 @@ namespace Cognite.Simulator.Utils {
                 return oldValue;
             });
             
-        }
-
-        /// <summary>
-        /// Sets the configuration for the remote API.
-        /// </summary>
-        /// <param name="config">This configuration sets the minimum log level to report to the API and
-        /// whether the remote logging is enabled or not.
-        /// </param>
-        public void SetConfig(SimulatorLoggingConfig config)
-        {
-            if(config == null){
-                apiLoggerConfig = new SimulatorLoggingConfig{
-                    Level = LogEventLevel.Information,
-                    Enabled = true
-                };
-            } else {
-                apiLoggerConfig = config;
-            }
         }
 
         /// <summary>

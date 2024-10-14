@@ -5,12 +5,13 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+
 using System.Threading;
 using System.Threading.Tasks;
-using Cognite.Extractor.Configuration;
+
 using CogniteSdk.Alpha;
 using CogniteSdk;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
@@ -67,8 +68,6 @@ namespace Cognite.Simulator.Utils
         /// List of simulator configurations handled by this connector
         /// </summary>
         protected IList<SimulatorConfig> Simulators { get; }
-        private ConnectorConfig Config { get; }
-
         private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
         private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
@@ -100,7 +99,6 @@ namespace Cognite.Simulator.Utils
         {
             Cdf = cdf;
             Simulators = simulators;
-            Config = config;
             _simulatorIntegrationsList = new Dictionary<string, SimulatorIntegration>();
             _logger = logger;
             _remoteApiSink = remoteSink;

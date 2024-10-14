@@ -1,8 +1,7 @@
-﻿using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Extensions;
 using CogniteSdk;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -50,13 +49,15 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
 
+            await SeedData.GetOrCreateTestTimeseries(cdf).ConfigureAwait(false);
+
             // Tests assume the given time series exists in the test project and
             // that it contains data points in this time range
             var samplingConfiguration = new SamplingConfiguration(start: 1631294940000, end: 1631296740000);
             
             // Test max aggregation. A single data point should be returned
             var (timestamps, values) = await dataPoints.GetSample(
-                "SimConnect-IntegrationTests-OnOffValues",
+                "utils-tests-OnOffValues",
                 Extensions.DataPointAggregate.Max,
                 800,
                 samplingConfiguration,
@@ -69,9 +70,9 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var range2 = new SamplingConfiguration(start: 0, end: 0);
 
             // No data points in the range. Throw exception
-            _ = Assert.ThrowsAsync<DataPointSampleNotFoundException>(
+            _ = await Assert.ThrowsAsync<DataPointSampleNotFoundException>(
                 async () => await dataPoints.GetSample(
-                  "SimConnect-IntegrationTests-OnOffValues",
+                  "utils-tests-OnOffValues",
                   Extensions.DataPointAggregate.Max,
                   1,
                   range2,
@@ -81,7 +82,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             // No data points in the range, and before the range. Since aggregation
             // is step interpolation should search forward in time for any data points
             var (timestamps2, values2) = await dataPoints.GetSample(
-                "SimConnect-IntegrationTests-OnOffValues",
+                "utils-tests-OnOffValues",
                 Extensions.DataPointAggregate.StepInterpolation,
                 1,
                 range2,
@@ -105,7 +106,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var currentTimeEpoch = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var disabledDataSampling = new SamplingConfiguration( end: currentTimeEpoch );
             var (timestamp, value) = await dataPoints.GetLatestValue(
-                "SimConnect-IntegrationTests-OnOffValues",
+                "utils-tests-OnOffValues",
                 disabledDataSampling,
                 System.Threading.CancellationToken.None).ConfigureAwait(false);
             

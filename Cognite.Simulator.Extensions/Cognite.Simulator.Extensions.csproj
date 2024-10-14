@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Cognite.Simulator.Extensions</PackageId>
     <Author>Cognite AS</Author>
@@ -21,9 +22,9 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup> 
   <ItemGroup>
-    <PackageReference Include="CogniteSdk" Version="4.5.0" />
+    <PackageReference Include="CogniteSdk" Version="4.6.0" />
     <!-- <ProjectReference Include="..\..\cognite-sdk-dotnet\CogniteSdk\src\CogniteSdk.csproj" /> -->
-    <PackageReference Include="Cognite.Extensions" Version="1.20.0" />
+    <PackageReference Include="Cognite.Extensions" Version="1.26.1" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" /> -->
   </ItemGroup> 
 
