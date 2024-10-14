@@ -144,7 +144,7 @@ namespace Cognite.Simulator.Utils
 
         private void ParseCommand(Dictionary<string, string> arguments)
         {
-            _logger.LogInformation("Running command: {Command}", SimulatorLoggingUtils.FlattenDictionary(arguments));
+            _logger.LogDebug("Running command: {Command}", SimulatorLoggingUtils.FlattenDictionary(arguments));
             // Perform command
             RunCommand(arguments);
         }
@@ -163,7 +163,7 @@ namespace Cognite.Simulator.Utils
                 {
                     var output = matchingOutputs.First();
                     string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
-                    _logger.LogInformation("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
+                    _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
                     _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
                 }
             else
