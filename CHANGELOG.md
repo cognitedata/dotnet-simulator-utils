@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-005 (2024-10-10)
+
+### Increase routine logging
+
+* Increased the amount of logs generated during routine execution to help users debug issues more effectively.
+
 
 ## Release v1.0.0-beta-005 (2024-10-10)
 
