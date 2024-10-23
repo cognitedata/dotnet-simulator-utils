@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 
 using Microsoft.Extensions.Logging;
-using Serilog.Context;
 
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
@@ -329,7 +328,8 @@ namespace Cognite.Simulator.Utils
         {
             if (modelState.ShouldProcess()) {
                 var logId = modelState.LogId;
-                using (LogContext.PushProperty("LogId", logId)) {
+                var logContext = SimulatorLoggingUtils.WithLogId(_cdfSimulatorResources, logId);//.ConfigureAwait(false);
+                using (logContext) {
                     try
                     {
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);

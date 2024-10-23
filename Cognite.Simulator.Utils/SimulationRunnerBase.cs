@@ -202,7 +202,10 @@ namespace Cognite.Simulator.Utils
 
                     var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
 
-                    using (LogContext.PushProperty("LogId", runItem.Run.LogId))
+                    // TODO : true
+                    // using (await SimulatorLoggingUtils.WithLogId(_cdfSimulators, runItem.Run.LogId).ConfigureAwait(false))
+                    var logContext = SimulatorLoggingUtils.WithLogId(_cdfSimulators, runItem.Run.LogId);//.ConfigureAwait(false);
+                    using (logContext)
                     {
                         try
                         {
@@ -304,7 +307,7 @@ namespace Cognite.Simulator.Utils
                         {
                             Filter = new SimulatorIntegrationFilter()
                             {
-                                simulatorExternalIds = new List<string>() { simulator.Name },
+                                SimulatorExternalIds = new List<string>() { simulator.Name },
                             }
                         },
                         token).ConfigureAwait(false);
