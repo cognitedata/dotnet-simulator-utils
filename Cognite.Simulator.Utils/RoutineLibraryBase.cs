@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         ///     Limit for pagination when fetching routine revisions from CDF.
         /// </summary>
-        public int? PaginationLimit { get; set; } = 100;
+        public int? PaginationLimit { get; set; } = 20;
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -207,7 +207,8 @@ namespace Cognite.Simulator.Utils
                         // TODO filter by simulatorIntegrationExternalIds
                         SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
                     },
-                    Limit = PaginationLimit
+                    Limit = PaginationLimit,
+                    IncludeAllFields = true
                 },
                 CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync,
                 token);

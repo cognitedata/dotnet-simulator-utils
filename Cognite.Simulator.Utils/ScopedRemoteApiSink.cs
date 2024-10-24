@@ -20,7 +20,7 @@ namespace Cognite.Simulator.Utils {
     public class ScopedRemoteApiSink : ILogEventSink
     {
         private bool enabled;
-        private LogEventLevel minLevel;
+        private LogEventLevel minSeverityLevel;
 
         // Buffer for storing log data
         private readonly ConcurrentDictionary<long, List<SimulatorLogDataEntry>> logBuffer = new ConcurrentDictionary<long, List<SimulatorLogDataEntry>>();
@@ -36,7 +36,7 @@ namespace Cognite.Simulator.Utils {
             if (loggerConfig != null) {
                 enabled = loggerConfig.Remote == null || loggerConfig.Remote.Enabled;
                 if (enabled) {
-                    minLevel = ParseLogLevel(loggerConfig.Remote?.Level);
+                    minSeverityLevel = ParseLogLevel(loggerConfig.Remote?.Level);
                 }
             }
         }
@@ -78,6 +78,12 @@ namespace Cognite.Simulator.Utils {
                 throw new ArgumentNullException(nameof(logEvent));
             }
 
+            var minLevel = minSeverityLevel;
+
+            if (logEvent.Properties.TryGetValue("Severity", out var value) && value is ScalarValue sv && sv.Value is string overrideSeverity) {
+                minLevel = ParseLogLevel(overrideSeverity);
+            }
+
             if (logEvent.Level < minLevel)
             {
                 return;
@@ -92,6 +98,7 @@ namespace Cognite.Simulator.Utils {
             }
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
+
             if (logId == null && defaultLogId == null) {
                 return;
             }
