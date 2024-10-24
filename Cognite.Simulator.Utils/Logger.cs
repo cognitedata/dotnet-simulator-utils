@@ -26,8 +26,9 @@ namespace Cognite.Simulator.Utils
     public static class SimulatorLoggingUtils
     {
         /// <summary>
-        /// Push log id into the log context.
-        /// You can wrap the code that needs to be logged to the remote (API) sink with this method.
+        /// Used to enrish log events with the simulator log id and min severity.
+        /// Example usage:
+        ///     LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false))
         /// </summary>
         /// <param name="cdf">Simulators resource</param>
         /// <param name="logId">Log id to push</param>
