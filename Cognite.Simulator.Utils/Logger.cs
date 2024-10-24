@@ -1,17 +1,18 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
-using Cognite.Extractor.Logging;
 using Serilog.Core;
+using Serilog.Core.Enrichers;
 using Serilog.Events;
 
 using CogniteSdk;
-using Serilog.Core.Enrichers;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
+using Cognite.Extractor.Logging;
 using CogniteSdk.Resources.Alpha;
 
 namespace Cognite.Simulator.Utils
