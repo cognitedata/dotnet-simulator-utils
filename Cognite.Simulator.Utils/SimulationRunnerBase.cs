@@ -4,7 +4,6 @@ using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk;
 using CogniteSdk.Alpha;
-using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
@@ -13,6 +12,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using static Cognite.Simulator.Utils.SimulatorLoggingUtils;
 
 namespace Cognite.Simulator.Utils
 {
@@ -202,10 +203,7 @@ namespace Cognite.Simulator.Utils
 
                     var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
 
-                    // TODO : true
-                    // using (await SimulatorLoggingUtils.WithLogId(_cdfSimulators, runItem.Run.LogId).ConfigureAwait(false))
-                    var logContext = SimulatorLoggingUtils.WithLogId(_cdfSimulators, runItem.Run.LogId);//.ConfigureAwait(false);
-                    using (logContext)
+                    using (LogContext.Push(await GetLogEnrichers(_cdfSimulators, runItem.Run.LogId, true).ConfigureAwait(false)))
                     {
                         try
                         {

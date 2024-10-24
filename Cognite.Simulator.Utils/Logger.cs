@@ -16,51 +16,6 @@ using CogniteSdk.Resources.Alpha;
 
 namespace Cognite.Simulator.Utils
 {
-
-    public class AsyncLogContext : IAsyncDisposable
-    {
-        private readonly IDisposable _logContext;
-
-        private AsyncLogContext(IDisposable logContext)
-        {
-            _logContext = logContext;
-        }
-
-        public static async Task<AsyncLogContext> CreateAsync(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
-        {
-            var enrichers = new List<ILogEventEnricher> {
-                new PropertyEnricher("LogId", logId)
-            };
-
-            if (checkForSeverityOverride && logId.HasValue)
-            {
-                try
-                {
-                    var logResTask = cdf.RetrieveSimulatorLogsAsync(new[] { new Identity(logId.Value) });
-                    var logItem = await logResTask.ConfigureAwait(false);
-                    var logItemFirst = logItem.FirstOrDefault();
-                    if (logItemFirst?.Severity != null)
-                    {
-                        enrichers.Add(new PropertyEnricher("Severity", logItemFirst.Severity));
-                    }
-                }
-                catch (Exception)
-                {
-                    // Ignore, we don't want to fail everything if we can't get the log item
-                }
-            }
-
-            var logContext = Serilog.Context.LogContext.Push(enrichers.ToArray());
-            return new AsyncLogContext(logContext);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            _logContext.Dispose();
-            await Task.CompletedTask;
-        }
-    }
-
     /// <summary>
     /// Utility class for configuring simulator loggers.
     /// The logging framework used is <see href="https://serilog.net/">Serilog</see>.
@@ -73,20 +28,20 @@ namespace Cognite.Simulator.Utils
         /// Push log id into the log context.
         /// You can wrap the code that needs to be logged to the remote (API) sink with this method.
         /// </summary>
-        /// <param name="cdf">Cognite SDK client</param>
+        /// <param name="cdf">Simulators resource</param>
         /// <param name="logId">Log id to push</param>
         /// <param name="checkForSeverityOverride">True to check for severity override</param>
-        public static IDisposable WithLogId(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
+        public static async Task<PropertyEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
         {
-            var enrichers = new List<ILogEventEnricher>() {
+            var enrichers = new List<PropertyEnricher>() {
                 new PropertyEnricher("LogId", logId)
             };
 
             if (checkForSeverityOverride && logId.HasValue)
             {
                 try {
-                    var logResTask = cdf.RetrieveSimulatorLogsAsync([new Identity(logId.Value)]);
-                    var logItem = Task.Run(() => logResTask).Result.FirstOrDefault();
+                    var logRes = await cdf.RetrieveSimulatorLogsAsync([new Identity(logId.Value)]).ConfigureAwait(false);
+                    var logItem = logRes.First();
                     if (logItem.Severity != null)
                     {
                         enrichers.Add(new PropertyEnricher("Severity", logItem.Severity));
@@ -96,10 +51,7 @@ namespace Cognite.Simulator.Utils
                 }
             }
 
-            Console.WriteLine("Pushing log id: " + logId);
-            
-
-            return Serilog.Context.LogContext.Push(enrichers.ToArray());
+            return enrichers.ToArray();
         }
 
         // Enricher that creates a property with UTC timestamp.
