@@ -26,7 +26,7 @@ namespace Cognite.Simulator.Utils
     public static class SimulatorLoggingUtils
     {
         /// <summary>
-        /// Used to enrish log events with the simulator log id and min severity.
+        /// Used to enrich log events with the simulator log id and min severity.
         /// Example usage:
         ///     LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false))
         /// </summary>
