@@ -24,7 +24,7 @@
   <ItemGroup>
     <PackageReference Include="CogniteSdk" Version="4.8.0" />
     <!-- <ProjectReference Include="..\..\cognite-sdk-dotnet\CogniteSdk\src\CogniteSdk.csproj" /> -->
-    <PackageReference Include="Cognite.Extensions" Version="1.27.0" />
+    <PackageReference Include="Cognite.Extensions" Version="1.27.1" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" /> -->
   </ItemGroup> 
 
