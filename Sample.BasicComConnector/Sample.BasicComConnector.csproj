@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-beta-005" />
+    <PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-beta-006" />
   </ItemGroup>
 
 </Project>
