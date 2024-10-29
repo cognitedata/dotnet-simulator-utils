@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-007 (2024-10-29)
+
+### Features
+
+* Increased the default timeout for the soft restart of the connector to 10 seconds after the failure.
+* More debug logs on simulation routine base methods.
+
+### Bug Fixes
+
+* Fixed the issue where error during startup was being swallowed and connector would not be re-started after.
+
+
+## Release v1.0.0-beta-006 (2024-10-25)
+
+### Features
+
+* Added a possibility of overridding the minimum log level for each simulation run
 
 ## Release v1.0.0-beta-005 (2024-10-10)
 

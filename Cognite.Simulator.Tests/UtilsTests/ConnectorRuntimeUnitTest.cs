@@ -69,7 +69,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Error, "Request to CDF failed with code 403", Times.Once(), true);
-            VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 5 seconds", Times.AtLeastOnce());
+            VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 10 seconds", Times.AtLeastOnce());
         }
 
         private class EmptySimulatorAutomationClient :

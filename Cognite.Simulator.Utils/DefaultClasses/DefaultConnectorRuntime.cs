@@ -170,23 +170,10 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         var destination = provider.GetRequiredService<CogniteDestination>();
         var cdfClient = provider.GetRequiredService<Client>();
 
-        try
-        {
-            await destination.TestCogniteConfig(token).ConfigureAwait(false);
-            logger.LogInformation("Connector can reach CDF!");
+        await destination.TestCogniteConfig(token).ConfigureAwait(false);
+        logger.LogInformation("Connector can reach CDF!");
 
-            await GetOrCreateSimulator(cdfClient, config, logger, token).ConfigureAwait(false);
-
-        }
-        catch (Exception e)
-        {
-            // NewConfigDetected needs to propagate all the way up
-            if (!(e is NewConfigDetected))
-            {
-                logger.LogError(e, "Error testing connection to CDF: {Message}", e.Message);
-                return;
-            }
-        }
+        await GetOrCreateSimulator(cdfClient, config, logger, token).ConfigureAwait(false);
 
         while (!token.IsCancellationRequested)
         {
@@ -256,7 +243,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
                     // Most errors may be intermittent. Wait and restart.
                     if (!token.IsCancellationRequested)
                     {
-                        var delay = TimeSpan.FromSeconds(5);
+                        var delay = TimeSpan.FromSeconds(10);
                         logger.LogWarning("Restarting connector in {time} seconds", delay.TotalSeconds);
                         await Task.Delay(delay, token).ConfigureAwait(false);
                     }
