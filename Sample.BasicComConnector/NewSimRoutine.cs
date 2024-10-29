@@ -1,10 +1,10 @@
 using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
+using Microsoft.Extensions.Logging;
 
 public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
-
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
     {

@@ -351,11 +351,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public static List<double> _inputs;
         public static double? _output;
-        public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, SimulatorValueItem> inputData)
-            :base(config, inputData)
+
+        private ILogger _logger;
+        public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, SimulatorValueItem> inputData, ILogger logger)
+            :base(config, inputData, logger)
         {
             _inputs = new List<double>();
             _output = null;
+            _logger = logger;
         }
         
         public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
@@ -466,7 +469,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             SimulatorRoutineRevision simulationConfiguration, 
             Dictionary<string, SimulatorValueItem> inputData)
         {
-            var routine = new SampleRoutine(simulationConfiguration, inputData);
+            var routine = new SampleRoutine(simulationConfiguration, inputData, _logger);
             _logger.LogWarning("Running a sample routine, not a real simulation");
             return Task.FromResult(routine.PerformSimulation());
         }
