@@ -113,7 +113,7 @@ namespace Cognite.Simulator.Utils
         {
             if (dict == null)
             {
-                throw new ArgumentNullException(nameof(dict));
+                return "";
             }
             return string.Join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         }
