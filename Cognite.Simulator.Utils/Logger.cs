@@ -115,7 +115,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(dict));
             }
-            return string.join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+            return string.Join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         }
 
     }
