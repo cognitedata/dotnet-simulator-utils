@@ -104,12 +104,28 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Flattens a dictionary into a string representation.
+        /// </summary>
+        /// <param name="dict">The dictionary to flatten.</param>
+        /// <returns>A string representation of the dictionary.</returns>
+        public static string FlattenDictionary(Dictionary<string, string> dict)
+        {
+            if (dict == null)
+            {
+                return "";
+            }
+            return string.Join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        }
+
     }
    
     /// <summary>
     /// Extension utilities for logging
     /// </summary>
     public static class LoggingExtensions {
+
+
 
         /// <summary>
         /// Adds a configured Serilog logger as singleton of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
