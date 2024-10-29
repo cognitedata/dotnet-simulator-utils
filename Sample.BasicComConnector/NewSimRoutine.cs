@@ -6,8 +6,6 @@ public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
 
-
-    // TODO: Add logger as an argument here
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
     {
         _workbook = workbook;

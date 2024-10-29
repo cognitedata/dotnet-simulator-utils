@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Release v1.0.0-beta-005 (2024-10-10)
+## Release v1.0.0-beta-008 (2024-10-29)
 
 ### Increase routine logging
 

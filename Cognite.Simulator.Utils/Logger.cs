@@ -115,12 +115,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(dict));
             }
-            var sb = new StringBuilder();
-            foreach (var kvp in dict)
-            {
-                sb.Append($"{kvp.Key}={kvp.Value};");
-            }
-            return sb.ToString();
+            return string.join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         }
 
     }
