@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 * Increased the default timeout for the soft restart of the connector to 10 seconds after the failure.
+* More debug logs on simulation routine base methods.
 
 ### Bug Fixes
 
