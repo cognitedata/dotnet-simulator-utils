@@ -43,7 +43,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SeedData.SimulatorRoutineRevisionWithTsAndExtendedIO,
                     new List<SimulationInputOverride>(),
                     SimulatorValue.Create(2037.478183282069),
-                    true // check for timeseries
+                    true, // check for timeseries
+                    true, // debug log
                 },
                 // 2. constant inputs
                 new object[] {
@@ -51,7 +52,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SeedData.SimulatorRoutineRevisionWithExtendedIO,
                     new List<SimulationInputOverride>(),
                     SimulatorValue.Create(142),
-                    true
+                    true, // check for timeseries
+                    true // debug log
                 },
                 // 3. constant inputs with override
                 new object[] {
@@ -64,7 +66,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         },
                     },
                     SimulatorValue.Create(58),
-                    true
+                    true, // check for timeseries
+                    true // debug log
                 },
                 // 4. constant string inputs
                 new object[] {
@@ -72,7 +75,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SeedData.SimulatorRoutineRevisionWithStringsIO,
                     new List<SimulationInputOverride>(),
                     SimulatorValue.Create("42"),
-                    false
+                    false, // check for timeseries
+                    false // debug log
                 },
                 // 5. timeseries inputs with override
                 new object[] {
@@ -85,7 +89,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         },
                     },
                     SimulatorValue.Create(2345),
-                    true
+                    true, // check for timeseries
+                    false // debug log
                 },
                 // 6. timeseries inputs with disabled data sampling (used latest value)
                 new object[] {
@@ -93,7 +98,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     SeedData.SimulatorRoutineRevisionWithTsNoDataSampling,
                     new List<SimulationInputOverride>(),
                     SimulatorValue.Create(2037.7438329838599),
-                    false
+                    false, // check for timeseries
+                    false // debug log
                 },
             };
 
@@ -106,7 +112,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             SimulatorRoutineRevisionCreate createRevisionItem,
             IEnumerable<SimulationInputOverride> inputOverrides,
             SimulatorValue expectedResult,
-            bool checkTs
+            bool checkTs,
+            bool debugLog
         ) {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
@@ -180,7 +187,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             RoutineExternalId = routineRevision.RoutineExternalId,
                             RunType = SimulationRunType.external,
                             RunTime = validationEndOverwrite,
-                            Inputs = inputOverrides.Any() ? inputOverrides : null
+                            Inputs = inputOverrides.Any() ? inputOverrides : null,
+                            LogSeverity = debugLog ? "Debug" : null
                         }
                     }, source.Token).ConfigureAwait(false);
                 Assert.NotEmpty(runs);
@@ -225,9 +233,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                     new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
 
-                logData = logsRes.First().Data;
-                Assert.NotEmpty(logData);
-                Assert.Equal("Running a sample routine, not a real simulation", logData.First().Message);
+                var logResFirst = logsRes.First();
+                Assert.NotEmpty(logResFirst.Data);
+                var warningLogItem = logResFirst.Data.Where(l => l.Severity == "Warning").First();
+                Assert.Equal("Running a sample routine, not a real simulation", warningLogItem.Message);
+                
+                if (debugLog)
+                {
+                    Assert.Equal("Debug", logResFirst.Severity); // Override min severity
+                    var debugLogs = logResFirst.Data.Where(l => l.Severity == "Debug");
+                    Assert.NotEmpty(debugLogs);
+                } else {
+                    Assert.Null(logResFirst.Severity); // Default severity
+                }
 
                 // check inputs/outputs from the /runs/data/list endpoint
                 var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(

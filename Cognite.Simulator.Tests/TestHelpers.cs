@@ -14,7 +14,7 @@ namespace Cognite.Simulator.Tests {
                 new SimulatorIntegrationQuery
                 {
                     Filter = new SimulatorIntegrationFilter() {
-                        simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
+                        SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                     }
                 }
             ).ConfigureAwait(false);

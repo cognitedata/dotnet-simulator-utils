@@ -1,14 +1,19 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
-using Cognite.Extractor.Logging;
 using Serilog.Core;
+using Serilog.Core.Enrichers;
 using Serilog.Events;
-using System.Collections.Generic;
-using System.Text;
-using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk;
+using Cognite.Extractor.Logging;
+using CogniteSdk.Resources.Alpha;
 
 namespace Cognite.Simulator.Utils
 {
@@ -18,8 +23,38 @@ namespace Cognite.Simulator.Utils
     /// Loggers are created according to a <see cref="LoggerConfig"/> configuration object.
     /// Log messages contain UTC timestamps.
     /// </summary>
-    public static class SimulatorLoggingUtils 
+    public static class SimulatorLoggingUtils
     {
+        /// <summary>
+        /// Used to enrich log events with the simulator log id and min severity.
+        /// Example usage:
+        ///     LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false))
+        /// </summary>
+        /// <param name="cdf">Simulators resource</param>
+        /// <param name="logId">Log id to push</param>
+        /// <param name="checkForSeverityOverride">True to check for severity override</param>
+        public static async Task<PropertyEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
+        {
+            var enrichers = new List<PropertyEnricher>() {
+                new PropertyEnricher("LogId", logId)
+            };
+
+            if (checkForSeverityOverride && logId.HasValue)
+            {
+                try {
+                    var logRes = await cdf.RetrieveSimulatorLogsAsync([new Identity(logId.Value)]).ConfigureAwait(false);
+                    var logItem = logRes.First();
+                    if (logItem.Severity != null)
+                    {
+                        enrichers.Add(new PropertyEnricher("Severity", logItem.Severity));
+                    }
+                } catch (Exception) {
+                    // Ignore, we don't want to fail everything if we can't get the log item
+                }
+            }
+
+            return enrichers.ToArray();
+        }
 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
