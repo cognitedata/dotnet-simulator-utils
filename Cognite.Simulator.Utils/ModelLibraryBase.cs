@@ -504,7 +504,6 @@ namespace Cognite.Simulator.Utils
         /// <returns>List of tasks</returns>
         public IEnumerable<Task> GetRunTasks(CancellationToken token)
         {
-            // return new List<Task> { SaveStates(token), SearchAndDownloadFiles(token) };
             return new List<Task> { SearchAndDownloadFiles(token) };
         }
 
@@ -640,7 +639,7 @@ namespace Cognite.Simulator.Utils
                 await SaveStates(token).ConfigureAwait(false);
 
                 await Task
-                    .Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token)
+                    .Delay(TimeSpan.FromSeconds(_config.LibraryUpdateInterval), token)
                     .ConfigureAwait(false);
             }
         }
@@ -656,13 +655,7 @@ namespace Cognite.Simulator.Utils
             {
                 return;
             }
-            StoreLibraryState(token);
-            //while (!token.IsCancellationRequested)
-            {
-                //var waitTask = Task.Delay(TimeSpan.FromSeconds(_config.StateStoreInterval), token);
-                //var storeTask = StoreLibraryState(token);
-                //await Task.WhenAll(waitTask, storeTask).ConfigureAwait(false);
-            }
+            await StoreLibraryState(token).ConfigureAwait(false);
         }
 
         /// <summary>

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-008 (2024-11-01)
+
+### Features
+
+* **Breaking** deleted `model-library.state-store-interval` configuration option. Use `model-library.library-update-interval` instead.
+* Increased default refresh interval for the model library and routine library to 10 seconds.
+
 ## Release v1.0.0-beta-007 (2024-10-29)
 
 ### Features

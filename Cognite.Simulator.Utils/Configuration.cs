@@ -125,14 +125,9 @@ namespace Cognite.Simulator.Utils
     public class ModelLibraryConfig
     {
         /// <summary>
-        /// Interval for writing the library state to the local store.
-        /// </summary>
-        public int StateStoreInterval { get; set; } = 10;
-
-        /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
-        public int LibraryUpdateInterval { get; set; } = 5;
+        public int LibraryUpdateInterval { get; set; } = 10;
 
         /// <summary>
         /// Id of the library object
@@ -163,7 +158,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
-        public int LibraryUpdateInterval { get; set; } = 5;
+        public int LibraryUpdateInterval { get; set; } = 10;
     }
 
     /// <summary>

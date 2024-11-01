@@ -541,7 +541,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     LibraryId = "LibraryState",
                     LibraryTable = "Library",
                     LibraryUpdateInterval = 2, // Update every 2 seconds
-                    StateStoreInterval = 2, // Save state every 2 seconds
                 },
                 new List<SimulatorConfig>
                 {
