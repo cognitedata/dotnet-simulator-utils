@@ -75,10 +75,12 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 {
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
     private readonly string _version = "N/A";
+    private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config.Automation)
     {
+        this.logger = logger;
         semaphore.Wait();
         try
         {
