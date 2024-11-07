@@ -6,7 +6,7 @@ public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
 
-    public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
+    public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
     }

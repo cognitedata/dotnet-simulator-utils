@@ -17,7 +17,7 @@ public class NewSimRoutine : RoutineImplementationBase
     private readonly dynamic _workbook;
 
 
-    public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData) : base(routineRevision, inputData)
+    public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
     }
@@ -104,7 +104,7 @@ public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFi
             Initialize();
             workbook = OpenBook(modelState.FilePath);
 
-            var routine = new NewSimRoutine(workbook, routineRev, inputData);
+            var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
             return routine.PerformSimulation();
         }
         finally
