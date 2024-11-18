@@ -200,7 +200,7 @@ namespace Cognite.Simulator.Utils
         private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
             
             V localConfiguration = LocalConfigurationFromRoutine(routineRev);
-            RoutineRevisions.Add(routineRev.Id.ToString(), localConfiguration);
+            RoutineRevisions[routineRev.Id.ToString()] = localConfiguration;
 
             return localConfiguration;
         }
@@ -236,10 +236,7 @@ namespace Cognite.Simulator.Utils
 
             foreach (var routineRev in routineRevisions)
             {
-                if (!RoutineRevisions.ContainsKey(routineRev.Id.ToString()))
-                {
-                    ReadAndSaveRoutineRevision(routineRev);
-                }
+                ReadAndSaveRoutineRevision(routineRev);
             }
 
             var maxCreatedMs = RoutineRevisions
