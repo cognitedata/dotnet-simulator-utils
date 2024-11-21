@@ -241,18 +241,22 @@ namespace Cognite.Simulator.Utils
 
             var routineRevisions = await routineRevisionsRes.ToListAsync(token).ConfigureAwait(false);
 
-            foreach (var routineRev in routineRevisions)
+            if (routineRevisions.Any())
             {
-                ReadAndSaveRoutineRevision(routineRev);
-            }
+                foreach (var routineRev in routineRevisions)
+                {
+                    ReadAndSaveRoutineRevision(routineRev);
+                }
 
-            var maxCreatedMs = RoutineRevisions
-                .Select(s => s.Value.CreatedTime)
-                .Max();
-            var maxCreatedDt = CogniteTime.FromUnixTimeMilliseconds(maxCreatedMs);
-            _libState.UpdateDestinationRange(
-                maxCreatedDt,
-                maxCreatedDt);
+                var maxCreatedMs = RoutineRevisions
+                    .Select(s => s.Value.CreatedTime)
+                    .Max();
+
+                var maxCreatedDt = CogniteTime.FromUnixTimeMilliseconds(maxCreatedMs);
+                _libState.UpdateDestinationRange(
+                    maxCreatedDt,
+                    maxCreatedDt);
+            }
         }
     }
 

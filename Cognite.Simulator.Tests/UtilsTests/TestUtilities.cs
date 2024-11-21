@@ -83,13 +83,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         private static HttpResponseMessage ForbiddenResponse =
-            CreateResponse(HttpStatusCode.Forbidden, "{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}");
+            CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
         /// Mocks the HttpClientFactory to return the mocked responses
         /// Example format for endpointMappings:
         ///     { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, 2) },
-        ///     2 is the number of times the response function will be called before returning a 403 Forbidden
+        ///     2 is the number of times the response function will be called before returning a 410 Gone
         ///     if maxCalls is null, the response function will return the same response indefinitely
         /// </summary>
         /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
