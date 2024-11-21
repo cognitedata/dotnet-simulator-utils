@@ -35,7 +35,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             );
 
         // We need to mock the HttpClientFactory to return the mocked responses
-        // First few requests return the mocked responses, then we return a 403 Forbidden
+        // First few requests return the mocked responses, then we return a 410 Gone
         // This should cause a "soft" restart of the connector
         [Fact]
         public async Task TestConnectorRuntimeWithRestart()
@@ -49,7 +49,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
             var mocks = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
-            var mockHttpMessageHandler = mocks.handler;
             var mockFactory = mocks.factory;
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) => {
@@ -63,7 +62,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             try {
                 await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
             } catch (OperationCanceledException) {}
-        
+
             // Check the logs, it should first succeed on the startup, then fail and restart
             VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());

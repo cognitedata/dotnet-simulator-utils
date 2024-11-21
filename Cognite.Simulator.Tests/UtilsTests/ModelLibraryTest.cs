@@ -468,8 +468,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedToken);
-                await modelLibTasks
+                var routineLibTasks = lib.GetRunTasks(linkedToken);
+                await routineLibTasks
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 

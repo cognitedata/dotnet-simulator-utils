@@ -82,7 +82,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        private static HttpResponseMessage ForbiddenResponse =
+        private static HttpResponseMessage GoneResponse =
             CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         var (responseFunc, callCount, maxCalls) = mapping.Value;
                         if (maxCalls.HasValue && callCount >= maxCalls)
                         {
-                            return ForbiddenResponse;
+                            return GoneResponse;
                         }
                         endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
                         return responseFunc();
@@ -163,6 +163,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123,
+                ""createdTime"": 1234567890000
             }}";
             return OkItemsResponse(item);
         }
