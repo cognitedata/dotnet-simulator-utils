@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Utils
         ///  In memory extraction state for the library.
         ///  Keeps track of the time range of routine revisions that have been fetched.
         /// </summary>
-        private readonly BaseExtractionState _libState;
+        protected BaseExtractionState LibState { get; private set; }
 
         /// <summary>
         ///     Limit for pagination when fetching routine revisions from CDF.
@@ -66,7 +66,7 @@ namespace Cognite.Simulator.Utils
 
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             RoutineRevisions = new ConcurrentDictionary<string, V>();
-            _libState = new BaseExtractionState("RoutineLibraryState");
+            LibState = new BaseExtractionState("RoutineLibraryState");
             _simulators = simulators;
         }
         
@@ -214,15 +214,15 @@ namespace Cognite.Simulator.Utils
 
         private async Task ReadRoutineRevisions(bool init, CancellationToken token)
         {
-            string timeRange = _libState.DestinationExtractedRange.IsEmpty ? "Empty" : _libState.DestinationExtractedRange.ToString();
+            string timeRange = LibState.DestinationExtractedRange.IsEmpty ? "Empty" : LibState.DestinationExtractedRange.ToString();
             _logger.LogDebug("Updating routine library. There are currently {Num} routine revisions. Extracted range: {TimeRange}",
                 RoutineRevisions.Count,
                 timeRange
             );
 
             long createdAfter = 
-                !init && !_libState.DestinationExtractedRange.IsEmpty ?
-                    _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
+                !init && !LibState.DestinationExtractedRange.IsEmpty ?
+                    LibState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
             var routineRevisionsRes = ApiUtils.FollowCursor(
                 new SimulatorRoutineRevisionQuery()
@@ -253,7 +253,7 @@ namespace Cognite.Simulator.Utils
                     .Max();
 
                 var maxCreatedDt = CogniteTime.FromUnixTimeMilliseconds(maxCreatedMs);
-                _libState.UpdateDestinationRange(
+                LibState.UpdateDestinationRange(
                     maxCreatedDt,
                     maxCreatedDt);
             }
