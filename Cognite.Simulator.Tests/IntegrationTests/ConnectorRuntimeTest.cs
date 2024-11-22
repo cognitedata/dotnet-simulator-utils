@@ -142,7 +142,9 @@ connector:
                 Assert.Equal(simulatorDefinition.UnitQuantities.ToString(), unitQuantities.ToString());
             } finally {
                 await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
-                await testCdfClient.ExtPipes.DeleteAsync(new List<string> { SeedData.TestExtPipelineId });
+                try {
+                    await testCdfClient.ExtPipes.DeleteAsync(new List<string> { SeedData.TestExtPipelineId });
+                } catch (Exception) {}
             }
         }
 
