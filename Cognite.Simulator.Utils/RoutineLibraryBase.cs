@@ -10,6 +10,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extensions;
+using Cognite.Extractor.Common;
+using System.Collections.Concurrent;
 
 namespace Cognite.Simulator.Utils
 {
@@ -22,7 +24,7 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
-        public Dictionary<string, V> RoutineRevisions { get; }
+        public ConcurrentDictionary<string, V> RoutineRevisions { get; }
 
         private readonly ILogger _logger;
         private readonly RoutineLibraryConfig _config;
@@ -30,6 +32,12 @@ namespace Cognite.Simulator.Utils
         private IList<SimulatorConfig> _simulators;
         /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
+        
+        /// <summary>
+        ///  In memory extraction state for the library.
+        ///  Keeps track of the time range of routine revisions that have been fetched.
+        /// </summary>
+        protected BaseExtractionState LibState { get; private set; }
 
         /// <summary>
         ///     Limit for pagination when fetching routine revisions from CDF.
@@ -57,7 +65,8 @@ namespace Cognite.Simulator.Utils
             _config = config;
 
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            RoutineRevisions = new Dictionary<string, V>();
+            RoutineRevisions = new ConcurrentDictionary<string, V>();
+            LibState = new BaseExtractionState("RoutineLibraryState");
             _simulators = simulators;
         }
         
@@ -68,7 +77,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {            
-            await ReadRoutineRevisions(token).ConfigureAwait(false);
+            await ReadRoutineRevisions(true, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -144,7 +153,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogWarning("Removing {Model} - {Routine} routine revision, not found in CDF",
                     config.ModelExternalId,
                     config.ExternalId);
-                RoutineRevisions.Remove(config.Id.ToString());
+                RoutineRevisions.TryRemove(config.Id.ToString(), out _);
             }
             return exists;
         }
@@ -162,7 +171,7 @@ namespace Cognite.Simulator.Utils
                     RoutineRevisions.Count);
 
 
-                await ReadRoutineRevisions(token).ConfigureAwait(false);
+                await ReadRoutineRevisions(false, token).ConfigureAwait(false);
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.LibraryUpdateInterval), token)
@@ -191,14 +200,38 @@ namespace Cognite.Simulator.Utils
 
         private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev) {
             
-            V localConfiguration = LocalConfigurationFromRoutine(routineRev);
-            RoutineRevisions.Add(routineRev.Id.ToString(), localConfiguration);
+            V newRevision = LocalConfigurationFromRoutine(routineRev);
+            
+            var result = RoutineRevisions.AddOrUpdate(routineRev.Id.ToString(), newRevision, (key, oldValue) => {
+                if (newRevision.CreatedTime < oldValue.CreatedTime) {
+                    return oldValue;
+                }
+                return newRevision;
+            });
 
-            return localConfiguration;
+            return result;
         }
 
-        private async Task ReadRoutineRevisions(CancellationToken token)
+        private async Task ReadRoutineRevisions(bool init, CancellationToken token)
         {
+
+            if (init)
+            {
+                _logger.LogInformation("Updating routine library from scratch.");
+            }
+            else
+            {
+                string lastTimestamp = LibState.DestinationExtractedRange.IsEmpty ? "n/a" : LibState.DestinationExtractedRange.Last.ToString();
+                _logger.LogDebug("Updating routine library. There are currently {Num} routine revisions. Extracted until: {LastTime}",
+                    RoutineRevisions.Count,
+                    lastTimestamp
+                );
+            }
+
+            long createdAfter = 
+                !init && !LibState.DestinationExtractedRange.IsEmpty ?
+                    LibState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
+
             var routineRevisionsRes = ApiUtils.FollowCursor(
                 new SimulatorRoutineRevisionQuery()
                 {
@@ -206,6 +239,7 @@ namespace Cognite.Simulator.Utils
                     {
                         // TODO filter by simulatorIntegrationExternalIds
                         SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
+                        CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
                     },
                     Limit = PaginationLimit,
                     IncludeAllFields = true
@@ -215,12 +249,25 @@ namespace Cognite.Simulator.Utils
 
             var routineRevisions = await routineRevisionsRes.ToListAsync(token).ConfigureAwait(false);
 
-            foreach (var routineRev in routineRevisions)
+            if (routineRevisions.Any())
             {
-                if (!RoutineRevisions.ContainsKey(routineRev.Id.ToString()))
+                foreach (var routineRev in routineRevisions)
                 {
                     ReadAndSaveRoutineRevision(routineRev);
                 }
+
+                var maxCreatedTimestamp = RoutineRevisions
+                    .Select(s => s.Value.CreatedTime)
+                    .Max();
+
+                var maxCreatedDateTime = CogniteTime.FromUnixTimeMilliseconds(maxCreatedTimestamp);
+                LibState.UpdateDestinationRange(
+                    maxCreatedDateTime,
+                    maxCreatedDateTime);
+                _logger.LogDebug("Updated routine library with {Num} routine revisions. Extracted until: {MaxTime}",
+                    routineRevisions.Count(),
+                    maxCreatedDateTime
+                );
             }
         }
     }
@@ -253,7 +300,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Dictionary of simulation routines. The key is the routine revision id
         /// </summary>
-        Dictionary<string, V> RoutineRevisions { get; }
+        ConcurrentDictionary<string, V> RoutineRevisions { get; }
 
         /// <summary>
         /// Initializes the library

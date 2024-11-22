@@ -366,6 +366,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<RoutineLibraryTest>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
+            var testStart = DateTime.UtcNow;
 
             // prepopulate routine in CDF
             var cdf = provider.GetRequiredService<CogniteDestination>();
@@ -406,10 +407,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedToken);
-                await modelLibTasks
+                var routineLibTasks = lib.GetRunTasks(linkedToken);
+                await routineLibTasks
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
+
+                var libRange = lib.LibraryState.DestinationExtractedRange;
+                Assert.True(libRange.Before(testStart));
+                Assert.True(libRange.After(DateTime.UtcNow));
 
                 var simConf = await lib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
                 Assert.NotNull(simConf);
@@ -468,8 +473,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedToken);
-                await modelLibTasks
+                var routineLibTasks = lib.GetRunTasks(linkedToken);
+                await routineLibTasks
                     .RunAll(linkedTokenSource)
                     .ConfigureAwait(false);
 
@@ -625,5 +630,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf, logger)
         {
         }
+
+        public BaseExtractionState LibraryState => LibState;
     }
 }

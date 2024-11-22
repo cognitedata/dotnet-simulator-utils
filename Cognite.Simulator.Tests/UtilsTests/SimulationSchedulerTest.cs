@@ -140,8 +140,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             StateStoreConfig stateConfig = null;
 
-            List<string> eventIds = new List<string>();
-
             var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
@@ -219,11 +217,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
 
-                if (eventIds.Any())
-                {
-                    await cdf.Events.DeleteAsync(eventIds, source.Token)
-                        .ConfigureAwait(false);
-                }
                 provider.Dispose(); // Dispose provider to also dispose managed services
                 if (stateConfig != null)
                 {

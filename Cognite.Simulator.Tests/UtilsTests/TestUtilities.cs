@@ -82,14 +82,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        private static HttpResponseMessage ForbiddenResponse =
-            CreateResponse(HttpStatusCode.Forbidden, "{\"error\": {\"code\": 403,\"message\": \"Forbidden\"}}");
+        private static HttpResponseMessage GoneResponse =
+            CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
         /// Mocks the HttpClientFactory to return the mocked responses
         /// Example format for endpointMappings:
         ///     { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, 2) },
-        ///     2 is the number of times the response function will be called before returning a 403 Forbidden
+        ///     2 is the number of times the response function will be called before returning a 410 Gone
         ///     if maxCalls is null, the response function will return the same response indefinitely
         /// </summary>
         /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         var (responseFunc, callCount, maxCalls) = mapping.Value;
                         if (maxCalls.HasValue && callCount >= maxCalls)
                         {
-                            return ForbiddenResponse;
+                            return GoneResponse;
                         }
                         endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
                         return responseFunc();
@@ -163,6 +163,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123,
+                ""createdTime"": 1234567890000
             }}";
             return OkItemsResponse(item);
         }
