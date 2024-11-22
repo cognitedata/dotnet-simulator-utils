@@ -214,11 +214,19 @@ namespace Cognite.Simulator.Utils
 
         private async Task ReadRoutineRevisions(bool init, CancellationToken token)
         {
-            string timeRange = LibState.DestinationExtractedRange.IsEmpty ? "Empty" : LibState.DestinationExtractedRange.ToString();
-            _logger.LogDebug("Updating routine library. There are currently {Num} routine revisions. Extracted range: {TimeRange}",
-                RoutineRevisions.Count,
-                timeRange
-            );
+
+            if (init)
+            {
+                _logger.LogInformation("Updating routine library from scratch.");
+            }
+            else
+            {
+                string lastTimestamp = LibState.DestinationExtractedRange.IsEmpty ? "n/a" : LibState.DestinationExtractedRange.Last.ToString();
+                _logger.LogDebug("Updating routine library. There are currently {Num} routine revisions. Extracted until: {LastTime}",
+                    RoutineRevisions.Count,
+                    lastTimestamp
+                );
+            }
 
             long createdAfter = 
                 !init && !LibState.DestinationExtractedRange.IsEmpty ?
@@ -248,14 +256,18 @@ namespace Cognite.Simulator.Utils
                     ReadAndSaveRoutineRevision(routineRev);
                 }
 
-                var maxCreatedMs = RoutineRevisions
+                var maxCreatedTimestamp = RoutineRevisions
                     .Select(s => s.Value.CreatedTime)
                     .Max();
 
-                var maxCreatedDt = CogniteTime.FromUnixTimeMilliseconds(maxCreatedMs);
+                var maxCreatedDateTime = CogniteTime.FromUnixTimeMilliseconds(maxCreatedTimestamp);
                 LibState.UpdateDestinationRange(
-                    maxCreatedDt,
-                    maxCreatedDt);
+                    maxCreatedDateTime,
+                    maxCreatedDateTime);
+                _logger.LogDebug("Updated routine library with {Num} routine revisions. Extracted until: {MaxTime}",
+                    routineRevisions.Count(),
+                    maxCreatedDateTime
+                );
             }
         }
     }
