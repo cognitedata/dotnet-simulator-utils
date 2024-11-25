@@ -217,7 +217,7 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
 
-                            PublishConnectorStatus(ConnectorStatus.RUNNING_SIMULATION, token);
+                            PublishConnectorStatus(ConnectorStatus.RUNNING_SIMULATION);
 
                             await InitSimulationRun(
                                 runItem,
@@ -251,7 +251,7 @@ namespace Cognite.Simulator.Utils
                             if (!skipped)
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
-                                PublishConnectorStatus(ConnectorStatus.IDLE, token);
+                                PublishConnectorStatus(ConnectorStatus.IDLE);
                                 ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
@@ -288,12 +288,12 @@ namespace Cognite.Simulator.Utils
             if (simEv.Run.Status == SimulationRunStatus.running)
             {
                 _logger.LogError("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
-                throw new ConnectorException("Simulation entered unrecoverable state failed");
+                throw new ConnectorException("Simulation entered unrecoverable state and failed");
             }
             return (model, calcConfig);
         }
 
-        async void PublishConnectorStatus(ConnectorStatus status, CancellationToken token)
+        async void PublishConnectorStatus(ConnectorStatus status)
         {
             try
             {
@@ -307,8 +307,7 @@ namespace Cognite.Simulator.Utils
                             {
                                 SimulatorExternalIds = new List<string>() { simulator.Name },
                             }
-                        },
-                        token).ConfigureAwait(false);
+                        }).ConfigureAwait(false);
                     var integration = integrationRes.Items.FirstOrDefault(i => i.ExternalId == _connectorConfig.GetConnectorName());
                     if (integration == null)
                     {
@@ -327,12 +326,12 @@ namespace Cognite.Simulator.Utils
                         new SimulatorIntegrationUpdateItem(simulatorIntegrationId.Value) {
                             Update = simulatorIntegrationUpdate
                         }
-                    },
-                    token
+                    }
                 ).ConfigureAwait(false);
             }
-            catch (ResponseException e)
+            catch (Exception e)
             {
+                // This method should not throw exceptions as it is called in finally block
                 _logger.LogWarning("Failed to update simulator integration status: {Message}", e.Message);
             }
         }

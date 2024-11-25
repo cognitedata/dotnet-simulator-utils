@@ -129,6 +129,7 @@ namespace Cognite.Simulator.Utils
                     }
                     _logger.LogError(innerEx, "An error occurred during task execution");
                 }
+                throw;
             }
         }   
     }
