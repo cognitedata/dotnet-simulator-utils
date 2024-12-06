@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Utils
     where TModelStateBase: ModelStateBase, new()
     where TModelStateBasePoco : ModelStateBasePoco
     {
-        private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> __simulationClient;
+        private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient;
 
         /// <summary>
         /// Creates an instance of the model library
@@ -44,15 +44,15 @@ namespace Cognite.Simulator.Utils
                 client,
                 store)
         {
-            __simulationClient = simulatorClient;
+            this.simulatorClient = simulatorClient;
         }
 
         protected override async Task ExtractModelInformation(
-        TModelStateBase state,
-        CancellationToken token)
-        {
-            if (__simulationClient != null) {
-                await __simulationClient.ExtractModelInformation(state, token).ConfigureAwait(false);
+            TModelStateBase state,
+            CancellationToken token
+        ) {
+            if (simulatorClient != null) {
+                await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);
             } else {
                 state.CanRead = true;
                 state.ParsingInfo.SetSuccess();

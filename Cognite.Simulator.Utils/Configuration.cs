@@ -148,6 +148,11 @@ namespace Cognite.Simulator.Utils
         /// Local directory that contains the downloaded files
         /// </summary>
         public string FilesDirectory { get; set; }
+
+        /// <summary>
+        /// Maximum number of download attempts before giving up. Default is 3.
+        /// </summary>
+        public int MaxDownloadAttempts { get; set; } = 3;
     }
 
     /// <summary>

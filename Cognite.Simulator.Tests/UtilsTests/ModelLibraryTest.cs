@@ -200,6 +200,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal(1, modelInState.DownloadAttempts);
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
                     Assert.False(modelInState.CanRead);
@@ -208,7 +209,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(SimulatorModelRevisionStatus.failure, modelInState.ParsingInfo.Status);
                     Assert.True(modelInState.ParsingInfo.Error);
                     // last updated time should not change
-                    Assert.Equal(revision.LastUpdatedTime, modelInState.ParsingInfo.LastUpdatedTime);
+                    Assert.Equal(revision.LastUpdatedTime, modelInState.UpdatedTime);
                 }
 
                 var updatedRevisions = new List<SimulatorModelRevision>();
@@ -240,6 +241,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal(0, modelInState.DownloadAttempts); // This gets reset when the model is to set to be re-parsed
 
                     Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
                     Assert.True(modelInState.CanRead);
@@ -248,7 +250,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
                     Assert.False(modelInState.ParsingInfo.Error);
                     // last updated time should change since status is updated during the test
-                    Assert.True(revision.LastUpdatedTime < modelInState.ParsingInfo.LastUpdatedTime);
+                    Assert.True(initialRevisions.First().LastUpdatedTime < modelInState.UpdatedTime);
                 }
             }
             finally
