@@ -209,7 +209,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(SimulatorModelRevisionStatus.failure, modelInState.ParsingInfo.Status);
                     Assert.True(modelInState.ParsingInfo.Error);
                     // last updated time should not change
-                    Assert.Equal(revision.LastUpdatedTime, modelInState.ParsingInfo.LastUpdatedTime);
+                    Assert.Equal(revision.LastUpdatedTime, modelInState.UpdatedTime);
                 }
 
                 var updatedRevisions = new List<SimulatorModelRevision>();
@@ -250,7 +250,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
                     Assert.False(modelInState.ParsingInfo.Error);
                     // last updated time should change since status is updated during the test
-                    Assert.True(revision.LastUpdatedTime < modelInState.ParsingInfo.LastUpdatedTime);
+                    Assert.True(initialRevisions.First().LastUpdatedTime < modelInState.UpdatedTime);
                 }
             }
             finally

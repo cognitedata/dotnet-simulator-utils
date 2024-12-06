@@ -393,18 +393,25 @@ namespace Cognite.Simulator.Utils
 
         private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
-            if (modelState.ParsingInfo == null || modelState.ParsingInfo.LastUpdatedTime < modelRevision.LastUpdatedTime)
+            var status = modelRevision.Status;
+            var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
+            if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
             {
-                var status = modelRevision.Status;
+                _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status",
+                    modelState.ModelExternalId,
+                    modelState.ParsingInfo,
+                    status);
+                modelState.DownloadAttempts = 0;
+            }
+            if (needsUpdate || modelState.ParsingInfo == null)
+            {
                 var isError = status == SimulatorModelRevisionStatus.failure;
                 var parsed = isError || status == SimulatorModelRevisionStatus.success;
                 V info = new V(){
                     Parsed = parsed,
                     Status = status,
                     Error = isError,
-                    LastUpdatedTime = modelRevision.LastUpdatedTime
                 };
-                modelState.DownloadAttempts = 0;
                 modelState.ParsingInfo = info;
                 modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
             }

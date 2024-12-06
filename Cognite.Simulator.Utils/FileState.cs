@@ -226,7 +226,7 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Download attempts
-        /// <summary/>
+        /// </summary>
         public int DownloadAttempts {
             get => _downloadAttempts;
             set
@@ -257,6 +257,7 @@ namespace Cognite.Simulator.Utils
             _externalId = poco.ExternalId;
             _logId = poco.LogId;
             _fileExtension = poco.FileExtension;
+            _downloadAttempts = poco.DownloadAttempts;
             _version = poco.Version;
 
         }
@@ -281,6 +282,7 @@ namespace Cognite.Simulator.Utils
                 ExternalId = ExternalId,
                 LogId = LogId,
                 FileExtension = FileExtension,
+                DownloadAttempts = DownloadAttempts,
                 Version = Version
             };
         }
@@ -363,5 +365,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("log-id")]
         public long LogId { get; set; }
+
+        /// <summary>
+        /// Download attempts
+        /// </summary>
+        [StateStoreProperty("download-attempts")]
+        public int DownloadAttempts { get; set; }
     }
 }
