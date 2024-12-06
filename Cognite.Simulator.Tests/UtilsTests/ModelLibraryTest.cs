@@ -200,6 +200,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal(1, modelInState.DownloadAttempts);
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
                     Assert.False(modelInState.CanRead);
@@ -240,6 +241,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal(0, modelInState.DownloadAttempts); // This gets reset when the model is to set to be re-parsed
 
                     Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
                     Assert.True(modelInState.CanRead);

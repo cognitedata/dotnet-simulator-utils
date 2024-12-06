@@ -222,6 +222,21 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private int _downloadAttempts;
+
+        /// <summary>
+        /// Download attempts
+        /// <summary/>
+        public int DownloadAttempts {
+            get => _downloadAttempts;
+            set
+            {
+                if (value == _downloadAttempts) return;
+                LastTimeModified = DateTime.UtcNow;
+                _downloadAttempts = value;
+            }
+        }
+
         /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>

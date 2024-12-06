@@ -404,6 +404,7 @@ namespace Cognite.Simulator.Utils
                     Error = isError,
                     LastUpdatedTime = modelRevision.LastUpdatedTime
                 };
+                modelState.DownloadAttempts = 0;
                 modelState.ParsingInfo = info;
                 modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
             }
@@ -542,10 +543,11 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(modelState));
             }
             var fileId = new Identity(modelState.CdfId);
-            _logger.LogInformation("Downloading file: {Id}. Model external id: {ModelExternalId}, model revision external id: {ExternalId}",
+            modelState.DownloadAttempts++;
+            _logger.LogInformation("Downloading file: {Id}. Model revision external id: {ExternalId}. Attempt: {DownloadAttempts}",
                 modelState.CdfId,
-                modelState.ModelExternalId,
-                modelState.ExternalId);
+                modelState.ExternalId,
+                modelState.DownloadAttempts);
 
             try {
                 var response = await _cdfFiles
@@ -569,11 +571,11 @@ namespace Cognite.Simulator.Utils
                     modelState.IsInDirectory = true;
                     
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(uri, filename)
+                        .DownloadFileAsync(uri, filename, failLargeFiles: isTemporary)
                         .ConfigureAwait(false);
                     if (downloaded)
                     {
-                        _logger.LogDebug("File downloaded: {Id}. Model revision external id: {ExternalId}. File path: {FilePath}",
+                        _logger.LogDebug("File downloaded: {Id}. Model revision: {ExternalId}. File path: {FilePath}",
                             modelState.CdfId,
                             modelState.ExternalId,
                             filename);
@@ -583,7 +585,20 @@ namespace Cognite.Simulator.Utils
                 }
             } catch (ResponseException e) {
                 // File cannot be downloaded, skip for now and try again later
-                _logger.LogWarning("Failed to fetch file url from CDF: {Message}", e.Message);
+                _logger.LogWarning("Failed to fetch file url from CDF: {Message}. Model revision: {ExternalId}",
+                    e.Message,
+                    modelState.ExternalId
+                );
+            } catch (ConnectorException e) {
+                _logger.LogWarning("Failed to download file: {Message}. Model revision: {ExternalId}",
+                    e.Message,
+                    modelState.ExternalId
+                );
+            } catch (Exception e) {
+                _logger.LogError("Error occurred while downloading the file for model revision {ExternalId}: {Error}",
+                    modelState.ExternalId,
+                    e
+                );
             }
             return false;
         }
@@ -609,7 +624,7 @@ namespace Cognite.Simulator.Utils
 
                 // Find the files that are not yet saved locally (no file path)
                 var files = _state.Values
-                    .Where(f => string.IsNullOrEmpty(f.FilePath))
+                    .Where(f => string.IsNullOrEmpty(f.FilePath) && f.DownloadAttempts < _config.MaxDownloadAttempts)
                     .OrderBy(f => f.UpdatedTime)
                     .ToList();
 
