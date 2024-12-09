@@ -14,9 +14,20 @@ namespace Cognite.Simulator.Utils
         private readonly HttpClient _client;
         private readonly ILogger _logger;
 
-        private static readonly int DefaultBufferSize = 81920; // 80 KB
-        private static readonly long MaxFileDownloadSize = 8 * 1024 * 1024 * 1024L; // 8 GB
-        private static readonly long LargeFileSize = 512 * 1024 * 1024L; // 512 MB
+        /// <summary>
+        /// Default buffer size for file operations (80 KB)
+        /// </summary>
+        public static readonly int DefaultBufferSize = 81920;
+
+        /// <summary>
+        /// Maximum file size that can be downloaded (8 GB)
+        /// </summary>
+        public static readonly long MaxFileDownloadSize = 8 * 1024 * 1024 * 1024L;
+
+        /// <summary>
+        /// Maximum file size that can be downloaded without throwing an exception (512 MB)
+        /// </summary>
+        public static readonly long LargeFileSize = 512 * 1024 * 1024L;
 
         /// <summary>
         /// Initializes this object with the given HTTP client and logger
@@ -43,6 +54,7 @@ namespace Cognite.Simulator.Utils
             {
                 var response = await _client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead)
                     .ConfigureAwait(false);
+
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Failed to download the file: {Message}", response.ReasonPhrase);
@@ -51,15 +63,18 @@ namespace Cognite.Simulator.Utils
 
                 if (response.Content.Headers.ContentLength > MaxFileDownloadSize)
                 {
-                    _logger.LogWarning("File size exceeds the maximum allowed size: {Size} bytes", MaxFileDownloadSize);
+
+                    _logger.LogError("File size exceeds the maximum allowed size: {MaxFileDownloadSize} bytes, actual size: {Size}, {uri}",
+                        MaxFileDownloadSize, response.Content.Headers.ContentLength, uri);
                     return false;
                 }
 
                 if (failLargeFiles && response.Content.Headers.ContentLength > LargeFileSize)
                 {
+                    _logger.LogWarning("File size exceeds the maximum allowed size to be downloded now, but can still be downloaded later: {LargeFileSize} bytes, actual size: {Size}, {uri}",
+                        LargeFileSize, response.Content.Headers.ContentLength, uri);
                     throw new ConnectorException(
-                        $"The file is larger than {LargeFileSize / 1024 / 1024} MB and needs to be pre-downloaded before any operations can be performed." +
-                        "Connector hasn't been able to pre-download the file yet. " +
+                        $"The file is larger than {LargeFileSize / 1024 / 1024} MB and needs to be pre-downloaded before any operations can be performed. " +
                         "Please wait for the file to be downloaded and try again."
                     );
                 }

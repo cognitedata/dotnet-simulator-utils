@@ -397,10 +397,7 @@ namespace Cognite.Simulator.Utils
             var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
             if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
             {
-                _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status",
-                    modelState.ModelExternalId,
-                    modelState.ParsingInfo,
-                    status);
+                _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status", modelState.ModelExternalId);
                 modelState.DownloadAttempts = 0;
             }
             if (needsUpdate || modelState.ParsingInfo == null)
