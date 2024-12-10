@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-010 (2024-12-06)
+
+### Features
+
+* Support model revision file size up to 8GB (previously 2GB). This is theoretical limit, as the actual limit is determined by the available memory, disk space and the performance of the system.
 
 ## Release v1.0.0-beta-009 (2024-11-22)
 

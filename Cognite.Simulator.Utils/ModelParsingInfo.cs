@@ -31,10 +31,6 @@ namespace Cognite.Simulator.Utils
         /// If there were any errors during parsing
         /// </summary>
         public bool Error { get; set; }
-        /// <summary>
-        /// Timestamp of when this entry was updated last
-        /// </summary>
-        public long LastUpdatedTime { get; set; }
 
         /// <summary>
         /// Update the model info status to success
@@ -53,13 +49,12 @@ namespace Cognite.Simulator.Utils
             this.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
         }
 
-        private void SetStatus( SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
+        private void SetStatus(SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
         {
             this.Status = status;
             this.Parsed = isParsed;
             this.Error = isError;
             this.StatusMessage = statusMessage;
-            this.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
     }
 }
