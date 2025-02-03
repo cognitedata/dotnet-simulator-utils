@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-11 (2025-02-03)
+
+### Features
+
+* Introduce `connector.simulation-run-tolerance` configuration option to prevent simulation runs pile-up. The connector will time out simulation runs that are older than this value (in seconds).
+
 ## Release v1.0.0-beta-010 (2024-12-06)
 
 ### Features
