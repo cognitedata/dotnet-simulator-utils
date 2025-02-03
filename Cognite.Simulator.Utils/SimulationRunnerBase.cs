@@ -101,12 +101,14 @@ namespace Cognite.Simulator.Utils
                 simulationTime = simTime;
             }
 
+            var message = statusMessage == null || statusMessage.Length < 255 ? statusMessage : statusMessage.Substring(0, 254);
+
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
                 new SimulationRunCallbackItem()
                 {
                     Id = runId,
                     Status = status,
-                    StatusMessage = statusMessage,
+                    StatusMessage = message,
                     SimulationTime = simulationTime
                 }, token).ConfigureAwait(false);
 
@@ -207,6 +209,7 @@ namespace Cognite.Simulator.Utils
                     {
                         try
                         {
+                            runItem.ValidateReadinessForExecution(_connectorConfig.SimulationRunTolerance);
                             (modelState, routineRev) = await GetModelAndRoutine(runItem, connectorIdList).ConfigureAwait(false);
                             if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId))
                             {
@@ -236,14 +239,14 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogError(error.Message);
                                 }
                             }
-                            _logger.LogError("Simulation run failed with error: {Message}", ex);
+                            _logger.LogWarning("Simulation run {id} failed with error: {Message}", runId, ex);
                             runItem.Run = await UpdateSimulationRunStatus(
                                 runId,
                                 SimulationRunStatus.failure,
-                                ex.Message == null || ex.Message.Length < 255 ? ex.Message : ex.Message.Substring(0, 254),
+                                ex.Message,
                                 token,
                                 runItem.RunConfiguration
-                                ).ConfigureAwait(false);
+                            ).ConfigureAwait(false);
                         }
                         finally
                         {
@@ -273,24 +276,20 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError("Could not find a local model file to run Simulation run {Id}", runId);
                 throw new SimulationException($"Could not find a model file for {modelRevExternalId}");
             }
-            V calcConfig = await RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId).ConfigureAwait(false);
+            V routineRev = await RoutineLibrary.GetRoutineRevision(simEv.Run.RoutineRevisionExternalId).ConfigureAwait(false);
 
-            if (calcConfig == null)
+            if (routineRev == null)
             {
                 _logger.LogError("Could not find a local configuration to run Simulation run {Id}", runId);
                 throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {simEv.Run.RoutineRevisionExternalId}");
             }
 
-            if (!integrations.Contains(calcConfig.SimulatorIntegrationExternalId))
+            if (!integrations.Contains(routineRev.SimulatorIntegrationExternalId))
             {
                 return (model, null);
             }
-            if (simEv.Run.Status == SimulationRunStatus.running)
-            {
-                _logger.LogError("Simulation run {Id} could not finish properly. This could be due to a connector being unexpectedly stopped during the run", runId);
-                throw new ConnectorException("Simulation entered unrecoverable state failed");
-            }
-            return (model, calcConfig);
+            
+            return (model, routineRev);
         }
 
         async void PublishConnectorStatus(ConnectorStatus status, CancellationToken token)
@@ -482,6 +481,24 @@ namespace Cognite.Simulator.Utils
         public SimulationRunItem(SimulationRun r)
         {
             Run = r;
+        }
+
+        /// <summary>
+        /// Validates the simulation run for readiness for execution.
+        /// Throws an exception if the simulation run is too old or in an invalid state
+        /// </summary>
+        /// <param name="maxAgeSeconds">Maximum age of the simulation run in seconds</param>
+        public void ValidateReadinessForExecution(int maxAgeSeconds = 3600) {
+          
+            if (Run.CreatedTime < DateTime.UtcNow.AddSeconds(-1 * maxAgeSeconds).ToUnixTimeMilliseconds())
+            {
+                throw new ConnectorException($"Simulation has timed out because it is older than {maxAgeSeconds} second(s)");
+            }
+
+            if (Run.Status == SimulationRunStatus.running)
+            {
+                throw new ConnectorException("Simulation entered unrecoverable state and failed");
+            }
         }
     }
 
