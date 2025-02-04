@@ -37,10 +37,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             [StateStoreProperty("info-extracted")]
             public bool InformationExtracted { get; internal set; }
         }
-        static void ConfigureServices(IServiceCollection services)
-        {
-            services.AddScoped<ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
-        }
         public class CustomAutomationConfig : AutomationConfig { }
 
         public string ConnectorExternalId = SeedData.TestIntegrationExternalId;
@@ -52,7 +48,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var tenant = Environment.GetEnvironmentVariable("AZURE_TENANT");
             var clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
             var secret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
-            var simulatorName = SeedData.TestSimulatorExternalId;
             var datasetId = SeedData.TestDataSetId;
             var pipelineId = SeedData.TestExtPipelineId;
             string directory = Directory.GetCurrentDirectory();
@@ -76,14 +71,12 @@ cognite:
       - ""{host}/.default""
   extraction-pipeline:
     pipeline-id: {pipelineId}
-simulator:
-  name: {simulatorName}
-  data-set-id: {datasetId}
 
 connector:
   status-interval: 3
   name-prefix: {ConnectorExternalId}
   add-machine-name-suffix: false
+  data-set-id: {datasetId}
 ";
 
             // Write the content to the file

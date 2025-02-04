@@ -38,11 +38,12 @@ namespace Cognite.Simulator.Utils
             DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco> runner,
             DefaultSimulationScheduler<TAutomationConfig> scheduler,
             ExtractionPipeline pipeline,
+            SimulatorCreate simulatorDefinition,
             ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> logger,
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
             ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
-            : base(cdf, config.Connector, new List<SimulatorConfig> { config.Simulator }, logger, remoteConfigManager, sink)
+            : base(cdf, config.Connector, simulatorDefinition, logger, remoteConfigManager, sink)
         {
             _config = config;
             _logger = logger;
@@ -73,13 +74,13 @@ namespace Cognite.Simulator.Utils
         public override async Task Init(CancellationToken token)
         {
 
-            await _pipeline.Init(_config.Simulator, token).ConfigureAwait(false);
-            await InitRemoteSimulatorIntegrations(token).ConfigureAwait(false);
+            await _pipeline.Init(_config.Connector, token).ConfigureAwait(false);
+            await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
             var integration = GetSimulatorIntegrations().FirstOrDefault();
             if(integration != null){
                 _sink.SetDefaultLogId(integration.LogId);
             }
-            await UpdateRemoteSimulatorIntegrations(true, token).ConfigureAwait(false);
+            await UpdateRemoteSimulatorIntegration(true, token).ConfigureAwait(false);
             await _modelLibrary.Init(token).ConfigureAwait(false);
             await _routineLibrary.Init(token).ConfigureAwait(false);
         }

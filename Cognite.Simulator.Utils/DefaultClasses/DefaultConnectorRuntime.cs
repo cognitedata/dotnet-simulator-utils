@@ -17,14 +17,23 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly.Timeout;
 
-public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>
+/// <summary>
+/// Default implementation of the runtime for a connector.
+/// In general cases, this class should not be overridden.
+/// </summary>
+public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>
  where TAutomationConfig : AutomationConfig, new()
  where TModelState: ModelStateBase, new()
  where TModelStateBasePoco: ModelStateBasePoco
 {
-
+    /// <summary>
+    /// Delegate to configure services. This will be called before the services are built.
+    /// </summary>
     public delegate void ServiceConfiguratorDelegate(IServiceCollection services);
 
+    /// <summary>
+    /// Delegate to configure services. This will be called before the services are built.
+    /// </summary>
     public static ServiceConfiguratorDelegate ConfigureServices;
 
     /// <summary>
@@ -99,11 +108,9 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
 
     private static async Task GetOrCreateSimulator( Client cdfClient, DefaultConfig<TAutomationConfig> config, 
     ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token) {
-        var definition = SimulatorDefinition ;
-        var simulatorExternalId = config.Simulator.Name;
-        var simQuery = new SimulatorQuery { };
-        var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(simQuery, token).ConfigureAwait(false);
-        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorExternalId);
+        var definition = SimulatorDefinition;
+        var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
+        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == definition.ExternalId);
         if (definition == null && existingSimulator == null) {
             throw new Exception("Simulator definition not found in either the remote API or locally.");
         }
@@ -132,7 +139,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         {
             config = await services.AddConfiguration<DefaultConfig<TAutomationConfig>>(
                 path: "./config.yml",
-                types: new Type[] { typeof(DefaultConnectorConfig), typeof(SimulatorConfig), typeof(LoggerConfig), typeof(Cognite.Simulator.Utils.BaseConfig) },
+                types: new Type[] { typeof(DefaultConnectorConfig), typeof(LoggerConfig), typeof(Cognite.Simulator.Utils.BaseConfig) },
                 appId: $"{ConnectorName}Connector",
                 token: token
             ).ConfigureAwait(false);
@@ -146,6 +153,7 @@ public class DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBa
         services.AddStateStore();
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
+        services.AddSingleton(SimulatorDefinition);
         services.AddScoped<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();

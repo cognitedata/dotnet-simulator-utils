@@ -29,7 +29,7 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
         private readonly RoutineLibraryConfig _config;
 
-        private IList<SimulatorConfig> _simulators;
+        private SimulatorCreate _simulatorDefinition;
         /// <inheritdoc/>
         protected CogniteSdk.Resources.Alpha.SimulatorsResource CdfSimulatorResources { get; private set; }
         
@@ -48,12 +48,12 @@ namespace Cognite.Simulator.Utils
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
         /// <param name="config">Library configuration</param>
-        /// <param name="simulators">Dictionary of simulators</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
         public RoutineLibraryBase(
             RoutineLibraryConfig config,
-            IList<SimulatorConfig> simulators,
+            SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger logger)
         {
@@ -67,7 +67,7 @@ namespace Cognite.Simulator.Utils
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             RoutineRevisions = new ConcurrentDictionary<string, V>();
             LibState = new BaseExtractionState("RoutineLibraryState");
-            _simulators = simulators;
+            _simulatorDefinition = simulatorDefinition;
         }
         
 
@@ -238,7 +238,7 @@ namespace Cognite.Simulator.Utils
                     Filter = new SimulatorRoutineRevisionFilter()
                     {
                         // TODO filter by simulatorIntegrationExternalIds
-                        SimulatorExternalIds = _simulators.Select(s => s.Name).ToList(),
+                        SimulatorExternalIds = [_simulatorDefinition.ExternalId],
                         CreatedTime = new CogniteSdk.TimeRange() {  Min = createdAfter + 1 },
                     },
                     Limit = PaginationLimit,
@@ -282,9 +282,10 @@ namespace Cognite.Simulator.Utils
     {
         public DefaultRoutineLibrary(
             DefaultConfig<TAutomationConfig> config,
+            SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger<DefaultRoutineLibrary<TAutomationConfig>> logger) :
-            base(config.Connector.RoutineLibrary, new List<SimulatorConfig> { config.Simulator }, cdf, logger)
+            base(config.Connector.RoutineLibrary, simulatorDefinition, cdf, logger)
         {
         }
     }

@@ -29,6 +29,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             var loggerConfig = new LoggerConfig
@@ -144,6 +145,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
@@ -276,6 +278,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
@@ -364,6 +367,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
             StateStoreConfig stateConfig = null;
@@ -443,6 +447,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
 
@@ -539,6 +544,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
+            SimulatorCreate simulatorDefinition,
             IExtractionStateStore store = null) :
             base(
                 new ModelLibraryConfig
@@ -549,14 +555,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     LibraryTable = "Library",
                     LibraryUpdateInterval = 2, // Update every 2 seconds
                 },
-                new List<SimulatorConfig>
-                {
-                    new SimulatorConfig
-                    {
-                        Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = SeedData.TestDataSetId
-                    }
-                },
+                simulatorDefinition,
                 cdf,
                 logger,
                 downloadClient,
@@ -615,20 +614,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
     {
         public RoutineLibraryTest(
             CogniteDestination cdf, 
+            SimulatorCreate simulatorDefinition,
             ILogger<RoutineLibraryTest> logger) : 
             base(
                 new RoutineLibraryConfig
                 {
                     LibraryUpdateInterval = 2, // Update every 2 seconds
                 },
-                new List<SimulatorConfig>
-                {
-                    new SimulatorConfig
-                    {
-                        Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = SeedData.TestDataSetId
-                    }
-                },
+                simulatorDefinition,
                 cdf, logger)
         {
         }
