@@ -187,9 +187,8 @@ namespace Cognite.Simulator.Utils
         /// The connector will run simulation run resource found on CDF that are not older than
         /// this value (in seconds). In case it finds items older than this, the runs will
         /// fail due to timeout
-        /// TODO: We should use this so that our runs dont pile up
         /// </summary>
-        public int SimulationRunTolerance { get; set; } = 1800; // 30 min
+        public int SimulationRunTolerance { get; set; } = 3600; // 1h
 
         /// <summary>
         /// The connector will check if scheduled simulations should be triggered with

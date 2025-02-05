@@ -2,11 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## Release v1.0.0-beta-011 (2025-02-04)
+## Release v1.0.0-beta-012 (2025-02-06)
 
 ### Features
 
 * **Breaking** Removed redundant `simulator` configuration section from the configuration file, move the `data-set-id` configuration property under the `connector` section.
+
+## Release v1.0.0-beta-11 (2025-02-03)
+
+### Features
+
+* Introduce `connector.simulation-run-tolerance` configuration option to prevent simulation runs pile-up. The connector will time out simulation runs that are older than this value (in seconds).
 
 ## Release v1.0.0-beta-010 (2024-12-06)
 
