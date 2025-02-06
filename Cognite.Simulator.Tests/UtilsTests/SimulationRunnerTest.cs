@@ -122,11 +122,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<SampleSimulatorClient>();
             services.AddSingleton(new ConnectorConfig
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
+                DataSetId = SeedData.TestDataSetId,
             });
 
             StateStoreConfig stateConfig = null;
@@ -479,32 +481,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         RoutineRunnerBase<DefaultAutomationConfig,TestFileState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
-        private ILogger<SampleSimulationRunner> _logger;
 
         public SampleSimulationRunner(
             CogniteDestination cdf,
             ModeLibraryTest modelLibrary,
+            SimulatorCreate simulatorDefinition,
             RoutineLibraryTest configLibrary,
             SampleSimulatorClient client,
             ConnectorConfig config,
             ILogger<SampleSimulationRunner> logger
         ) :
             base(config,
-                new List<SimulatorConfig>
-                {
-                    new SimulatorConfig
-                    {
-                        Name = SeedData.TestSimulatorExternalId,
-                        DataSetId = SeedData.TestDataSetId
-                    }
-                },
+                simulatorDefinition,
                 cdf,
                 modelLibrary,
                 configLibrary,
                 client,
                 logger)
         {
-            _logger = logger;
         }
     }
 }

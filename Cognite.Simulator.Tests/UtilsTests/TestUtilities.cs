@@ -49,7 +49,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
-            var simulatorName = SeedData.TestSimulatorExternalId;
             var datasetId = SeedData.TestDataSetId;
             var pipelineId = SeedData.TestExtPipelineId;
             string directory = Directory.GetCurrentDirectory();
@@ -67,14 +66,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     host: {host}
                     extraction-pipeline:
                         pipeline-id: {pipelineId}
-                simulator:
-                    name: {simulatorName}
-                    data-set-id: {datasetId}
 
                 connector:
                     status-interval: 3
                     name-prefix: {SeedData.TestIntegrationExternalId}
                     add-machine-name-suffix: false
+                    data-set-id: {datasetId}
                     model-library:
                         library-update-interval: 1";
 

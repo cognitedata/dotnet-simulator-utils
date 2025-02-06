@@ -65,10 +65,14 @@ namespace Cognite.Simulator.Utils
         protected CogniteDestination Cdf { get; }
         
         /// <summary>
-        /// List of simulator configurations handled by this connector
+        /// Simulator definition, containing the simulator name, supported units, etc.
         /// </summary>
-        protected IList<SimulatorConfig> Simulators { get; }
-        private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
+        protected SimulatorCreate SimulatorDefinition { get; }
+
+        /// <summary>
+        /// Simulator integration resource in CDF
+        /// </summary>
+        public SimulatorIntegration RemoteSimulatorIntegration { get; private set; }
         private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
@@ -85,21 +89,20 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="cdf">CDF client wrapper</param>
         /// <param name="config">Connector configuration</param>
-        /// <param name="simulators">List of simulator configurations</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="logger">Logger</param>
         /// <param name="remoteConfigManager"></param>
         /// <param name="remoteSink">Remote API sink for the logger</param>
         public ConnectorBase(
             CogniteDestination cdf,
             ConnectorConfig config,
-            IList<SimulatorConfig> simulators,
+            SimulatorCreate simulatorDefinition,
             ILogger<ConnectorBase<T>> logger,
             RemoteConfigManager<T> remoteConfigManager,
             ScopedRemoteApiSink remoteSink)
         {
             Cdf = cdf;
-            Simulators = simulators;
-            _simulatorIntegrationsList = new Dictionary<string, SimulatorIntegration>();
+            SimulatorDefinition = simulatorDefinition;
             _logger = logger;
             _remoteApiSink = remoteSink;
             _config = config;
@@ -107,33 +110,9 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Returns the ID of the simulator integration resource in CDF, if any
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <returns>Simulator integration ID, or null if not found</returns>
-        public SimulatorIntegration GetSimulatorIntegration(string simulator)
-        {
-            if (!_simulatorIntegrationsList.ContainsKey(simulator))
-            {
-                return null;
-            }
-            return _simulatorIntegrationsList[simulator];
-        }
-
-        /// <summary>
-        /// Returns the first simulator integration.
-        /// </summary>
-        /// <returns>A list of simulator integrations.</returns>
-        public IEnumerable<CogniteSdk.Alpha.SimulatorIntegration> GetSimulatorIntegrations()
-        {
-            return _simulatorIntegrationsList.Values;
-        }
-
-
-        /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
         /// This should include a call to
-        /// <see cref="InitRemoteSimulatorIntegrations(CancellationToken)"/>
+        /// <see cref="InitRemoteSimulatorIntegration(CancellationToken)"/>
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public abstract Task Init(CancellationToken token);
@@ -197,12 +176,12 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// For each simulator specified in the configuration, create a simulator integration in CDF containing the
+        /// Create a simulator integration in CDF containing the
         /// simulator name, connector name, data set id, connector version, etc. These parameters will be updated
         /// periodically by the connector, and indicate the status of the currently running connector to
         /// applications consuming this simulation integration data.
         /// </summary>
-        protected async Task InitRemoteSimulatorIntegrations(CancellationToken token)
+        protected async Task InitRemoteSimulatorIntegration(CancellationToken token)
         {
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
             try
@@ -212,50 +191,31 @@ namespace Cognite.Simulator.Utils
                     token).ConfigureAwait(false);
                 var integrations = integrationRes.Items;
                 var connectorName = GetConnectorName();
-                for (var index = 0; index < Simulators.Count; index++)
-                {
-                    var simulator = Simulators[index];
-
-                    // If there are more than one, we add the Simulator name as a prefix
-                    if (index > 0)
-                    {
-                        connectorName = $"{simulator.Name}-{GetConnectorName()}";
-                    }
+                var simulatorExternalId = SimulatorDefinition.ExternalId;
                     
-                    var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulator.Name);
-                    if (existing == null)
+                var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulatorExternalId);
+                if (existing == null)
+                {
+                    _logger.LogInformation("Creating new simulator integration for {Simulator}", SimulatorDefinition.Name);
+
+                    var integrationToCreate = new SimulatorIntegrationCreate
                     {
-                        _logger.LogInformation("Creating new simulator integration for {Simulator}", simulator.Name);
-                        var existingSimulators = await Cdf.CogniteClient.Alpha.Simulators.ListAsync(
-                            new SimulatorQuery (),
-                            token).ConfigureAwait(false);
-                        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulator.Name);
+                        ExternalId = connectorName,
+                        SimulatorExternalId = simulatorExternalId,
+                        DataSetId = _config.DataSetId,
+                        ConnectorVersion = GetConnectorVersion() ?? "N/A",
+                        SimulatorVersion = GetSimulatorVersion(simulatorExternalId) ?? "N/A",
+                    };
 
-                        if (existingSimulator == null)
-                        {
-                            _logger.LogWarning("Simulator {Simulator} not found in CDF", simulator.Name);
-                            throw new ConnectorException($"Simulator {simulator.Name} not found in CDF");
-                        }
-
-                        var integrationToCreate = new SimulatorIntegrationCreate
-                        {
-                            ExternalId = connectorName,
-                            SimulatorExternalId = simulator.Name,
-                            DataSetId = simulator.DataSetId,
-                            ConnectorVersion = GetConnectorVersion() ?? "N/A",
-                            SimulatorVersion = GetSimulatorVersion(simulator.Name) ?? "N/A",
-                        };
-
-                        var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
-                            integrationToCreate
-                        }, token).ConfigureAwait(false);
-                        _simulatorIntegrationsList[simulator.Name] = res.First();
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Found existing simulator integration for {Simulator}", simulator.Name);
-                        _simulatorIntegrationsList[simulator.Name] = existing;
-                    }
+                    var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
+                        integrationToCreate
+                    }, token).ConfigureAwait(false);
+                    RemoteSimulatorIntegration = res.First();
+                }
+                else
+                {
+                    _logger.LogInformation("Found existing simulator integration for {Simulator}", simulatorExternalId);
+                    RemoteSimulatorIntegration = existing;
                 }
             }
             catch (CogniteException e)
@@ -269,7 +229,7 @@ namespace Cognite.Simulator.Utils
         /// version are not expected to change while the connector is running, and are only set during
         /// initialization.
         /// </summary>
-        protected async Task UpdateRemoteSimulatorIntegrations(
+        protected async Task UpdateRemoteSimulatorIntegration(
             bool init,
             CancellationToken token)
         {   
@@ -278,39 +238,36 @@ namespace Cognite.Simulator.Utils
                 LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.UNKNOWN : LicenseStatus.DISABLED;
             }
             var simulatorsApi = Cdf.CogniteClient.Alpha.Simulators;
+            var simulatorExternalId = SimulatorDefinition.ExternalId;
             try
             {
-                foreach (var simulator in Simulators)
+                var integrationUpdate = init ? new SimulatorIntegrationUpdate
                 {
-                    var integrationUpdate = init ? new SimulatorIntegrationUpdate
-                    {
-                        DataSetId = new Update<long> { Set = simulator.DataSetId },
-                        ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
-                        SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulator.Name) ?? "N/A" },
-                        ConnectorStatus = new Update<string> { Set = ConnectorStatus.IDLE.ToString() },
-                        ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
-                        Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
-                        LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() }, 
-                    } : new SimulatorIntegrationUpdate {
-                        Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
-                        LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                        LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
-                    };
-                    var simIntegration = GetSimulatorIntegration(simulator.Name);
-                    if (simIntegration == null)
-                    {
-                        _logger.LogWarning("Simulator integration for {Simulator} not found", simulator.Name);
-                        throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
-                    }
-                    var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(simIntegration.Id)
-                        {
-                            Update = integrationUpdate,
-                        };
-                    await simulatorsApi.UpdateSimulatorIntegrationAsync(
-                        new [] { integrationUpdateItem },
-                        token).ConfigureAwait(false);
+                    DataSetId = new Update<long> { Set = _config.DataSetId },
+                    ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
+                    SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulatorExternalId) ?? "N/A" },
+                    ConnectorStatus = new Update<string> { Set = ConnectorStatus.IDLE.ToString() },
+                    ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                    Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                    LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
+                    LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() }, 
+                } : new SimulatorIntegrationUpdate {
+                    Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
+                    LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
+                    LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
+                };
+                if (RemoteSimulatorIntegration == null)
+                {
+                    _logger.LogWarning("Simulator integration for {Simulator} not found", simulatorExternalId);
+                    throw new ConnectorException($"Simulator integration for {simulatorExternalId} not found");
                 }
+                var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(RemoteSimulatorIntegration.Id)
+                    {
+                        Update = integrationUpdate,
+                    };
+                await simulatorsApi.UpdateSimulatorIntegrationAsync(
+                    new [] { integrationUpdateItem },
+                    token).ConfigureAwait(false);
             }
             catch (CogniteException e)
             {
@@ -332,7 +289,7 @@ namespace Cognite.Simulator.Utils
                     .Delay(GetHeartbeatInterval(), token)
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector heartbeat");
-                await UpdateRemoteSimulatorIntegrations(false, token)
+                await UpdateRemoteSimulatorIntegration(false, token)
                     .ConfigureAwait(false);
                 await _remoteApiSink.Flush(Cdf.CogniteClient.Alpha.Simulators, token).ConfigureAwait(false);
             }
@@ -362,7 +319,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
                 LastLicenseCheckResult = GetLicenseStatus() ;
-                await UpdateRemoteSimulatorIntegrations(false, token)
+                await UpdateRemoteSimulatorIntegration(false, token)
                     .ConfigureAwait(false);
             }
         }

@@ -9,25 +9,6 @@ using Cognite.Simulator.Utils.Automation;
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a simulator configuration, holding the simulator name and dataset id in CDF.
-    /// Ideally, all the data related to the simulator should be in this dataset 
-    /// </summary>
-    public class SimulatorConfig
-    {
-        /// <summary>
-        /// Name or Id of the simulator. E.g. PROSPER, PetroSim
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Simulator data, such as model files, simulation configuration files and events,
-        /// should be in this data set. Result inputs and outputs should be
-        /// written to this data set
-        /// </summary>
-        public long DataSetId { get; set; }
-    }
-
-    /// <summary>
     /// Configuration for remote logging (logs are stored in CDF)
     /// </summary>
     public class RemoteLogConfig: LogConfig
@@ -186,6 +167,13 @@ namespace Cognite.Simulator.Utils
         public bool AddMachineNameSuffix { get; set; } = true;
 
         /// <summary>
+        /// Simulator data, such as model files, simulation configuration files and events,
+        /// should be in this data set. Result inputs and outputs should be
+        /// written to this data set
+        /// </summary>
+        public long DataSetId { get; set; }
+
+        /// <summary>
         /// The connector will update its heartbeat in CDF with this interval (in seconds)
         /// </summary>
         public int StatusInterval { get; set; } = 10;
@@ -282,7 +270,6 @@ namespace Cognite.Simulator.Utils
     public class DefaultConfig<TAutomationConfig> : BaseConfig 
     where TAutomationConfig : AutomationConfig, new()
     {
-        public SimulatorConfig Simulator { get; set; }
         public DefaultConnectorConfig Connector { get; set; }
 
         public TAutomationConfig Automation { get; set; }
@@ -292,8 +279,6 @@ namespace Cognite.Simulator.Utils
             base.GenerateDefaults();
 
             if (Connector == null) Connector = new DefaultConnectorConfig();
-
-            if (Simulator == null) Simulator = new SimulatorConfig();
 
             if (Automation == null) Automation = new TAutomationConfig();
 

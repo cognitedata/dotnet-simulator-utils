@@ -73,7 +73,7 @@ namespace Cognite.Simulator.Utils
 
         // Other injected services
         private readonly ModelLibraryConfig _config;
-        private readonly IList<SimulatorConfig> _simulators;
+        private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
 
@@ -88,14 +88,14 @@ namespace Cognite.Simulator.Utils
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
         /// <param name="config">Library configuration</param>
-        /// <param name="simulators">Dictionary of simulators</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             ModelLibraryConfig config, 
-            IList<SimulatorConfig> simulators, 
+            SimulatorCreate simulatorDefinition,
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
@@ -107,7 +107,7 @@ namespace Cognite.Simulator.Utils
             }
 
             _config = config;
-            _simulators = simulators;
+            _simulatorDefinition = simulatorDefinition;
             _cdfFiles = cdf.CogniteClient.Files;
             _cdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
             _store = store;
@@ -486,9 +486,8 @@ namespace Cognite.Simulator.Utils
                         }, token
                     ).ConfigureAwait(false);
 
-                var simulatorsExternalIds = _simulators.Select(s => s.Name).ToList();
                 var modelRevisionsRes = modelRevisionsAllRes.Items
-                    .Where(r => simulatorsExternalIds.Contains(r.SimulatorExternalId))
+                    .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
                     .ToList();
 
                 foreach (var revision in modelRevisionsRes) {

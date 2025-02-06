@@ -16,6 +16,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Simulation runner for simulation routine revision of type <see cref="SimulatorRoutineRevision"/>
     /// </summary>
+    /// <typeparam name="A">Type of automation configuration objects</typeparam>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class RoutineRunnerBase<A, T, V> : SimulationRunnerBase<A, T, V>
@@ -35,7 +36,7 @@ namespace Cognite.Simulator.Utils
         /// Creates an instance of the runner with the provided parameters
         /// </summary>
         /// <param name="connectorConfig">Connector configuration</param>
-        /// <param name="simulators">List of simulators</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF client</param>
         /// <param name="modelLibrary">Model library</param>
         /// <param name="configLibrary">Configuration library</param>
@@ -43,13 +44,13 @@ namespace Cognite.Simulator.Utils
         /// <param name="logger">Logger</param>
         protected RoutineRunnerBase(
             ConnectorConfig connectorConfig, 
-            IList<SimulatorConfig> simulators, 
+            SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             IModelProvider<A,T> modelLibrary, 
             IRoutineProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
             ILogger logger) : 
-            base(connectorConfig, simulators, cdf, modelLibrary, configLibrary, logger)
+            base(connectorConfig, simulatorDefinition, cdf, modelLibrary, configLibrary, logger)
         {
             _logger = logger;
             _cdf = cdf;

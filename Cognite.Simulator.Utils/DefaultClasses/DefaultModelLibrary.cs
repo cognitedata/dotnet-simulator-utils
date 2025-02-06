@@ -34,11 +34,12 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
+            SimulatorCreate simulatorDefinition,
             FileStorageClient client,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,
-                new List<SimulatorConfig> { config.Simulator },
+                simulatorDefinition,
                 cdf,
                 logger,
                 client,

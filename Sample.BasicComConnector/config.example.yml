@@ -21,12 +21,7 @@ cognite:
         #   - https://api.cognitedata.com/.default
         scopes:
           - ${COGNITE_SCOPE}
-
-
-simulator:
-  name: "NewSim"
-  # Data set ID to keep all the simulator resources
-  data-set-id: ${COGNITE_DATA_SET_ID}
-    
+ 
 connector:
   name-prefix: "new-sim-connector@"
+  data-set-id: ${COGNITE_DATA_SET_ID}

@@ -30,7 +30,6 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _connectorConfig;
-        private readonly IList<SimulatorConfig> _simulators;
         private readonly SimulatorsResource _cdfSimulators;
         private readonly CogniteSdk.Resources.DataPointsResource _cdfDataPoints;
         private readonly ILogger _logger;
@@ -47,19 +46,21 @@ namespace Cognite.Simulator.Utils
 
         private long? simulatorIntegrationId;
 
+        private SimulatorCreate _simulatorDefinition;
+
 
         /// <summary>
         /// Create a new instance of the runner with the provided parameters
         /// </summary>
         /// <param name="connectorConfig">Connector configuration</param>
-        /// <param name="simulators">List of simulators</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF client</param>
         /// <param name="modelLibrary">Model library</param>
         /// <param name="routineLibrary">Configuration library</param>
         /// <param name="logger">Logger</param>
         public SimulationRunnerBase(
             ConnectorConfig connectorConfig,
-            IList<SimulatorConfig> simulators,
+            SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             IModelProvider<A,T> modelLibrary,
             IRoutineProvider<V> routineLibrary,
@@ -70,7 +71,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(cdf));
             }
             _connectorConfig = connectorConfig;
-            _simulators = simulators;
+            _simulatorDefinition = simulatorDefinition;
             _cdfSimulators = cdf.CogniteClient.Alpha.Simulators;
             _cdfDataPoints = cdf.CogniteClient.DataPoints;
             _logger = logger;
@@ -116,25 +117,18 @@ namespace Cognite.Simulator.Utils
         }
 
         private async Task<IEnumerable<SimulationRun>> FindSimulationRunsWithStatus(
-            Dictionary<string, long> simulators,
             SimulationRunStatus status,
             CancellationToken token)
         {
-            if (simulators == null || !simulators.Any())
-            {
-                return new List<SimulationRun>();
-            }
-
             var connectorName = _connectorConfig.GetConnectorName();
-            var listOfIntegrations = CommonUtils.ConnectorsToExternalIds(simulators, connectorName);
 
             var query = new SimulationRunQuery()
             {
                 Filter = new SimulationRunFilter()
                 {
                     Status = status,
-                    SimulatorExternalIds = simulators.Keys.ToList(),
-                    SimulatorIntegrationExternalIds = listOfIntegrations
+                    SimulatorExternalIds = [_simulatorDefinition.ExternalId],
+                    SimulatorIntegrationExternalIds = [connectorName],
                 }
             };
             var runsResult = await _cdfSimulators
@@ -145,13 +139,10 @@ namespace Cognite.Simulator.Utils
         }
 
         private async Task<IEnumerable<SimulationRunItem>> FindSimulationRuns(
-            Dictionary<string, long> simulatorDataSetMap,
             SimulationRunStatus status,
             CancellationToken token)
         {
-            var simulationRuns = await FindSimulationRunsWithStatus(
-                simulatorDataSetMap,
-                status, token).ConfigureAwait(false);
+            var simulationRuns = await FindSimulationRunsWithStatus(status, token).ConfigureAwait(false);
             return simulationRuns.Select(r => new SimulationRunItem(r)).ToList();
         }
 
@@ -164,10 +155,8 @@ namespace Cognite.Simulator.Utils
             var interval = TimeSpan.FromSeconds(_connectorConfig.FetchRunsInterval);
             while (!token.IsCancellationRequested)
             {
-                var simulators = _simulators.ToDictionary(s => s.Name, s => s.DataSetId);
                 // Find runs that are ready to be executed
                 var simulationRuns = await FindSimulationRuns(
-                    simulators,
                     SimulationRunStatus.ready,
                     token).ConfigureAwait(false);
                 if (simulationRuns.Any())
@@ -181,7 +170,6 @@ namespace Cognite.Simulator.Utils
                 // Any running events indicates that the connector went down during the run, and the run status should
                 // be updated to "failure".
                 var simulationRunningItems = await FindSimulationRuns(
-                    simulators,
                     SimulationRunStatus.running,
                     token).ConfigureAwait(false);
                 if (simulationRunningItems.Any())
@@ -203,15 +191,15 @@ namespace Cognite.Simulator.Utils
                     V routineRev = null;
                     bool skipped = false;
 
-                    var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulators, _connectorConfig.GetConnectorName());
+                    var connectorExternalId = _connectorConfig.GetConnectorName();
 
                     using (LogContext.Push(await GetLogEnrichers(_cdfSimulators, runItem.Run.LogId, true).ConfigureAwait(false)))
                     {
                         try
                         {
                             runItem.ValidateReadinessForExecution(_connectorConfig.SimulationRunTolerance);
-                            (modelState, routineRev) = await GetModelAndRoutine(runItem, connectorIdList).ConfigureAwait(false);
-                            if (routineRev == null || !connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId))
+                            (modelState, routineRev) = await GetModelAndRoutine(runItem).ConfigureAwait(false);
+                            if (routineRev == null || connectorExternalId != routineRev.SimulatorIntegrationExternalId)
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
@@ -265,7 +253,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private async Task<(T, V)> GetModelAndRoutine(SimulationRunItem simEv, List<string> integrations)
+        private async Task<(T, V)> GetModelAndRoutine(SimulationRunItem simEv)
         {
             string modelRevExternalId = simEv.Run.ModelRevisionExternalId;
             string runId = simEv.Run.Id.ToString();
@@ -284,7 +272,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {simEv.Run.RoutineRevisionExternalId}");
             }
 
-            if (!integrations.Contains(routineRev.SimulatorIntegrationExternalId))
+            if (_connectorConfig.GetConnectorName() != routineRev.SimulatorIntegrationExternalId)
             {
                 return (model, null);
             }
@@ -296,22 +284,22 @@ namespace Cognite.Simulator.Utils
         {
             try
             {
-                if (!simulatorIntegrationId.HasValue && _simulators.Count > 0)
+                if (!simulatorIntegrationId.HasValue)
                 {
-                    SimulatorConfig simulator = _simulators[0]; // Retrieve the first item
+                    var simulatorExternalId = _simulatorDefinition.ExternalId;
                     var integrationRes = await _cdfSimulators.ListSimulatorIntegrationsAsync(
                         new SimulatorIntegrationQuery()
                         {
                             Filter = new SimulatorIntegrationFilter()
                             {
-                                SimulatorExternalIds = new List<string>() { simulator.Name },
+                                SimulatorExternalIds = [simulatorExternalId]
                             }
                         },
                         token).ConfigureAwait(false);
                     var integration = integrationRes.Items.FirstOrDefault(i => i.ExternalId == _connectorConfig.GetConnectorName());
                     if (integration == null)
                     {
-                        throw new ConnectorException($"Simulator integration for {simulator.Name} not found");
+                        throw new ConnectorException($"Simulator integration for {simulatorExternalId} not found");
                     }
                     simulatorIntegrationId = integration.Id;
                 }
