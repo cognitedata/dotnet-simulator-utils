@@ -56,10 +56,9 @@ namespace Cognite.Simulator.Utils
         /// pipeline in CDF in case one does not exists. It uses the simulator name and 
         /// dataset information specified in <paramref name="connectorConfig"/> to create a new pipeline
         /// </summary>
-        /// <param name="connectorConfig">Simulator definition</param>
+        /// <param name="connectorConfig">Connector config</param>
         /// <param name="token">Cancellation token</param>
         public async Task Init(
-            // SimulatorConfig simConfig,
             ConnectorConfig connectorConfig,
             CancellationToken token)
         {

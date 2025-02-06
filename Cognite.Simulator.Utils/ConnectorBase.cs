@@ -68,7 +68,11 @@ namespace Cognite.Simulator.Utils
         /// Simulator definition, containing the simulator name, supported units, etc.
         /// </summary>
         protected SimulatorCreate SimulatorDefinition { get; }
-        private readonly Dictionary<string, SimulatorIntegration> _simulatorIntegrationsList;
+
+        /// <summary>
+        /// Simulator integration resource in CDF
+        /// </summary>
+        public SimulatorIntegration RemoteSimulatorIntegration { get; private set; }
         private readonly ILogger<ConnectorBase<T>> _logger;
         private readonly ConnectorConfig _config;
 
@@ -99,36 +103,11 @@ namespace Cognite.Simulator.Utils
         {
             Cdf = cdf;
             SimulatorDefinition = simulatorDefinition;
-            _simulatorIntegrationsList = new Dictionary<string, SimulatorIntegration>();
             _logger = logger;
             _remoteApiSink = remoteSink;
             _config = config;
             _remoteConfigManager = remoteConfigManager;
         }
-
-        /// <summary>
-        /// Returns the ID of the simulator integration resource in CDF, if any
-        /// </summary>
-        /// <param name="simulator">Simulator name</param>
-        /// <returns>Simulator integration ID, or null if not found</returns>
-        public SimulatorIntegration GetSimulatorIntegration(string simulator)
-        {
-            if (!_simulatorIntegrationsList.ContainsKey(simulator))
-            {
-                return null;
-            }
-            return _simulatorIntegrationsList[simulator];
-        }
-
-        /// <summary>
-        /// Returns the first simulator integration.
-        /// </summary>
-        /// <returns>A list of simulator integrations.</returns>
-        public IEnumerable<CogniteSdk.Alpha.SimulatorIntegration> GetSimulatorIntegrations()
-        {
-            return _simulatorIntegrationsList.Values;
-        }
-
 
         /// <summary>
         /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
@@ -218,16 +197,6 @@ namespace Cognite.Simulator.Utils
                 if (existing == null)
                 {
                     _logger.LogInformation("Creating new simulator integration for {Simulator}", SimulatorDefinition.Name);
-                    var existingSimulators = await Cdf.CogniteClient.Alpha.Simulators.ListAsync(
-                        new SimulatorQuery (),
-                        token).ConfigureAwait(false);
-                    var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorExternalId);
-
-                    if (existingSimulator == null)
-                    {
-                        _logger.LogWarning("Simulator {Simulator} not found in CDF", simulatorExternalId);
-                        throw new ConnectorException($"Simulator {simulatorExternalId} not found in CDF");
-                    }
 
                     var integrationToCreate = new SimulatorIntegrationCreate
                     {
@@ -241,12 +210,12 @@ namespace Cognite.Simulator.Utils
                     var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
                         integrationToCreate
                     }, token).ConfigureAwait(false);
-                    _simulatorIntegrationsList[simulatorExternalId] = res.First();
+                    RemoteSimulatorIntegration = res.First();
                 }
                 else
                 {
                     _logger.LogInformation("Found existing simulator integration for {Simulator}", simulatorExternalId);
-                    _simulatorIntegrationsList[simulatorExternalId] = existing;
+                    RemoteSimulatorIntegration = existing;
                 }
             }
             catch (CogniteException e)
@@ -287,13 +256,12 @@ namespace Cognite.Simulator.Utils
                     LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
                     LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
                 };
-                var simIntegration = GetSimulatorIntegration(simulatorExternalId);
-                if (simIntegration == null)
+                if (RemoteSimulatorIntegration == null)
                 {
                     _logger.LogWarning("Simulator integration for {Simulator} not found", simulatorExternalId);
                     throw new ConnectorException($"Simulator integration for {simulatorExternalId} not found");
                 }
-                var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(simIntegration.Id)
+                var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(RemoteSimulatorIntegration.Id)
                     {
                         Update = integrationUpdate,
                     };

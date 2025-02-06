@@ -76,9 +76,8 @@ namespace Cognite.Simulator.Utils
 
             await _pipeline.Init(_config.Connector, token).ConfigureAwait(false);
             await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
-            var integration = GetSimulatorIntegrations().FirstOrDefault();
-            if(integration != null){
-                _sink.SetDefaultLogId(integration.LogId);
+            if(RemoteSimulatorIntegration != null){
+                _sink.SetDefaultLogId(RemoteSimulatorIntegration.LogId);
             }
             await UpdateRemoteSimulatorIntegration(true, token).ConfigureAwait(false);
             await _modelLibrary.Init(token).ConfigureAwait(false);
