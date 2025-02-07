@@ -96,27 +96,23 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
-        private readonly IEnumerable<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
         /// </summary>
         /// <param name="config">Connector configuration</param>
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
-        /// <param name="simulators">List of simulators</param>
         /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IRoutineProvider<V> configLib,
             ILogger logger,
-            IEnumerable<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ITimeManager timeManager = null)
         {
             _configLib = configLib;
             _logger = logger;
-            _simulators = simulators;
             _cdf = cdf;
             _config = config;
             _timeManager = timeManager ?? new TimeManager();
@@ -133,8 +129,7 @@ namespace Cognite.Simulator.Utils
             Dictionary<string, ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
 
-            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
-            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
+            var connectorExternalId = _config.GetConnectorName();
 
             await Task.Run(async () =>
             {
@@ -148,8 +143,7 @@ namespace Cognite.Simulator.Utils
                     foreach (var routineRev in routineRevisions)
                     {
                         // Check if the configuration has a schedule for this connector.
-                        if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                            routineRev.Configuration.Schedule == null)
+                        if (connectorExternalId != routineRev.SimulatorIntegrationExternalId || routineRev.Configuration.Schedule == null)
                         {
                             continue;
                         }
@@ -298,9 +292,8 @@ namespace Cognite.Simulator.Utils
             DefaultConfig<TAutomationConfig> config,
             DefaultRoutineLibrary<TAutomationConfig> configLib,
             ILogger<DefaultSimulationScheduler<TAutomationConfig>> logger,
-            IEnumerable<SimulatorConfig> simulatorConfigs,
             CogniteDestination cdf)
-            : base(config.Connector, configLib, logger, simulatorConfigs, cdf)
+            : base(config.Connector, configLib, logger, cdf)
         {
         }
     }

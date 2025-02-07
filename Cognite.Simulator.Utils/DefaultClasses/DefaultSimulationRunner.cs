@@ -25,14 +25,17 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf, 
             DefaultModelLibrary<TAutomationConfig, TModelStateBase,TModelStateBasePoco> modelLibrary, 
             DefaultRoutineLibrary<TAutomationConfig> configLibrary,
+            SimulatorCreate simulatorDefinition,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> client,
             ILogger<DefaultSimulationRunner<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger) : 
-            base(config.Connector, new List<SimulatorConfig>() { config.Simulator }, 
-            cdf, 
-            modelLibrary, 
-            configLibrary, 
-            client, 
-            logger)
+            base(config.Connector,
+                simulatorDefinition, 
+                cdf, 
+                modelLibrary, 
+                configLibrary, 
+                client, 
+                logger
+            )
         {
         }
     }

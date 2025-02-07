@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cognite.Extractor.Configuration;
+using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils
 {
@@ -20,6 +21,7 @@ namespace Cognite.Simulator.Utils
         private readonly CogniteDestination _cdf;
         private readonly CogniteConfig _cdfConfig;
         private readonly PipelineNotificationConfig _pipeConfig;
+        private readonly SimulatorCreate _simulatorDefinition;
         private CogniteSdk.ExtPipe _pipeline;
         private bool _available;
         
@@ -27,21 +29,24 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Creates a new extraction pipeline object. It is not yet active, it needs to
-        /// be initialized with <see cref="Init(SimulatorConfig, CancellationToken)"/> and
+        /// be initialized with <see cref="Init(ConnectorConfig, CancellationToken)"/> and
         /// then activated by running the <see cref="PipelineUpdate(CancellationToken)"/> task
         /// </summary>
         /// <param name="cdfConfig">CDF configuration</param>
+        /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="pipeConfig">Pipeline notification configuration</param>
         /// <param name="destination">CDF client</param>
         /// <param name="logger">Logger</param>
         public ExtractionPipeline(
             CogniteConfig cdfConfig,
+            SimulatorCreate simulatorDefinition,
             PipelineNotificationConfig pipeConfig,
             CogniteDestination destination,
             ILogger<ExtractionPipeline> logger)
         {
             _logger = logger;
             _cdf = destination;
+            _simulatorDefinition = simulatorDefinition;
             _cdfConfig = cdfConfig;
             _pipeConfig = pipeConfig;
         }
@@ -49,17 +54,17 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Initialized the extraction pipeline, if configured. This method creates a new
         /// pipeline in CDF in case one does not exists. It uses the simulator name and 
-        /// dataset information specified in <paramref name="simConfig"/> to create a new pipeline
+        /// dataset information specified in <paramref name="connectorConfig"/> to create a new pipeline
         /// </summary>
-        /// <param name="simConfig">Simulator configuration</param>
+        /// <param name="connectorConfig">Connector config</param>
         /// <param name="token">Cancellation token</param>
         public async Task Init(
-            SimulatorConfig simConfig,
+            ConnectorConfig connectorConfig,
             CancellationToken token)
         {
-            if (simConfig == null)
+            if (connectorConfig == null)
             {
-                throw new ArgumentNullException(nameof(simConfig));
+                throw new ArgumentNullException(nameof(connectorConfig));
             }
             if (_cdfConfig.ExtractionPipeline == null ||
                 string.IsNullOrEmpty(_cdfConfig.ExtractionPipeline.PipelineId))
@@ -85,11 +90,11 @@ namespace Cognite.Simulator.Utils
                         {
                            new CogniteSdk.ExtPipeCreate
                            {
-                               DataSetId = simConfig.DataSetId,
+                               DataSetId = connectorConfig.DataSetId,
                                ExternalId = pipelineId,
-                               Name = $"{simConfig.Name} connector extraction pipeline",
+                               Name = $"{_simulatorDefinition.Name} connector extraction pipeline",
                                Schedule = "Continuous",
-                               Source = simConfig.Name,
+                               Source = _simulatorDefinition.ExternalId,
                            }
                         }, token).ConfigureAwait(false);
                     _logger.LogDebug("Pipeline {Id} created successfully", pipelineId);
