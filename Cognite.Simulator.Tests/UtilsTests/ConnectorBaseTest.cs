@@ -27,18 +27,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var timestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<RemoteConfigManager<Utils.BaseConfig>>(provider => null!);
             services.AddSingleton<Utils.BaseConfig>();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
             services.AddSingleton<ScopedRemoteApiSink>();
-            var simConfig = new SimulatorConfig
-            {
-                Name = SeedData.TestSimulatorExternalId,
-                DataSetId = SeedData.TestDataSetId
-            };
-            services.AddSingleton(simConfig);
             var pipeConfig = new PipelineNotificationConfig();
             services.AddSingleton(pipeConfig);
             using var provider = services.BuildServiceProvider();
@@ -101,34 +96,31 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     internal class TestConnector : ConnectorBase<Utils.BaseConfig>
     {
+        static ConnectorConfig TestConnectorConfig = new ConnectorConfig() {
+            NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
+            AddMachineNameSuffix = false,
+            StatusInterval = 2,
+            DataSetId = SeedData.TestDataSetId,
+        };
+
         private readonly ExtractionPipeline _pipeline;
-        private readonly SimulatorConfig _config;
 
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
-            SimulatorConfig config,
+            SimulatorCreate simulatorDefinition,
             Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
             RemoteConfigManager<Utils.BaseConfig> remoteConfigManager,
             ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,
-                new ConnectorConfig
-                {
-                    NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
-                    AddMachineNameSuffix = false,
-                    StatusInterval = 2
-                },
-                new List<SimulatorConfig>
-                {
-                    config
-                },
+                TestConnectorConfig,
+                simulatorDefinition,
                 logger,
                 remoteConfigManager,
                 remoteSink)
         {
             _pipeline = pipeline;
-            _config = config;
         }
 
         public override string GetConnectorVersion()
@@ -143,11 +135,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public override async Task Init(CancellationToken token)
         {
-            await InitRemoteSimulatorIntegrations(token).ConfigureAwait(false);
-            await UpdateRemoteSimulatorIntegrations(
-                true,
-                token).ConfigureAwait(false);
-            await _pipeline.Init(_config, token).ConfigureAwait(false);
+            await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
+            await UpdateRemoteSimulatorIntegration(true, token).ConfigureAwait(false);
+            await _pipeline.Init(TestConnectorConfig, token).ConfigureAwait(false);
         }
 
         public override async Task Run(CancellationToken token)

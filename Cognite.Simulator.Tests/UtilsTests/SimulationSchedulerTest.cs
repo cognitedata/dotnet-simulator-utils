@@ -155,15 +155,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
                 SchedulerUpdateInterval = 2,
+                DataSetId = SeedData.TestDataSetId,
             });
-            services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>
-            {
-                new SimulatorConfig
-                {
-                    Name = SeedData.TestSimulatorExternalId,
-                    DataSetId = SeedData.TestDataSetId
-                }
-            });
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
 
@@ -263,13 +257,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ConnectorConfig config,
             ILogger<SampleSimulationScheduler> logger, 
             CogniteDestination cdf,
-            IEnumerable<SimulatorConfig> simulators,
             ITimeManager timeManager
             ) : base(
                 config,
                 configLib, 
                 logger,
-                simulators,
                 cdf,
                 timeManager)
         {

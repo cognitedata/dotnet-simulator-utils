@@ -70,28 +70,24 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
-        private readonly IEnumerable<SimulatorConfig> _simulators;
-
         /// <summary>
         /// Creates a new instance of a simulation scheduler.
         /// </summary>
         /// <param name="config">Connector configuration</param>
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
-        /// <param name="simulators">List of simulators</param>
+        /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         /// <param name="cdf">CDF client</param>
         /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IRoutineProvider<V> configLib,
             ILogger logger,
-            IEnumerable<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ITimeManager timeManager = null)
         {
             _configLib = configLib;
             _logger = logger;
-            _simulators = simulators;
             _cdf = cdf;
             _config = config;
             _timeManager = timeManager ?? new TimeManager();
@@ -112,9 +108,7 @@ namespace Cognite.Simulator.Utils
             var schedulerInterval = TimeSpan.FromMinutes(1);
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
 
-            // Collect simulator configuration info (external ids for this connector)
-            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
-            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
+            var connectorExternalId = _config.GetConnectorName();
 
             // This dictionary tracks, for each routine, the last time a simulation run was created.
             Dictionary<string, DateTime> lastRunTimes = new Dictionary<string, DateTime>();
@@ -130,10 +124,8 @@ namespace Cognite.Simulator.Utils
 
                     foreach (var routineRev in routineRevisions)
                     {
-                        // Skip if this routine revision is not meant for this connector or has no schedule.
-                        if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                            routineRev.Configuration.Schedule == null ||
-                            routineRev.Configuration.Schedule.Enabled == false)
+                        // Check if the configuration has a schedule for this connector.
+                        if (connectorExternalId != routineRev.SimulatorIntegrationExternalId || routineRev.Configuration.Schedule == null)
                         {
                             continue;
                         }
@@ -254,9 +246,8 @@ namespace Cognite.Simulator.Utils
             DefaultConfig<TAutomationConfig> config,
             DefaultRoutineLibrary<TAutomationConfig> configLib,
             ILogger<DefaultSimulationScheduler<TAutomationConfig>> logger,
-            IEnumerable<SimulatorConfig> simulatorConfigs,
             CogniteDestination cdf)
-            : base(config.Connector, configLib, logger, simulatorConfigs, cdf)
+            : base(config.Connector, configLib, logger, cdf)
         {
         }
     }
