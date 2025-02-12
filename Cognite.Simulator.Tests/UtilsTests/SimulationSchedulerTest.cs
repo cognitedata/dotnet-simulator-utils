@@ -15,6 +15,7 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
+using System.Diagnostics;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -112,6 +113,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 1000 * 60); // less than a minute
                 Assert.Equal(expectedRunTime, runTimeMs);
             }
+        }
+
+        [Fact]
+        public void ParseCronExpression_ShouldCompleteWithinThreshold()
+        {
+            const int iterations = 1000;
+            // Example cron expression: "*/5 * * * *" means every 5 minutes.
+            string cronExpression = "*/5 * * * *";
+            
+            // Warm-up: parse once so that any JIT overhead is minimized.
+            var schedule = CrontabSchedule.Parse(cronExpression);
+
+            var stopwatch = Stopwatch.StartNew();
+
+            for (int i = 0; i < iterations; i++)
+            {
+                schedule = CrontabSchedule.Parse(cronExpression);
+            }
+
+            stopwatch.Stop();
+
+            // Output the performance measurement
+            var elapsedMs = stopwatch.ElapsedMilliseconds;
+            Console.WriteLine($"Parsed cron expression {iterations} times in {elapsedMs}ms.");
+
+            // Example assertion: if parsing takes more than 1000ms overall, the test will fail.
+            // You can set this threshold to any value that meets your performance requirements.
+            Assert.True(elapsedMs < 1000, $"Parsing took too long: {elapsedMs}ms.");
         }
 
         [Fact]

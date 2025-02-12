@@ -12,7 +12,6 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 
-
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -43,50 +42,25 @@ namespace Cognite.Simulator.Utils
 
     /// <summary>
     /// Represents a scheduled job for simulation.
+    /// (No longer used since scheduling is now done in a single loop.)
     /// </summary>
     /// <typeparam name="V">Type of the simulator routine revision</typeparam>
     public class ScheduledJob<V> where V : SimulatorRoutineRevision
     {
-        /// <summary>
-        /// The schedule for the job.
-        /// </summary>
         public CrontabSchedule Schedule { get; set; }
-
-        /// <summary>
-        /// The Task of the scheduled job.
-        /// </summary>
         public Task Task { get; set; }
-
-        /// <summary>
-        /// The token source for the job, will be used to cancel it.
-        /// </summary>
         public CancellationTokenSource TokenSource { get; set; }
-
-        /// <summary>
-        /// Whether the job was started on the scheduler or not.
-        /// </summary>
         public bool Scheduled { get; set; }
-
-        /// <summary>
-        /// The time the job was created.
-        /// </summary>
         public long CreatedTime { get; set; }
-
-        /// <summary>
-        /// Routine revision.
-        /// </summary>
         public V RoutineRevision { get; set; }
     }
+
     /// <summary>
-    /// This class implements a basic simulation scheduler. It runs a loop on a configurable interval.
-    /// Each iteration, it checks the schedules for all configurations and determine if the simulation
-    /// should be triggered.
-    /// It is assumed that the simulator can only run one simulation at a time, and therefore there is no
-    /// need to schedule parallel simulation runs.
-    /// Alternatives to this implementation include libraries such as Quartz, but the added complexity of
-    /// a full fledged scheduling library in not necessary at this point.
-    /// Also, at some point scheduling the creation of CDF simulation runs should be done by a cloud service, instead
-    /// of doing it in the connector.
+    /// This class implements a basic simulation scheduler. Instead of creating a separate task
+    /// per routine revision it now runs one task that triggers every minute.
+    /// In each iteration the scheduler checks all routine configurations, and if the current time (with
+    /// a given tolerance) is at or past the next scheduled occurrence and the routine has not been
+    /// triggered yet, it creates a simulation run in CDF.
     /// </summary>
     public class SimulationSchedulerBase<V>
         where V : SimulatorRoutineRevision
@@ -97,15 +71,16 @@ namespace Cognite.Simulator.Utils
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
         private readonly IEnumerable<SimulatorConfig> _simulators;
+
         /// <summary>
-        /// Creates a new instance of a simulation scheduler
+        /// Creates a new instance of a simulation scheduler.
         /// </summary>
         /// <param name="config">Connector configuration</param>
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
         /// <param name="simulators">List of simulators</param>
-        /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         /// <param name="cdf">CDF client</param>
+        /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IRoutineProvider<V> configLib,
@@ -123,101 +98,126 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Starts the scheduler loop. For the existing simulation configuration files,
-        /// check the schedule and create simulation runs in CDF accordingly
+        /// Starts the scheduler loop. Every minute, this loop inspects all simulation configurations.
+        /// If the cron expression indicates that a routine revision should run (within the allowed tolerance),
+        /// a simulation run will be created in CDF.
+        /// 
+        /// To make sure a routine revision is not triggered multiple times for the same occurrence,
+        /// a dictionary stores the last scheduled run time per routine revision.
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Run(CancellationToken token)
         {
-            var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
-            Dictionary<string, ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
+            // Run every minute.
+            var schedulerInterval = TimeSpan.FromMinutes(1);
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
 
+            // Collect simulator configuration info (external ids for this connector)
             var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
             var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
 
-            await Task.Run(async () =>
+            // This dictionary tracks, for each routine, the last time a simulation run was created.
+            Dictionary<string, DateTime> lastRunTimes = new Dictionary<string, DateTime>();
+
+            while (!token.IsCancellationRequested)
             {
-                while (!token.IsCancellationRequested)
+                try
                 {
-                    // Check for new schedules
+                    // Get latest routine revisions: for each routine external id, take the most recent revision.
                     var routineRevisions = _configLib.RoutineRevisions.Values
                         .GroupBy(c => c.RoutineExternalId)
                         .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
 
                     foreach (var routineRev in routineRevisions)
                     {
-                        // Check if the configuration has a schedule for this connector.
+                        // Skip if this routine revision is not meant for this connector or has no schedule.
                         if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                            routineRev.Configuration.Schedule == null)
+                            routineRev.Configuration.Schedule == null ||
+                            routineRev.Configuration.Schedule.Enabled == false)
                         {
                             continue;
                         }
 
-                        // Check if the job already exists and if it should be cancelled due 
-                        // to a new configuration on the API
-                        if (scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var job))
+                        // Parse the cron schedule.
+                        CrontabSchedule schedule;
+                        try
                         {
-                            if (routineRev.CreatedTime > job.CreatedTime && job.TokenSource != null && !job.TokenSource.Token.IsCancellationRequested)
-                            {
-                                _logger.LogDebug($"Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.");
-                                job.TokenSource.Cancel();
-                                scheduledJobs.Remove(routineRev.RoutineExternalId);
-                            }
+                            schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
                         }
-
-                        if (!scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var existingJob))
+                        catch (Exception ex)
                         {
-                            try
-                            {
-                                if (routineRev.Configuration.Schedule.Enabled == false)
-                                {
-                                    continue;
-                                }
-                                var schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
-                                var newJob = new ScheduledJob<V>
-                                {
-                                    Schedule = schedule,
-                                    TokenSource = new CancellationTokenSource(),
-                                    CreatedTime = routineRev.CreatedTime,
-                                    RoutineRevision = routineRev,
-                                };
-                                _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
-                                scheduledJobs.Add(routineRev.RoutineExternalId, newJob);
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.LogError($"Exception while scheduling job for RoutineRevision : {job.RoutineRevision.ExternalId} Error: {e.Message}. Skipping.");
-                            }
-                        }
-                    }
-
-                    // Schedule new jobs
-                    List<Task> tasks = new List<Task>();
-                    foreach (var kvp in scheduledJobs)
-                    {
-                        if (kvp.Value.Scheduled)
-                        {
+                            _logger.LogError($"Error parsing cron expression {routineRev.Configuration.Schedule.CronExpression} " +
+                                $"for routine: {routineRev.RoutineExternalId}, error: {ex.Message}");
                             continue;
                         }
-                        tasks.Add(RunJob(kvp.Value, token));
-                        kvp.Value.Scheduled = true;
+
+                        // Get the last time this routine was triggered.
+                        DateTime lastRun;
+                        if (!lastRunTimes.TryGetValue(routineRev.RoutineExternalId, out lastRun))
+                        {
+                            lastRun = DateTime.MinValue;
+                        }
+
+                        // Compute the next scheduled occurrence from the last run time.
+                        var nextOccurrence = schedule.GetNextOccurrence(lastRun);
+
+                        // If the next occurrence is less or equal than the current UTC time (plus tolerance)
+                        // and is greater than the last run time, trigger the simulation run.
+                        if (nextOccurrence <= DateTime.UtcNow.Add(tolerance) && nextOccurrence > lastRun)
+                        {
+                            // Verify the routine revision exists in the in-memory cache.
+                            bool revisionExists = await _configLib.VerifyInMemoryCache(routineRev, token)
+                                .ConfigureAwait(false);
+                            if (!revisionExists)
+                            {
+                                _logger.LogDebug($"Routine revision: {routineRev.RoutineExternalId} not found in cache, skipping.");
+                                continue;
+                            }
+
+                            // Floor the run time to the nearest minute.
+                            long runTime = nextOccurrence.ToUnixTimeMilliseconds();
+                            runTime -= runTime % 60000;
+
+                            var runEvent = new SimulationRunCreate
+                            {
+                                RoutineExternalId = routineRev.RoutineExternalId,
+                                RunType = SimulationRunType.scheduled,
+                                RunTime = runTime,
+                            };
+
+                            await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
+                                items: new List<SimulationRunCreate> { runEvent },
+                                token: token
+                            ).ConfigureAwait(false);
+
+                            _logger.LogDebug($"Scheduled simulation run created for routine revision: {routineRev.ExternalId} at {nextOccurrence}.");
+
+                            // Mark this routine revision as having run at the next occurrence.
+                            lastRunTimes[routineRev.RoutineExternalId] = nextOccurrence;
+                        }
                     }
-                    if (tasks.Count != 0)
-                    {
-                        _ = Task.WhenAll(tasks);
-                    }
-                    // Wait for interval seconds before checking again
-                    await Task.Delay(interval, token).ConfigureAwait(false);
                 }
-            }, token).ConfigureAwait(false);
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error during scheduler loop: {ex.Message}");
+                }
+
+                try
+                {
+                    // Wait until the next minute tick.
+                    await _timeManager.Delay(schedulerInterval, token).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException)
+                {
+                    // Likely due to cancellation. Break out of the loop.
+                    break;
+                }
+            }
         }
 
         /// <summary>
+        /// (No longer used)
         /// Gets the next job delay and run time in milliseconds.
-        /// Delay is the actual time until the next job should run.
-        /// Run time is the "official" time job is considered to run at (used for inputs data sampling, etc).
-        /// Run time is floored to the nearest minute.
         /// </summary>
         public static (TimeSpan, long) GetNextJobDelayAndRunTimeMs(CrontabSchedule schedule)
         {
@@ -228,9 +228,8 @@ namespace Cognite.Simulator.Utils
             var now = DateTime.UtcNow;
             var nextOccurrence = schedule.GetNextOccurrence(now);
             var delay = nextOccurrence - now;
-            
-            // Get the next occurrence time. Since cron expressions can go as far as minutes, we floor it to the
-            // nearest minute, just to make sure the cron is respected
+
+            // Floor run time to the nearest minute.
             var nextOccurrenceMs = nextOccurrence.ToUnixTimeMilliseconds();
             var nextJobRunTimeMs = nextOccurrenceMs - (nextOccurrenceMs % 60000);
 
@@ -238,62 +237,19 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Runs a scheduled job.
+        /// (No longer used)
+        /// This method was originally used to run an individual scheduled job.
         /// </summary>
-        /// <param name="job">The scheduled job to run.</param>
-        /// <param name="mainToken">The cancellation token.</param>
         private async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
         {
-            if (job == null)
-            {
-                _logger.LogError($"Scheduled Job is null. Exiting.");
-                return;
-            }
-            while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
-            {
-                var routineRev = job.RoutineRevision;
-                var (delay, nextJobTimeMs) = GetNextJobDelayAndRunTimeMs(job.Schedule);
-
-                if (delay.TotalMilliseconds > 0)
-                {
-                    try
-                    {
-                        await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.UtcNow} for routine revision: {routineRev.ExternalId}");
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
-                        break;
-                    }
-                    bool revisionExists = await _configLib
-                        .VerifyInMemoryCache(routineRev, mainToken)
-                        .ConfigureAwait(false);
-                    if (!revisionExists)
-                    {
-                        _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
-                        break;
-                    }
-
-                    var runEvent = new SimulationRunCreate
-                    {
-                        RoutineExternalId = routineRev.RoutineExternalId,
-                        RunType = SimulationRunType.scheduled,
-                        RunTime = nextJobTimeMs,
-                    };
-                    await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
-                        items: new List<SimulationRunCreate> { runEvent },
-                        token: job.TokenSource.Token
-                    ).ConfigureAwait(false);
-                }
-            }
+            // This method is no longer used as the scheduler now runs in a single loop.
+            await Task.CompletedTask.ConfigureAwait(false);
         }
     }
 
     public class DefaultSimulationScheduler<TAutomationConfig> : SimulationSchedulerBase<SimulatorRoutineRevision>
-    where TAutomationConfig : AutomationConfig, new()
+        where TAutomationConfig : AutomationConfig, new()
     {
-
         public DefaultSimulationScheduler(
             DefaultConfig<TAutomationConfig> config,
             DefaultRoutineLibrary<TAutomationConfig> configLib,
