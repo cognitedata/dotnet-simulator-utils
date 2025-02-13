@@ -121,15 +121,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             const int iterations = 1000;
             // Example cron expression: "*/5 * * * *" means every 5 minutes.
             string cronExpression = "*/5 * * * *";
+            string cronExpression2 = "*/3 * * * *";
             
             // Warm-up: parse once so that any JIT overhead is minimized.
-            var schedule = CrontabSchedule.Parse(cronExpression);
+            var fakeLogger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<SimulationSchedulerBase<SimulatorRoutineRevision>>();
+            var schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression, fakeLogger);
 
             var stopwatch = Stopwatch.StartNew();
 
             for (int i = 0; i < iterations; i++)
             {
-                schedule = CrontabSchedule.Parse(cronExpression);
+                if (i % 2 == 0)
+                    schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression, fakeLogger);
+                else
+                    schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression2, fakeLogger);
+                
+                SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextOccurrence(schedule, DateTime.UtcNow);
             }
 
             stopwatch.Stop();
@@ -139,7 +146,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Console.WriteLine($"Parsed cron expression {iterations} times in {elapsedMs}ms.");
 
             // Example assertion: if parsing takes more than 1000ms overall, the test will fail.
-            // You can set this threshold to any value that meets your performance requirements.
             Assert.True(elapsedMs < 1000, $"Parsing took too long: {elapsedMs}ms.");
         }
 

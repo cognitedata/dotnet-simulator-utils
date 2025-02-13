@@ -94,6 +94,41 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Parses a cron expression into a CrontabSchedule.
+        /// </summary>
+        /// <param name="cronExpression">The cron expression to parse.</param>
+        /// <param name="logger">The logger to log errors.</param>
+        /// <returns>The parsed CrontabSchedule, or null if parsing fails.</returns>
+        public static CrontabSchedule ParseCronTabSchedule(string cronExpression, ILogger logger)
+        {
+            try
+            {
+                return CrontabSchedule.Parse(cronExpression);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error parsing cron expression {cronExpression} : error: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the next occurrence of the schedule after the specified last run time.
+        /// </summary>
+        /// <param name="schedule">The cron schedule.</param>
+        /// <param name="lastRun">The last run time.</param>
+        /// <returns>The next occurrence of the schedule.</returns>
+        public static DateTime GetNextOccurrence(CrontabSchedule schedule, DateTime lastRun) {
+            if (schedule == null)
+            {
+                throw new ArgumentNullException(nameof(schedule));
+            }
+            // Get the next occurrence of the schedule.
+            var nextOccurrence = schedule.GetNextOccurrence(lastRun);
+            return nextOccurrence;
+        }
+
+        /// <summary>
         /// Starts the scheduler loop. Every minute, this loop inspects all simulation configurations.
         /// If the cron expression indicates that a routine revision should run (within the allowed tolerance),
         /// a simulation run will be created in CDF.
@@ -134,7 +169,7 @@ namespace Cognite.Simulator.Utils
                         CrontabSchedule schedule;
                         try
                         {
-                            schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
+                            schedule = ParseCronTabSchedule(routineRev.Configuration.Schedule.CronExpression, _logger);
                         }
                         catch (Exception ex)
                         {
@@ -151,7 +186,7 @@ namespace Cognite.Simulator.Utils
                         }
 
                         // Compute the next scheduled occurrence from the last run time.
-                        var nextOccurrence = schedule.GetNextOccurrence(lastRun);
+                        var nextOccurrence = GetNextOccurrence(schedule, lastRun);
 
                         // If the next occurrence is less or equal than the current UTC time (plus tolerance)
                         // and is greater than the last run time, trigger the simulation run.
