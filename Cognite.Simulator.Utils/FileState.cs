@@ -237,6 +237,22 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+
+        private DateTime _lastAccessTime;
+        /// <summary>
+        /// Last time the file was accessed
+        /// </summary>
+        public DateTime LastAccessTime {
+            get => _lastAccessTime;
+            set
+            {
+                if (value == _lastAccessTime) return;
+                LastTimeModified = DateTime.UtcNow;
+                _lastAccessTime = value;
+            }
+        }
+
+
         /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>

@@ -134,6 +134,12 @@ namespace Cognite.Simulator.Utils
         /// Maximum number of download attempts before giving up. Default is 3.
         /// </summary>
         public int MaxDownloadAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// Days to keep files in the library before deleting them, default is 7 days
+        /// Each time the model revision is accessed it will update the LastAccessedTime
+        /// </summary>
+        public int FilesTTL { get; set; } = 7;
     }
 
     /// <summary>

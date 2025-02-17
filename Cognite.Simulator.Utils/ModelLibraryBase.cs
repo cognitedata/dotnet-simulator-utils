@@ -243,11 +243,32 @@ namespace Cognite.Simulator.Utils
 
             if (model != null)
             {
+                model.LastAccessTime = DateTime.UtcNow;
                 return model;
             }
 
             return await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// If a file has not been accessed for a certain amount of time, it will be deleted.
+        /// The default is 7 days.
+        /// </summary>
+        public void CleanExpiredModelRevisionFiles(){
+            var revisions = _state.Values
+                .Where(s => s.IsInDirectory
+                    && !string.IsNullOrEmpty(s.FilePath)
+                    && s.LastAccessTime.AddMinutes(_config.FilesTTL) < DateTime.UtcNow)
+                .OrderByDescending(s => s.CreatedTime);
+
+            foreach (var revision in revisions)
+            {
+                _logger.LogInformation("Deleting expired model file: {FilePath}", revision.FilePath);
+                StateUtils.DeleteFileAndDirectory(revision.FilePath, revision.IsInDirectory);
+                _state.TryRemove(revision.Id, out _);
+            }
+        }
+
 
         /// <inheritdoc/>
         private IEnumerable<T> GetAllModelRevisions(string modelExternalId)
@@ -487,6 +508,7 @@ namespace Cognite.Simulator.Utils
                     ).ConfigureAwait(false);
 
                 var modelRevisionsRes = modelRevisionsAllRes.Items
+                    .Where(r => r.Status != SimulatorModelRevisionStatus.failure)
                     .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
                     .ToList();
 
@@ -583,6 +605,7 @@ namespace Cognite.Simulator.Utils
                             modelState.ExternalId,
                             filename);
                         modelState.FilePath = filename;
+                        modelState.LastAccessTime = DateTime.UtcNow;
                         return true;
                     }
                 }
