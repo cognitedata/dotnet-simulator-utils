@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Tests
         private static int _configIdx;
         private static string? _statePath;
 
-        public static IServiceCollection AddCogniteTestClient(this IServiceCollection services)
+        public static IServiceCollection AddCogniteTestClient(this IServiceCollection services, bool skipHttpClientConfig = false)
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -85,10 +85,14 @@ namespace Cognite.Simulator.Tests
             });
 
             // Configure CDF Client
-            services.AddHttpClient<Client.Builder>()
-                .AddPolicyHandler((provider, message) => {
-                    return CogniteExtensions.GetRetryPolicy(null, 10, 10000);
-                });
+            // Only configure HTTP client if flag is false
+            if (!skipHttpClientConfig)
+            {
+                services.AddHttpClient<Client.Builder>()
+                    .AddPolicyHandler((provider, message) => {
+                        return CogniteExtensions.GetRetryPolicy(null, 10, 10000);
+                    });
+            }
             services.AddSingleton(p => {
                 var auth = p.GetRequiredService<IAuthenticator>();
                 var builder = p.GetRequiredService<Client.Builder>();
