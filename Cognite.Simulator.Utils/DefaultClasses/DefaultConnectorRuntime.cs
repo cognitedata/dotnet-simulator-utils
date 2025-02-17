@@ -67,6 +67,10 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                     logger.LogInformation($"New remote config detected, restarting... {newConfigException}");
                     continue;
                 }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Unhandled exception: {message}", e.Message);
+                }
             }
         }
     }
@@ -132,6 +136,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
     {
         var assembly = Assembly.GetEntryAssembly();
         var services = new ServiceCollection();
+        services.ConfigureCustomHttpClientWithRetryPolicy();
         services.AddCogniteClient($"{ConnectorName}Connector", $"{ConnectorName}Connector (Cognite)", true);
 
         DefaultConfig<TAutomationConfig> config;

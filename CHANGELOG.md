@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-013 (2025-02-17)
+
+### Features
+
+* **Breaking** added a method on the `ISimulatorClient` called `TestConnection`. 
+* Wrapped some more areas of the code with Try-Catch statements to enhance stability.
+
 ## Release v1.0.0-beta-012 (2025-02-06)
 
 ### Features
