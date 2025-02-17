@@ -11,6 +11,35 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class HttpClientPolicyConfiguration
     {
+        
+        /// <summary>
+        /// Gets or sets the action to execute when a transient HTTP error occurs.
+        /// </summary>
+        public static Action<Exception, TimeSpan, int, Context, IServiceProvider> OnRetry { get; set; } = (exception, timeSpan, retryCount, context, serviceProvider) => { 
+            try
+            {
+                var logger = serviceProvider.GetService<ILogger<Client.Builder>>();
+                if (logger != null)
+                {
+                    logger.LogWarning(
+                        "Retry {RetryCount} of {MaxRetries} after {Delay}s. Error: {Error}",
+                        retryCount,
+                        11,
+                        timeSpan.TotalSeconds,
+                        exception.ToString());
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // Ignore if the logger has been disposed
+            }
+        };
+
+        /// <summary>
+        /// Gets or sets the function that provides the sleep duration for each retry attempt.
+        /// </summary>
+        public static Func<int, TimeSpan> SleepDurationProvider { get; set; } = retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
+
         /// <summary>
         /// Configures a custom HTTP client with a retry policy for transient HTTP errors.
         /// </summary>
@@ -25,27 +54,11 @@ namespace Cognite.Simulator.Utils
                         .HandleTransientHttpError()
                         .WaitAndRetryAsync(
                             retryCount: 11,
-                            sleepDurationProvider: retryAttempt =>
-                                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                            sleepDurationProvider: SleepDurationProvider,
                             onRetry: (exception, timeSpan, retryCount, context) =>
                             {
-                                try
-                                {
-                                    var logger = serviceProvider.GetService<ILogger<Client.Builder>>();
-                                    if (logger != null)
-                                    {
-                                        logger.LogWarning(
-                                            "Retry {RetryCount} of {MaxRetries} after {Delay}s. Error: {Error}",
-                                            retryCount,
-                                            11,
-                                            timeSpan.TotalSeconds,
-                                            exception.ToString());
-                                    }
-                                }
-                                catch (ObjectDisposedException)
-                                {
-                                    // Ignore if the logger has been disposed
-                                }
+                                OnRetry(exception.Exception, timeSpan, retryCount, context, serviceProvider);
+                                
                             });
                 });
 

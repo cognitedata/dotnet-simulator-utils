@@ -28,7 +28,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 public class RetryPolicyTests
 {
     private const string TestHost = "https://api.cognite.com";
-    private static int _retryCount = 0;
     private static readonly List<TimeSpan> _retryDelays = new();
 
     [Fact]
@@ -46,64 +45,79 @@ public class RetryPolicyTests
         Assert.NotNull(clientFactory);
     }
 
+    private class TestDelegatingHandler : DelegatingHandler
+    {
+        private readonly Action<TimeSpan> _onRetry;
+
+        public TestDelegatingHandler(Action<TimeSpan> onRetry)
+        {
+            _onRetry = onRetry;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            // Always return a transient error to trigger retries
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        }
+    }
+
     [Fact]
     public async Task Run_WithRetryPolicy_ShouldBeConfiguredCorrectly()
     {
         // Arrange
         var services = new ServiceCollection();
         var mockLogger = new Mock<ILogger>();
-        
-        // Configure minimum required services
-        services.ConfigureCustomHttpClientWithRetryPolicy();
+        _retryDelays.Clear();
+
+        // Configure services
         services.AddSingleton(mockLogger.Object);
-        services.AddScoped<DefaultAutomationConfig>();
-        // services.AddSingleton(SimulatorDefinition);
-        services.AddCogniteClient("TestConnector");
+
+        // Override the retry configuration for testing
+        var originalSleepDuration = HttpClientPolicyConfiguration.SleepDurationProvider;
+        var originalOnRetry = HttpClientPolicyConfiguration.OnRetry;
+        
+        HttpClientPolicyConfiguration.SleepDurationProvider = _ => TimeSpan.FromMilliseconds(1); // Use minimal delay for testing
+        HttpClientPolicyConfiguration.OnRetry = (exception, timeSpan, retryCount, context, serviceProvider) =>
+        {
+            _retryDelays.Add(timeSpan);
+        };
+
+        // Configure the retry policy and test handler
+        services.ConfigureCustomHttpClientWithRetryPolicy();
+        services.AddHttpClient<Client.Builder>()
+            .ConfigurePrimaryHttpMessageHandler(() => new TestDelegatingHandler(delay => { }));
 
         var serviceProvider = services.BuildServiceProvider();
 
-        // Act & Assert
-        using (var scope = serviceProvider.CreateScope())
-        {
-            var client = scope.ServiceProvider.GetRequiredService<Client.Builder>();
-            Assert.NotNull(client);
+        // Act
+        var client = serviceProvider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(nameof(Client.Builder));
+        client.BaseAddress = new Uri(TestHost);
 
-            // Verify that the HttpClient has been registered with the retry policy
-            var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-            Assert.NotNull(httpClientFactory);
+        try
+        {
+            // This should trigger the policy's retries
+            await client.GetAsync("/api/test");
         }
-    }
-
-    private class TestHttpMessageHandler : HttpMessageHandler
-    {
-        private readonly Func<int, bool> _shouldFail;
-        private readonly Action<int, TimeSpan> _onRetry;
-        private int _attempts = 0;
-
-        public TestHttpMessageHandler(Func<int, bool> shouldFail, Action<int, TimeSpan> onRetry)
+        catch (HttpRequestException)
         {
-            _shouldFail = shouldFail;
-            _onRetry = onRetry;
+            // Expected to fail after all retries
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
+        // Assert
+        Assert.Equal(11, _retryDelays.Count);
+
+        // Verify all delays are minimal (1ms)
+        foreach (var delay in _retryDelays)
         {
-            _attempts++;
-
-            if (_shouldFail(_attempts))
-            {
-                var delay = TimeSpan.FromSeconds(Math.Pow(2, _attempts - 1));
-                _onRetry(_attempts, delay);
-                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("[]")
-            };
+            Assert.Equal(TimeSpan.FromMilliseconds(1), delay);
         }
+
+        // Restore original configurations
+        HttpClientPolicyConfiguration.SleepDurationProvider = originalSleepDuration;
+        HttpClientPolicyConfiguration.OnRetry = originalOnRetry;
     }
 }
 }
