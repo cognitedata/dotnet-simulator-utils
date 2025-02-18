@@ -72,6 +72,8 @@ namespace Cognite.Simulator.Utils
             if (Cognite == null)
             {
                 Cognite = new CogniteConfig();
+                Cognite.CdfRetries.MaxRetries = 11;
+                Cognite.CdfRetries.MaxDelay = 60 * 1000; //ms
             }
 
             if (Metrics == null)
