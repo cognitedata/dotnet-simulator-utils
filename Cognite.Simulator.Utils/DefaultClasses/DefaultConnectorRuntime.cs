@@ -179,6 +179,8 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
 
         logger.LogInformation("Starting the connector...");
 
+        logger.LogInformation($"Cognite SDK Retry Config : Max delay : {config.Cognite.CdfRetries.MaxDelay} - Max Retries : {config.Cognite.CdfRetries.MaxRetries}");
+
         var destination = provider.GetRequiredService<CogniteDestination>();
         var cdfClient = provider.GetRequiredService<Client>();
 
