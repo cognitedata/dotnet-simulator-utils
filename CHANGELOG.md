@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 * **Breaking** added a method on the `ISimulatorClient` called `TestConnection`. 
 * Wrapped some more areas of the code with Try-Catch statements to enhance stability.
-* Added support for backoff based retries to API calls.
+* Increased default value for retry config of SDK based API calls.
 
 ## Release v1.0.0-beta-012 (2025-02-06)
 
