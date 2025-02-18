@@ -475,6 +475,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _logger.LogWarning("Running a sample routine, not a real simulation");
             return Task.FromResult(routine.PerformSimulation());
         }
+
+        public Task TestConnection(CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     public class SampleSimulationRunner :

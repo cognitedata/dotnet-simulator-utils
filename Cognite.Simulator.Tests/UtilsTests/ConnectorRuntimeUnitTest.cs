@@ -105,6 +105,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new NotImplementedException();
             }
 
+            public Task TestConnection(CancellationToken token)
+            {
+                return Task.CompletedTask;
+            }
+
             protected override void PreShutdown()
             {
                 throw new NotImplementedException();

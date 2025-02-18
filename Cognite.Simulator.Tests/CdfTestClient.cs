@@ -89,6 +89,7 @@ namespace Cognite.Simulator.Tests
                 .AddPolicyHandler((provider, message) => {
                     return CogniteExtensions.GetRetryPolicy(null, 10, 10000);
                 });
+            
             services.AddSingleton(p => {
                 var auth = p.GetRequiredService<IAuthenticator>();
                 var builder = p.GetRequiredService<Client.Builder>();

@@ -110,6 +110,8 @@ namespace Cognite.Simulator.Utils
             {
                 using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
+                    
+                    await _simulatorClient.TestConnection(linkedTokenSource.Token).ConfigureAwait(false);
                     await RunAllTasks(linkedTokenSource).ConfigureAwait(false);
                 }
             }
@@ -129,6 +131,10 @@ namespace Cognite.Simulator.Utils
                     }
                     _logger.LogError(innerEx, "An error occurred during task execution");
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during task execution");
             }
         }   
     }

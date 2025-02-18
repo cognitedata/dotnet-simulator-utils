@@ -55,6 +55,11 @@ public class CalculatorSimulatorClient :
         }
         
     }
+
+    public Task TestConnection(CancellationToken token)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 internal class CalculatorRoutine : RoutineImplementationBase
