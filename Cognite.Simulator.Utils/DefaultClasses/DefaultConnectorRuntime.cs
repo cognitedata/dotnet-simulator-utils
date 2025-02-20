@@ -67,10 +67,6 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                     logger.LogInformation($"New remote config detected, restarting... {newConfigException}");
                     continue;
                 }
-                catch (Exception e)
-                {
-                    logger.LogError(e, "Unhandled exception: {message}", e.Message);
-                }
             }
         }
     }
