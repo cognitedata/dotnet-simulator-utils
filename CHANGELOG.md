@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-014 (2025-02-20)
+
+### Features
+
+* Fix bug where invalid config file lead to connector running in a loop displaying connection error
+* Introduce support for license tracking and holding.
+
 ## Release v1.0.0-beta-013 (2025-02-17)
 
 ### Features
