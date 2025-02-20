@@ -75,6 +75,7 @@ namespace Cognite.Simulator.Utils
             }
 
             if (Cognite.CdfRetries == null) {
+                Cognite.CdfRetries = new CdfRetries();
                 Cognite.CdfRetries.MaxRetries = 11;
                 Cognite.CdfRetries.MaxDelay = 60 * 1000; //ms
             }
