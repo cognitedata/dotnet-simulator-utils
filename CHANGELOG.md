@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 * Fix bug where invalid config file lead to connector running in a loop displaying connection error
 * Introduce support for license tracking and holding.
+* Introduce support for Process termination.
 
 ## Release v1.0.0-beta-013 (2025-02-17)
 
