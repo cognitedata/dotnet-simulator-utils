@@ -5,6 +5,7 @@ using Cognite.Extractor.Metrics;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
