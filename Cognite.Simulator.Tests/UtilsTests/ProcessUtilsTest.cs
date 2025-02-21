@@ -55,25 +55,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 // Assert
                 // Verify log messages were called with correct parameters
-                mockLogger.Verify(
-                    x => x.Log(
-                        LogLevel.Debug,
-                        It.IsAny<EventId>(),
-                        It.Is<It.IsAnyType>((v, t) => v.ToString().Contains($"Searching for process : {processName}")),
-                        It.IsAny<Exception>(),
-                        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                    Times.Once);
+                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : {processName}", Times.Once(), isContainsCheck: true);
                 
                 // Verify that process.Kill was called if this process belongs to current user
                 string currentUser = ProcessUtils.GetCurrentUsername().ToLower();
-                mockLogger.Verify(
-                    x => x.Log(
-                        LogLevel.Information,
-                        It.IsAny<EventId>(),
-                        It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Killing process with PID")),
-                        It.IsAny<Exception>(),
-                        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                    Times.AtLeastOnce);
+                VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), isContainsCheck: true);
                 
                 // Verify that our testProcess was killed (it should belong to current user)
                 Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
@@ -96,14 +82,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             
             // Assert - verify error wasn't logged since no exception should occur
             // when process not found (empty enumeration handled gracefully)
-            mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Failed to kill process")),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.Never);
+            VerifyLog(mockLogger, LogLevel.Information, "Failed to kill process", Times.Once(), isContainsCheck: true);
         }
 
         [Fact]
