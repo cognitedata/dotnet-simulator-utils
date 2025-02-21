@@ -55,11 +55,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 // Assert
                 // Verify log messages were called with correct parameters
-                TestUtilities.VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : {processName}", Times.Once(), isContainsCheck: true);
+                TestUtilities.VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : {processName}", Times.Once(), true);
                 
                 // Verify that process.Kill was called if this process belongs to current user
                 string currentUser = ProcessUtils.GetCurrentUsername().ToLower();
-                TestUtilities.VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), isContainsCheck: true);
+                TestUtilities.VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
                 
                 // Verify that our testProcess was killed (it should belong to current user)
                 Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
@@ -82,7 +82,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             
             // Assert - verify error wasn't logged since no exception should occur
             // when process not found (empty enumeration handled gracefully)
-            TestUtilities.VerifyLog(mockLogger, LogLevel.Information, "Failed to kill process", Times.Once(), isContainsCheck: true);
+            TestUtilities.VerifyLog(mockLogger, LogLevel.Information, "Failed to kill process", Times.Once(), true);
         }
 
         [Fact]
