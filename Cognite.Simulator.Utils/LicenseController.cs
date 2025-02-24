@@ -154,6 +154,8 @@ namespace Cognite.Simulator.Utils
             lock (_lock)
             {
                 _licenseHeld = false;
+                _lastUsageTime = DateTime.Now;
+                _scheduledReleaseTime = DateTime.Now;
                 _releaseTimer.Change(Timeout.Infinite, Timeout.Infinite);
                 _logger.LogInformation("License released without callback");
             }
