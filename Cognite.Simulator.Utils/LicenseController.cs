@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Utils
             _licenseHeld = false;
             _releaseLicenseFunc = releaseLicenseFunc ?? throw new ArgumentNullException(nameof(releaseLicenseFunc));
             _acquireLicenseFunc = acquireLicenseFunc ?? throw new ArgumentNullException(nameof(acquireLicenseFunc));
-            _releaseTimer = new Timer(ReleaseLicense, null, Timeout.Infinite, Timeout.Infinite);
+            _releaseTimer = new Timer(ReleaseLicenseAfterTimeout, null, Timeout.Infinite, Timeout.Infinite);
             _logger = logger;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _ = StartLoggingTask(_cts.Token);
@@ -131,7 +131,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void ReleaseLicense(object state)
+        private void ReleaseLicenseAfterTimeout(object state)
         {
             lock (_lock)
             {
@@ -147,6 +147,15 @@ namespace Cognite.Simulator.Utils
                     _logger.LogInformation("License not released - current time {CurrentTime} is before scheduled release time", 
                         DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                 }
+            }
+        }
+
+        public void ReleaseLicenseWithoutCallback() {
+            lock (_lock)
+            {
+                _licenseHeld = false;
+                _releaseTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                _logger.LogInformation("License released without callback");
             }
         }
 
