@@ -112,6 +112,11 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
+                    if (_licenseHeld)
+                    {
+                        _logger.LogInformation("License already held, skipping acquisition");
+                        return;
+                    }
                     _logger.LogInformation("Attempting to acquire license");
                     _acquireLicenseFunc();
                     _licenseHeld = true;
