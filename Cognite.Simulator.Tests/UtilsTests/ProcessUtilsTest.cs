@@ -72,7 +72,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public void KillProcess_HandlesExceptions()
+        public void KillProcess_DoesNotThrow_WhenProcessNotFound()
         {
             // Arrange
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
@@ -81,8 +81,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object);
             
             // Assert - verify error wasn't logged since no exception should occur
-            // when process not found (empty enumeration handled gracefully)
-            VerifyLog(mockLogger, LogLevel.Information, "Failed to kill process", Times.Once(), true);
+            VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process", Times.Never(), true);
         }
 
         [Fact]
