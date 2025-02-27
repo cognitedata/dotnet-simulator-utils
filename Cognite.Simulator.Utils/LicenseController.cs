@@ -48,7 +48,6 @@ namespace Cognite.Simulator.Utils
             _logger = logger;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _ = StartLoggingTask(_cts.Token);
-            
         }
 
         /// <summary>
@@ -77,27 +76,16 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private string FormatDuration(TimeSpan duration)
-        {
-            if (duration.TotalDays >= 1)
-                return $"{duration.TotalDays:N1} days";
-            if (duration.TotalHours >= 1)
-                return $"{duration.TotalHours:N1} hours";
-            if (duration.TotalMinutes >= 1)
-                return $"{duration.TotalMinutes:N1} minutes";
-            return $"{duration.TotalSeconds:N1} seconds";
-        }
-
         private void LogLicenseStatus()
         {
             _logger.LogInformation("License is currently {Status}", _licenseHeld ? "held" : "not held");
             if (_licenseHeld)
             {
                 var duration = DateTime.Now - _lastUsageTime;
-                _logger.LogInformation("License has been held for {Duration}", FormatDuration(duration));
+                _logger.LogInformation("License has been held for {Duration}", CommonUtils.FormatDuration(duration));
                 var timeUntilRelease = _scheduledReleaseTime - DateTime.Now;
                 _logger.LogInformation("License will be released in {TimeUntilRelease} (at {ReleaseTime})", 
-                    FormatDuration(timeUntilRelease),
+                    CommonUtils.FormatDuration(timeUntilRelease),
                     _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
             }
         }
@@ -131,6 +119,9 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Releases the license after the timeout has elapsed. This is called by the timer.
+        /// </summary>
         private void ReleaseLicenseAfterTimeout(object state)
         {
             lock (_lock)
@@ -150,6 +141,10 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Releases the license immediately. This is used externally to reset the internal state when an external process finds out
+        /// that the license is no longer held.
+        /// </summary>
         public void ReleaseLicenseWithoutCallback() {
             lock (_lock)
             {
