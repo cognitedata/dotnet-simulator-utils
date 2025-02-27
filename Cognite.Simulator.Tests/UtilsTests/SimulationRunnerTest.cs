@@ -480,6 +480,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             return Task.CompletedTask;
         }
+
+        public void SetExternalCancellationToken(CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class SampleSimulationRunner :

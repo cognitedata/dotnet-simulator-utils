@@ -60,6 +60,11 @@ public class CalculatorSimulatorClient :
     {
         return Task.CompletedTask;
     }
+
+    public void SetExternalCancellationToken(CancellationToken token)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 internal class CalculatorRoutine : RoutineImplementationBase

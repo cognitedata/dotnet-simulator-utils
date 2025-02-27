@@ -114,6 +114,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 throw new NotImplementedException();
             }
+
+            public void SetExternalCancellationToken(CancellationToken token)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         internal class CalculatorRoutineAutomation : RoutineImplementationBase

@@ -311,5 +311,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns>A task representing the asynchronous operation</returns>
         Task TestConnection(CancellationToken token);
+
+        /// <summary>
+        /// Set the cancellation token to be used by the client
+        /// </summary>
+        void SetExternalCancellationToken(CancellationToken token);
     } 
 }

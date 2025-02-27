@@ -12,11 +12,18 @@ using System.Management;
 using System.Security.Principal;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
      public static class ProcessUtils {
+
+        /// <summary>
+        /// Get the owner of a process using WMI
+        /// </summary>
+        /// <param name="processId">The process ID</param>
+        /// <returns>The owner of the process</returns>
+        /// <exception cref="PlatformNotSupportedException">Thrown when the method is called on a non-Windows platform</exception>
+        /// <exception cref="Exception">Thrown when the process is not found or access is denied</exception>
         public static string GetProcessOwnerWmi(int processId)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
@@ -40,11 +47,11 @@ namespace Cognite.Simulator.Utils
                     }
                     catch
                     {
-                        return "Access Denied or Process Exited";
+                        throw new Exception("Access Denied or Process Exited");
                     }
                 }
             }
-            return "No Owner Found";
+            throw new Exception("Process not found");
         }
 
         public static void KillProcess(string processId, ILogger _logger) {

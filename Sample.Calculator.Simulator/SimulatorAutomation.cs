@@ -128,6 +128,11 @@ public class CalculatorSimulatorAutomationClient :
     {
         throw new NotImplementedException();
     }
+
+    public void SetExternalCancellationToken(CancellationToken token)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 internal class CalculatorRoutineAutomation : RoutineImplementationBase

@@ -8,8 +8,19 @@ using System.Security.Principal;
 using Xunit;
 using Cognite.Simulator.Utils;
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
+    public class WindowsOnlyFactAttribute : FactAttribute
+    {
+        public WindowsOnlyFactAttribute()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Skip = "Test only runs on Windows";
+            }
+        }
+    }
     public class ProcessUtilsTests
     {
         [Fact]
@@ -31,14 +42,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void KillProcess_KillsOwnedProcessesOnly()
         {
-            // Only run on Windows for simplicity
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return;
-            }
 
             // Arrange
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
@@ -84,14 +90,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process", Times.Never(), true);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void GetProcessOwnerWmi_ReturnsOwnerString()
         {
-            // Skip test on non-Windows platforms
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return;
-            }
 
             // Arrange - get current process ID
             int processId = Process.GetCurrentProcess().Id;
@@ -100,28 +101,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             string owner = ProcessUtils.GetProcessOwnerWmi(processId);
             
             // Assert
-            Assert.NotEqual("No Owner Found", owner);
-            Assert.NotEqual("Access Denied or Process Exited", owner);
             Assert.Contains("\\", owner); // Owner format should be "domain\user"
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void GetProcessOwnerWmi_ReturnsNoOwnerFound_WhenProcessDoesNotExist()
         {
-            // Skip test on non-Windows platforms
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return;
-            }
 
             // Arrange - unlikely that process ID 999999 exists
             int nonExistentProcessId = 999999;
-            
-            // Act
-            string owner = ProcessUtils.GetProcessOwnerWmi(nonExistentProcessId);
-            
-            // Assert
-            Assert.Equal("No Owner Found", owner);
+
+            var exception = Assert.Throws<Exception>(() => ProcessUtils.GetProcessOwnerWmi(nonExistentProcessId));
+            Assert.Equal("Process not found", exception.Message);
         }
     }
 }
