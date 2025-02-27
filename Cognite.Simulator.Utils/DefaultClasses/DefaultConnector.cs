@@ -135,6 +135,7 @@ namespace Cognite.Simulator.Utils
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred during task execution");
+                throw;
             }
         }   
     }
