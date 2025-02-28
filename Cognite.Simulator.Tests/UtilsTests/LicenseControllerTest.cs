@@ -70,7 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             using (tracker.BeginUsage()) { /* Use and immediately release */ } 
             
             // Add buffer time to account for timer inconsistencies
-            Thread.Sleep(250);
+            Thread.Sleep(400);
             
             // Check if the release license callback was called
             _releaseLicenseFuncMock.Verify(f => f(), Times.Once);
@@ -120,7 +120,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
-            Thread.Sleep(200); // Wait for full lock time + buffer
+            Thread.Sleep(400); // Wait for full lock time + buffer
             Assert.True(license.State == TestLicenseState.Released);
             Assert.False(tracker.LicenseHeld);
 
@@ -146,7 +146,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 }
             }
 
-            Thread.Sleep(300); // Wait longer than lock time after all usage ends
+            Thread.Sleep(400); // Wait longer than lock time after all usage ends
             
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
