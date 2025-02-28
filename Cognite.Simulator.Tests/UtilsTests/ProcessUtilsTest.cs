@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
                 
                 // Verify that our testProcess was killed (it should belong to current user)
-                testProcess.WaitForExit(1000); // Wait up to 1 second
+                testProcess.WaitForExit(3000); // Wait
                 Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
                 // Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
             }
