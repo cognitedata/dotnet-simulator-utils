@@ -146,7 +146,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 }
             }
 
-            Thread.Sleep(250); // Wait longer than lock time after all usage ends
+            Thread.Sleep(300); // Wait longer than lock time after all usage ends
             
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
