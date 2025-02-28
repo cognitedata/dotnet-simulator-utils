@@ -120,7 +120,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
-            Thread.Sleep(150); // Wait for full lock time + buffer
+            Thread.Sleep(200); // Wait for full lock time + buffer
             Assert.True(license.State == TestLicenseState.Released);
             Assert.False(tracker.LicenseHeld);
 

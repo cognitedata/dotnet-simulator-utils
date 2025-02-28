@@ -24,7 +24,9 @@ namespace Cognite.Simulator.Utils
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LicenseController"/> class.
+        /// Class to handle license acquisition and release.
+        /// When this is used in a using block, the license is released based on the time span provided after the block ends.
+        /// When the block ends a timer is started to release the license after the time span has elapsed.
         /// </summary>
         /// <param name="licenseLockTime">The time span for which the license is locked.</param>
         /// <param name="releaseLicenseFunc">The function to release the license.</param>
