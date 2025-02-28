@@ -27,10 +27,6 @@ jobs:
         AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@v5
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
 
   build-windows:
     runs-on: windows-latest
