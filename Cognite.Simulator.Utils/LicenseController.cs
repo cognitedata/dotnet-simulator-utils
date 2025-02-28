@@ -49,6 +49,12 @@ namespace Cognite.Simulator.Utils
             _releaseTimer = new Timer(ReleaseLicenseAfterTimeout, null, Timeout.Infinite, Timeout.Infinite);
             _logger = logger;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            
+            // Dispose the timer on cancellation
+            _cts.Token.Register(() => {
+                _releaseTimer?.Dispose();
+                _releaseTimer = null;
+            }); 
             _ = StartLoggingTask(_cts.Token);
         }
 
