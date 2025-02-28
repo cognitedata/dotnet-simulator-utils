@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 // Assert
                 // Verify log messages were called with correct parameters
-                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : {processName}", Times.Once(), true);
+                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : notepad", Times.Once(), true);
                 
                 // Verify that process.Kill was called if this process belongs to current user
                 string currentUser = ProcessUtils.GetCurrentUsername().ToLower();
