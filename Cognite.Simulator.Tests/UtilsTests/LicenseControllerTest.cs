@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var tracker = new LicenseController(
                 licenseLockTime ?? TimeSpan.FromMilliseconds(100),
                 () => { releaseMock.Object(); },
-                () => { acquireMock.Object(); },
+                (CancellationToken _token) => { acquireMock.Object(); },
                 _loggerMock.Object
             );
             
@@ -62,7 +62,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.Equal(TestLicenseState.Released, license.State);
 
             // Check if acquiring the license calls the acquire license function and changes the state
-            tracker.AcquireLicense();
+            tracker.AcquireLicense(CancellationToken.None);
             _acquireLicenseFuncMock.Verify(f => f(), Times.Once);
             Assert.Equal(TestLicenseState.Held, license.State);
             Assert.True(tracker.LicenseHeld);
@@ -89,7 +89,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
             
             // Act
-            tracker.AcquireLicense();
+            tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
             Assert.True(tracker.LicenseHeld);
             using (var usage = tracker.BeginUsage())
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
 
             // Act  
-            tracker.AcquireLicense();
+            tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
             using (tracker.BeginUsage()) { } // First usage
             Thread.Sleep(50);
@@ -134,7 +134,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var (tracker, license) = CreateTracker();
 
             // Act
-            tracker.AcquireLicense();
+            tracker.AcquireLicense(CancellationToken.None);
             using (var usage1 = tracker.BeginUsage())
             {
                 Thread.Sleep(50);
@@ -158,7 +158,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         {
             // Arrange
             var (tracker, license) = CreateTracker();
-            tracker.AcquireLicense();
+            tracker.AcquireLicense(CancellationToken.None);
             using (tracker.BeginUsage()) { }
             Assert.True(tracker.LicenseHeld);
 

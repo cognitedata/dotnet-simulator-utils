@@ -15,7 +15,7 @@ namespace Cognite.Simulator.Utils
         private readonly object _lock = new object();
         private Timer _releaseTimer;
         private readonly Action _releaseLicenseFunc;
-        private readonly Action _acquireLicenseFunc;
+        private readonly Action<CancellationToken> _acquireLicenseFunc;
         private bool _licenseHeld;
         private DateTime _lastUsageTime;
         private DateTime _scheduledReleaseTime;
@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Utils
         public LicenseController(
             TimeSpan licenseLockTime,
             Action releaseLicenseFunc,
-            Action acquireLicenseFunc,
+            Action<CancellationToken> acquireLicenseFunc,
             ILogger logger,
             CancellationToken cancellationToken = new CancellationToken()
         )
@@ -97,7 +97,7 @@ namespace Cognite.Simulator.Utils
         /// Also updates the release timer to ensure the license is released after a certain period.
         /// </summary>
         /// <exception cref="Exception">Thrown when an error occurs while acquiring the license.</exception>
-        public void AcquireLicense() {
+        public void AcquireLicense(CancellationToken cancellationToken) {
             lock (_lock)
             {
                 try
@@ -108,7 +108,7 @@ namespace Cognite.Simulator.Utils
                         return;
                     }
                     _logger.LogInformation("Attempting to acquire license");
-                    _acquireLicenseFunc();
+                    _acquireLicenseFunc(cancellationToken);
                     _licenseHeld = true;
                     PauseTimer();
                     _logger.LogInformation("License acquired successfully");
