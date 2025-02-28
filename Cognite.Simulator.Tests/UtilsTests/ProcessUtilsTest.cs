@@ -54,22 +54,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Process testProcess = null;
             try
             {
-                testProcess = Process.Start("notepad.exe");
+                testProcess = Process.Start(processName + ".exe");
                 
                 // Act
                 ProcessUtils.KillProcess(processName, mockLogger.Object);
                 
                 // Assert
                 // Verify log messages were called with correct parameters
-                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : notepad", Times.Once(), true);
+                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
                 
                 // Verify that process.Kill was called if this process belongs to current user
                 string currentUser = ProcessUtils.GetCurrentUsername().ToLower();
                 VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
                 
                 // Verify that our testProcess was killed (it should belong to current user)
-                testProcess.WaitForExit(3000); // Wait
-                Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
+                bool processStillRunning = Process.GetProcessesByName(processName).Any(p => p.Id == testProcess.Id);
+                Assert.False(processStillRunning, "Process should have been terminated");
                 // Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
             }
             finally
