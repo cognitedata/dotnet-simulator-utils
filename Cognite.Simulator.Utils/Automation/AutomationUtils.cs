@@ -40,7 +40,7 @@ namespace Cognite.Simulator.Utils.Automation
         /// be deactivated after use with <see cref="Shutdown"/>, else resources may not be deallocated
         /// </summary>
         /// <exception cref="SimulatorConnectionException">Thrown if the connection cannot be established</exception>
-        public void Initialize()
+        public virtual void Initialize()
         {
             if (Server != null)
             {
