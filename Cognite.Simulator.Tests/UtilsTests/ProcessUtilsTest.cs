@@ -8,6 +8,7 @@ using System.Security.Principal;
 using Xunit;
 using Cognite.Simulator.Utils;
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
+using System.Linq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {

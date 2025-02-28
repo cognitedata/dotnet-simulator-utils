@@ -86,7 +86,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         {
             // Arrange
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker();
+            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
             
             // Act
             tracker.AcquireLicense();
