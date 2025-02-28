@@ -163,7 +163,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.True(tracker.LicenseHeld);
 
             // Act
-            tracker.ReleaseLicenseWithoutCallback();
+            tracker.ClearLicenseState();
             
             // Assert
             Assert.False(tracker.LicenseHeld);

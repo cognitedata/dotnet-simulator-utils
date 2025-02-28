@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Utils
         /// Releases the license immediately. This is used externally to reset the internal state when an external process finds out
         /// that the license is no longer held.
         /// </summary>
-        public void ReleaseLicenseWithoutCallback() {
+        public void ClearLicenseState() {
             lock (_lock)
             {
                 _licenseHeld = false;
