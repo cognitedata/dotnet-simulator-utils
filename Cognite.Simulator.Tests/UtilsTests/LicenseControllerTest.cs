@@ -13,7 +13,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         Held
     }
 
-    public class LicenseTrackerTests
+    public class LicenseControllerTests
     {
         private readonly Mock<ILogger> _loggerMock = new Mock<ILogger>();
 
@@ -33,8 +33,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             
             var tracker = new LicenseController(
                 licenseLockTime ?? TimeSpan.FromMilliseconds(100),
-                () => { releaseMock.Object(); return null; },
-                () => { acquireMock.Object(); return null; },
+                () => { releaseMock.Object(); },
+                () => { acquireMock.Object(); },
                 _loggerMock.Object
             );
             

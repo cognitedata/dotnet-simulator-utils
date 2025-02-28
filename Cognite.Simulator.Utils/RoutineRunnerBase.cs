@@ -200,7 +200,7 @@ namespace Cognite.Simulator.Utils
                 }
             }
             var results = await SimulatorClient
-                .RunSimulation(modelState, routineRevision, inputData)
+                .RunSimulation(modelState, routineRevision, inputData, token)
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Saving simulation results as time series");
@@ -297,7 +297,8 @@ namespace Cognite.Simulator.Utils
         Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             T modelState, 
             V simulationConfiguration, 
-            Dictionary<string, SimulatorValueItem> inputData);
+            Dictionary<string, SimulatorValueItem> inputData,
+            CancellationToken token);
 
         Task ExtractModelInformation(T state, CancellationToken _token);
 
@@ -311,10 +312,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns>A task representing the asynchronous operation</returns>
         Task TestConnection(CancellationToken token);
-
-        /// <summary>
-        /// Set the cancellation token to be used by the client
-        /// </summary>
-        void SetExternalCancellationToken(CancellationToken token);
     } 
 }

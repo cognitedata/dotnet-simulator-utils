@@ -175,7 +175,8 @@ connector:
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
                 SampleModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData
+                Dictionary<string, SimulatorValueItem> inputData,
+                CancellationToken _token
             )
             {
                 _logger.LogInformation("CalculatorClient Running a simulation");
@@ -198,11 +199,6 @@ connector:
             }
 
             protected override void PreShutdown()
-            {
-                throw new NotImplementedException();
-            }
-
-            public void SetExternalCancellationToken(CancellationToken token)
             {
                 throw new NotImplementedException();
             }

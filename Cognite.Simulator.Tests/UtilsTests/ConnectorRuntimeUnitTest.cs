@@ -99,7 +99,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
                 DefaultModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData
+                Dictionary<string, SimulatorValueItem> inputData,
+                CancellationToken _token
             )
             {
                 throw new NotImplementedException();
@@ -111,11 +112,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
             protected override void PreShutdown()
-            {
-                throw new NotImplementedException();
-            }
-
-            public void SetExternalCancellationToken(CancellationToken token)
             {
                 throw new NotImplementedException();
             }

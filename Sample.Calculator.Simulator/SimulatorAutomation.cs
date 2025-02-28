@@ -99,7 +99,8 @@ public class CalculatorSimulatorAutomationClient :
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
         CalculatorModelFilestate modelState,
         SimulatorRoutineRevision routineRevision,
-        Dictionary<string, SimulatorValueItem> inputData
+        Dictionary<string, SimulatorValueItem> inputData,
+        CancellationToken _token
     )
     {
         if (modelState == null) {
@@ -125,11 +126,6 @@ public class CalculatorSimulatorAutomationClient :
     }
 
     protected override void PreShutdown()
-    {
-        throw new NotImplementedException();
-    }
-
-    public void SetExternalCancellationToken(CancellationToken token)
     {
         throw new NotImplementedException();
     }

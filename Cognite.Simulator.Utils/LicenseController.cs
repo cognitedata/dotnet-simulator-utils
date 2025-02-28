@@ -14,8 +14,8 @@ namespace Cognite.Simulator.Utils
         private readonly TimeSpan _licenseLockTime;
         private readonly object _lock = new object();
         private Timer _releaseTimer;
-        private readonly Func<object> _releaseLicenseFunc;
-        private readonly Func<object> _acquireLicenseFunc;
+        private readonly Action _releaseLicenseFunc;
+        private readonly Action _acquireLicenseFunc;
         private bool _licenseHeld;
         private DateTime _lastUsageTime;
         private DateTime _scheduledReleaseTime;
@@ -34,8 +34,8 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="releaseLicenseFunc"/> is null.</exception>
         public LicenseController(
             TimeSpan licenseLockTime,
-            Func<object> releaseLicenseFunc,
-            Func<object> acquireLicenseFunc,
+            Action releaseLicenseFunc,
+            Action acquireLicenseFunc,
             ILogger logger,
             CancellationToken cancellationToken = new CancellationToken()
         )
@@ -108,7 +108,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogInformation("Attempting to acquire license");
                     _acquireLicenseFunc();
                     _licenseHeld = true;
-                    UpdateReleaseTimer();
+                    PauseTimer();
                     _logger.LogInformation("License acquired successfully");
                 }
                 catch (Exception ex)
@@ -156,12 +156,8 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void UpdateReleaseTimer() {
-            _lastUsageTime = DateTime.Now;
-            // Extend release time
-            _scheduledReleaseTime = DateTime.Now.Add(_licenseLockTime);
-            _logger.LogInformation("License release scheduled for {ReleaseTime}", 
-            _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
+        private void PauseTimer() {
+            _logger.LogInformation("License usage started pausing release timer");
             _releaseTimer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
@@ -174,7 +170,7 @@ namespace Cognite.Simulator.Utils
             lock (_lock)
             {
                 _logger.LogInformation("Starting license usage");
-                UpdateReleaseTimer();
+                PauseTimer();
                 return new LicenseUsageScope(this);
             }
         }
@@ -187,13 +183,13 @@ namespace Cognite.Simulator.Utils
                 _lastUsageTime = DateTime.Now;
                 _scheduledReleaseTime = _lastUsageTime.Add(_licenseLockTime);
                 _logger.LogInformation("License release scheduled for {ReleaseTime}", 
-                    _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
+                _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
                 _releaseTimer.Change(_licenseLockTime, Timeout.InfiniteTimeSpan);
             }
         }
 
         /// <summary>
-        /// Releases the license immediately.
+        /// Disposes the license controller and releases the timer.
         /// </summary>
         public void Dispose()
         {
