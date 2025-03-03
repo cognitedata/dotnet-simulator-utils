@@ -22,7 +22,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         private (LicenseController controller, StateHolder<TestLicenseState> stateHolder) CreateTracker(
             Mock<Func<object>>? releaseMock = null,
             Mock<Func<object>>? acquireMock = null,
-            TimeSpan? licenseLockTime = null)
+            TimeSpan? licenseLockTime = null,
+            ITimeProvider timeProvider = null)
         {
             var stateHolder = new StateHolder<TestLicenseState> { State = TestLicenseState.Released };
             
@@ -37,7 +38,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 licenseLockTime ?? TimeSpan.FromMilliseconds(100),
                 () => { releaseMock.Object(); },
                 (CancellationToken _token) => { acquireMock.Object(); },
-                _loggerMock.Object
+                _loggerMock.Object,
+                timeProvider
             );
             
             return (tracker, stateHolder);
@@ -142,6 +144,47 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 CancellationToken.None
             );
 
+            tracker.Dispose();
+        }
+
+        [Fact]
+        public void LicenseTracker_ShouldResetTimer_OnNewUsage_UsingFakeTimer()
+        {
+            // Arrange
+            var licenseLockTime = TimeSpan.FromMilliseconds(100);
+            var fakeTimeProvider = new FakeTimeProvider();
+            var startTime = new DateTime(2025, 3, 3, 12, 0, 0);
+            fakeTimeProvider.SetCurrentTime(startTime);
+            
+            var (tracker, license) = CreateTracker(
+                licenseLockTime: licenseLockTime, 
+                timeProvider: fakeTimeProvider);
+            
+            // Act
+            tracker.AcquireLicense(CancellationToken.None);
+            Assert.Equal(TestLicenseState.Held, license.State);
+            
+            using (tracker.BeginUsage()) { } 
+            
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
+            
+            using (tracker.BeginUsage()) { } // Second usage should not reset the timer yet
+            
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(49));
+            
+            tracker.SimulateTimerCallback_ForTesting();
+            Assert.True(tracker.LicenseHeld); 
+
+            using (tracker.BeginUsage()) { } 
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
+
+            tracker.SimulateTimerCallback_ForTesting();
+            Assert.False(tracker.LicenseHeld); 
+            
+            // Verify license state
+            Assert.Equal(TestLicenseState.Released, license.State);
+            Assert.False(tracker.LicenseHeld);
+            
             tracker.Dispose();
         }
 
