@@ -67,6 +67,10 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                     logger.LogInformation($"New remote config detected, restarting... {newConfigException}");
                     continue;
                 }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Unhandled exception: {message}", e.Message);
+                }
             }
         }
     }
@@ -174,6 +178,8 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>>>();
 
         logger.LogInformation("Starting the connector...");
+
+        logger.LogInformation($"Cognite SDK Retry Config : Max delay : {config.Cognite.CdfRetries.MaxDelay} - Max Retries : {config.Cognite.CdfRetries.MaxRetries}");
 
         var destination = provider.GetRequiredService<CogniteDestination>();
         var cdfClient = provider.GetRequiredService<Client>();

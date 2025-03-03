@@ -192,6 +192,11 @@ connector:
 
             }
 
+            public Task TestConnection(CancellationToken token)
+            {
+                return Task.CompletedTask;
+            }
+
             protected override void PreShutdown()
             {
                 throw new NotImplementedException();

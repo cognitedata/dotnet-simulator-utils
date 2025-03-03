@@ -304,5 +304,12 @@ namespace Cognite.Simulator.Utils
         string GetSimulatorVersion();
 
         string GetConnectorVersion();
+
+        /// <summary>
+        /// Tests the connection to the simulator.
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>A task representing the asynchronous operation</returns>
+        Task TestConnection(CancellationToken token);
     } 
 }
