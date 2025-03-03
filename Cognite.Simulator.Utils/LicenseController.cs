@@ -89,18 +89,19 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void LogLicenseStatus()
-        {
-            _logger.LogInformation("License is currently {Status}", _licenseHeld ? "held" : "not held");
-            if (_licenseHeld)
-            {
-                var duration = _timeProvider.GetUtcNow() - _lastUsageTime;
-                _logger.LogInformation("License has been held for {Duration}", CommonUtils.FormatDuration(duration));
-                var timeUntilRelease = _scheduledReleaseTime - _timeProvider.GetUtcNow();
-                _logger.LogInformation("License will be released in {TimeUntilRelease} (at {ReleaseTime})", 
-                    CommonUtils.FormatDuration(timeUntilRelease),
-                    _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
-            }
+        private void LogLicenseStatus() {
+          _logger.LogInformation("License is currently {Status}", _licenseHeld ? "held" : "not held");
+          if (_licenseHeld) {
+            var duration = _timeProvider.GetUtcNow() - _lastUsageTime;
+            _logger.LogInformation("License has been held for {Duration}", CommonUtils.FormatDuration(duration));
+            var timeUntilRelease = _scheduledReleaseTime - _timeProvider.GetUtcNow();
+            var timeUntilReleaseFormatted = CommonUtils.FormatDuration(timeUntilRelease);
+            var scheduledReleaseTimeFormatted = _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss");
+            _logger.LogInformation("License will be released in {TimeUntilRelease} (at {ReleaseTime})",
+              timeUntilReleaseFormatted,
+              scheduledReleaseTimeFormatted
+              );
+          }
         }
         
         /// <summary>
