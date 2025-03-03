@@ -196,6 +196,7 @@ namespace Cognite.Simulator.Utils
                     HashSet<string> idsToKeep = new HashSet<string>(_state.Select(s => s.Value.Id));
                     ldbStore.RemoveUnusedState(_config.FilesTable, idsToKeep);
                 }
+                CleanExpiredModelRevisionFiles();
             }
             _logger.LogInformation("Local state store {Table} initiated. Tracking {Num} files", _config.FilesTable, _state.Count);
         }
@@ -241,10 +242,17 @@ namespace Cognite.Simulator.Utils
             
             var model = modelVersions.FirstOrDefault();
 
-            if (model != null)
-            {
+            if(model != null){
+                if(model.IsDeleted){
+                    var downloaded = await DownloadFileAsync(model, true).ConfigureAwait(false);
+                    if(downloaded){
+                        model.IsDeleted = false;
+                    }
+                }
+
                 model.LastAccessTime = DateTime.UtcNow;
                 return model;
+                    
             }
 
             return await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
@@ -265,7 +273,7 @@ namespace Cognite.Simulator.Utils
             {
                 _logger.LogInformation("Deleting expired model file: {FilePath}", revision.FilePath);
                 StateUtils.DeleteFileAndDirectory(revision.FilePath, revision.IsInDirectory);
-                _state.TryRemove(revision.Id, out _);
+                revision.IsDeleted = true;
             }
         }
 
