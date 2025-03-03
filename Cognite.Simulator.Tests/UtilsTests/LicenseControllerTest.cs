@@ -6,6 +6,7 @@ using Moq;
 using Cognite.Simulator.Utils;
 using Cognite.Extractor.Common;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Cognite.Simulator.Tests.UtilsTests{
 
@@ -23,7 +24,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Mock<Func<object>>? releaseMock = null,
             Mock<Func<object>>? acquireMock = null,
             TimeSpan? licenseLockTime = null,
-            ITimeProvider timeProvider = null)
+            TimeProvider timeProvider = null)
         {
             var stateHolder = new StateHolder<TestLicenseState> { State = TestLicenseState.Released };
             
@@ -57,10 +58,11 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         {
 
             // Arrange
+            var fakeTimeProvider = new FakeTimeProvider();
             Mock<Func<object>> _releaseLicenseFuncMock = new Mock<Func<object>>();
             Mock<Func<object>> _acquireLicenseFuncMock = new Mock<Func<object>>();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
+            var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime, timeProvider: fakeTimeProvider);
 
             Assert.Equal(TestLicenseState.Released, license.State);
 
@@ -72,7 +74,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             using (tracker.BeginUsage()) { /* Use and immediately release */ } 
             
-            Thread.Sleep(400);
+            // Thread.Sleep(400);
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(400));
             
             _releaseLicenseFuncMock.Verify(f => f(), Times.Once);
 
@@ -85,8 +88,9 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public void LicenseTracker_ShouldNotRelease_WhileInUse()
         {
             // Arrange
+            var fakeTimeProvider = new FakeTimeProvider();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
+            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime, timeProvider: fakeTimeProvider);
             
             // Act
             tracker.AcquireLicense(CancellationToken.None);
@@ -94,7 +98,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.True(tracker.LicenseHeld);
             using (var usage = tracker.BeginUsage())
             {
-                Thread.Sleep(200); // Wait longer than lock time
+                fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(200));// Wait longer than lock time
                 Assert.True(tracker.LicenseHeld); // Should not release while in use
             }
 
@@ -105,109 +109,55 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public async Task LicenseTracker_ShouldResetTimer_OnNewUsage()
         {
             // Arrange
+            var fakeTimeProvider = new FakeTimeProvider();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
+            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime, timeProvider: fakeTimeProvider);
 
             // Act  
             tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
+            
             using (tracker.BeginUsage()) { } // First usage
-            Thread.Sleep(50);
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
             
             using (tracker.BeginUsage()) { } // Second usage should reset timer
-            Thread.Sleep(50);
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
             
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
-            var retryConfig = new RetryUtilConfig
-            {
-                MaxDelay = "200ms",
-                MaxTries = 10,
-            };
-            var nullLogger = new Mock<ILogger>().Object;
-            await RetryUtil.RetryAsync(
-                "VerifyLicenseReleased",
-                async () =>
-                {
-                    await Task.Run(() =>
-                    {
-                        if (license.State != TestLicenseState.Released || tracker.LicenseHeld)
-                        {
-                            throw new InvalidOperationException($"License is not in expected state. Current state: {license.State}, LicenseHeld: {tracker.LicenseHeld}");
-                        }
-                    });
-                },
-                retryConfig,
-                ex => ex is InvalidOperationException, 
-                nullLogger,
-                CancellationToken.None
-            );
-
-            tracker.Dispose();
-        }
-
-        [Fact]
-        public void LicenseTracker_ShouldResetTimer_OnNewUsage_UsingFakeTimer()
-        {
-            // Arrange
-            var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var fakeTimeProvider = new FakeTimeProvider();
-            var startTime = new DateTime(2025, 3, 3, 12, 0, 0);
-            fakeTimeProvider.SetCurrentTime(startTime);
-            
-            var (tracker, license) = CreateTracker(
-                licenseLockTime: licenseLockTime, 
-                timeProvider: fakeTimeProvider);
-            
-            // Act
-            tracker.AcquireLicense(CancellationToken.None);
-            Assert.Equal(TestLicenseState.Held, license.State);
-            
-            using (tracker.BeginUsage()) { } 
-            
-            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
-            
-            using (tracker.BeginUsage()) { } // Second usage should not reset the timer yet
-            
-            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(49));
-            
-            tracker.SimulateTimerCallback_ForTesting();
-            Assert.True(tracker.LicenseHeld); 
-
-            using (tracker.BeginUsage()) { } 
+            // Advance time past the license lock time to trigger release
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
 
-            tracker.SimulateTimerCallback_ForTesting();
-            Assert.False(tracker.LicenseHeld); 
-            
-            // Verify license state
-            Assert.Equal(TestLicenseState.Released, license.State);
             Assert.False(tracker.LicenseHeld);
-            
+            Assert.Equal(TestLicenseState.Released, license.State);
+
             tracker.Dispose();
         }
+            // Arrange
+
 
         [Fact]
         public void LicenseTracker_ShouldPreventRelease_DuringContinuousUsage()
         {
             // Arrange
-            var (tracker, license) = CreateTracker();
+            var fakeTimeProvider = new FakeTimeProvider();
+            var (tracker, license) = CreateTracker(timeProvider: fakeTimeProvider);
 
             // Act
             tracker.AcquireLicense(CancellationToken.None);
             using (var usage1 = tracker.BeginUsage())
             {
-                Thread.Sleep(50);
+                fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
                 using (var usage2 = tracker.BeginUsage())
                 {
-                    Thread.Sleep(100);
+                    fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
                     // Should not release during overlapping usage
                     Assert.True(tracker.LicenseHeld);
                 }
             }
 
-            Thread.Sleep(400); // Wait longer than lock time after all usage ends
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(200)); // Wait longer than lock time after all usage ends
             
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
