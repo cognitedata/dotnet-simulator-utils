@@ -4,6 +4,8 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Cognite.Simulator.Utils;
+using Cognite.Extractor.Common;
+using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Tests.UtilsTests{
 
@@ -58,7 +60,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
             var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
 
-            // Check if the default state of the license is released
             Assert.Equal(TestLicenseState.Released, license.State);
 
             // Check if acquiring the license calls the acquire license function and changes the state
@@ -69,13 +70,10 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             using (tracker.BeginUsage()) { /* Use and immediately release */ } 
             
-            // Add buffer time to account for timer inconsistencies
             Thread.Sleep(400);
             
-            // Check if the release license callback was called
             _releaseLicenseFuncMock.Verify(f => f(), Times.Once);
 
-            // Check if the license is released
             Assert.Equal(TestLicenseState.Released, license.State);
             Assert.False(tracker.LicenseHeld);
             tracker.Dispose();
@@ -102,7 +100,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         }
 
         [Fact]
-        public void LicenseTracker_ShouldResetTimer_OnNewUsage()
+        public async Task LicenseTracker_ShouldResetTimer_OnNewUsage()
         {
             // Arrange
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
@@ -120,9 +118,29 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
-            Thread.Sleep(400); // Wait for full lock time + buffer
-            Assert.True(license.State == TestLicenseState.Released);
-            Assert.False(tracker.LicenseHeld);
+            var retryConfig = new RetryUtilConfig
+            {
+                MaxDelay = "200ms",
+                MaxTries = 10,
+            };
+            var nullLogger = new Mock<ILogger>().Object;
+            await RetryUtil.RetryAsync(
+                "VerifyLicenseReleased",
+                async () =>
+                {
+                    await Task.Run(() =>
+                    {
+                        if (license.State != TestLicenseState.Released || tracker.LicenseHeld)
+                        {
+                            throw new InvalidOperationException($"License is not in expected state. Current state: {license.State}, LicenseHeld: {tracker.LicenseHeld}");
+                        }
+                    });
+                },
+                retryConfig,
+                ex => ex is InvalidOperationException, 
+                nullLogger,
+                CancellationToken.None
+            );
 
             tracker.Dispose();
         }
@@ -169,7 +187,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.False(tracker.LicenseHeld);
             // Should not change external license state (since this is a manual release)
             Assert.True(license.State == TestLicenseState.Held);
-            // check timer is stopped
             tracker.Dispose();
         }
     }
