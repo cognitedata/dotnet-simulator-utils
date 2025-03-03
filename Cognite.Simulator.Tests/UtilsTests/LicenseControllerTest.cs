@@ -20,6 +20,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
     {
         private readonly Mock<ILogger> _loggerMock = new Mock<ILogger>();
 
+        private FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
+
         private (LicenseController controller, StateHolder<TestLicenseState> stateHolder) CreateTracker(
             Mock<Func<object>>? releaseMock = null,
             Mock<Func<object>>? acquireMock = null,
@@ -40,7 +42,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 () => { releaseMock.Object(); },
                 (CancellationToken _token) => { acquireMock.Object(); },
                 _loggerMock.Object,
-                timeProvider
+                fakeTimeProvider
             );
             
             return (tracker, stateHolder);
@@ -57,11 +59,10 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public void LicenseTracker_ShouldReleaseLicense_WhenNotInUse()
         {
             // Arrange
-            var fakeTimeProvider = new FakeTimeProvider();
             Mock<Func<object>> _releaseLicenseFuncMock = new Mock<Func<object>>();
             Mock<Func<object>> _acquireLicenseFuncMock = new Mock<Func<object>>();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime, timeProvider: fakeTimeProvider);
+            var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
 
             Assert.Equal(TestLicenseState.Released, license.State);
 
@@ -86,9 +87,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public void LicenseTracker_ShouldNotRelease_WhileInUse()
         {
             // Arrange
-            var fakeTimeProvider = new FakeTimeProvider();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime, timeProvider: fakeTimeProvider);
+            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
             
             // Act
             tracker.AcquireLicense(CancellationToken.None);
@@ -107,9 +107,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public async Task LicenseTracker_ShouldResetTimer_OnNewUsage()
         {
             // Arrange
-            var fakeTimeProvider = new FakeTimeProvider();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime, timeProvider: fakeTimeProvider);
+            var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
 
             // Act  
             tracker.AcquireLicense(CancellationToken.None);
@@ -136,8 +135,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         public void LicenseTracker_ShouldPreventRelease_DuringContinuousUsage()
         {
             // Arrange
-            var fakeTimeProvider = new FakeTimeProvider();
-            var (tracker, license) = CreateTracker(timeProvider: fakeTimeProvider);
+            var (tracker, license) = CreateTracker();
 
             // Act
             tracker.AcquireLicense(CancellationToken.None);
