@@ -165,12 +165,12 @@ namespace Cognite.Simulator.Utils
                 _lastUsageTime = _timeProvider.GetUtcNow();
                 _scheduledReleaseTime = _timeProvider.GetUtcNow();
                 _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-                _logger.LogInformation("License released without callback");
+                _logger.LogInformation("License released forcefully");
             }
         }
 
         private void PauseTimer() {
-            _logger.LogInformation("License usage started pausing release timer");
+            _logger.LogInformation("License usage started: pausing release timer");
             _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         }
 

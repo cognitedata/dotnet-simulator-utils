@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
-* Fix bug where invalid config file lead to connector running in a loop displaying connection error
+* Fix bug where invalid config file led to connector running in a loop displaying connection error
 * Introduce support for license tracking and holding.
 * Introduce support for Process termination.
 

@@ -80,7 +80,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             Assert.Equal(TestLicenseState.Released, license.State);
             Assert.False(tracker.LicenseHeld);
-            tracker.Dispose();
         }
 
         [Fact]
@@ -100,7 +99,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 Assert.True(tracker.LicenseHeld); // Should not release while in use
             }
 
-            tracker.Dispose();
         }
 
         [Fact]
@@ -128,7 +126,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.False(tracker.LicenseHeld);
             Assert.Equal(TestLicenseState.Released, license.State);
 
-            tracker.Dispose();
         }
 
         [Fact]
@@ -153,7 +150,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
-            tracker.Dispose();
         }
 
         [Fact]
@@ -172,7 +168,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.False(tracker.LicenseHeld);
             // Should not change external license state (since this is a manual release)
             Assert.True(license.State == TestLicenseState.Held);
-            tracker.Dispose();
         }
     }
 }
