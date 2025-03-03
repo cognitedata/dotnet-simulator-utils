@@ -55,9 +55,6 @@ jobs:
           name: coverage-windows-latest
           path: ./coverage-windows
       
-      - name: Install ReportGenerator
-        run: dotnet tool install -g dotnet-reportgenerator-globaltool
-      
       - name: Upload combined coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

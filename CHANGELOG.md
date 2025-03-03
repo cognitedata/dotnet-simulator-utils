@@ -6,9 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
-* Fix bug where invalid config file led to connector running in a loop displaying connection error
-* Introduce support for license tracking and holding.
-* Introduce support for Process termination.
+* **Breaking** `TerminateProcess` flag under the `AutomationConfig` section was removed. Since termination logic is unique to each connector this can be implemented by each connector.
+* Fixed bug where invalid config file led to connector running in a loop displaying connection error.
+* Introduced support for license tracking and holding.
+* Introduced support for Process termination.
 
 ## Release v1.0.0-beta-013 (2025-02-17)
 
