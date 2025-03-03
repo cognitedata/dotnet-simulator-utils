@@ -56,7 +56,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
         [Fact]
         public void LicenseTracker_ShouldReleaseLicense_WhenNotInUse()
         {
-
             // Arrange
             var fakeTimeProvider = new FakeTimeProvider();
             Mock<Func<object>> _releaseLicenseFuncMock = new Mock<Func<object>>();
@@ -74,8 +73,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             using (tracker.BeginUsage()) { /* Use and immediately release */ } 
             
-            // Thread.Sleep(400);
-            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(400));
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
             
             _releaseLicenseFuncMock.Verify(f => f(), Times.Once);
 
@@ -98,7 +96,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.True(tracker.LicenseHeld);
             using (var usage = tracker.BeginUsage())
             {
-                fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(200));// Wait longer than lock time
+                fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(200));
                 Assert.True(tracker.LicenseHeld); // Should not release while in use
             }
 
@@ -117,16 +115,15 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
             
-            using (tracker.BeginUsage()) { } // First usage
+            using (tracker.BeginUsage()) { } 
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
             
-            using (tracker.BeginUsage()) { } // Second usage should reset timer
+            using (tracker.BeginUsage()) { } // This usage should reset the timeout timer
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
             
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
-            // Advance time past the license lock time to trigger release
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
 
             Assert.False(tracker.LicenseHeld);
@@ -134,8 +131,6 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             tracker.Dispose();
         }
-            // Arrange
-
 
         [Fact]
         public void LicenseTracker_ShouldPreventRelease_DuringContinuousUsage()
@@ -152,12 +147,11 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 using (var usage2 = tracker.BeginUsage())
                 {
                     fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
-                    // Should not release during overlapping usage
                     Assert.True(tracker.LicenseHeld);
                 }
             }
 
-            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(200)); // Wait longer than lock time after all usage ends
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100)); // Wait for the lock time to pass
             
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
