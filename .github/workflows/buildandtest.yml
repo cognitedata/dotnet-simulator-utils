@@ -1,55 +1,90 @@
 name: Build and Test
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push, pull_request]
 
 jobs:
   build-ubuntu:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/  --logger:"console"
-      env:
-        COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
-        COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
-        AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/ --logger:"console"
+        env:
+          COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
+          COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
+          AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-ubuntu
+          path: ./Cognite.Simulator.Tests/TestResults/coverage.opencover.xml
+          retention-days: 1
 
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/  --logger:"console"
-      env:
-        COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
-        COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
-        AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/ --logger:"console"
+        env:
+          COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
+          COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
+          AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-windows
+          path: ./Cognite.Simulator.Tests/TestResults/coverage.opencover.xml
+          retention-days: 1
+
+  upload-coverage:
+    needs: [build-ubuntu, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Ubuntu coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-ubuntu
+          path: ./coverage-ubuntu
+      
+      - name: Download Windows coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-windows
+          path: ./coverage-windows
+      
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+      
+      - name: Merge coverage reports
+        run: |
+          reportgenerator "-reports:./coverage-ubuntu/coverage.opencover.xml;./coverage-windows/coverage.opencover.xml" "-targetdir:./merged-coverage" "-reporttypes:Cobertura"
+      
+      - name: Upload combined coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./merged-coverage/Cobertura.xml
+          fail_ci_if_error: true
