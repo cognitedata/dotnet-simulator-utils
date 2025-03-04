@@ -91,19 +91,26 @@ namespace Cognite.Simulator.Utils.Automation
 
         private dynamic ActivateAutomationServer()
         {
-            var serverType = Type.GetTypeFromProgID(_config.ProgramId);
-            if (serverType == null)
-            {
-                _logger.LogError("Could not find automation server using the id: {ProgId}", _config.ProgramId);
-                throw new SimulatorConnectionException("Cannot connect to simulator");
-            }            
-            dynamic server = Activator.CreateInstance(serverType);
-            if (server == null)
-            {
-                _logger.LogError("Could not activate automation server instance");
-                throw new SimulatorConnectionException("Cannot connect to simulator");
+            try {
+                var serverType = Type.GetTypeFromProgID(_config.ProgramId);
+                if (serverType == null)
+                {
+                    _logger.LogError("Could not find automation server using the id: {ProgId}", _config.ProgramId);
+                    throw new SimulatorConnectionException("Cannot connect to get automation server type");
+                }            
+                dynamic server = Activator.CreateInstance(serverType);
+                if (server == null)
+                {
+                    _logger.LogError("Could not activate automation server instance");
+                    throw new SimulatorConnectionException("Unable to create automation server instance");
+                }
+                return server;
             }
-            return server;
+            catch(Exception e) {
+                // wrap every exception in a SimulatorConnectionException
+                throw new SimulatorConnectionException("Cannot connect to automation server", e);
+            }
+
         }
     }
     

@@ -75,7 +75,15 @@ namespace Cognite.Simulator.Utils
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     LogLicenseStatus();
-                    await Task.Delay(LoggingIntervalMs, cancellationToken).ConfigureAwait(false);
+                    
+                    var tcs = new TaskCompletionSource<bool>();
+                    
+                    using var delayTimer = _timeProvider.CreateTimer(_ => tcs.TrySetResult(true), null,
+                        TimeSpan.FromMilliseconds(LoggingIntervalMs), Timeout.InfiniteTimeSpan);
+                    
+                    using var registration = cancellationToken.Register(() => tcs.TrySetCanceled());
+                    
+                    await tcs.Task.ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -164,7 +172,7 @@ namespace Cognite.Simulator.Utils
             {
                 _licenseHeld = false;
                 _lastUsageTime = _timeProvider.GetUtcNow();
-                _scheduledReleaseTime = _timeProvider.GetUtcNow();
+                _scheduledReleaseTime = DateTimeOffset.MaxValue;
                 _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
                 _logger.LogInformation("License released forcefully");
             }

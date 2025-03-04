@@ -8,6 +8,8 @@ using Cognite.Extractor.Common;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 
+using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
+
 namespace Cognite.Simulator.Tests.UtilsTests{
 
     public enum TestLicenseState
@@ -18,7 +20,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
     public class LicenseControllerTests
     {
-        private readonly Mock<ILogger> _loggerMock = new Mock<ILogger>();
+        private readonly Mock<ILogger<LicenseControllerTests>> _loggerMock = new Mock<ILogger<LicenseControllerTests>>();
 
         private FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
@@ -168,6 +170,44 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.False(tracker.LicenseHeld);
             // Should not change external license state (since this is a manual release)
             Assert.True(license.State == TestLicenseState.Held);
+        }
+
+        [Fact]
+        public void ClearLicenseState_ShouldLogProperlyAfterReset()
+        {
+            // Arrange
+            Mock<Func<object>> _releaseLicenseFuncMock = new Mock<Func<object>>();
+            Mock<Func<object>> _acquireLicenseFuncMock = new Mock<Func<object>>();
+            var licenseLockTime = TimeSpan.FromMinutes(5);
+            var (tracker, license) = CreateTracker(_releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
+
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1)); 
+            VerifyLog(_loggerMock, LogLevel.Information, "License is currently not held", Times.AtLeastOnce(), true);
+
+            // Current time at this point is 2000-01-01 00:00:01
+            tracker.AcquireLicense(CancellationToken.None);
+            using (tracker.BeginUsage()) {  }
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
+            VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
+            VerifyLog(_loggerMock, LogLevel.Information, "License release scheduled for ", Times.AtLeastOnce(), true);
+            VerifyLog(_loggerMock, LogLevel.Information, "License will be released in 3.0 minutes (at 2000-01-01 00:06:00)", Times.AtLeastOnce(), true);
+
+            _loggerMock.Invocations.Clear();
+            
+            // Act
+            tracker.ClearLicenseState();
+            
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
+
+            VerifyLog(_loggerMock, LogLevel.Information, "License released forcefully", Times.AtLeastOnce(), true);
+            VerifyLog(_loggerMock, LogLevel.Information, "License is currently not held", Times.AtLeastOnce(), true);
+
+            tracker.AcquireLicense(CancellationToken.None);
+            using (tracker.BeginUsage()) {  }
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1)); 
+            VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
+            VerifyLog(_loggerMock, LogLevel.Information, "License has been held for 1.0 minutes", Times.AtLeastOnce(), true);
+            VerifyLog(_loggerMock, LogLevel.Information, "License will be released in 4.0 minutes (at 2000-01-01 00:10:00)", Times.AtLeastOnce(), true);
         }
     }
 }
