@@ -130,6 +130,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogInformation("Attempting to acquire license");
                     _acquireLicenseFunc(cancellationToken);
                     _licenseHeld = true;
+                    _scheduledReleaseTime = _timeProvider.GetUtcNow().Add(_licenseLockTime);
                     PauseTimer();
                     _logger.LogInformation("License acquired successfully");
                 }
