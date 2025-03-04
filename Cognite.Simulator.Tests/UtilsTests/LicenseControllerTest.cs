@@ -188,6 +188,8 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             tracker.AcquireLicense(CancellationToken.None);
             using (tracker.BeginUsage()) {  }
             fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
+            // forcing logging for the Github action
+            tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License release scheduled for ", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License will be released in 3.0 minutes (at 2000-01-01 00:06:00)", Times.AtLeastOnce(), true);

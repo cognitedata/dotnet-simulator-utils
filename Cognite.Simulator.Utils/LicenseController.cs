@@ -100,8 +100,11 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError(ex, $"{_controllerName}: Error in license status logging task");
             }
         }
-
-        private void LogLicenseStatus() {
+        
+        /// <summary>
+        /// Logs the current license status.
+        /// </summary>
+        public void LogLicenseStatus() {
             _logger.LogInformation("{ControllerName}: License is currently {Status}", _controllerName, _licenseHeld ? "held" : "not held");
             if (_licenseHeld) {
                 var duration = _timeProvider.GetUtcNow() - _lastUsageTime;
