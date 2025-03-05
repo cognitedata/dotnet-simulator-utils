@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
+
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,42 +20,31 @@ namespace Cognite.Simulator.Tests.UtilsTests
     public class ExtPipelineUnitTest
     {
 
-        public static HttpResponseMessage MockExtPipesEndpointWithErr(int n)
+        private static readonly List<SimpleRequestMocker> endpointMappings = new List<SimpleRequestMocker>
         {
-            if (n == 0)
-            {
-                return CreateResponse(System.Net.HttpStatusCode.BadRequest, "Bad Request");
-            }
-            return MockExtPipesEndpoint(n);
-        }
-
-        public static HttpResponseMessage MockExtPipesEndpointWithEmptyRes(int n)
-        {
-            if (n == 0)
-            {
-                return CreateResponse(System.Net.HttpStatusCode.BadRequest, "Bad Request");
-            }
-            return OkItemsResponse("");
-        }
-
-        private static readonly IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>
-                {
-                    { uri => uri.EndsWith("/token"), (MockAzureAADTokenEndpoint, 0, 1) },
-                    { uri => uri.EndsWith("/extpipes/byids"), (MockExtPipesEndpointWithEmptyRes, 0, null) },
-                    { uri => uri.EndsWith("/extpipes"), (MockExtPipesEndpointWithErr, 0, null) },
-                    { uri => uri.EndsWith("/extpipes/runs"), (MockExtPipesEndpoint, 0, null) },
-                }
-            );
+            new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/byids"), MockBadRequest, 1),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/byids"), () => OkItemsResponse(""), 2),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockBadRequest, 1),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockExtPipesEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/runs"), MockExtPipesEndpoint),
+        };
 
         [Fact]
+        /// <summary>
+        /// Test the late initialization of the extraction pipeline.
+        /// 1. On the first attempt it tries to get the pipeline, the /extpipes/byids fails with a 400.
+        /// 2. Next try, the /extpipes/byids returns an empty response. So the connector will try to create the pipeline. Create fails with a 400.
+        /// 3. Next try, the /extpipes/byids returns an empty response. The connector will try to create the pipeline again. Create succeeds.
+        /// 4. The connector will then try to notify the pipeline, which should succeed.
+        /// </summary>
         public async Task TestExtPipineRetryInitRemote()
         {
+            // Arrange
             var services = new ServiceCollection();
             services.AddSingleton(SeedData.SimulatorCreate);
 
-            var httpMock = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
+            var httpMock = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappings));
             var mockFactory = httpMock.factory;
             services.AddSingleton(mockFactory.Object);
             services.AddCogniteTestClient();
@@ -76,6 +64,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
 
+            // Act
             await extPipeline.Init(connectorConfig, CancellationToken.None);
 
             using var tokenSource = new CancellationTokenSource();
@@ -86,6 +75,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await extPipeline.PipelineUpdate(tokenSource.Token);
             } catch (OperationCanceledException) { }
 
+            // Assert
             VerifyLog(mockedLogger, LogLevel.Warning, "Could not find an extraction pipeline with id utils-tests-pipeline, attempting to create one", Times.AtLeast(1), true);
             VerifyLog(mockedLogger, LogLevel.Warning, "Could not retrieve or create extraction pipeline from CDF: CogniteSdk.ResponseException: Bad Request", Times.AtLeast(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "Pipeline utils-tests-pipeline created successfully", Times.Once());

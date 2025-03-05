@@ -79,18 +79,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        private static HttpResponseMessage GoneResponse =
+        public static HttpResponseMessage GoneResponse =
             CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
-        /// Mocks the HttpClientFactory to return the mocked responses
-        /// Example format for endpointMappings:
-        ///     { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, 2) },
-        ///     2 is the number of times the response function will be called before returning a 410 Gone
-        ///     if maxCalls is null, the response function will return the same response indefinitely
+        /// Mocks the requests to the endpoints with the given templates.
+        /// Goes through the list of templates in order and returns the response from the first template that matches the request.
+        /// If no template matches, returns a 501 Not Implemented response.
+        /// If a template has a max call count, it will only be used that many times. After that, it will be skipped.
         /// </summary>
-        /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
-        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
+        /// <param name="endpointMockTemplates"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> MockRequestsAsync(IList<SimpleRequestMocker> endpointMockTemplates)
         {
             
             return async (HttpRequestMessage message, CancellationToken token) =>
@@ -101,30 +102,68 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     throw new ArgumentNullException(nameof(uri));
                 }
 
-                foreach (var mapping in endpointMappings)
+                foreach (var mockTemplate in endpointMockTemplates)
                 {
-                    if (mapping.Key(uri))
+                    if (mockTemplate.Matches(uri))
                     {
-                        var (responseFunc, callCount, maxCalls) = mapping.Value;
-                        if (maxCalls.HasValue && callCount >= maxCalls)
-                        {
-                            return GoneResponse;
-                        }
-                        endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
-                        return responseFunc(callCount);
+                        return mockTemplate.GetResponse();
                     }
                 }
-
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":[]}") };
+                return CreateResponse(HttpStatusCode.NotImplemented, "Not implemented");
             };
         }
 
-        public static HttpResponseMessage MockAzureAADTokenEndpoint(int n)
+        /// <summary>
+        /// A container for easier mocking of endpoints.
+        /// </summary>
+        public class SimpleRequestMocker
+        {
+            private readonly Func<string, bool> _uriMatcher;
+            private readonly Func<HttpResponseMessage> _responseFunc;
+            private int _callCount = 0;
+            private readonly int? _maxCalls = null;
+
+            /// <summary>
+            /// Creates a new SimpleRequestMocker.
+            /// </summary>
+            /// <param name="uriMatcher">Function to match the URI of the request.</param>
+            /// <param name="responseFunc">Function to generate the response.</param>
+            /// <param name="maxCalls">Maximum number of times this mocker can be called. If null, there is no limit.</param>
+            public SimpleRequestMocker(Func<string, bool> uriMatcher, Func<HttpResponseMessage> responseFunc, int? maxCalls = null)
+            {
+                _uriMatcher = uriMatcher;
+                _responseFunc = responseFunc;
+                _maxCalls = maxCalls;
+            }
+
+            private bool HasMoreCalls()
+            {
+                return !_maxCalls.HasValue || _callCount < _maxCalls;
+            }
+
+            public bool Matches(string uri)
+            {
+                return _uriMatcher(uri) && HasMoreCalls();
+            }
+
+            public HttpResponseMessage GetResponse()
+            {
+                _callCount++;
+                return _responseFunc();
+            }
+        }
+
+        public static HttpResponseMessage MockAzureAADTokenEndpoint()
         {
             return CreateResponse(HttpStatusCode.OK, "{\"access_token\": \"test_token\", \"expires_in\": 3600, \"token_type\": \"Bearer\"}");
         }
 
-        public static HttpResponseMessage MockExtPipesEndpoint(int n)
+        public static HttpResponseMessage MockBadRequest()
+        {
+            return CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
+        }
+
+        public static HttpResponseMessage MockExtPipesEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestExtPipelineId}"",
@@ -139,7 +178,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorsEndpoint(int n)
+        public static HttpResponseMessage MockSimulatorsEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestSimulatorExternalId}"",
@@ -149,7 +188,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint(int n)
+        public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
@@ -159,7 +198,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorRoutineRevEndpoint(int n)
+        public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",

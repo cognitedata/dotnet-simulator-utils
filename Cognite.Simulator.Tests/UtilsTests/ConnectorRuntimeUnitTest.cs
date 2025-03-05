@@ -23,16 +23,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeUnitTest
     {
-        private static readonly IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>
-                {
-                    { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, null) },
-                    { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), (MockSimulatorsEndpoint, 0, null) },
-                    { uri => uri.Contains("/simulators/integrations"), (MockSimulatorsIntegrationsEndpoint, 0, null) },
-                    { uri => uri.Contains("/simulators/routines/revisions/list"), (MockSimulatorRoutineRevEndpoint, 0, 1) }
-                }
-            );
+        private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
+        {
+            new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+            new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
+            new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list"), MockSimulatorRoutineRevEndpoint, 1),
+            new SimpleRequestMocker(uri => true, () => GoneResponse)
+        };
 
         // We need to mock the HttpClientFactory to return the mocked responses
         // First few requests return the mocked responses, then we return a 410 Gone
@@ -48,7 +47,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
-            var mocks = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
+            var mocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockFactory = mocks.factory;
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) => {
