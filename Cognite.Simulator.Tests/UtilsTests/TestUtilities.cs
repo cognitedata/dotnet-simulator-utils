@@ -169,7 +169,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 if (!HasMoreCalls())
                 {
-                    throw new InvalidOperationException("This mocker limit has been reached.");
+                    throw new InvalidOperationException("Maximum number of calls reached.");
                 }
                 _callCount++;
                 return _responseFunc();
