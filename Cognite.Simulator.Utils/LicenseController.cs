@@ -126,6 +126,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <exception cref="Exception">Thrown when an error occurs while acquiring the license.</exception>
         public void AcquireLicense(CancellationToken cancellationToken) {
+            _logger.LogDebug($"{_controllerName}: Acquire license called");
             lock (_lock)
             {
                 try
@@ -155,6 +156,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         private void ReleaseLicenseAfterTimeout(object state)
         {
+            _logger.LogDebug("{ControllerName}: Release license called by timer", _controllerName);
             lock (_lock)
             {
                 _logger.LogInformation("{ControllerName}: Attempting to release license at scheduled time {ScheduledTime}", 
