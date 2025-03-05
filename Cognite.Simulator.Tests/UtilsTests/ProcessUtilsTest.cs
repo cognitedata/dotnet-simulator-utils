@@ -42,6 +42,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Throws<PlatformNotSupportedException>(() => ProcessUtils.GetCurrentUsername());
             }
         }
+        
+        private bool IsProcessRunning(string processName, Process process) {
+            try
+            {
+                return Process.GetProcessesByName(processName).Any(p => p.Id == process.Id);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         [WindowsOnlyFact]
         public void KillProcess_KillsOwnedProcessesOnly()
@@ -69,7 +80,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
                 
                 // Verify that our testProcess was killed (it should belong to current user)
-                bool processStillRunning = Process.GetProcessesByName(processName).Any(p => p.Id == testProcess.Id);
+                bool processStillRunning = IsProcessRunning(processName, testProcess);
                 
                 Assert.False(processStillRunning, "Process should have been terminated");
             }
