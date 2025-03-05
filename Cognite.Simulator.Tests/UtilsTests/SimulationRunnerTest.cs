@@ -124,6 +124,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<SampleSimulatorClient>();
+            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             services.AddSingleton(new ConnectorConfig
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,

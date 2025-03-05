@@ -18,6 +18,7 @@ using CogniteSdk.Alpha;
 
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -286,6 +287,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -417,6 +419,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
