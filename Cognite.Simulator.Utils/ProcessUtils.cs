@@ -68,6 +68,7 @@ namespace Cognite.Simulator.Utils
                 }
             } catch (Exception e) {
                 _logger.LogError("Failed to kill process: {Message}", e.Message);
+                throw;
             }
         }
 
