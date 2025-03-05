@@ -23,6 +23,7 @@ namespace Cognite.Simulator.Tests
         public static string TestExtPipelineId = "utils-tests-pipeline-" + Now;
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
+        public static string TestModelExternalId2 = "Utils-Connector_Test_Model_2_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
@@ -119,6 +120,12 @@ namespace Cognite.Simulator.Tests
             DataSetId = TestDataSetId,
         };
 
+        public static FileCreate SimpleModelFileCreate3 = new FileCreate() {
+            Name = "simutils-tests-model-3.out",
+            ExternalId = "simutils-tests-model-single-byte-3",
+            DataSetId = TestDataSetId,
+        };
+
         public static async Task<CogniteSdk.File> GetOrCreateFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file)
         {
             if (sdk == null)
@@ -188,6 +195,14 @@ namespace Cognite.Simulator.Tests
             var rev1 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
             var rev2 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate2, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
             return new List<SimulatorModelRevision> { rev1, rev2 };
+        }
+
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisionsForCleanup(Client sdk, FileStorageClient fileStorageClient) {            
+            var revision = SimulatorModelRevisionCreateV3;            
+            var modelFile = await GetOrCreateFile(sdk, fileStorageClient, SimpleModelFileCreate3).ConfigureAwait(false);
+            revision.FileId = modelFile.Id;
+            var rev =await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate2, revision).ConfigureAwait(false);
+            return new List<SimulatorModelRevision> { rev };
         }
 
         public static async Task<SimulatorRoutine> GetOrCreateSimulatorRoutine(Client sdk, SimulatorRoutineCreateCommandItem routine)
@@ -814,15 +829,27 @@ namespace Cognite.Simulator.Tests
             Type = "OilWell",
         };
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 1);
+        public static SimulatorModelCreate SimulatorModelCreate2 = new SimulatorModelCreate()
+        {
+            ExternalId = TestModelExternalId2,
+            Name = "Connector Test Model",
+            Description = "PETEX-Connector Test Model",
+            DataSetId = TestDataSetId,
+            SimulatorExternalId = TestSimulatorExternalId,
+            Type = "OilWell",
+        };
 
-        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV1 = GenerateSimulatorModelRevisionCreate(SimulatorModelCreate, 1);
 
-        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(SimulatorModelCreate, 2);
+
+        public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV3 = GenerateSimulatorModelRevisionCreate(SimulatorModelCreate2, 1);
+
+        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(SimulatorModelCreate model, int version = 1) {
             return new SimulatorModelRevisionCreate()
             {
-                ExternalId = $"{externalId}-{version}",
-                ModelExternalId = SimulatorModelCreate.ExternalId,
+                ExternalId = $"{model.ExternalId}-{version}",
+                ModelExternalId = model.ExternalId,
                 Description = "integration test. can be deleted at any time. the test will recreate it.",
             };
         }

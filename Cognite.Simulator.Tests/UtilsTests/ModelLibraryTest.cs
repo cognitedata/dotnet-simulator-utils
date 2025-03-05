@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Moq;
 
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
@@ -32,6 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
+            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             var loggerConfig = new LoggerConfig
             {
                 Console = new Extractor.Logging.ConsoleConfig
@@ -121,6 +123,141 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var logv2Data = logv2.First().Data;
                 var parsedModelEntry2 = logv2Data.Where(lg => lg.Message.StartsWith("Model revision parsed successfully"));
                 Assert.Equal("Information", parsedModelEntry2.First().Severity);
+            }
+            finally
+            {
+                if (Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
+            }
+        }
+
+        [Fact]
+        public async Task TestModelLibraryCleanup(){
+            var utcNow = DateTime.UtcNow;
+            var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+            mockDateTimeProvider.Setup(m => m.UtcNow).Returns(() => utcNow); // Dynamic value
+
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+            services.AddHttpClient<FileStorageClient>();
+            services.AddSingleton(SeedData.SimulatorCreate);
+            services.AddSingleton<ModeLibraryTest>();
+            services.AddSingleton<IDateTimeProvider>(mockDateTimeProvider.Object);
+
+            StateStoreConfig stateConfig = null;
+            using var provider = services.BuildServiceProvider();
+
+            var cdf = provider.GetRequiredService<Client>();
+
+            try
+            {
+                await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+                var fileStorageClient = provider.GetRequiredService<FileStorageClient>();
+                // prepopulate models and revisions in CDF
+                var revisionsRes = await SeedData.GetOrCreateSimulatorModelRevisions(cdf, fileStorageClient).ConfigureAwait(false);
+                var revisionsCleanup = await SeedData.GetOrCreateSimulatorModelRevisionsForCleanup(cdf, fileStorageClient).ConfigureAwait(false);
+
+                var revisions =
+                    revisionsRes.TakeLast(1)
+                    .Concat(revisionsCleanup)
+                    .ToList();
+
+                stateConfig = provider.GetRequiredService<StateStoreConfig>();
+                using var source = new CancellationTokenSource();
+
+                var lib = provider.GetRequiredService<ModeLibraryTest>();
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+
+                var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
+
+                Assert.NotEmpty(lib._state);
+                Assert.Equal(revisions.Count, lib._state.Count);
+ 
+                // Start the library update loop that download and parses the files, stop after 5 secs
+                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
+                var linkedToken = linkedTokenSource.Token;
+                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(10)); // should be enough time to download the file from CDF and parse it
+                var modelLibTasks = lib.GetRunTasks(linkedToken);
+                await modelLibTasks
+                    .RunAll(linkedTokenSource)
+                    .ConfigureAwait(false);
+
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    Assert.False(modelInState.IsDeleted);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                }
+
+                var modelRev1 = $"{SeedData.TestModelExternalId}-2";
+                var modelRev2 = $"{SeedData.TestModelExternalId2}-1";
+                var v1 = await lib.GetModelRevision(modelRev1).ConfigureAwait(false);
+                var v2 = await lib.GetModelRevision(modelRev2).ConfigureAwait(false);
+
+                Assert.True((v1.LastAccessTime - DateTime.UtcNow).TotalSeconds < 10);
+                Assert.True((v2.LastAccessTime - DateTime.UtcNow).TotalSeconds < 10);
+
+                // add 3 days to utcNow
+                utcNow = DateTime.UtcNow.AddDays(3);
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+                lib.GetRunTasks(linkedToken);
+                    await modelLibTasks
+                        .RunAll(linkedTokenSource)
+                        .ConfigureAwait(false);
+
+                foreach (var revision in revisions)
+                {
+                    var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
+                    Assert.NotNull(modelInState);
+                    Assert.Equal(revision.ExternalId, modelInState.ExternalId);
+                    Assert.False(modelInState.IsDeleted);
+                    Assert.True((utcNow - modelInState.LastAccessTime).TotalDays >= 3);
+                    Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
+                    Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                }
+
+                v2 = await lib.GetModelRevision(modelRev2).ConfigureAwait(false);
+                Assert.True((v2.LastAccessTime - utcNow).TotalSeconds < 10);
+
+                var rev1Id = revisionsRes.TakeLast(1).First().Id;
+                var rev1 = lib._state.GetValueOrDefault( rev1Id.ToString());
+                Assert.NotNull(rev1);
+                Assert.True((utcNow - rev1.LastAccessTime).TotalDays >= 3);
+
+
+                // add 5 days to utcNow
+                utcNow = utcNow.AddDays(5);
+                await lib.Init(source.Token).ConfigureAwait(false);
+
+                lib.GetRunTasks(linkedToken);
+                    await modelLibTasks
+                        .RunAll(linkedTokenSource)
+                        .ConfigureAwait(false);
+
+                rev1 = lib._state.GetValueOrDefault( rev1Id.ToString());
+                Assert.NotNull(rev1);
+                Assert.True(rev1.IsDeleted);
+                Assert.True((utcNow - rev1.LastAccessTime).TotalDays >= 7);
+                Assert.False(System.IO.File.Exists(rev1.FilePath));
+                Assert.True(System.IO.File.Exists(v2.FilePath));
+
+                v1 = await lib.GetModelRevision(modelRev1).ConfigureAwait(false);
+                Assert.False(v1.IsDeleted);
+                Assert.True((v1.LastAccessTime - utcNow).TotalSeconds < 10);
+                Assert.False(string.IsNullOrEmpty(v1.FilePath));
+                Assert.True(System.IO.File.Exists(v1.FilePath));
             }
             finally
             {
@@ -324,7 +461,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var modelExternalIdToDelete = revisions.First().ModelExternalId;
                 await SeedData.DeleteSimulatorModel(cdf, modelExternalIdToDelete).ConfigureAwait(false);
 
-                var revisionNewCreate = SeedData.GenerateSimulatorModelRevisionCreate("hot-reload", version: 1);
+                var revisionNewCreate = SeedData.GenerateSimulatorModelRevisionCreate(SeedData.SimulatorModelCreate, version: 1);
                 await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
 
                 var revisionNew = await SeedData.GetOrCreateSimulatorModelRevisionWithFile(cdf, fileStorageClient, SeedData.SimpleModelFileCreate, revisionNewCreate).ConfigureAwait(false);
@@ -545,6 +682,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
             SimulatorCreate simulatorDefinition,
+            IDateTimeProvider dateTimeProvider,
             IExtractionStateStore store = null) :
             base(
                 new ModelLibraryConfig
@@ -559,7 +697,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 cdf,
                 logger,
                 downloadClient,
-                store)
+                dateTimeProvider,
+                store
+                )
         {
             _logger = logger;
         }

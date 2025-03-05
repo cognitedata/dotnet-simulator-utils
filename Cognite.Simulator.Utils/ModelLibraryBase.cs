@@ -76,6 +76,7 @@ namespace Cognite.Simulator.Utils
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -93,13 +94,15 @@ namespace Cognite.Simulator.Utils
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
+        /// <param name="dateTimeProvider">Date time provider</param>
         public ModelLibraryBase(
             ModelLibraryConfig config, 
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            IExtractionStateStore store = null) 
+            IDateTimeProvider dateTimeProvider,
+            IExtractionStateStore store = null)
         {
             if (cdf == null)
             {
@@ -117,6 +120,7 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         private void CopyNonBaseProperties(T source, T target)
@@ -250,7 +254,7 @@ namespace Cognite.Simulator.Utils
                     }
                 }
 
-                model.LastAccessTime = DateTime.UtcNow;
+                model.LastAccessTime = _dateTimeProvider.UtcNow;
                 return model;
                     
             }
@@ -266,7 +270,7 @@ namespace Cognite.Simulator.Utils
             var revisions = _state.Values
                 .Where(s => s.IsInDirectory
                     && !string.IsNullOrEmpty(s.FilePath)
-                    && s.LastAccessTime.AddMinutes(_config.FilesTTL) < DateTime.UtcNow)
+                    && s.LastAccessTime.AddDays(_config.FilesTTL) < _dateTimeProvider.UtcNow)
                 .OrderByDescending(s => s.CreatedTime);
 
             foreach (var revision in revisions)
@@ -516,7 +520,6 @@ namespace Cognite.Simulator.Utils
                     ).ConfigureAwait(false);
 
                 var modelRevisionsRes = modelRevisionsAllRes.Items
-                    .Where(r => r.Status != SimulatorModelRevisionStatus.failure)
                     .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
                     .ToList();
 
@@ -613,7 +616,7 @@ namespace Cognite.Simulator.Utils
                             modelState.ExternalId,
                             filename);
                         modelState.FilePath = filename;
-                        modelState.LastAccessTime = DateTime.UtcNow;
+                        modelState.LastAccessTime = _dateTimeProvider.UtcNow;
                         return true;
                     }
                 }
@@ -731,6 +734,16 @@ namespace Cognite.Simulator.Utils
             token).ConfigureAwait(false);
         }
 
+    }
+
+    public interface IDateTimeProvider
+    {
+        DateTime UtcNow { get; }
+    }
+
+    public class SystemDateTimeProvider : IDateTimeProvider
+    {
+        public DateTime UtcNow => DateTime.UtcNow;
     }
 
     /// <summary>
