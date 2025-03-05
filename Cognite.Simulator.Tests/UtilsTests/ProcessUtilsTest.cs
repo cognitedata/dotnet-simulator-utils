@@ -76,7 +76,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     bool currentUserIsOwner = owner == currentUser;
                     Assert.False(processStillRunning && currentUserIsOwner, "Process should have been terminated");
                 }
-                catch (Exception e) {}
+                catch (Exception e) {
+                    VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process", Times.Once(), true);
+                }
                 // Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
             }
             finally
