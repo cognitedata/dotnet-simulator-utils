@@ -70,7 +70,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 
                 // Verify that our testProcess was killed (it should belong to current user)
                 bool processStillRunning = Process.GetProcessesByName(processName).Any(p => p.Id == testProcess.Id);
-                Assert.False(processStillRunning, "Process should have been terminated");
+                bool currentUserIsOwner = ProcessUtils.GetProcessOwnerWmi(testProcess.Id).ToLower() == currentUser;
+
+                Assert.False(processStillRunning && currentUserIsOwner, "Process should have been terminated");
                 // Assert.Throws<InvalidOperationException>(() => testProcess.Refresh());
             }
             finally

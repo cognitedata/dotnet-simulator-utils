@@ -21,6 +21,7 @@ namespace Cognite.Simulator.Utils
         private bool _licenseHeld;
         private DateTimeOffset _lastUsageTime;
         private DateTimeOffset _scheduledReleaseTime;
+        private DateTimeOffset _acquisitionTime;
         private readonly ILogger _logger;
         private readonly TimeProvider _timeProvider;
         private const int LoggingIntervalMs = 60000; // 1 minute
@@ -108,7 +109,9 @@ namespace Cognite.Simulator.Utils
             _logger.LogInformation("{ControllerName}: License is currently {Status}", _controllerName, _licenseHeld ? "held" : "not held");
             if (_licenseHeld) {
                 var duration = _timeProvider.GetUtcNow() - _lastUsageTime;
-                _logger.LogInformation("{ControllerName}: License has been held for {Duration}", _controllerName, CommonUtils.FormatDuration(duration));
+                _logger.LogInformation("{ControllerName}: Duration of last license usage : {Duration} ", _controllerName, CommonUtils.FormatDuration(duration));
+                duration = _timeProvider.GetUtcNow() - _acquisitionTime;
+                _logger.LogInformation("{ControllerName}: License has been held for {Duration} ", _controllerName, CommonUtils.FormatDuration(duration));
                 var timeUntilRelease = _scheduledReleaseTime - _timeProvider.GetUtcNow();
                 var timeUntilReleaseFormatted = CommonUtils.FormatDuration(timeUntilRelease);
                 var scheduledReleaseTimeFormatted = _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss");
@@ -135,6 +138,7 @@ namespace Cognite.Simulator.Utils
                     _logger.LogInformation($"{_controllerName}: Attempting to acquire license");
                     _acquireLicenseFunc(cancellationToken);
                     _licenseHeld = true;
+                    _acquisitionTime = _timeProvider.GetUtcNow();
                     PauseTimer();
                     _logger.LogInformation($"{_controllerName}: License acquired successfully");
                 }
@@ -159,6 +163,7 @@ namespace Cognite.Simulator.Utils
                 {
                     _releaseLicenseFunc();
                     _licenseHeld = false;  
+                    _acquisitionTime = DateTimeOffset.MinValue;
                     _logger.LogInformation("{ControllerName}: License released successfully", _controllerName);
                 }
                 else
@@ -179,6 +184,7 @@ namespace Cognite.Simulator.Utils
                 _licenseHeld = false;
                 _lastUsageTime = _timeProvider.GetUtcNow();
                 _scheduledReleaseTime = DateTimeOffset.MaxValue;
+                _acquisitionTime = DateTimeOffset.MinValue;
                 _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
                 _logger.LogInformation($"{_controllerName}: License released forcefully");
             }
