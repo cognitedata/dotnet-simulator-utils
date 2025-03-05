@@ -23,9 +23,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ConnectorRuntimeUnitTest
     {
-        private static readonly IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
+        private static readonly IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
+            new ConcurrentDictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>(
+                new Dictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>
                 {
                     { uri => uri.Contains("/extpipes"), (MockExtPipesEndpoint, 0, null) },
                     { uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators"), (MockSimulatorsEndpoint, 0, null) },

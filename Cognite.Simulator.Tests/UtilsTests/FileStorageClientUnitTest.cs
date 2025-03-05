@@ -26,12 +26,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return response;
         }
 
-        HttpResponseMessage MockFilesDownloadEndpointMaxSize()
+        HttpResponseMessage MockFilesDownloadEndpointMaxSize(int n)
         {
             return MockFilesDownloadEndpoint(FileStorageClient.MaxFileDownloadSize + 1);
         }
 
-        HttpResponseMessage MockFilesDownloadEndpointLarge()
+        HttpResponseMessage MockFilesDownloadEndpointLarge(int n)
         {
             return MockFilesDownloadEndpoint(FileStorageClient.LargeFileSize + 1);
         }
@@ -40,9 +40,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestFileStorageClientFailMaxSizeFiles()
         {
 
-            IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
+            IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
+            new ConcurrentDictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>(
+                new Dictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>
                 {
                     { uri => uri.Contains("/files/download"), (MockFilesDownloadEndpointMaxSize, 0, 1) },   
                 }
@@ -71,9 +71,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestFileStorageClientFailLargeFiles()
         {
 
-            IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
+            IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
+            new ConcurrentDictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>(
+                new Dictionary<Func<string, bool>, (Func<int, HttpResponseMessage>, int, int?)>
                 {
                     { uri => uri.Contains("/files/download"), (MockFilesDownloadEndpointLarge, 0, 1) },   
                 }

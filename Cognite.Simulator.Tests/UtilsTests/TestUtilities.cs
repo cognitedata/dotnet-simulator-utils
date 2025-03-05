@@ -90,7 +90,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         ///     if maxCalls is null, the response function will return the same response indefinitely
         /// </summary>
         /// <param name="endpointMappings">Dictionary of URL matchers and response functions</param>
-        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
+        public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockRequestsAsync(IDictionary<Func<string, bool>, (Func<int, HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings)
         {
             
             return async (HttpRequestMessage message, CancellationToken token) =>
@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             return GoneResponse;
                         }
                         endpointMappings[mapping.Key] = (responseFunc, callCount + 1, maxCalls);
-                        return responseFunc();
+                        return responseFunc(callCount);
                     }
                 }
 
@@ -119,7 +119,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             };
         }
 
-        public static HttpResponseMessage MockExtPipesEndpoint()
+        public static HttpResponseMessage MockAzureAADTokenEndpoint(int n)
+        {
+            return CreateResponse(HttpStatusCode.OK, "{\"access_token\": \"test_token\", \"expires_in\": 3600, \"token_type\": \"Bearer\"}");
+        }
+
+        public static HttpResponseMessage MockExtPipesEndpoint(int n)
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestExtPipelineId}"",
@@ -134,7 +139,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorsEndpoint()
+        public static HttpResponseMessage MockSimulatorsEndpoint(int n)
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestSimulatorExternalId}"",
@@ -144,7 +149,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
+        public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint(int n)
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
@@ -154,7 +159,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()
+        public static HttpResponseMessage MockSimulatorRoutineRevEndpoint(int n)
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
@@ -165,12 +170,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        private static HttpResponseMessage OkItemsResponse(string item)
+        public static HttpResponseMessage OkItemsResponse(string item)
         {
             return CreateResponse(HttpStatusCode.OK, $"{{\"items\":[{item}]}}");
         }
 
-        private static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
+        public static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
         {
             return new HttpResponseMessage(statusCode) { Content = new StringContent(content) };
         }
