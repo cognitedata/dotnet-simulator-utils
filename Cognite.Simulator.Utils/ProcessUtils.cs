@@ -54,16 +54,24 @@ namespace Cognite.Simulator.Utils
             throw new Exception("Process not found");
         }
 
+        /// <summary>
+        /// Kill a process by ID. Can throw exceptions if it is unable to kill the process or if it cannot find the process owner.
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <param name="_logger"></param>
         public static void KillProcess(string processId, ILogger _logger) {
             try {
                 Process[] processes = Process.GetProcessesByName(processId);
                 _logger.LogDebug("Searching for process : " + processId);
+                _logger.LogDebug("Found {Count} matching processes", processes.Length);
                 foreach (Process process in processes) {
                     string owner = GetProcessOwnerWmi(process.Id);
                     _logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
                     if (owner.ToLower() == GetCurrentUsername().ToLower()) {
                         _logger.LogInformation("Killing process with PID {PID}", process.Id);
                         process.Kill();
+                    } else {
+                        _logger.LogWarning("Process with PID {PID} is owned by {Owner}. Skipping.", process.Id, owner);
                     }
                 }
             } catch (Exception e) {
