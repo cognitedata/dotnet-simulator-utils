@@ -200,13 +200,14 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             tracker.ClearLicenseState();
             
             fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
-
+            tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License released forcefully", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently not held", Times.AtLeastOnce(), true);
 
             tracker.AcquireLicense(CancellationToken.None);
             using (tracker.BeginUsage()) {  }
             fakeTimeProvider.Advance(TimeSpan.FromMinutes(1)); 
+            tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License has been held for 1.0 minutes", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License will be released in 4.0 minutes (at 2000-01-01 00:10:00)", Times.AtLeastOnce(), true);
