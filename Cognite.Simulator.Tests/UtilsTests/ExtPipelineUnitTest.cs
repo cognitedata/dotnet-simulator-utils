@@ -22,11 +22,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         private static readonly List<SimpleRequestMocker> endpointMappings = new List<SimpleRequestMocker>
         {
-            new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+            new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint).ShouldBeCalled(Times.Once()),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/byids"), MockBadRequest, 1),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/byids"), () => OkItemsResponse(""), 2),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockBadRequest, 1),
-            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockExtPipesEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockExtPipesEndpoint, 1).ShouldBeCalled(Times.Once()),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/runs"), MockExtPipesEndpoint),
         };
 
@@ -70,16 +70,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var tokenSource = new CancellationTokenSource();
             tokenSource.CancelAfter(TimeSpan.FromSeconds(5));
 
-            try
-            {
-                await extPipeline.PipelineUpdate(tokenSource.Token);
-            } catch (OperationCanceledException) { }
+            await Assert.ThrowsAsync<TaskCanceledException>(() => extPipeline.PipelineUpdate(tokenSource.Token));
 
             // Assert
             VerifyLog(mockedLogger, LogLevel.Warning, "Could not find an extraction pipeline with id utils-tests-pipeline, attempting to create one", Times.AtLeast(1), true);
             VerifyLog(mockedLogger, LogLevel.Warning, "Could not retrieve or create extraction pipeline from CDF: CogniteSdk.ResponseException: Bad Request", Times.AtLeast(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "Pipeline utils-tests-pipeline created successfully", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Debug, "Notifying extraction pipeline, status: seen", Times.AtLeastOnce());
+
+            foreach (var mocker in endpointMappings)
+            {
+                mocker.AssertCallCount();
+            }
         }
     }
 }

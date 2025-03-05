@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -122,6 +123,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             private readonly Func<HttpResponseMessage> _responseFunc;
             private int _callCount = 0;
             private readonly int? _maxCalls = null;
+            private Times _expectedCalls = Times.AtLeastOnce();
 
             /// <summary>
             /// Creates a new SimpleRequestMocker.
@@ -136,6 +138,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 _maxCalls = maxCalls;
             }
 
+            /// <summary>
+            /// Sets the expected number of calls to this mocker.
+            /// After the test, you can call AssertCallCount to check if the number of calls was as expected.
+            /// Default is AtLeastOnce.
+            /// </summary>
+            /// <param name="expectedCalls"></param>
+            public SimpleRequestMocker ShouldBeCalled(Times expectedCalls)
+            {
+                _expectedCalls = expectedCalls;
+                return this;
+            }
+
             private bool HasMoreCalls()
             {
                 return !_maxCalls.HasValue || _callCount < _maxCalls;
@@ -146,8 +160,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 return _uriMatcher(uri) && HasMoreCalls();
             }
 
+            public void AssertCallCount()
+            {
+                Assert.True(_expectedCalls.Validate(_callCount), $"Unexpected number of calls to endpoint. Expected {_expectedCalls} but was {_callCount}.");
+            }
+
             public HttpResponseMessage GetResponse()
             {
+                if (!HasMoreCalls())
+                {
+                    throw new InvalidOperationException("This mocker limit has been reached.");
+                }
                 _callCount++;
                 return _responseFunc();
             }
