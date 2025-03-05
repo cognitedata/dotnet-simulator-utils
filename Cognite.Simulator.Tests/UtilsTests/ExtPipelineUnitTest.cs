@@ -38,7 +38,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         /// 3. Next try, the /extpipes/byids returns an empty response. The connector will try to create the pipeline again. Create succeeds.
         /// 4. The connector will then try to notify the pipeline, which should succeed.
         /// </summary>
-        public async Task TestExtPipineRetryInitRemote()
+        public async Task TestExtPipelineRetryInitRemote()
         {
             // Arrange
             var services = new ServiceCollection();
