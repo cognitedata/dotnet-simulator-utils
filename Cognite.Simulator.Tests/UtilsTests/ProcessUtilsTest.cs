@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             catch(Exception e)
             {
-                VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process", Times.Once(), true);
+                VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process " + e.Message, Times.Once(), true);
                 throw;
             }
             finally
