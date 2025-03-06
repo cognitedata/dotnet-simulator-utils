@@ -50,6 +50,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             catch
             {
+                // Any other exception indicates the process is likely not running
                 return false;
             }
         }
@@ -74,12 +75,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 // Assert
                 // Verify log messages were called with correct parameters
                 VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
-                
-                // Verify that process.Kill was called if this process belongs to current user
-                string currentUser = ProcessUtils.GetCurrentUsername().ToLower();
                 VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
                 
-                // Verify that our testProcess was killed (it should belong to current user)
+                // Verify that our testProcess was killed
                 bool processStillRunning = IsProcessRunning(processName, testProcess);
                 
                 Assert.False(processStillRunning, "Process should have been terminated");
@@ -97,16 +95,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public void KillProcess_DoesNotThrow_WhenProcessNotFound()
+        public void KillProcess_DoesThrow_WhenProcessNotFound()
         {
             // Arrange
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
             
-            // Act - pass a non-existent process name
-            ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object);
+            // Act 
+            Assert.Throws<Exception>(() => ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object));
             
-            // Assert - verify error wasn't logged since no exception should occur
-            VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process", Times.Never(), true);
+            VerifyLog(mockLogger, LogLevel.Error, "No processes found to kill for the current user", Times.Once(), true);
         }
 
         [WindowsOnlyFact]
