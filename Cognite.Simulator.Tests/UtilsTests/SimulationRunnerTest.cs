@@ -469,7 +469,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             TestFileState modelState, 
             SimulatorRoutineRevision simulationConfiguration, 
-            Dictionary<string, SimulatorValueItem> inputData)
+            Dictionary<string, SimulatorValueItem> inputData,
+            CancellationToken _token)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData, _logger);
             _logger.LogWarning("Running a sample routine, not a real simulation");

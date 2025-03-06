@@ -5,6 +5,7 @@ using Cognite.Extractor.Metrics;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
@@ -72,11 +73,6 @@ namespace Cognite.Simulator.Utils
             if (Cognite == null)
             {
                 Cognite = new CogniteConfig();
-            }
-
-            if (Cognite.CdfRetries == null) {
-                Cognite.CdfRetries.MaxRetries = 11;
-                Cognite.CdfRetries.MaxDelay = 60 * 1000; //ms
             }
 
             if (Metrics == null)

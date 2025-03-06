@@ -98,7 +98,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
                 DefaultModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData
+                Dictionary<string, SimulatorValueItem> inputData,
+                CancellationToken _token
             )
             {
                 throw new NotImplementedException();
