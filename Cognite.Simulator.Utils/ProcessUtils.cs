@@ -64,15 +64,20 @@ namespace Cognite.Simulator.Utils
                 Process[] processes = Process.GetProcessesByName(processId);
                 _logger.LogDebug("Searching for process : " + processId);
                 _logger.LogDebug("Found {Count} matching processes", processes.Length);
+                bool found = false;
                 foreach (Process process in processes) {
                     string owner = GetProcessOwnerWmi(process.Id);
                     _logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
                     if (owner.ToLower() == GetCurrentUsername().ToLower()) {
                         _logger.LogInformation("Killing process with PID {PID}", process.Id);
                         process.Kill();
+                        found = true;
                     } else {
-                        _logger.LogWarning("Process with PID {PID} is owned by {Owner}. Skipping.", process.Id, owner);
+                        _logger.LogWarning("Process with PID {PID} is owned by a different user ({Owner}). Skipping.", process.Id, owner);
                     }
+                }
+                if (!found) {
+                    throw new Exception("No processes found to kill for the current user");
                 }
             } catch (Exception e) {
                 _logger.LogError("Failed to kill process: {Message}", e.Message);
