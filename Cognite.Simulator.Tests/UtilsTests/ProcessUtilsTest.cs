@@ -74,10 +74,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             catch(Exception e) {
                 VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process " + e.Message, Times.Once(), true);
             }
-            finally{
-                // Cleanup - make sure process is closed
-                testProcess?.Close();
-            }
             // Assert
             // Verify log messages were called with correct parameters
             VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
