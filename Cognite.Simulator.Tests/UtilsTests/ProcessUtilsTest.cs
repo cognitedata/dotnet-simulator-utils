@@ -65,31 +65,30 @@ namespace Cognite.Simulator.Tests.UtilsTests
             
             // Create test process to ensure at least one exists
             Process testProcess = null;
+            testProcess = Process.Start(processName + ".exe");
             
+            // Act
+            try{
+                ProcessUtils.KillProcess(processName, mockLogger.Object);
+            }
+            catch(Exception e) {
+                VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process " + e.Message, Times.Once(), true);
+            }
+            finally{
+                // Cleanup - make sure process is closed
+                testProcess?.Close();
+            }
+            // Assert
+            // Verify log messages were called with correct parameters
+            VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
+            VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
             
-                testProcess = Process.Start(processName + ".exe");
-                
-                // Act
-                try{
-                    ProcessUtils.KillProcess(processName, mockLogger.Object);
-                }
-                catch(Exception e) {
-                    VerifyLog(mockLogger, LogLevel.Error, "Failed to kill process " + e.Message, Times.Once(), true);
-                }
-                finally{
-                    // Cleanup - make sure process is closed
-                    testProcess?.Close();
-                }
-                // Assert
-                // Verify log messages were called with correct parameters
-                VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
-                VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
-                
-                // Verify that our testProcess was killed
-                System.Threading.Thread.Sleep(3000);
-                bool processStillRunning = IsProcessRunning(processName, testProcess);
-                
-                Assert.False(processStillRunning, "Process should have been terminated");
+            // Verify that our testProcess was killed
+            System.Threading.Thread.Sleep(3000);
+
+            Retry
+            bool processStillRunning = IsProcessRunning(processName, testProcess);
+            Assert.False(processStillRunning, "Process should have been terminated");
         }
 
         [Fact]
