@@ -85,8 +85,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             
             // Verify that our testProcess was killed
             System.Threading.Thread.Sleep(3000);
-
-            Retry
+            
             bool processStillRunning = IsProcessRunning(processName, testProcess);
             Assert.False(processStillRunning, "Process should have been terminated");
         }
