@@ -237,6 +237,36 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+
+        private DateTime _lastAccessTime;
+        /// <summary>
+        /// Last time the file was accessed
+        /// </summary>
+        public DateTime LastAccessTime {
+            get => _lastAccessTime;
+            set
+            {
+                if (value == _lastAccessTime) return;
+                LastTimeModified = DateTime.UtcNow;
+                _lastAccessTime = value;
+            }
+        }
+
+        private bool _isDeleted;
+        /// <summary>
+        /// If the file has been deleted
+        /// </summary>
+        public bool IsDeleted {
+            get => _isDeleted;
+            set
+            {
+                if (value == _isDeleted) return;
+                LastTimeModified = DateTime.UtcNow;
+                _isDeleted = value;
+            }
+        }
+
+
         /// <summary>
         /// Initialize this state using a data object from the state store
         /// </summary>
@@ -279,6 +309,7 @@ namespace Cognite.Simulator.Utils
                 CdfId = CdfId,
                 UpdatedTime = UpdatedTime,
                 IsInDirectory = IsInDirectory,
+                isDeleted = IsDeleted,
                 ExternalId = ExternalId,
                 LogId = LogId,
                 FileExtension = FileExtension,
@@ -371,5 +402,17 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("download-attempts")]
         public int DownloadAttempts { get; set; }
+
+        /// <summary>
+        /// If the file has been deleted
+        /// </summary>
+        [StateStoreProperty("is-deleted")]
+        public bool isDeleted { get; set; }
+
+        /// <summary>
+        /// Last time the file was accessed
+        /// </summary>
+        [StateStoreProperty("last-access-time")]
+        public DateTime LastAccessTime { get; set; }
     }
 }

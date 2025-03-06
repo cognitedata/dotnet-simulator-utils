@@ -76,6 +76,7 @@ namespace Cognite.Simulator.Utils
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -93,13 +94,15 @@ namespace Cognite.Simulator.Utils
         /// <param name="logger">Logger</param>
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
+        /// <param name="dateTimeProvider">Date time provider</param>
         public ModelLibraryBase(
             ModelLibraryConfig config, 
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf, 
             ILogger logger, 
             FileStorageClient downloadClient,
-            IExtractionStateStore store = null) 
+            IDateTimeProvider dateTimeProvider,
+            IExtractionStateStore store = null)
         {
             if (cdf == null)
             {
@@ -117,6 +120,7 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         private void CopyNonBaseProperties(T source, T target)
@@ -196,6 +200,7 @@ namespace Cognite.Simulator.Utils
                     HashSet<string> idsToKeep = new HashSet<string>(_state.Select(s => s.Value.Id));
                     ldbStore.RemoveUnusedState(_config.FilesTable, idsToKeep);
                 }
+                CleanExpiredModelRevisionFiles();
             }
             _logger.LogInformation("Local state store {Table} initiated. Tracking {Num} files", _config.FilesTable, _state.Count);
         }
@@ -241,13 +246,41 @@ namespace Cognite.Simulator.Utils
             
             var model = modelVersions.FirstOrDefault();
 
-            if (model != null)
-            {
+            if(model != null){
+                if(model.IsDeleted){
+                    var downloaded = await DownloadFileAsync(model, true).ConfigureAwait(false);
+                    if(downloaded){
+                        model.IsDeleted = false;
+                    }
+                }
+
+                model.LastAccessTime = _dateTimeProvider.UtcNow;
                 return model;
+                    
             }
 
             return await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// If a file has not been accessed for a certain amount of time, it will be deleted.
+        /// The default is 7 days.
+        /// </summary>
+        public void CleanExpiredModelRevisionFiles(){
+            var revisions = _state.Values
+                .Where(s => s.IsInDirectory
+                    && !string.IsNullOrEmpty(s.FilePath)
+                    && s.LastAccessTime.AddDays(_config.FilesTTL) < _dateTimeProvider.UtcNow)
+                .OrderByDescending(s => s.CreatedTime);
+
+            foreach (var revision in revisions)
+            {
+                _logger.LogInformation("Deleting expired model file: {FilePath}", revision.FilePath);
+                StateUtils.DeleteFileAndDirectory(revision.FilePath, revision.IsInDirectory);
+                revision.IsDeleted = true;
+            }
+        }
+
 
         /// <inheritdoc/>
         private IEnumerable<T> GetAllModelRevisions(string modelExternalId)
@@ -583,6 +616,7 @@ namespace Cognite.Simulator.Utils
                             modelState.ExternalId,
                             filename);
                         modelState.FilePath = filename;
+                        modelState.LastAccessTime = _dateTimeProvider.UtcNow;
                         return true;
                     }
                 }
@@ -700,6 +734,16 @@ namespace Cognite.Simulator.Utils
             token).ConfigureAwait(false);
         }
 
+    }
+
+    public interface IDateTimeProvider
+    {
+        DateTime UtcNow { get; }
+    }
+
+    public class SystemDateTimeProvider : IDateTimeProvider
+    {
+        public DateTime UtcNow => DateTime.UtcNow;
     }
 
     /// <summary>
