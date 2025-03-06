@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Release v1.0.0-beta-014 (2025-02-20)
+## Release v1.0.0-beta-015 (2025-03-06)
 
 ### Features
 
@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 * Fixed bug where invalid config file led to connector running in a loop displaying connection error.
 * Introduced support for license tracking and holding.
 * Introduced support for Process termination.
+
+## Release v1.0.0-beta-014 (2025-03-05)
+
+### Bug Fixes
+
+* Resolved an issue where the connector failed to initialize the extraction pipeline on startup, causing false alerts indicating the pipeline was offline. Added support for late initialization of the extraction pipeline in case of such failures.
 
 ## Release v1.0.0-beta-013 (2025-02-17)
 

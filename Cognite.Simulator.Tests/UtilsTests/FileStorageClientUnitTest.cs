@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -40,17 +39,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestFileStorageClientFailMaxSizeFiles()
         {
 
-            IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
-                {
-                    { uri => uri.Contains("/files/download"), (MockFilesDownloadEndpointMaxSize, 0, 1) },   
-                }
-            );
-
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), MockFilesDownloadEndpointMaxSize, 1)
+            };
 
             var services = new ServiceCollection();
-            var httpMocks = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
+            var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockHttpClientFactory = httpMocks.factory;
             var mockedLogger = new Mock<ILogger<FileStorageClient>>();
 
@@ -70,17 +65,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestFileStorageClientFailLargeFiles()
         {
-
-            IDictionary<Func<string, bool>, (Func<HttpResponseMessage> responseFunc, int callCount, int? maxCalls)> endpointMappings =
-            new ConcurrentDictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>(
-                new Dictionary<Func<string, bool>, (Func<HttpResponseMessage>, int, int?)>
-                {
-                    { uri => uri.Contains("/files/download"), (MockFilesDownloadEndpointLarge, 0, 1) },   
-                }
-            );
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), MockFilesDownloadEndpointLarge, 1)
+            };
 
             var services = new ServiceCollection();
-            var httpMocks = GetMockedHttpClientFactory(mockRequestsAsync(endpointMappings));
+            var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockHttpClientFactory = httpMocks.factory;
             var mockedLogger = new Mock<ILogger<FileStorageClient>>();
 
