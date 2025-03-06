@@ -66,12 +66,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Create test process to ensure at least one exists
             Process testProcess = null;
             testProcess = Process.Start(processName + ".exe");
-            bool exceptionInKillProcess = false;
+
             // Act
-            
             ProcessUtils.KillProcess(processName, mockLogger.Object);
 
-            // Assert
             // Verify log messages were called with correct parameters
             VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
             VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
