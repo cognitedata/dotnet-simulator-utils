@@ -22,8 +22,9 @@ namespace Cognite.Simulator.Utils
         private readonly CogniteConfig _cdfConfig;
         private readonly PipelineNotificationConfig _pipeConfig;
         private readonly SimulatorCreate _simulatorDefinition;
+        private ConnectorConfig _connectorConfig;
         private CogniteSdk.ExtPipe _pipeline;
-        private bool _available;
+        private bool _disabled;
         
         internal static string LastErrorMessage;
 
@@ -66,18 +67,26 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(connectorConfig));
             }
-            if (_cdfConfig.ExtractionPipeline == null ||
-                string.IsNullOrEmpty(_cdfConfig.ExtractionPipeline.PipelineId))
+            _connectorConfig = connectorConfig;
+            _disabled = _cdfConfig.ExtractionPipeline == null || string.IsNullOrEmpty(_cdfConfig.ExtractionPipeline.PipelineId);
+            if (_disabled)
             {
                 _logger.LogDebug("Extraction pipeline is not configured");
-                _available = false;
                 return;
             }
+            await TryInitRemotePipeline(token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Try to initialize the extraction pipeline by creating it in CDF (if it does not exist)
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        private async Task<bool> TryInitRemotePipeline(CancellationToken token) {
             try
             {
                 var pipelineId = _cdfConfig.ExtractionPipeline.PipelineId;
                 var pipelines = await _cdf.CogniteClient.ExtPipes.RetrieveAsync(
-                    new[] { pipelineId }, 
+                    [ pipelineId ], 
                     true, 
                     token).ConfigureAwait(false);
                 if (!pipelines.Any())
@@ -90,7 +99,7 @@ namespace Cognite.Simulator.Utils
                         {
                            new CogniteSdk.ExtPipeCreate
                            {
-                               DataSetId = connectorConfig.DataSetId,
+                               DataSetId = _connectorConfig.DataSetId,
                                ExternalId = pipelineId,
                                Name = $"{_simulatorDefinition.Name} connector extraction pipeline",
                                Schedule = "Continuous",
@@ -103,11 +112,9 @@ namespace Cognite.Simulator.Utils
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Could not retrieve or create extraction pipeline from CDF: {Message}", ex.Message);
-                _available = false;
-                return;
+                _logger.LogWarning("Could not retrieve or create extraction pipeline from CDF: {Exception}", ex);
             }
-            _available = true;
+            return _pipeline != null;
         }
 
         /// <summary>
@@ -121,21 +128,35 @@ namespace Cognite.Simulator.Utils
             string message,
             CancellationToken token)
         {
-            if (!_available)
+            if (_disabled)
             {
                 return;
             }
+
+            var available = _pipeline != null;
+
+            if (!available)
+            {
+                available = await TryInitRemotePipeline(token).ConfigureAwait(false);
+                if (!available)
+                {
+                    return;
+                }
+            }
+
+            _logger.LogDebug("Notifying extraction pipeline, status: {Status}", status);
+            
             try
             {
-                await _cdf.CogniteClient.ExtPipes.CreateRunsAsync(new[]
-                {
+                await _cdf.CogniteClient.ExtPipes.CreateRunsAsync(
+                [
                     new CogniteSdk.ExtPipeRunCreate
                     {
                         ExternalId = _pipeline.ExternalId,
                         Message = message.Truncate(1000),
                         Status = status
                     }
-                }, token).ConfigureAwait(false);
+                ], token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -150,11 +171,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task PipelineUpdate(CancellationToken token)
         {
-            if (!_available)
-            {
-                return;
-            }
-
             var startMessage = LastErrorMessage != null ?
                 $"Connector restarted after error: {LastErrorMessage}" :
                 "Connector started";
@@ -166,7 +182,6 @@ namespace Cognite.Simulator.Utils
             var delay = _cdfConfig.ExtractionPipeline.Frequency;
             while (!token.IsCancellationRequested)
             {
-                _logger.LogDebug("Notifying extraction pipeline");
                 await NotifyPipeline(
                    CogniteSdk.ExtPipeRunStatus.seen, 
                    "Connector available", 
@@ -207,13 +222,10 @@ namespace Cognite.Simulator.Utils
                 // Notify pipeline if the number of errors per time window is exceeded
                 if (errorCountLimitExceeded)
                 {
-                    if (_available)
-                    {
-                        await NotifyPipeline(
-                             CogniteSdk.ExtPipeRunStatus.failure,
-                             $"Connector failed more than {_pipeConfig.MaxErrors} times in the last {_pipeConfig.MaxTime} minutes: {e.Message}\n{e.StackTrace}",
-                             token).ConfigureAwait(false);
-                    }
+                    await NotifyPipeline(
+                        CogniteSdk.ExtPipeRunStatus.failure,
+                        $"Connector failed more than {_pipeConfig.MaxErrors} times in the last {_pipeConfig.MaxTime} minutes: {e.Message}\n{e.StackTrace}",
+                        token).ConfigureAwait(false);
                 }
 
                 firstErrorOccured = null;
