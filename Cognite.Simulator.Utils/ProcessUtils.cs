@@ -71,6 +71,7 @@ namespace Cognite.Simulator.Utils
                     if (owner.ToLower() == GetCurrentUsername().ToLower()) {
                         _logger.LogInformation("Killing process with PID {PID}", process.Id);
                         process.Kill();
+                        process.WaitForExit();
                         found = true;
                     } else {
                         _logger.LogWarning("Process with PID {PID} is owned by a different user ({Owner}). Skipping.", process.Id, owner);
