@@ -363,7 +363,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _logger = logger;
         }
         
-        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
         {
             SimulatorValue outputValue;
             if (outputConfig == null)
@@ -410,7 +410,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
         {
             double value;
             if (input == null)

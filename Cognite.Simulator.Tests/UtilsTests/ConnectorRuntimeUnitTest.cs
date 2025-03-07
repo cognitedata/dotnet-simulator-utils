@@ -122,7 +122,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
             }
 
-            public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+            public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
             {
                 throw new NotImplementedException();
             }
@@ -131,7 +131,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
             }
 
-            public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+            public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
             {
             }
         }

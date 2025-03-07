@@ -52,10 +52,12 @@ namespace Cognite.Simulator.Utils
         /// <param name="inputConfig">Input configuration</param>
         /// <param name="input">Input value</param>
         /// <param name="arguments">Extra arguments</param>
+        /// <param name="token">Cancellation token</param>
         public abstract void SetInput(
             SimulatorRoutineRevisionInput inputConfig,
             SimulatorValueItem input,
-            Dictionary<string, string> arguments);
+            Dictionary<string, string> arguments,
+            CancellationToken token);
 
         /// <summary>
         /// Gets a numeric simulation result that should be saved
@@ -63,10 +65,12 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="outputConfig">Output time series configuration</param>
         /// <param name="arguments">Extra arguments</param>
+        /// <param name="token">Cancellation token</param>
         /// <returns></returns>
         public abstract SimulatorValueItem GetOutput(
             SimulatorRoutineRevisionOutput outputConfig,
-            Dictionary<string, string> arguments);
+            Dictionary<string, string> arguments,
+            CancellationToken token);
 
         /// <summary>
         /// Invoke the given command on the simulator using the provided arguments.
@@ -168,7 +172,7 @@ namespace Cognite.Simulator.Utils
                     var output = matchingOutputs.First();
                     string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                     _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
-                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
+                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
                 }
             else
             {
@@ -190,7 +194,7 @@ namespace Cognite.Simulator.Utils
             {
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                 _logger.LogDebug("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
-                SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+                SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs, token);
             }
             else
             {
