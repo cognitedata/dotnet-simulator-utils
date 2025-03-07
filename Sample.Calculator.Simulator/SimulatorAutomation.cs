@@ -137,7 +137,7 @@ internal class CalculatorRoutineAutomation : RoutineImplementationBase
     {
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
     {
         var resultItem = new SimulatorValueItem()
         {
@@ -158,7 +158,7 @@ internal class CalculatorRoutineAutomation : RoutineImplementationBase
         Console.WriteLine("Handling run command");
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling inputs");
     }
