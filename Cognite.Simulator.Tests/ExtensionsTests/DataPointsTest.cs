@@ -49,19 +49,19 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
 
-            await SeedData.GetOrCreateTestTimeseries(cdf).ConfigureAwait(false);
+            await SeedData.GetOrCreateTestTimeseries(cdf);
 
             // Tests assume the given time series exists in the test project and
             // that it contains data points in this time range
             var samplingConfiguration = new SamplingConfiguration(start: 1631294940000, end: 1631296740000);
-            
+
             // Test max aggregation. A single data point should be returned
             var (timestamps, values) = await dataPoints.GetSample(
                 "utils-tests-OnOffValues",
                 Extensions.DataPointAggregate.Max,
                 800,
                 samplingConfiguration,
-                System.Threading.CancellationToken.None).ConfigureAwait(false);
+                System.Threading.CancellationToken.None);
             Assert.NotNull(timestamps);
             Assert.NotNull(values);
             Assert.Single(values);
@@ -86,15 +86,16 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 Extensions.DataPointAggregate.StepInterpolation,
                 1,
                 range2,
-                System.Threading.CancellationToken.None).ConfigureAwait(false);
+                System.Threading.CancellationToken.None);
             Assert.NotNull(timestamps2);
             Assert.NotNull(values2);
             Assert.Single(values2);
             Assert.Equal(1, values2[0]);
         }
-        
+
         [Fact]
-        public async Task TestGetSampleNoDataSampling() {
+        public async Task TestGetSampleNoDataSampling()
+        {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
 
@@ -104,12 +105,12 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             // DataSampling disabled range
             var currentTimeEpoch = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var disabledDataSampling = new SamplingConfiguration( end: currentTimeEpoch );
+            var disabledDataSampling = new SamplingConfiguration(end: currentTimeEpoch);
             var (timestamp, value) = await dataPoints.GetLatestValue(
                 "utils-tests-OnOffValues",
                 disabledDataSampling,
-                System.Threading.CancellationToken.None).ConfigureAwait(false);
-            
+                System.Threading.CancellationToken.None);
+
             Assert.Equal(1, value);
         }
     }

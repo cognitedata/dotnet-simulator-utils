@@ -55,7 +55,8 @@ namespace Cognite.Simulator.Utils.Automation
             else
             {
                 var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").ToLower() == "development";
-                if (!isDevelopment) {
+                if (!isDevelopment)
+                {
                     throw new SimulatorConnectionException("Simulator integration only available on Windows");
                 }
 
@@ -75,7 +76,8 @@ namespace Cognite.Simulator.Utils.Automation
             }
             finally
             {
-                if (Server != null) {
+                if (Server != null)
+                {
                     Marshal.ReleaseComObject(Server);
                     _logger.LogDebug("Released COM Object");
                     Server = null;
@@ -132,7 +134,7 @@ namespace Cognite.Simulator.Utils.Automation
             return server;
         }
     }
-    
+
     /// <summary>
     /// Represents errors related to the connection to simulator instance
     /// </summary>
@@ -174,12 +176,12 @@ namespace Cognite.Simulator.Utils.Automation
         /// Identifier of the application/program to connect to
         /// </summary>
         public string ProgramId { get; set; }
-        
+
         /// <summary>
         /// Identifier of the process that should be terminated on shutdown, if any
         /// </summary>
         public string ProcessId { get; set; }
-        
+
         /// <summary>
         /// Whether or not to terminate (kill) the application process after shutdown.
         /// This is not ideal and should be avoided, unless there is risk of a process

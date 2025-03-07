@@ -19,9 +19,9 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="TModelStateBase">Type of the model state</typeparam>
     /// <typeparam name="TModelStateBasePoco">Type of the model state POCO</typeparam>
     public class DefaultModelLibrary<TAutomationConfig, TModelStateBase, TModelStateBasePoco> :
-    ModelLibraryBase<TAutomationConfig,TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
+    ModelLibraryBase<TAutomationConfig, TModelStateBase, TModelStateBasePoco, ModelParsingInfo>
     where TAutomationConfig : AutomationConfig, new()
-    where TModelStateBase: ModelStateBase, new()
+    where TModelStateBase : ModelStateBase, new()
     where TModelStateBasePoco : ModelStateBasePoco
     {
         private ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient;
@@ -32,7 +32,7 @@ namespace Cognite.Simulator.Utils
         public DefaultModelLibrary(
             DefaultConfig<TAutomationConfig> config,
             CogniteDestination cdf,
-            ILogger<DefaultModelLibrary<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger,
+            ILogger<DefaultModelLibrary<TAutomationConfig, TModelStateBase, TModelStateBasePoco>> logger,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
             SimulatorCreate simulatorDefinition,
             FileStorageClient client,
@@ -51,10 +51,14 @@ namespace Cognite.Simulator.Utils
         protected override async Task ExtractModelInformation(
             TModelStateBase state,
             CancellationToken token
-        ) {
-            if (simulatorClient != null) {
+        )
+        {
+            if (simulatorClient != null)
+            {
                 await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);
-            } else {
+            }
+            else
+            {
                 state.CanRead = true;
                 state.ParsingInfo.SetSuccess();
             }

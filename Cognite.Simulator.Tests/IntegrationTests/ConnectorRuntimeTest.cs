@@ -102,42 +102,51 @@ connector:
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            try {
-                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = (services) => {
+            try
+            {
+                DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.ConfigureServices = (services) =>
+                {
                     services.AddScoped<ISimulatorClient<SampleModelFilestate, SimulatorRoutineRevision>, CalculatorSimulatorAutomationClient>();
                 };
-                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
-                DefaultConnectorRuntime<CustomAutomationConfig,SampleModelFilestate, SampleModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
-                
-                try {
-                    await DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
-                } catch (OperationCanceledException) {}
-                
+                DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.ConnectorName = "Calculator";
+                DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
+
+                try
+                {
+                    await DefaultConnectorRuntime<CustomAutomationConfig, SampleModelFilestate, SampleModelFileStatePoco>.Run(logger, cts.Token);
+                }
+                catch (OperationCanceledException) { }
+
                 var integrations = await testCdfClient.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                     new SimulatorIntegrationQuery
                     {
-                        Filter = new SimulatorIntegrationFilter() {
+                        Filter = new SimulatorIntegrationFilter()
+                        {
                             SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                         }
                     }
-                ).ConfigureAwait(false);
+                );
 
-                var simulators = await testCdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery()).ConfigureAwait(false);
+                var simulators = await testCdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery());
 
                 var unitQuantities = SeedData.SimulatorCreate.UnitQuantities;
                 Assert.Contains(ConnectorExternalId, integrations.Items.Select(i => i.ExternalId));
                 var existingIntegration = integrations.Items.FirstOrDefault(i => i.ExternalId == ConnectorExternalId);
-                
+
                 var simulatorDefinition = simulators.Items.FirstOrDefault(i => i.ExternalId == SeedData.TestSimulatorExternalId);
                 Assert.NotNull(simulatorDefinition);
 
                 // Simply checking the unit quantities created
                 Assert.Equal(simulatorDefinition.UnitQuantities.ToString(), unitQuantities.ToString());
-            } finally {
+            }
+            finally
+            {
                 await SeedData.DeleteSimulator(testCdfClient, SeedData.TestSimulatorExternalId);
-                try {
+                try
+                {
                     await testCdfClient.ExtPipes.DeleteAsync(new List<string> { SeedData.TestExtPipelineId });
-                } catch (Exception) {}
+                }
+                catch (Exception) { }
             }
         }
 
@@ -212,8 +221,8 @@ connector:
             public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
             {
                 var resultItem = new SimulatorValueItem()
-                    {
-                        SimulatorObjectReference = new Dictionary<string, string> {
+                {
+                    SimulatorObjectReference = new Dictionary<string, string> {
                         { "objectName", "a" },
                         { "objectProperty", "b" },
                     },

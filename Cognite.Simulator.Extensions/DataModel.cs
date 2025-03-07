@@ -11,7 +11,7 @@ namespace Cognite.Simulator.Extensions
         /// Data type metadata key
         /// </summary>
         public const string DataTypeKey = "dataType";
-        
+
         /// <summary>
         /// Simulator metadata key
         /// </summary>

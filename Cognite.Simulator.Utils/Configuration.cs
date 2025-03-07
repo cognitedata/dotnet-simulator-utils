@@ -11,7 +11,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Configuration for remote logging (logs are stored in CDF)
     /// </summary>
-    public class RemoteLogConfig: LogConfig
+    public class RemoteLogConfig : LogConfig
     {
         /// <summary>
         /// Whether remote logging is enabled
@@ -22,7 +22,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Logging configuration object
     /// </summary>
-    public class LoggerConfig: Extractor.Logging.LoggerConfig
+    public class LoggerConfig : Extractor.Logging.LoggerConfig
     {
         /// <summary>
         /// Remote logging configuration (optional)
@@ -74,7 +74,8 @@ namespace Cognite.Simulator.Utils
                 Cognite = new CogniteConfig();
             }
 
-            if (Cognite.CdfRetries == null) {
+            if (Cognite.CdfRetries == null)
+            {
                 Cognite.CdfRetries.MaxRetries = 11;
                 Cognite.CdfRetries.MaxDelay = 60 * 1000; //ms
             }
@@ -91,7 +92,8 @@ namespace Cognite.Simulator.Utils
 
             if (Logger.Remote == null)
             {
-                Logger.Remote = new RemoteLogConfig() {
+                Logger.Remote = new RemoteLogConfig()
+                {
                     Enabled = true,
                     Level = "warning"
                 };
@@ -272,7 +274,7 @@ namespace Cognite.Simulator.Utils
         public RoutineLibraryConfig RoutineLibrary { get; set; }
     }
 
-    public class DefaultConfig<TAutomationConfig> : BaseConfig 
+    public class DefaultConfig<TAutomationConfig> : BaseConfig
     where TAutomationConfig : AutomationConfig, new()
     {
         public DefaultConnectorConfig Connector { get; set; }

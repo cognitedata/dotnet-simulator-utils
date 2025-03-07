@@ -86,12 +86,12 @@ namespace Cognite.Simulator.Extensions
         /// Time associated with the simulation, in milliseconds 
         /// </summary>
         public long SimulationTime { get; }
-        
+
         /// <summary>
         /// Start of the sampling range, in milliseconds
         /// </summary>
         public long? Start { get; }
-        
+
         /// <summary>
         /// End of the sampling range, in milliseconds
         /// </summary>
@@ -120,13 +120,14 @@ namespace Cognite.Simulator.Extensions
                     SimulationTime = End;
                 else
                     throw new ArgumentException("Invalid sampling position");
-            } else
+            }
+            else
             {
                 SimulationTime = end;
             }
         }
     }
-    
+
     /// <summary>
     /// Defines the position of the simulation time relative to the sampling window
     /// </summary>

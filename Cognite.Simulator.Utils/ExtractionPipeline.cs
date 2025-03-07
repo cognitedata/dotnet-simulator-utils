@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
         private ConnectorConfig _connectorConfig;
         private CogniteSdk.ExtPipe _pipeline;
         private bool _disabled;
-        
+
         internal static string LastErrorMessage;
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Cognite.Simulator.Utils
             _cdfConfig = cdfConfig;
             _pipeConfig = pipeConfig;
         }
-        
+
         /// <summary>
         /// Initialized the extraction pipeline, if configured. This method creates a new
         /// pipeline in CDF in case one does not exists. It uses the simulator name and 
@@ -81,18 +81,19 @@ namespace Cognite.Simulator.Utils
         /// Try to initialize the extraction pipeline by creating it in CDF (if it does not exist)
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        private async Task<bool> TryInitRemotePipeline(CancellationToken token) {
+        private async Task<bool> TryInitRemotePipeline(CancellationToken token)
+        {
             try
             {
                 var pipelineId = _cdfConfig.ExtractionPipeline.PipelineId;
                 var pipelines = await _cdf.CogniteClient.ExtPipes.RetrieveAsync(
-                    [ pipelineId ], 
-                    true, 
+                    [pipelineId],
+                    true,
                     token).ConfigureAwait(false);
                 if (!pipelines.Any())
                 {
                     _logger.LogWarning(
-                        "Could not find an extraction pipeline with id {Id}, attempting to create one", 
+                        "Could not find an extraction pipeline with id {Id}, attempting to create one",
                         pipelineId);
                     pipelines = await _cdf.CogniteClient.ExtPipes.CreateAsync(
                         new List<CogniteSdk.ExtPipeCreate>
@@ -145,7 +146,7 @@ namespace Cognite.Simulator.Utils
             }
 
             _logger.LogDebug("Notifying extraction pipeline, status: {Status}", status);
-            
+
             try
             {
                 await _cdf.CogniteClient.ExtPipes.CreateRunsAsync(
@@ -175,19 +176,19 @@ namespace Cognite.Simulator.Utils
                 $"Connector restarted after error: {LastErrorMessage}" :
                 "Connector started";
             await NotifyPipeline(
-                CogniteSdk.ExtPipeRunStatus.success, 
-                startMessage, 
+                CogniteSdk.ExtPipeRunStatus.success,
+                startMessage,
                 token).ConfigureAwait(false);
 
             var delay = _cdfConfig.ExtractionPipeline.Frequency;
             while (!token.IsCancellationRequested)
             {
                 await NotifyPipeline(
-                   CogniteSdk.ExtPipeRunStatus.seen, 
-                   "Connector available", 
+                   CogniteSdk.ExtPipeRunStatus.seen,
+                   "Connector available",
                    token).ConfigureAwait(false);
                 await Task.Delay(
-                    TimeSpan.FromSeconds(delay), 
+                    TimeSpan.FromSeconds(delay),
                     token).ConfigureAwait(false);
             }
         }
@@ -254,7 +255,7 @@ namespace Cognite.Simulator.Utils
             services.AddSingleton(config.PipelineNotification);
             services.AddScoped<ExtractionPipeline>();
         }
-        
+
         /// <summary>
         /// Use `type: remote` to fetch the config from Fusion, or use `type: local` to use the local file instead
         /// Example from config.yml using the remote config from Fusion
@@ -284,7 +285,7 @@ namespace Cognite.Simulator.Utils
             int version = 1,
             int[] acceptedConfigVersions = null) where T : BaseConfig
         {
-            var configTypes = new [] {
+            var configTypes = new[] {
                 typeof(CogniteConfig),
                 typeof(LoggerConfig),
                 typeof(HighAvailabilityConfig),
@@ -292,14 +293,14 @@ namespace Cognite.Simulator.Utils
                 typeof(Extractor.StateStorage.StateStoreConfig),
                 typeof(BaseConfig)
             };
-            var localConfig = services.AddConfig<T>(path, configTypes, new [] { version });
+            var localConfig = services.AddConfig<T>(path, configTypes, new[] { version });
 
             var remoteConfig = new RemoteConfig
             {
                 Type = localConfig.Type,
                 Cognite = localConfig.Cognite
             };
-            
+
             return await services.AddRemoteConfig<T>(
                 logger: null,
                 path: path,

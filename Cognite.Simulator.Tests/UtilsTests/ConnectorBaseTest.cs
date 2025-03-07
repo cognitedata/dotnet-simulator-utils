@@ -43,17 +43,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate);
 
             try
             {
                 await connector
                     .Init(source.Token)
-                    .ConfigureAwait(false);
+;
 
                 var integrationsRes = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                     new SimulatorIntegrationQuery(),
-                    source.Token).ConfigureAwait(false);
+                    source.Token);
                 var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == SeedData.TestSimulatorExternalId);
 
                 Assert.NotNull(integration);
@@ -69,22 +69,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                await connector.Run(linkedToken).ConfigureAwait(false);
+                await connector.Run(linkedToken);
 
                 var pipelines = await cdf.ExtPipes.RetrieveAsync(
                     new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
                     true,
-                    source.Token).ConfigureAwait(false);
+                    source.Token);
                 Assert.Contains(pipelines, p => p.ExternalId == cdfConfig.ExtractionPipeline.PipelineId);
                 Assert.Contains(pipelines, p => p.LastSeen >= timestamp);
             }
             finally
             {
-                await SeedData.DeleteSimulator(cdf, SeedData.TestSimulatorExternalId).ConfigureAwait(false);
-                try {
+                await SeedData.DeleteSimulator(cdf, SeedData.TestSimulatorExternalId);
+                try
+                {
                     await cdf.ExtPipes
-                        .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None); 
-                } catch (Exception) {}
+                        .DeleteAsync(new[] { cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None);
+                }
+                catch (Exception) { }
             }
         }
     }
@@ -96,7 +98,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     internal class TestConnector : ConnectorBase<Utils.BaseConfig>
     {
-        static ConnectorConfig TestConnectorConfig = new ConnectorConfig() {
+        static ConnectorConfig TestConnectorConfig = new ConnectorConfig()
+        {
             NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
             AddMachineNameSuffix = false,
             StatusInterval = 2,
@@ -146,8 +149,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                 var linkedToken = linkedTokenSource.Token;
-                var taskList = new List<Task> 
-                { 
+                var taskList = new List<Task>
+                {
                     HeartbeatLoop(linkedToken),
                     _pipeline.PipelineUpdate(linkedToken)
                 };

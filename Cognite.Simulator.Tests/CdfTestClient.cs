@@ -78,7 +78,8 @@ namespace Cognite.Simulator.Tests
 
             // Configure OIDC auth
             services.AddHttpClient("AuthClient");
-            services.AddSingleton<IAuthenticator>(p => {
+            services.AddSingleton<IAuthenticator>(p =>
+            {
                 var factory = p.GetRequiredService<IHttpClientFactory>();
                 var logger = p.GetRequiredService<ILogger<IAuthenticator>>();
                 return new MsalAuthenticator(authConfig, logger, factory, "AuthClient");
@@ -86,11 +87,13 @@ namespace Cognite.Simulator.Tests
 
             // Configure CDF Client
             services.AddHttpClient<Client.Builder>()
-                .AddPolicyHandler((provider, message) => {
+                .AddPolicyHandler((provider, message) =>
+                {
                     return CogniteExtensions.GetRetryPolicy(null, 10, 10000);
                 });
-            
-            services.AddSingleton(p => {
+
+            services.AddSingleton(p =>
+            {
                 var auth = p.GetRequiredService<IAuthenticator>();
                 var builder = p.GetRequiredService<Client.Builder>();
                 var client = builder

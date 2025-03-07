@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var client = services.BuildServiceProvider().GetRequiredService<FileStorageClient>();
 
             await Assert.ThrowsAsync<ConnectorException>(async () => await client.DownloadFileAsync(new Uri("http://localhost/files/download"), "test.txt", true));
-            
+
             VerifyLog(mockedLogger, LogLevel.Warning, $"File size exceeds the maximum allowed size to be downloded now, but can still be downloaded later: {FileStorageClient.LargeFileSize} bytes, actual size: {FileStorageClient.LargeFileSize + 1}", Times.Once(), true);
         }
     }

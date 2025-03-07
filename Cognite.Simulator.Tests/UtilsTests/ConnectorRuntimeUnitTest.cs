@@ -50,17 +50,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockFactory = mocks.factory;
 
-            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) => {
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
+            {
                 services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, EmptySimulatorAutomationClient>();
                 services.AddSingleton(mockFactory.Object);
                 services.AddSingleton(mockedLogger.Object);
             };
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
-            
-            try {
-                await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(logger, cts.Token).ConfigureAwait(false);
-            } catch (OperationCanceledException) {}
+
+            try
+            {
+                await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(logger, cts.Token);
+            }
+            catch (OperationCanceledException) { }
 
             // Check the logs, it should first succeed on the startup, then fail and restart
             VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
@@ -117,7 +120,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         internal class CalculatorRoutineAutomation : RoutineImplementationBase
         {
-            public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger )
+            public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
             {
             }
 

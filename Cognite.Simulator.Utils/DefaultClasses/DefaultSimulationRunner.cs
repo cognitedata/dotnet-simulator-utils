@@ -13,27 +13,27 @@ using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
-    public class DefaultSimulationRunner<TAutomationConfig,TModelStateBase,TModelStateBasePoco> : 
-        RoutineRunnerBase<TAutomationConfig,TModelStateBase, SimulatorRoutineRevision>
+    public class DefaultSimulationRunner<TAutomationConfig, TModelStateBase, TModelStateBasePoco> :
+        RoutineRunnerBase<TAutomationConfig, TModelStateBase, SimulatorRoutineRevision>
          where TAutomationConfig : AutomationConfig, new()
-         where TModelStateBase: ModelStateBase, new()
-         where TModelStateBasePoco: ModelStateBasePoco
+         where TModelStateBase : ModelStateBase, new()
+         where TModelStateBasePoco : ModelStateBasePoco
     {
 
         public DefaultSimulationRunner(
             DefaultConfig<TAutomationConfig> config,
-            CogniteDestination cdf, 
-            DefaultModelLibrary<TAutomationConfig, TModelStateBase,TModelStateBasePoco> modelLibrary, 
+            CogniteDestination cdf,
+            DefaultModelLibrary<TAutomationConfig, TModelStateBase, TModelStateBasePoco> modelLibrary,
             DefaultRoutineLibrary<TAutomationConfig> configLibrary,
             SimulatorCreate simulatorDefinition,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> client,
-            ILogger<DefaultSimulationRunner<TAutomationConfig,TModelStateBase,TModelStateBasePoco>> logger) : 
+            ILogger<DefaultSimulationRunner<TAutomationConfig, TModelStateBase, TModelStateBasePoco>> logger) :
             base(config.Connector,
-                simulatorDefinition, 
-                cdf, 
-                modelLibrary, 
-                configLibrary, 
-                client, 
+                simulatorDefinition,
+                cdf,
+                modelLibrary,
+                configLibrary,
+                client,
                 logger
             )
         {

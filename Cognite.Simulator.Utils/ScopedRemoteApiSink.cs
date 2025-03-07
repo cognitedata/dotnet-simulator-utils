@@ -11,7 +11,8 @@ using System.Threading;
 
 using System.Linq;
 
-namespace Cognite.Simulator.Utils {
+namespace Cognite.Simulator.Utils
+{
 
     /// <summary>
     /// Represents a sink for emitting log events to a remote API.
@@ -27,15 +28,18 @@ namespace Cognite.Simulator.Utils {
         private long? defaultLogId;
         private static readonly LogEventLevel DefaultMinimumLevel = LogEventLevel.Warning;
         private static readonly LogEventLevel[] AllowedLogLevels = new[] { LogEventLevel.Debug, LogEventLevel.Information, LogEventLevel.Warning, LogEventLevel.Error };
-        
+
         /// <summary>
         /// Create a scoped api sink
         /// </summary>
         /// <param name="loggerConfig">The logger configuration</param>
-        public ScopedRemoteApiSink(LoggerConfig loggerConfig) : base(){
-            if (loggerConfig != null) {
+        public ScopedRemoteApiSink(LoggerConfig loggerConfig) : base()
+        {
+            if (loggerConfig != null)
+            {
                 enabled = loggerConfig.Remote == null || loggerConfig.Remote.Enabled;
-                if (enabled) {
+                if (enabled)
+                {
                     minSeverityLevel = ParseLogLevel(loggerConfig.Remote?.Level);
                 }
             }
@@ -47,7 +51,8 @@ namespace Cognite.Simulator.Utils {
             {
                 return DefaultMinimumLevel;
             }
-            if(!Enum.TryParse(level, true, out LogEventLevel logLevel)) {
+            if (!Enum.TryParse(level, true, out LogEventLevel logLevel))
+            {
                 throw new ArgumentException($"Unknown minimum log level for remote API: {level}");
             }
             return logLevel;
@@ -68,11 +73,11 @@ namespace Cognite.Simulator.Utils {
         /// <param name="logEvent">The log event to emit.</param>
         public void Emit(LogEvent logEvent)
         {
-            if(!enabled)
+            if (!enabled)
             {
                 return;
             }
-            
+
             if (logEvent == null)
             {
                 throw new ArgumentNullException(nameof(logEvent));
@@ -80,7 +85,8 @@ namespace Cognite.Simulator.Utils {
 
             var minLevel = minSeverityLevel;
 
-            if (logEvent.Properties.TryGetValue("Severity", out var value) && value is ScalarValue sv && sv.Value is string overrideSeverity) {
+            if (logEvent.Properties.TryGetValue("Severity", out var value) && value is ScalarValue sv && sv.Value is string overrideSeverity)
+            {
                 minLevel = ParseLogLevel(overrideSeverity);
             }
 
@@ -99,11 +105,13 @@ namespace Cognite.Simulator.Utils {
 
             logEvent.Properties.TryGetValue("LogId", out var logId);
 
-            if (logId == null && defaultLogId == null) {
+            if (logId == null && defaultLogId == null)
+            {
                 return;
             }
             long logIdLong = logId == null ? defaultLogId.Value : long.Parse(logId.ToString());
-            if (logIdLong == 0) {
+            if (logIdLong == 0)
+            {
                 return;
             }
             // Customize the log data to send to the remote API
@@ -114,11 +122,12 @@ namespace Cognite.Simulator.Utils {
                 Message = logEvent.RenderMessage(),
             };
 
-            logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>(){ logData }, (key, oldValue) => {
+            logBuffer.AddOrUpdate(logIdLong, new List<SimulatorLogDataEntry>() { logData }, (key, oldValue) =>
+            {
                 oldValue.Add(logData);
                 return oldValue;
             });
-            
+
         }
 
         /// <summary>
@@ -136,7 +145,8 @@ namespace Cognite.Simulator.Utils {
         {
             foreach (var log in logBuffer)
             {
-                try {
+                try
+                {
                     // to make sure we remove only the logs that were sent to the remote API
                     if (logBuffer.TryRemove(log.Key, out var logData))
                     {
@@ -144,8 +154,8 @@ namespace Cognite.Simulator.Utils {
                             log.Key,
                             logData,
                             token
-                        ).ConfigureAwait(false);   
-                        
+                        ).ConfigureAwait(false);
+
                     }
                 }
                 catch (Exception ex)

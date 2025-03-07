@@ -16,7 +16,7 @@ namespace Cognite.Simulator.Utils
         /// File id. Typically CDF external id
         /// </summary>
         public string Id { get; set; }
-        
+
         private string _externalId;
         /// <summary>
         /// External ID of the entity that is represented by this object.
@@ -46,7 +46,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private string _modelExternalId;
-        
+
         /// <summary>
         /// External ID of the model associated with this file. The model is
         /// typically the object being simulated.
@@ -70,7 +70,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// If the file is stored in a directory, or as a single file
         /// </summary>
-        public bool IsInDirectory {
+        public bool IsInDirectory
+        {
             get => _isInDirectory;
             set
             {
@@ -95,7 +96,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long? _dataSetId;
-        
+
         /// <summary>
         /// Dataset id that contains the file in CDF
         /// </summary>
@@ -111,7 +112,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private string _filePath;
-        
+
         /// <summary>
         /// Path of the file in the local disk. This is only available
         /// once the file has been downloaded from CDF and saved locally.
@@ -128,7 +129,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _createdTime;
-        
+
         /// <summary>
         /// Time the file was created in CDF
         /// </summary>
@@ -144,7 +145,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _updatedTime;
-        
+
         /// <summary>
         /// Last time the file was updated in CDF
         /// </summary>
@@ -160,7 +161,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _cdfId;
-        
+
         /// <summary>
         /// Internal (numeric) id of the file in CDF
         /// </summary>
@@ -179,7 +180,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Model revision logId
         /// </summary>
-        public long LogId {
+        public long LogId
+        {
             get => _logId;
             set
             {
@@ -227,7 +229,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Download attempts
         /// </summary>
-        public int DownloadAttempts {
+        public int DownloadAttempts
+        {
             get => _downloadAttempts;
             set
             {
@@ -287,7 +290,7 @@ namespace Cognite.Simulator.Utils
             };
         }
     }
-    
+
     /// <summary>
     /// Data object that contains the state properties to be persisted
     /// by the state store. These properties are restored to the state on initialization
@@ -317,37 +320,37 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("model-external-id")]
         public string ModelExternalId { get; set; }
-        
+
         /// <summary>
         /// Source of the file (simulator)
         /// </summary>
         [StateStoreProperty("source")]
         public string Source { get; set; }
-        
+
         /// <summary>
         /// Dataset id in CDF
         /// </summary>
         [StateStoreProperty("data-set-id")]
         public long? DataSetId { get; set; }
-        
+
         /// <summary>
         /// Path to the file in the local disk
         /// </summary>
         [StateStoreProperty("file-path")]
         public string FilePath { get; set; }
-        
+
         /// <summary>
         /// Time the file was created in CDF
         /// </summary>
         [StateStoreProperty("created-time")]
         public long CreatedTime { get; set; }
-        
+
         /// <summary>
         /// CDF internal id of the file 
         /// </summary>
         [StateStoreProperty("cdf-id")]
         public long CdfId { get; set; }
-        
+
         /// <summary>
         /// Last time the file was updated in CDF
         /// </summary>

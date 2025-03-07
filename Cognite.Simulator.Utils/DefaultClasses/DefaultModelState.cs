@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Cognite.Simulator.Utils
 {
 
-   public class DefaultModelFileStatePoco : ModelStateBasePoco
+    public class DefaultModelFileStatePoco : ModelStateBasePoco
     {
         [StateStoreProperty("info-extracted")]
         public bool InformationExtracted { get; internal set; }

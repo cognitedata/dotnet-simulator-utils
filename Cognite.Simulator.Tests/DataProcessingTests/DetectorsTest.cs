@@ -15,7 +15,7 @@ public class DetectorsTest
         // shared test inputs
         _data = new double[] { 1, 1, 1, 1, 10, 10, 10, 10, 10, 1, 1, 1, 1 };
         _minDistance = 1;
-        
+
         var testData = new TestValues();
         _sensorSsd = new TimeSeriesData(
             time: testData.TimeSsd, data: testData.DataSsd, granularity: 60000, isStep: false);
@@ -35,7 +35,7 @@ public class DetectorsTest
         for (int i = 0; i < expected.Length; i++)
             Assert.Equal(expected[i], changePoints[i]);
     }
-    
+
     [Fact]
     public void TestSsd()
     {

@@ -41,14 +41,17 @@ namespace Cognite.Simulator.Utils
 
             if (checkForSeverityOverride && logId.HasValue)
             {
-                try {
+                try
+                {
                     var logRes = await cdf.RetrieveSimulatorLogsAsync([new Identity(logId.Value)]).ConfigureAwait(false);
                     var logItem = logRes.First();
                     if (logItem.Severity != null)
                     {
                         enrichers.Add(new PropertyEnricher("Severity", logItem.Severity));
                     }
-                } catch (Exception) {
+                }
+                catch (Exception)
+                {
                     // Ignore, we don't want to fail everything if we can't get the log item
                 }
             }
@@ -58,8 +61,10 @@ namespace Cognite.Simulator.Utils
 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
-        class UtcTimestampEnricher : ILogEventEnricher {
-            public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf) {
+        class UtcTimestampEnricher : ILogEventEnricher
+        {
+            public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf)
+            {
                 logEvent.AddPropertyIfAbsent(
                     lepf.CreateProperty("UtcTimestamp", logEvent.Timestamp.UtcDateTime));
             }
@@ -69,7 +74,8 @@ namespace Cognite.Simulator.Utils
         /// Create a default Serilog console logger and returns it.
         /// </summary>
         /// <returns>A <see cref="Serilog.ILogger"/> logger with default properties</returns>
-        public static Serilog.ILogger GetSerilogDefault() {
+        public static Serilog.ILogger GetSerilogDefault()
+        {
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .Enrich.FromLogContext()
@@ -96,7 +102,8 @@ namespace Cognite.Simulator.Utils
         /// Create a default console logger and returns it.
         /// </summary>
         /// <returns>A <see cref="Microsoft.Extensions.Logging.ILogger"/> logger with default properties</returns>
-        public static Microsoft.Extensions.Logging.ILogger GetDefault() {
+        public static Microsoft.Extensions.Logging.ILogger GetDefault()
+        {
             using (var loggerFactory = new LoggerFactory())
             {
                 loggerFactory.AddSerilog(GetSerilogDefault(), true);
@@ -119,11 +126,12 @@ namespace Cognite.Simulator.Utils
         }
 
     }
-   
+
     /// <summary>
     /// Extension utilities for logging
     /// </summary>
-    public static class LoggingExtensions {
+    public static class LoggingExtensions
+    {
 
 
 
@@ -140,7 +148,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
-        public static void AddLogger(this IServiceCollection services,  bool alternativeLogger = false) 
+        public static void AddLogger(this IServiceCollection services, bool alternativeLogger = false)
         {
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();

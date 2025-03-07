@@ -94,7 +94,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         /// <exception cref="ArgumentNullException"></exception>
         public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> MockRequestsAsync(IList<SimpleRequestMocker> endpointMockTemplates)
         {
-            
+
             return async (HttpRequestMessage message, CancellationToken token) =>
             {
                 var uri = message.RequestUri?.ToString();

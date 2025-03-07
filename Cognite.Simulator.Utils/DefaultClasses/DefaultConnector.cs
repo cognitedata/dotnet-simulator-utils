@@ -12,17 +12,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
-    public class DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>  
+    public class DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>
         where TAutomationConfig : AutomationConfig, new()
-         where TModelState: ModelStateBase, new()
-         where TModelStateBasePoco: ModelStateBasePoco
- 
+         where TModelState : ModelStateBase, new()
+         where TModelStateBasePoco : ModelStateBasePoco
+
     {
         private readonly DefaultConfig<TAutomationConfig> _config;
-        private readonly ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> _logger;
-        private readonly DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco> _modelLibrary;
+        private readonly ILogger<DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco>> _logger;
+        private readonly DefaultModelLibrary<TAutomationConfig, TModelState, TModelStateBasePoco> _modelLibrary;
         private readonly DefaultRoutineLibrary<TAutomationConfig> _routineLibrary;
-        private readonly DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco> _simulationRunner;
+        private readonly DefaultSimulationRunner<TAutomationConfig, TModelState, TModelStateBasePoco> _simulationRunner;
         private readonly DefaultSimulationScheduler<TAutomationConfig> _scheduler;
         private readonly ExtractionPipeline _pipeline;
         private readonly string _version;
@@ -33,13 +33,13 @@ namespace Cognite.Simulator.Utils
         public DefaultConnector(
             CogniteDestination cdf,
             DefaultConfig<TAutomationConfig> config,
-            DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco> modelLibrary,
+            DefaultModelLibrary<TAutomationConfig, TModelState, TModelStateBasePoco> modelLibrary,
             DefaultRoutineLibrary<TAutomationConfig> routineLibrary,
-            DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco> runner,
+            DefaultSimulationRunner<TAutomationConfig, TModelState, TModelStateBasePoco> runner,
             DefaultSimulationScheduler<TAutomationConfig> scheduler,
             ExtractionPipeline pipeline,
             SimulatorCreate simulatorDefinition,
-            ILogger<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>> logger,
+            ILogger<DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco>> logger,
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
             ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
@@ -55,7 +55,7 @@ namespace Cognite.Simulator.Utils
             _pipeline = pipeline;
             _simulatorClient = simulatorClient;
 
-        
+
             _version = Extractor.Metrics.Version.GetVersion(
                     Assembly.GetExecutingAssembly(),
                     "0.0.1");
@@ -76,7 +76,8 @@ namespace Cognite.Simulator.Utils
 
             await _pipeline.Init(_config.Connector, token).ConfigureAwait(false);
             await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
-            if(RemoteSimulatorIntegration != null){
+            if (RemoteSimulatorIntegration != null)
+            {
                 _sink.SetDefaultLogId(RemoteSimulatorIntegration.LogId);
             }
             await UpdateRemoteSimulatorIntegration(true, token).ConfigureAwait(false);
@@ -84,7 +85,8 @@ namespace Cognite.Simulator.Utils
             await _routineLibrary.Init(token).ConfigureAwait(false);
         }
 
-        private Task RunAllTasks(CancellationTokenSource linkedTokenSource) {
+        private Task RunAllTasks(CancellationTokenSource linkedTokenSource)
+        {
             var linkedToken = linkedTokenSource.Token;
             var modelLibTasks = _modelLibrary.GetRunTasks(linkedToken);
             var routineLibTasks = _routineLibrary.GetRunTasks(linkedToken);
@@ -105,12 +107,12 @@ namespace Cognite.Simulator.Utils
         {
             _logger.LogInformation("Connector started, sending status to CDF every {Interval} seconds",
                 _config.Connector.StatusInterval);
-                
+
             try
             {
                 using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-                    
+
                     await _simulatorClient.TestConnection(linkedTokenSource.Token).ConfigureAwait(false);
                     await RunAllTasks(linkedTokenSource).ConfigureAwait(false);
                 }
@@ -136,6 +138,6 @@ namespace Cognite.Simulator.Utils
             {
                 _logger.LogError(ex, "An error occurred during task execution");
             }
-        }   
+        }
     }
 }
