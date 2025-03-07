@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     public class SimulationRunnerTest
     {
 
-        public static IEnumerable<object[]> InputParams => 
+        public static IEnumerable<object[]> InputParams =>
             new List<object[]>
             {
                 // 1. timeseries inputs
@@ -108,13 +108,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Theory]
         [MemberData(nameof(InputParams))]
         public async Task TestSimulationRunnerBase(
-            SimulatorRoutineCreateCommandItem createRoutineItem, 
+            SimulatorRoutineCreateCommandItem createRoutineItem,
             SimulatorRoutineRevisionCreate createRevisionItem,
             IEnumerable<SimulationInputOverride> inputOverrides,
             SimulatorValue expectedResult,
             bool checkTs,
             bool debugLog
-        ) {
+        )
+        {
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
@@ -140,7 +141,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
 
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate);
 
             await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(true);
 
@@ -150,7 +151,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 FileStorageClient,
                 createRoutineItem,
                 createRevisionItem
-            ).ConfigureAwait(false);
+            );
 
             try
             {
@@ -163,15 +164,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // Run model and configuration libraries to fetch the test model and
                 // test simulation configuration from CDF
-                await modelLib.Init(source.Token).ConfigureAwait(false);
-                await configLib.Init(source.Token).ConfigureAwait(false);
+                await modelLib.Init(source.Token);
+                await configLib.Init(source.Token);
 
                 // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
                 // so this should be empty
                 var processedModels = modelLib._state.Values.Where(m => m.FilePath != null && m.Processed);
                 Assert.Empty(processedModels);
 
-                var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId).ConfigureAwait(false);
+                var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
                 var configObj = routineRevision.Configuration;
                 Assert.NotNull(configObj);
@@ -192,12 +193,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             Inputs = inputOverrides.Any() ? inputOverrides : null,
                             LogSeverity = debugLog ? "Debug" : null
                         }
-                    }, source.Token).ConfigureAwait(false);
+                    }, source.Token);
                 Assert.NotEmpty(runs);
                 var run = runs.First();
 
                 var modelRevisionRes = await cdf.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
-                    new List<Identity> { new Identity(run.ModelRevisionExternalId) }, source.Token).ConfigureAwait(false);
+                    new List<Identity> { new Identity(run.ModelRevisionExternalId) }, source.Token);
 
                 var modelRevision = modelRevisionRes.First();
 
@@ -206,13 +207,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var linkedToken2 = linkedTokenSource2.Token;
                 linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(10));
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
-                await taskList2.RunAll(linkedTokenSource2).ConfigureAwait(false);
+                await taskList2.RunAll(linkedTokenSource2);
 
                 Assert.Empty(modelLib._temporaryState); // temporary state should be empty after running the model as it cleans up automatically
                 Assert.Empty(Directory.GetFiles("./files/temp"));
 
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
-                    new List<long> { run.Id }, source.Token).ConfigureAwait(false);
+                    new List<long> { run.Id }, source.Token);
 
                 Assert.NotEmpty(runUpdatedRes);
                 var runUpdated = runUpdatedRes.First();
@@ -222,36 +223,38 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var simulationTime = runUpdated.SimulationTime.Value;
 
                 var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
+                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token);
 
                 // this test is not running the full connector runtime
                 // so logs are not being automatically sent to CDF
                 var logData = logsRes.First().Data;
                 Assert.Empty(logData);
 
-                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None).ConfigureAwait(false);
+                await sink.Flush(cdf.Alpha.Simulators, CancellationToken.None);
 
                 // check logs again after flushing
                 logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
-                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token).ConfigureAwait(false);
+                    new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token);
 
                 var logResFirst = logsRes.First();
                 Assert.NotEmpty(logResFirst.Data);
                 var warningLogItem = logResFirst.Data.Where(l => l.Severity == "Warning").First();
                 Assert.Equal("Running a sample routine, not a real simulation", warningLogItem.Message);
-                
+
                 if (debugLog)
                 {
                     Assert.Equal("Debug", logResFirst.Severity); // Override min severity
                     var debugLogs = logResFirst.Data.Where(l => l.Severity == "Debug");
                     Assert.NotEmpty(debugLogs);
-                } else {
+                }
+                else
+                {
                     Assert.Null(logResFirst.Severity); // Default severity
                 }
 
                 // check inputs/outputs from the /runs/data/list endpoint
                 var runDataRes = await cdf.Alpha.Simulators.ListSimulationRunsDataAsync(
-                    new List<long> { run.Id }, source.Token).ConfigureAwait(false);
+                    new List<long> { run.Id }, source.Token);
                 Assert.NotEmpty(runDataRes);
                 var inputs = runDataRes.First().Inputs;
                 Assert.NotEmpty(inputs);
@@ -262,12 +265,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         Assert.Contains(input.TimeseriesExternalId, inTsIds);
                     }
-                    if (inputOverrides.Any(i => i.ReferenceId == input.ReferenceId)) {
+                    if (inputOverrides.Any(i => i.ReferenceId == input.ReferenceId))
+                    {
                         Assert.True(input.Overridden);
                         var inputValue = input.Value as SimulatorValue.Double;
                         var inputOverride = inputOverrides.First(i => i.ReferenceId == input.ReferenceId).Value as SimulatorValue.Double;
                         Assert.Equal(inputValue?.Value, inputOverride?.Value);
-                    } else {
+                    }
+                    else
+                    {
                         Assert.NotEqual(input.Overridden, true);
                     }
                 }
@@ -279,17 +285,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Equal(expectedResult?.Type, resultValue.Type);
                 Assert.Equal(expectedResult, resultValue);
 
-                if (checkTs) {
+                if (checkTs)
+                {
                     Assert.True(outTsIds.Any());
                     Assert.True(inTsIds.Any());
 
                     // Check that output time series were created
-                    var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token).ConfigureAwait(false);
+                    var outTs = await cdf.TimeSeries.RetrieveAsync(outTsIds, true, source.Token);
                     Assert.True(outTs.Any(), $"No output time series were created [{string.Join(",", outTsIds)}]");
                     Assert.Equal(outTsIds.Count, outTs.Count());
 
                     // Check that input time series were created
-                    var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token).ConfigureAwait(false);
+                    var inTs = await cdf.TimeSeries.RetrieveAsync(inTsIds, true, source.Token);
                     Assert.True(inTs.Any(), $"No input time series were created [{string.Join(",", inTsIds)}]");
                     Assert.Equal(inTsIds.Count, inTs.Count());
 
@@ -303,7 +310,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             {
                                 ExternalId = o.ExternalId
                             })
-                        }, source.Token).ConfigureAwait(false);
+                        }, source.Token);
                     Assert.True(outDps.Items.Any());
                     Assert.NotNull(SampleRoutine._output);
                     Assert.Equal(SampleRoutine._output, outDps.Items.First().NumericDatapoints.Datapoints.First().Value);
@@ -318,7 +325,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             {
                                 ExternalId = i.ExternalId
                             })
-                        }, source.Token).ConfigureAwait(false);
+                        }, source.Token);
                     Assert.True(inDps.Items.Any());
                     Assert.NotEmpty(SampleRoutine._inputs);
                     Assert.Contains(inDps.Items.First().NumericDatapoints.Datapoints.First().Value, SampleRoutine._inputs);
@@ -332,7 +339,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         IgnoreUnknownIds = true,
                         Items = tsToDelete.Select(i => new Identity(i)).ToList()
-                    }, source.Token).ConfigureAwait(false);
+                    }, source.Token);
                 }
                 provider.Dispose(); // Dispose provider to also dispose managed services
                 if (Directory.Exists("./files"))
@@ -356,13 +363,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         private ILogger _logger;
         public SampleRoutine(SimulatorRoutineRevision config, Dictionary<string, SimulatorValueItem> inputData, ILogger logger)
-            :base(config, inputData, logger)
+            : base(config, inputData, logger)
         {
             _inputs = new List<double>();
             _output = null;
             _logger = logger;
         }
-        
+
         public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
         {
             SimulatorValue outputValue;
@@ -376,18 +383,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
             {
-                outputValue = new SimulatorValue.Double(_output.Value);   
-            } else if (outputConfig.ValueType == SimulatorValueType.STRING)
+                outputValue = new SimulatorValue.Double(_output.Value);
+            }
+            else if (outputConfig.ValueType == SimulatorValueType.STRING)
             {
                 outputValue = new SimulatorValue.String(_output.ToString());
-            } else {
+            }
+            else
+            {
                 throw new InvalidOperationException("Unsupported value type");
             }
-            return new SimulatorValueItem() {
+            return new SimulatorValueItem()
+            {
                 Value = outputValue,
                 ReferenceId = outputConfig.ReferenceId,
                 TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
-                Unit = outputConfig.Unit != null ? new SimulatorValueUnit() {
+                Unit = outputConfig.Unit != null ? new SimulatorValueUnit()
+                {
                     Name = outputConfig.Unit.Name,
                 } : null,
                 ValueType = outputConfig.ValueType
@@ -400,12 +412,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 throw new ArgumentNullException(nameof(arguments));
             }
-            if(arguments.TryGetValue("command", out var cmd)) {
+            if (arguments.TryGetValue("command", out var cmd))
+            {
                 if (cmd == "Simulate")
                 {
                     _output = _inputs.Sum();
                 }
-            } else {
+            }
+            else
+            {
                 throw new InvalidOperationException("No command provided");
             }
         }
@@ -467,8 +482,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            TestFileState modelState, 
-            SimulatorRoutineRevision simulationConfiguration, 
+            TestFileState modelState,
+            SimulatorRoutineRevision simulationConfiguration,
             Dictionary<string, SimulatorValueItem> inputData)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData, _logger);
@@ -483,7 +498,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     }
 
     public class SampleSimulationRunner :
-        RoutineRunnerBase<DefaultAutomationConfig,TestFileState, SimulatorRoutineRevision>
+        RoutineRunnerBase<DefaultAutomationConfig, TestFileState, SimulatorRoutineRevision>
     {
         internal const string connectorName = "integration-tests-connector";
 

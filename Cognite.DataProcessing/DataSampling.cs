@@ -152,7 +152,7 @@ namespace Cognite.DataProcessing
 
             return new TimeSeriesData(time: x, data: yRes, granularity: ts.Granularity, isStep: ts.IsStep);
         }
-        
+
         /// <summary>
         /// Supported logical operations
         /// </summary>

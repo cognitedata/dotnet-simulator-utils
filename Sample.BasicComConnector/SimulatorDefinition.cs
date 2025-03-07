@@ -1,19 +1,21 @@
 using CogniteSdk.Alpha;
 
-static class SimulatorDefinition {
-    public static SimulatorCreate Get() {
+static class SimulatorDefinition
+{
+    public static SimulatorCreate Get()
+    {
         return new SimulatorCreate()
-            {
-                ExternalId = "NewSim",
-                Name = "NewSim",
-                FileExtensionTypes = new List<string> { "xlsx" },
-                ModelTypes = new List<SimulatorModelType> {
+        {
+            ExternalId = "NewSim",
+            Name = "NewSim",
+            FileExtensionTypes = new List<string> { "xlsx" },
+            ModelTypes = new List<SimulatorModelType> {
                     new SimulatorModelType {
                         Name = "Steady State",
                         Key = "SteadyState",
                     }
                 },
-                StepFields = new List<SimulatorStepField> {
+            StepFields = new List<SimulatorStepField> {
                     new SimulatorStepField {
                         StepType = "get/set",
                         Fields = new List<SimulatorStepFieldParam> {
@@ -35,7 +37,7 @@ static class SimulatorDefinition {
                         },
                     },
                 },
-                UnitQuantities = new List<SimulatorUnitQuantity>() {
+            UnitQuantities = new List<SimulatorUnitQuantity>() {
                     new SimulatorUnitQuantity {
                         Name = "Temperature",
                         Label = "Temperature",
@@ -47,6 +49,6 @@ static class SimulatorDefinition {
                         },
                     },
                 },
-            };
+        };
     }
 }

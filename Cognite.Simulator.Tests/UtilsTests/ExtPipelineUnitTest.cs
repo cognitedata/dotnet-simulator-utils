@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 PipelineNotification = new PipelineNotificationConfig(),
             };
             services.AddExtractionPipeline(connectorConfig);
-            
+
             using var provider = services.BuildServiceProvider();
 
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
