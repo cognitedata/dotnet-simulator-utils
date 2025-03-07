@@ -22,12 +22,12 @@ public class CalculatorSimulatorClient :
         return Task.CompletedTask;
     }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken token)
     {
         return CommonUtils.GetAssemblyVersion();
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken token)
     {
         return "2.0.1";
     }

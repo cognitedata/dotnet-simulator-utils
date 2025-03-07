@@ -86,12 +86,12 @@ public class CalculatorSimulatorAutomationClient :
         state.ParsingInfo.SetSuccess();
     }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken token)
     {
         return CommonUtils.GetAssemblyVersion();
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken token)
     {
         return "2.0.1";
     }

@@ -301,9 +301,9 @@ namespace Cognite.Simulator.Utils
 
         Task ExtractModelInformation(T state, CancellationToken _token);
 
-        string GetSimulatorVersion();
+        string GetSimulatorVersion(CancellationToken _token);
 
-        string GetConnectorVersion();
+        string GetConnectorVersion(CancellationToken _token);
 
         /// <summary>
         /// Tests the connection to the simulator.

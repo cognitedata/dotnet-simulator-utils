@@ -456,12 +456,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             throw new NotImplementedException();
         }
 
-        public string GetConnectorVersion()
+        public string GetConnectorVersion(CancellationToken _token)
         {
             throw new NotImplementedException();
         }
 
-        public string GetSimulatorVersion()
+        public string GetSimulatorVersion(CancellationToken _token)
         {
             throw new NotImplementedException();
         }

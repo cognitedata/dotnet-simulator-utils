@@ -85,12 +85,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new NotImplementedException();
             }
 
-            public string GetConnectorVersion()
+            public string GetConnectorVersion(CancellationToken _token)
             {
                 return CommonUtils.GetAssemblyVersion();
             }
 
-            public string GetSimulatorVersion()
+            public string GetSimulatorVersion(CancellationToken _token)
             {
                 return "2.0.1";
             }
