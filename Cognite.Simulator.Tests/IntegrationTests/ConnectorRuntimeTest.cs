@@ -175,7 +175,8 @@ connector:
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
                 SampleModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData
+                Dictionary<string, SimulatorValueItem> inputData,
+                CancellationToken token
             )
             {
                 _logger.LogInformation("CalculatorClient Running a simulation");
@@ -183,7 +184,7 @@ connector:
                 {
                     Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
                     var routine = new CalculatorRoutineAutomation(routineRevision, inputData, _logger);
-                    result = routine.PerformSimulation();
+                    result = routine.PerformSimulation(token);
                     return Task.FromResult(result);
                 }
                 finally
@@ -225,7 +226,7 @@ connector:
                 return resultItem;
             }
 
-            public override void RunCommand(Dictionary<string, string> arguments)
+            public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
             {
             }
 

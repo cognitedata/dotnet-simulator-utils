@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cognite.Simulator.Utils
@@ -71,15 +72,18 @@ namespace Cognite.Simulator.Utils
         /// Invoke the given command on the simulator using the provided arguments.
         /// </summary>
         /// <param name="arguments">Arguments</param>
-        public abstract void RunCommand(Dictionary<string, string> arguments);
+        /// <param name="token">Cancellation token</param>
+        public abstract void RunCommand(Dictionary<string, string> arguments, CancellationToken token);
 
         /// <summary>
         /// Perform the simulation routine and collect the results
         /// </summary>
+        /// <param name="token">Cancellation token</param>
         /// <returns>Simulation results</returns>
         /// <exception cref="SimulationException">When the simulation configuration is invalid</exception>
         /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
-        public virtual Dictionary<string, SimulatorValueItem> PerformSimulation()
+        /// <exception cref="OperationCanceledException">When the cancellation token is cancelled</exception>
+        public virtual Dictionary<string, SimulatorValueItem> PerformSimulation(CancellationToken token)
         {
             _simulationResults.Clear();
             if (_script == null || !_script.Any())
@@ -93,7 +97,7 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
-                    ParseScriptStage(stage);
+                    ParseScriptStage(stage, token);
                 }
                 catch (SimulationRoutineException e)
                 {
@@ -104,7 +108,7 @@ namespace Cognite.Simulator.Utils
             return _simulationResults;
         }
 
-        private void ParseScriptStage(SimulatorRoutineRevisionScriptStage stage)
+        private void ParseScriptStage(SimulatorRoutineRevisionScriptStage stage, CancellationToken token)
         {
             var orderedSteps = stage.Steps.OrderBy(s => s.Order).ToList();
             foreach (var step in orderedSteps)
@@ -115,17 +119,17 @@ namespace Cognite.Simulator.Utils
                     {
                         case "Command":
                             {
-                                ParseCommand(step.Arguments);
+                                ParseCommand(step.Arguments, token);
                                 break;
                             }
                         case "Set":
                             {
-                                ParseSet(step.Arguments);
+                                ParseSet(step.Arguments, token);
                                 break;
                             }
                         case "Get":
                             {
-                                ParseGet(step.Arguments);
+                                ParseGet(step.Arguments, token);
                                 break;
                             }
                             throw new SimulationRoutineException($"Invalid stage step: {step.StepType}", stepNumber: step.Order);
@@ -142,14 +146,14 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void ParseCommand(Dictionary<string, string> arguments)
+        private void ParseCommand(Dictionary<string, string> arguments, CancellationToken token)
         {
             _logger.LogDebug("Running command: {Command}", SimulatorLoggingUtils.FlattenDictionary(arguments));
             // Perform command
-            RunCommand(arguments);
+            RunCommand(arguments, token);
         }
 
-        private void ParseGet(Dictionary<string, string> arguments)
+        private void ParseGet(Dictionary<string, string> arguments, CancellationToken token)
         {
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
@@ -172,7 +176,7 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void ParseSet(Dictionary<string, string> arguments)
+        private void ParseSet(Dictionary<string, string> arguments, CancellationToken token)
         {
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {

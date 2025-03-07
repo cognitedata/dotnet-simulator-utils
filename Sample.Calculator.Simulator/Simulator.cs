@@ -35,14 +35,15 @@ public class CalculatorSimulatorClient :
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
         CalculatorModelFilestate modelState, 
         SimulatorRoutineRevision routineRevision, 
-        Dictionary<string, SimulatorValueItem> inputData
+        Dictionary<string, SimulatorValueItem> inputData,
+        CancellationToken token
     ) {
         _logger.LogInformation("CalculatorClient Running a simulation");
         try
         {
             Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
             var routine = new CalculatorRoutine(routineRevision, inputData, _logger);
-            result = routine.PerformSimulation();
+            result = routine.PerformSimulation(token);
             foreach (var kvp in result)
             {
                 Console.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
@@ -84,7 +85,7 @@ internal class CalculatorRoutine : RoutineImplementationBase
         return resultItem;
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling run command");
     }
