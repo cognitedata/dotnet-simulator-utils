@@ -32,7 +32,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton<ModelParsingInfo>();
-            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+            //services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             var loggerConfig = new LoggerConfig
             {
                 Console = new Extractor.Logging.ConsoleConfig
@@ -150,7 +150,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+            //services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -282,7 +282,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
-            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+            //services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
 
@@ -368,7 +368,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
-            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+            //services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
             var testStart = DateTime.UtcNow;
@@ -449,7 +449,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<RoutineLibraryTest>();
-            services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+            //services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
             StateStoreConfig stateConfig = null;
             using var provider = services.BuildServiceProvider();
@@ -546,7 +546,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             ILogger<ModeLibraryTest> logger,
             FileStorageClient downloadClient,
             SimulatorCreate simulatorDefinition,
-            IDateTimeProvider dateTimeProvider,
+            IDateTimeProvider dateTimeProvider = null,
             IExtractionStateStore store = null) :
             base(
                 new ModelLibraryConfig

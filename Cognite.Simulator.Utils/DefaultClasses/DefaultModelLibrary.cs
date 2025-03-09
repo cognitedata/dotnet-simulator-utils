@@ -36,7 +36,6 @@ namespace Cognite.Simulator.Utils
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> simulatorClient,
             SimulatorCreate simulatorDefinition,
             FileStorageClient client,
-            IDateTimeProvider dateTimeProvider,
             IExtractionStateStore store = null) :
             base(
                 config.Connector.ModelLibrary,
@@ -44,7 +43,7 @@ namespace Cognite.Simulator.Utils
                 cdf,
                 logger,
                 client,
-                dateTimeProvider,
+                dateTimeProvider: new SystemDateTimeProvider(),
                 store)
         {
             this.simulatorClient = simulatorClient;

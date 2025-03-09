@@ -69,13 +69,14 @@ namespace Cognite.Simulator.Utils
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
-        private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly IDateTimeProvider _dateTimeProvider = new SystemDateTimeProvider();
 
         // Internal objects
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
 
         private List<(string, string)> _simulatorFileExtMap;
+        private readonly ConcurrentDictionary<long, TaskCompletionSource<bool>> _downloadTasks;
 
 
         /// <summary>
@@ -93,7 +94,7 @@ namespace Cognite.Simulator.Utils
             CogniteDestination cdf,
             ILogger logger,
             FileStorageClient downloadClient,
-            IDateTimeProvider dateTimeProvider,
+            IDateTimeProvider dateTimeProvider = null,
             IExtractionStateStore store = null)
         {
             if (cdf == null)
@@ -111,7 +112,8 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
-            _dateTimeProvider = dateTimeProvider;
+            _dateTimeProvider = dateTimeProvider ?? new SystemDateTimeProvider();
+            _downloadTasks = new ConcurrentDictionary<long, TaskCompletionSource<bool>>();
         }
 
         private void CopyNonBaseProperties(T source, T target)
@@ -579,28 +581,45 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-            var fileId = new Identity(modelState.CdfId);
+
+            var fileId = modelState.CdfId;
+
+            var tcs = _downloadTasks.GetOrAdd(fileId, _ => new TaskCompletionSource<bool>());
+
+            bool shouldDownload = false;
+        
+            lock (tcs)
+            {
+                if (tcs.Task.Status == TaskStatus.WaitingForActivation)
+                {
+                    shouldDownload = true;
+                }
+            }
+
+            if (!shouldDownload)
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
+
             modelState.DownloadAttempts++;
             _logger.LogInformation("Downloading file: {Id}. Model revision external id: {ExternalId}. Attempt: {DownloadAttempts}",
-                modelState.CdfId,
+                fileId,
                 modelState.ExternalId,
                 modelState.DownloadAttempts);
 
             try
             {
                 var response = await _cdfFiles
-                    .DownloadAsync(new[] { fileId })
+                    .DownloadAsync(new[] { new Identity(fileId) })
                     .ConfigureAwait(false);
                 if (response.Any() && response.First().DownloadUrl != null)
                 {
                     var uri = response.First().DownloadUrl;
 
-                    string filename;
-
                     var modelFolder = _modelFolder;
-                    var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
+                    var storageFolder = Path.Combine(modelFolder, $"{fileId}");
                     CreateDirectoryIfNotExists(storageFolder);
-                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
+                    var filename = Path.Combine(storageFolder, $"{fileId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
@@ -609,7 +628,7 @@ namespace Cognite.Simulator.Utils
                     if (downloaded)
                     {
                         _logger.LogDebug("File downloaded: {Id}. Model revision: {ExternalId}. File path: {FilePath}",
-                            modelState.CdfId,
+                            fileId,
                             modelState.ExternalId,
                             filename);
                         modelState.LastAccessTime = _dateTimeProvider.UtcNow;
@@ -639,6 +658,10 @@ namespace Cognite.Simulator.Utils
                     modelState.ExternalId,
                     e
                 );
+            }
+            finally
+            {
+                _downloadTasks.TryRemove(fileId, out _);
             }
             return false;
         }
