@@ -24,28 +24,28 @@ public class CalculatorSimulatorClient :
         return Task.CompletedTask;
     }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken token)
     {
         return CommonUtils.GetAssemblyVersion();
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken token)
     {
         return "2.0.1";
     }
 
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-        CalculatorModelFilestate modelState,
-        SimulatorRoutineRevision routineRevision,
-        Dictionary<string, SimulatorValueItem> inputData
-    )
-    {
+        CalculatorModelFilestate modelState, 
+        SimulatorRoutineRevision routineRevision, 
+        Dictionary<string, SimulatorValueItem> inputData,
+        CancellationToken token
+    ) {
         _logger.LogInformation("CalculatorClient Running a simulation");
         try
         {
             Dictionary<string, SimulatorValueItem> result = new Dictionary<string, SimulatorValueItem>();
             var routine = new CalculatorRoutine(routineRevision, inputData, _logger);
-            result = routine.PerformSimulation();
+            result = routine.PerformSimulation(token);
             foreach (var kvp in result)
             {
                 Console.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
@@ -71,7 +71,7 @@ internal class CalculatorRoutine : RoutineImplementationBase
     {
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling outputs");
         var resultItem = new SimulatorValueItem()
@@ -88,12 +88,12 @@ internal class CalculatorRoutine : RoutineImplementationBase
         return resultItem;
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling run command");
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling inputs");
     }

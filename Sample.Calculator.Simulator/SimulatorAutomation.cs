@@ -87,12 +87,12 @@ public class CalculatorSimulatorAutomationClient :
         state.ParsingInfo.SetSuccess();
     }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken token)
     {
         return CommonUtils.GetAssemblyVersion();
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken token)
     {
         return "2.0.1";
     }
@@ -100,7 +100,8 @@ public class CalculatorSimulatorAutomationClient :
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
         CalculatorModelFilestate modelState,
         SimulatorRoutineRevision routineRevision,
-        Dictionary<string, SimulatorValueItem> inputData
+        Dictionary<string, SimulatorValueItem> inputData,
+        CancellationToken token
     )
     {
         if (modelState == null)
@@ -112,7 +113,7 @@ public class CalculatorSimulatorAutomationClient :
         try
         {
             var routine = new CalculatorRoutine(routineRevision, inputData, _logger);
-            var result = routine.PerformSimulation();
+            var result = routine.PerformSimulation(token);
             return Task.FromResult(result);
         }
         finally
@@ -138,7 +139,7 @@ internal class CalculatorRoutineAutomation : RoutineImplementationBase
     {
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
     {
         var resultItem = new SimulatorValueItem()
         {
@@ -154,12 +155,12 @@ internal class CalculatorRoutineAutomation : RoutineImplementationBase
         return resultItem;
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling run command");
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling inputs");
     }

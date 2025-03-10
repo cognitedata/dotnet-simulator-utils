@@ -88,12 +88,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 throw new NotImplementedException();
             }
 
-            public string GetConnectorVersion()
+            public string GetConnectorVersion(CancellationToken _token)
             {
                 return CommonUtils.GetAssemblyVersion();
             }
 
-            public string GetSimulatorVersion()
+            public string GetSimulatorVersion(CancellationToken _token)
             {
                 return "2.0.1";
             }
@@ -101,7 +101,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
                 DefaultModelFilestate modelState,
                 SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData
+                Dictionary<string, SimulatorValueItem> inputData,
+                CancellationToken token
             )
             {
                 throw new NotImplementedException();
@@ -124,16 +125,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
             }
 
-            public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+            public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
             {
                 throw new NotImplementedException();
             }
 
-            public override void RunCommand(Dictionary<string, string> arguments)
+            public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
             {
             }
 
-            public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+            public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
             {
             }
         }

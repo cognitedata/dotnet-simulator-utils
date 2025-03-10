@@ -369,8 +369,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _output = null;
             _logger = logger;
         }
-
-        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+        
+        public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
         {
             SimulatorValue outputValue;
             if (outputConfig == null)
@@ -406,7 +406,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             };
         }
 
-        public override void RunCommand(Dictionary<string, string> arguments)
+        public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
         {
             if (arguments == null)
             {
@@ -425,7 +425,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+        public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
         {
             double value;
             if (input == null)
@@ -471,24 +471,25 @@ namespace Cognite.Simulator.Tests.UtilsTests
             throw new NotImplementedException();
         }
 
-        public string GetConnectorVersion()
+        public string GetConnectorVersion(CancellationToken _token)
         {
             throw new NotImplementedException();
         }
 
-        public string GetSimulatorVersion()
+        public string GetSimulatorVersion(CancellationToken _token)
         {
             throw new NotImplementedException();
         }
 
         public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            TestFileState modelState,
-            SimulatorRoutineRevision simulationConfiguration,
-            Dictionary<string, SimulatorValueItem> inputData)
+            TestFileState modelState, 
+            SimulatorRoutineRevision simulationConfiguration, 
+            Dictionary<string, SimulatorValueItem> inputData,
+            CancellationToken token)
         {
             var routine = new SampleRoutine(simulationConfiguration, inputData, _logger);
             _logger.LogWarning("Running a sample routine, not a real simulation");
-            return Task.FromResult(routine.PerformSimulation());
+            return Task.FromResult(routine.PerformSimulation(token));
         }
 
         public Task TestConnection(CancellationToken token)
