@@ -17,6 +17,10 @@ public class CalculatorSimulatorClient :
 
     public Task ExtractModelInformation(CalculatorModelFilestate state, CancellationToken _token)
     {
+        if (state == null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
         _logger.LogInformation("ExtractModelInformation ");
         state.CanRead = false;
         state.Processed = true;

@@ -63,7 +63,7 @@ public class CalculatorSimulatorAutomationClient :
 
     public CalculatorSimulatorAutomationClient(
         ILogger<CalculatorSimulatorAutomationClient> logger,
-        DefaultConfig<CustomAutomationConfig> config) : base(logger, config.Automation)
+        DefaultConfig<CustomAutomationConfig> config) : base(logger, config?.Automation)
     {
         _logger = logger;
     }

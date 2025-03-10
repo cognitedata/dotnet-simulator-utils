@@ -13,12 +13,22 @@ public class NewSimRoutine : RoutineImplementationBase
 
     public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
     {
+        if (arguments == null)
+        {
+            throw new ArgumentNullException(nameof(arguments));
+        }
+
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
         var row = int.Parse(rowStr);
         var col = int.Parse(colStr);
 
         dynamic worksheet = _workbook.ActiveSheet;
+
+        if (input == null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
 
         if (input.ValueType == SimulatorValueType.DOUBLE)
         {
@@ -41,6 +51,11 @@ public class NewSimRoutine : RoutineImplementationBase
 
     public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
     {
+        if (arguments == null)
+        {
+            throw new ArgumentNullException(nameof(arguments));
+        }
+
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
         var row = int.Parse(rowStr);
@@ -48,6 +63,11 @@ public class NewSimRoutine : RoutineImplementationBase
 
         dynamic worksheet = _workbook.ActiveSheet;
         var cell = worksheet.Cells[row, col];
+
+        if (outputConfig == null)
+        {
+            throw new ArgumentNullException(nameof(outputConfig));
+        }
 
         if (outputConfig.ValueType != SimulatorValueType.DOUBLE)
         {

@@ -295,7 +295,7 @@ namespace Cognite.Simulator.Utils
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger<DefaultRoutineLibrary<TAutomationConfig>> logger) :
-            base(config.Connector.RoutineLibrary, simulatorDefinition, cdf, logger)
+            base(config?.Connector.RoutineLibrary, simulatorDefinition, cdf, logger)
         {
         }
     }

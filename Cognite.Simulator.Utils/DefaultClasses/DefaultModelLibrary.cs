@@ -38,7 +38,7 @@ namespace Cognite.Simulator.Utils
             FileStorageClient client,
             IExtractionStateStore store = null) :
             base(
-                config.Connector.ModelLibrary,
+                config?.Connector.ModelLibrary,
                 simulatorDefinition,
                 cdf,
                 logger,
@@ -53,6 +53,11 @@ namespace Cognite.Simulator.Utils
             CancellationToken token
         )
         {
+            if (state == null)
+            {
+                throw new Exception("State is not defined");
+            }
+
             if (simulatorClient != null)
             {
                 await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);
@@ -66,6 +71,10 @@ namespace Cognite.Simulator.Utils
 
         protected override TModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
+            if (modelRevision == null)
+            {
+                throw new ArgumentNullException(nameof(modelRevision));
+            }
             var output = new TModelStateBase
             {
                 Id = modelRevision.Id.ToString(),
