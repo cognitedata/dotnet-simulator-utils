@@ -123,12 +123,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _pipeline = pipeline;
         }
 
-        public override string GetConnectorVersion()
+        public override string GetConnectorVersion(CancellationToken _token)
         {
             return "v0.0.1";
         }
 
-        public override string GetSimulatorVersion(string simulator)
+        public override string GetSimulatorVersion(string simulator, CancellationToken _token)
         {
             return "1.2.3";
         }

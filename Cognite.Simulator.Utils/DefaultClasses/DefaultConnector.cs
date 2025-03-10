@@ -61,14 +61,14 @@ namespace Cognite.Simulator.Utils
                     "0.0.1");
         }
 
-        public override string GetConnectorVersion()
+        public override string GetConnectorVersion(CancellationToken token)
         {
-            return _simulatorClient.GetConnectorVersion();
+            return _simulatorClient.GetConnectorVersion(token);
         }
 
-        public override string GetSimulatorVersion(string simulator)
+        public override string GetSimulatorVersion(string simulator, CancellationToken token)
         {
-            return _simulatorClient.GetSimulatorVersion();
+            return _simulatorClient.GetSimulatorVersion(token);
         }
 
         public override async Task Init(CancellationToken token)

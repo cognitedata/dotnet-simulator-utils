@@ -293,18 +293,18 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelState">Model state object</param>
         /// <param name="simulationConfiguration">Simulation configuration object</param>
         /// <param name="inputData">Input data</param>
+        /// <param name="token">Cancellation token</param>
         /// <returns></returns>
         Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
             T modelState, 
             V simulationConfiguration, 
-            Dictionary<string, SimulatorValueItem> inputData,
-            CancellationToken token);
+            Dictionary<string, SimulatorValueItem> inputData, CancellationToken token);
 
         Task ExtractModelInformation(T state, CancellationToken _token);
 
-        string GetSimulatorVersion();
+        string GetSimulatorVersion(CancellationToken _token);
 
-        string GetConnectorVersion();
+        string GetConnectorVersion(CancellationToken _token);
 
         /// <summary>
         /// Tests the connection to the simulator.
