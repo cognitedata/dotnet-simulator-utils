@@ -35,6 +35,11 @@ namespace Cognite.Simulator.Utils
         /// <param name="checkForSeverityOverride">True to check for severity override</param>
         public static async Task<PropertyEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
         {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
+
             var enrichers = new List<PropertyEnricher>() {
                 new PropertyEnricher("LogId", logId)
             };

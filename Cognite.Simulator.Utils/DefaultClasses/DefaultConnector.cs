@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
             ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
-            : base(cdf, config.Connector, simulatorDefinition, logger, remoteConfigManager, sink)
+            : base(cdf, config?.Connector, simulatorDefinition, logger, remoteConfigManager, sink)
         {
             _config = config;
             _logger = logger;

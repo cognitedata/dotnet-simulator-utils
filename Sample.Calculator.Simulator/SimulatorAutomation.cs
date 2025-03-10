@@ -63,7 +63,7 @@ public class CalculatorSimulatorAutomationClient :
 
     public CalculatorSimulatorAutomationClient(
         ILogger<CalculatorSimulatorAutomationClient> logger,
-        DefaultConfig<CustomAutomationConfig> config) : base(logger, config.Automation)
+        DefaultConfig<CustomAutomationConfig> config) : base(logger, config?.Automation)
     {
         _logger = logger;
     }
@@ -73,7 +73,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger.LogInformation("Begin model information extraction");
         if (state == null)
         {
-            throw new Exception("State is not defined");
+            throw new ArgumentNullException(nameof(state));
         }
         Random random = new Random();
         await Task.Run(() =>

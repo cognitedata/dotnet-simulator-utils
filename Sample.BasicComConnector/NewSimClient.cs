@@ -10,7 +10,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config.Automation)
+            : base(logger, config?.Automation)
     {
         this.logger = logger;
         semaphore.Wait();
@@ -39,6 +39,11 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
     {
+        if (state == null)
+        {
+            throw new Exception("State is not defined");
+        }
+
         await semaphore.WaitAsync(_token).ConfigureAwait(false);
         try
         {
@@ -71,6 +76,11 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
     {
+        if (modelState == null)
+        {
+            throw new ArgumentNullException(nameof(modelState));
+        }
+
         await semaphore.WaitAsync().ConfigureAwait(false);
         dynamic? workbook = null;
         try

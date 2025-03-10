@@ -21,8 +21,8 @@ namespace Cognite.Simulator.Utils
         {
         }
 
-        public bool Processed = true;
+        private bool _processed = true;
 
-        public override bool IsExtracted => Processed;
+        public override bool IsExtracted => _processed;
     }
 }
