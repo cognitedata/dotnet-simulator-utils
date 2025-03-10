@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<A, T, V>
-        where A: AutomationConfig
+        where A : AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Library containing the simulator model files
         /// </summary>
-        protected IModelProvider<A,T> ModelLibrary { get; }
+        protected IModelProvider<A, T> ModelLibrary { get; }
 
         /// <summary>
         /// Library containing the simulation configuration files
@@ -62,7 +62,7 @@ namespace Cognite.Simulator.Utils
             ConnectorConfig connectorConfig,
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
-            IModelProvider<A,T> modelLibrary,
+            IModelProvider<A, T> modelLibrary,
             IRoutineProvider<V> routineLibrary,
             ILogger logger)
         {
@@ -276,7 +276,7 @@ namespace Cognite.Simulator.Utils
             {
                 return (model, null);
             }
-            
+
             return (model, routineRev);
         }
 
@@ -360,11 +360,11 @@ namespace Cognite.Simulator.Utils
                 token).ConfigureAwait(false);
 
             var configObj = routineRevision.Configuration;
-            
+
             // Determine the validation end time
             // If the run contains a validation end overwrite, use that instead of the current time
-            var validationEnd = runItem.Run.RunTime.HasValue? CogniteTime.FromUnixTimeMilliseconds(runItem.Run.RunTime.Value) : startTime;
-            
+            var validationEnd = runItem.Run.RunTime.HasValue ? CogniteTime.FromUnixTimeMilliseconds(runItem.Run.RunTime.Value) : startTime;
+
             SamplingConfiguration samplingConfiguration = null;
             try
             {
@@ -377,7 +377,7 @@ namespace Cognite.Simulator.Utils
                         configObj,
                         validationEnd,
                         token).ConfigureAwait(false);
-                    
+
                     // if the sampling range is not null, use it to create the sampling configuration
                     // this should always pass, as the validation check should throw an exception if it fails
                     if (samplingRange.Max.HasValue)
@@ -386,7 +386,7 @@ namespace Cognite.Simulator.Utils
                             start: samplingRange.Min,
                             samplingPosition: SamplingPosition.Midpoint
                         );
-                } 
+                }
                 // if data sampling is not enabled, we do not sample data, but instead use the latest datapoint before
                 // validation end and the simulation time becomes also the validation end
                 else
@@ -395,7 +395,7 @@ namespace Cognite.Simulator.Utils
                         end: validationEnd.ToUnixTimeMilliseconds()
                     );
                 }
-                
+
                 _logger.LogInformation("Running routine revision {ExternalId} for model {ModelExternalId}. Simulation time: {Time}",
                     routineRevision.ExternalId,
                     routineRevision.ModelExternalId,
@@ -476,8 +476,9 @@ namespace Cognite.Simulator.Utils
         /// Throws an exception if the simulation run is too old or in an invalid state
         /// </summary>
         /// <param name="maxAgeSeconds">Maximum age of the simulation run in seconds</param>
-        public void ValidateReadinessForExecution(int maxAgeSeconds = 3600) {
-          
+        public void ValidateReadinessForExecution(int maxAgeSeconds = 3600)
+        {
+
             if (Run.CreatedTime < DateTime.UtcNow.AddSeconds(-1 * maxAgeSeconds).ToUnixTimeMilliseconds())
             {
                 throw new ConnectorException($"Simulation has timed out because it is older than {maxAgeSeconds} second(s)");

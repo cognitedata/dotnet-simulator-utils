@@ -1,20 +1,23 @@
 using CogniteSdk.Alpha;
 
-namespace SampleConnector{
-    public static class SimulatorDefinition {
-        public static SimulatorCreate Get() {
+namespace SampleConnector
+{
+    public static class SimulatorDefinition
+    {
+        public static SimulatorCreate Get()
+        {
             return new SimulatorCreate()
-                {
-                    ExternalId = "CALCULATOR-DEMO",
-                    Name = "CALCULATOR-DEMO",
-                    FileExtensionTypes = new List<string> { "demo" },
-                    ModelTypes = new List<SimulatorModelType> {
+            {
+                ExternalId = "CALCULATOR-DEMO",
+                Name = "CALCULATOR-DEMO",
+                FileExtensionTypes = new List<string> { "demo" },
+                ModelTypes = new List<SimulatorModelType> {
                         new SimulatorModelType {
                             Name = "General",
                             Key = "General",
                         },
                     },
-                    StepFields = new List<SimulatorStepField> {
+                StepFields = new List<SimulatorStepField> {
                         new SimulatorStepField {
                             StepType = "get/set",
                             Fields = new List<SimulatorStepFieldParam> {
@@ -36,7 +39,7 @@ namespace SampleConnector{
                             },
                         },
                     },
-                    UnitQuantities = new List<SimulatorUnitQuantity> {
+                UnitQuantities = new List<SimulatorUnitQuantity> {
                         new SimulatorUnitQuantity {
                             Name = "LiqRate/GasRate",
                             Label = "Liquid Gas Rate",
@@ -72,7 +75,7 @@ namespace SampleConnector{
                             },
                         },
                     }
-                };
+            };
         }
     }
 }

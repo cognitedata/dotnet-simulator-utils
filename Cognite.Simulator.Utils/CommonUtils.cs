@@ -95,7 +95,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentException("Sampling window is missing", nameof(config));
             if (config.DataSampling.Granularity == null)
                 throw new ArgumentException("Granularity is missing", nameof(config));
-            
+
             var validationWindow = config.DataSampling.ValidationWindow;
             var logicalCheck = config.LogicalCheck.FirstOrDefault();
             var logicalCheckEnabled = logicalCheck != null && logicalCheck.Enabled;
@@ -133,7 +133,7 @@ namespace Cognite.Simulator.Utils
 
             // Check for steady state, if enabled
             TimeSeriesData ssdMap = null;
-            
+
             if (steadyStateDetectionEnabled)
             {
                 var ssDps = await dataPoints.GetSample(
@@ -235,7 +235,7 @@ namespace Cognite.Simulator.Utils
         public static async Task<SimulatorValueItem> LoadTimeseriesSimulationInput(
             this Client _cdf,
             SimulatorRoutineRevisionInput inputTs,
-            SimulatorRoutineRevisionConfiguration routineConfiguration, 
+            SimulatorRoutineRevisionConfiguration routineConfiguration,
             SamplingConfiguration samplingConfiguration,
             CancellationToken token)
         {
@@ -273,7 +273,7 @@ namespace Cognite.Simulator.Utils
                 var inputDps = dps.ToTimeSeriesData(
                     routineConfiguration.DataSampling.Granularity.Value,
                     inputTs.Aggregate.ToDataPointAggregate());
-                
+
                 if (inputDps.Count == 0)
                 {
                     throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
@@ -282,7 +282,9 @@ namespace Cognite.Simulator.Utils
                 // This assumes the unit specified in the configuration is the same as the time series unit
                 // No unit conversion is made
                 sampledValue = inputDps.GetAverage();
-            } else {
+            }
+            else
+            {
                 var dp = await _cdf.DataPoints.GetLatestValue(inputTs.SourceExternalId, samplingConfiguration, token).ConfigureAwait(false);
                 sampledValue = dp.Value;
             }
@@ -290,7 +292,8 @@ namespace Cognite.Simulator.Utils
             return new SimulatorValueItem()
             {
                 Value = new SimulatorValue.Double(sampledValue),
-                Unit = inputTs.Unit != null ? new SimulatorValueUnit() {
+                Unit = inputTs.Unit != null ? new SimulatorValueUnit()
+                {
                     Name = inputTs.Unit.Name
                 } : null,
                 Overridden = false,

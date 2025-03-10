@@ -44,7 +44,8 @@ namespace Cognite.Simulator.Extensions
         /// </summary>
         public string ExternalIdSafeChars
         {
-            get {
+            get
+            {
                 return ExternalId.ReplaceSlashAndBackslash("_");
             }
         }
@@ -64,8 +65,10 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Indicates if the time series should be saved back to CDF
         /// </summary>
-        public bool ShouldSaveToTimeSeries {
-            get {
+        public bool ShouldSaveToTimeSeries
+        {
+            get
+            {
                 return !string.IsNullOrEmpty(SaveTimeseriesExternalId);
             }
         }
@@ -76,7 +79,7 @@ namespace Cognite.Simulator.Extensions
     /// </summary>
     public class SimulationOutput : SimulationTimeSeries
     {
-        internal override string TimeSeriesName => 
+        internal override string TimeSeriesName =>
             $"{Name} - OUTPUT - {ReferenceId} - {RoutineRevisionInfo.ExternalIdSafeChars}";
 
         internal override string TimeSeriesDescription =>

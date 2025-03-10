@@ -617,7 +617,7 @@ public class TestValues
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
     };
-    
+
     // Logical check
     public long[] LogicalCheckTime { get; } = new long[]
     {
@@ -728,7 +728,7 @@ public class TestValues
 
     public DataSampling.LogicOperator Check1 { get; } = DataSampling.LogicOperator.Ge;
     public double Threshold1 { get; } = 2300.0;
-    
+
     public double[] LogicalCheckData1 { get; } = new double[]
     {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

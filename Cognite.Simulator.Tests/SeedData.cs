@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests
 
             // delete all test simulators older than 3 minutes and the one with the given externalId
             var createdTime = DateTime.UtcNow.AddMinutes(-3).ToUnixTimeMilliseconds();
-            var simulatorRes = simulators.Items.Where(s => 
+            var simulatorRes = simulators.Items.Where(s =>
                 (s.ExternalId.StartsWith(TestSimulatorExternalIdPrefix) && s.CreatedTime < createdTime) || s.ExternalId == externalId
             );
             if (simulatorRes.Count() > 0)
@@ -107,13 +107,15 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
-        public static FileCreate SimpleModelFileCreate = new FileCreate() {
+        public static FileCreate SimpleModelFileCreate = new FileCreate()
+        {
             Name = "simutils-tests-model.out",
             ExternalId = "simutils-tests-model-single-byte",
             DataSetId = TestDataSetId,
         };
 
-        public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
+        public static FileCreate SimpleModelFileCreate2 = new FileCreate()
+        {
             Name = "simutils-tests-model-2.out",
             ExternalId = "simutils-tests-model-single-byte-2",
             DataSetId = TestDataSetId,
@@ -152,7 +154,8 @@ namespace Cognite.Simulator.Tests
             var uploadUrl = res.UploadUrl;
             var bytes = new byte[1] { 42 };
 
-            using (var fileStream = new StreamContent(new MemoryStream(bytes))) {
+            using (var fileStream = new StreamContent(new MemoryStream(bytes)))
+            {
                 await fileStorageClient.UploadFileAsync(uploadUrl, fileStream).ConfigureAwait(false);
             }
 
@@ -163,11 +166,14 @@ namespace Cognite.Simulator.Tests
         {
             await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
 
-            try {
+            try
+            {
                 var rev = await sdk.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
                     new List<Identity> { new Identity(revision.ExternalId) }).ConfigureAwait(false);
                 return rev.First();
-            } catch {
+            }
+            catch
+            {
                 var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
                 new List<SimulatorModelRevisionCreate>
                 {
@@ -184,7 +190,8 @@ namespace Cognite.Simulator.Tests
             return await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, revision).ConfigureAwait(false);
         }
 
-        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient) {            
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient)
+        {
             var rev1 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
             var rev2 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate2, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
             return new List<SimulatorModelRevision> { rev1, rev2 };
@@ -227,12 +234,16 @@ namespace Cognite.Simulator.Tests
             DataSetId = TestDataSetId,
         };
 
-        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries) {
-            try {
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries)
+        {
+            try
+            {
                 var res = await sdk.TimeSeries.CreateAsync(
                 new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
                 return res.First();
-            } catch (ResponseException e) when (e.Code == 409) {
+            }
+            catch (ResponseException e) when (e.Code == 409)
+            {
                 var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
                     new List<string>() { timeSeries.ExternalId }, true
                 ).ConfigureAwait(false);
@@ -605,7 +616,7 @@ namespace Cognite.Simulator.Tests
                 },
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    new SimulatorRoutineRevisionSteadyStateDetection 
+                    new SimulatorRoutineRevisionSteadyStateDetection
                     {
                         Enabled = true,
                         TimeseriesExternalId = "utils-tests-SsdSensorData",
@@ -818,7 +829,8 @@ namespace Cognite.Simulator.Tests
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
 
-        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
+        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1)
+        {
             return new SimulatorModelRevisionCreate()
             {
                 ExternalId = $"{externalId}-{version}",
@@ -830,8 +842,8 @@ namespace Cognite.Simulator.Tests
         public static SimulatorCreate SimulatorCreate = new SimulatorCreate()
         {
             ExternalId = TestSimulatorExternalId,
-            Name =  TestSimulatorExternalId,
-            FileExtensionTypes= new List<string> { "out" },
+            Name = TestSimulatorExternalId,
+            FileExtensionTypes = new List<string> { "out" },
             StepFields = new List<SimulatorStepField> {
                 new SimulatorStepField {
                     StepType = "get/set",

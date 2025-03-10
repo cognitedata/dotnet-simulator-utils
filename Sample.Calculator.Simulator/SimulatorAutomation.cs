@@ -76,7 +76,8 @@ public class CalculatorSimulatorAutomationClient :
             throw new Exception("State is not defined");
         }
         Random random = new Random();
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             Thread.Sleep(200);
         }, _token).ConfigureAwait(false);
         state.ModelType = "PARSED" + random.Next().ToString() + "abc";
@@ -103,7 +104,8 @@ public class CalculatorSimulatorAutomationClient :
         CancellationToken token
     )
     {
-        if (modelState == null) {
+        if (modelState == null)
+        {
             throw new Exception("Model state is not defined");
         }
         _logger.LogInformation("CalculatorClient Running a simulation");

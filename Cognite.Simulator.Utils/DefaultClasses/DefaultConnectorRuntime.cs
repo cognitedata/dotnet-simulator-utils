@@ -23,8 +23,8 @@ using Polly.Timeout;
 /// </summary>
 public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>
  where TAutomationConfig : AutomationConfig, new()
- where TModelState: ModelStateBase, new()
- where TModelStateBasePoco: ModelStateBasePoco
+ where TModelState : ModelStateBase, new()
+ where TModelStateBasePoco : ModelStateBasePoco
 {
     /// <summary>
     /// Delegate to configure services. This will be called before the services are built.
@@ -84,25 +84,29 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
     /// <param name="logger"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public static SimulatorUpdateItem PrepareUpdateSimulatorObject(Simulator existingSimulatorDefinition, 
-    SimulatorCreate newSimulatorDefinition, ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger )
+    public static SimulatorUpdateItem PrepareUpdateSimulatorObject(Simulator existingSimulatorDefinition,
+    SimulatorCreate newSimulatorDefinition, ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger)
     {
-        if (existingSimulatorDefinition == null) {
+        if (existingSimulatorDefinition == null)
+        {
             throw new Exception("Simulator definition from remote is null");
         }
 
-        if (newSimulatorDefinition == null) {
+        if (newSimulatorDefinition == null)
+        {
             throw new Exception("New simulator definition is null");
         }
 
-        var update = new SimulatorUpdate {
+        var update = new SimulatorUpdate
+        {
             FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes },
             ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes },
             StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields },
         };
 
         // Optional fields
-        if (newSimulatorDefinition.UnitQuantities != null) {
+        if (newSimulatorDefinition.UnitQuantities != null)
+        {
             update.UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities };
         }
 
@@ -110,26 +114,32 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         return new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update };
     }
 
-    private static async Task GetOrCreateSimulator( Client cdfClient, DefaultConfig<TAutomationConfig> config, 
-    ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token) {
+    private static async Task GetOrCreateSimulator(Client cdfClient, DefaultConfig<TAutomationConfig> config,
+    ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token)
+    {
         var definition = SimulatorDefinition;
         var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
         var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == definition.ExternalId);
-        if (definition == null && existingSimulator == null) {
+        if (definition == null && existingSimulator == null)
+        {
             throw new Exception("Simulator definition not found in either the remote API or locally.");
         }
-        if (definition != null) {
+        if (definition != null)
+        {
             logger.LogDebug("Simulator definition found locally");
-            if (existingSimulator == null) {
+            if (existingSimulator == null)
+            {
                 logger.LogDebug("Simulator definition not found on CDF, will create one remotely");
                 var res = await cdfClient.Alpha.Simulators.CreateAsync(new List<SimulatorCreate> { definition }, token).ConfigureAwait(false);
-            } else {
+            }
+            else
+            {
                 var updateItem = PrepareUpdateSimulatorObject(existingSimulator, definition, logger);
                 logger.LogDebug("Updating simulator definition");
                 var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
-                await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);                
+                await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);
             }
-        } 
+        }
     }
 
     public static async Task Run(ILogger defaultLogger, CancellationToken token)
@@ -158,10 +168,10 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         services.AddHttpClient<FileStorageClient>();
         services.AddScoped<TAutomationConfig>();
         services.AddSingleton(SimulatorDefinition);
-        services.AddScoped<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
-        services.AddScoped<DefaultModelLibrary<TAutomationConfig,TModelState,TModelStateBasePoco>>();
+        services.AddScoped<DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco>>();
+        services.AddScoped<DefaultModelLibrary<TAutomationConfig, TModelState, TModelStateBasePoco>>();
         services.AddScoped<DefaultRoutineLibrary<TAutomationConfig>>();
-        services.AddScoped<DefaultSimulationRunner<TAutomationConfig,TModelState,TModelStateBasePoco>>();
+        services.AddScoped<DefaultSimulationRunner<TAutomationConfig, TModelState, TModelStateBasePoco>>();
         services.AddScoped<DefaultSimulationScheduler<TAutomationConfig>>();
 
         defaultLogger.LogDebug("Injecting services");
@@ -175,7 +185,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         var provider = services.BuildServiceProvider();
 
 
-        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig,TModelState,TModelStateBasePoco>>>();
+        var logger = provider.GetRequiredService<ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>>>();
 
         logger.LogInformation("Starting the connector...");
 
@@ -194,13 +204,13 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
             using (var scope = provider.CreateScope())
             {
                 var pipeline = scope.ServiceProvider.GetRequiredService<ExtractionPipeline>();
-                
+
                 try
                 {
-                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig,TModelState,TModelStateBasePoco>>();
+                    var connector = scope.ServiceProvider.GetRequiredService<DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco>>();
 
                     await connector.Init(token).ConfigureAwait(false);
-                   
+
                     await connector.Run(token).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException) when (token.IsCancellationRequested)
@@ -264,7 +274,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                 }
             }
         }
-        
+
         logger.LogInformation("Connector exiting");
 
     }
