@@ -73,7 +73,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger.LogInformation("Begin model information extraction");
         if (state == null)
         {
-            throw new ArgumentNullException(nameof(state));
+            throw new Exception("State is not defined");
         }
         Random random = new Random();
         await Task.Run(() =>

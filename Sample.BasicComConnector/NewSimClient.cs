@@ -41,7 +41,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     {
         if (state == null)
         {
-            throw new Exception("State is not defined");
+            throw new ArgumentNullException(nameof(state));
         }
 
         await semaphore.WaitAsync(_token).ConfigureAwait(false);
