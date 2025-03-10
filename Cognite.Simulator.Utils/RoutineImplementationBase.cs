@@ -168,12 +168,12 @@ namespace Cognite.Simulator.Utils
 
             var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
             if (matchingOutputs.Any())
-                {
-                    var output = matchingOutputs.First();
-                    string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
-                    _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
-                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
-                }
+            {
+                var output = matchingOutputs.First();
+                string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
+                _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
+                _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
+            }
             else
             {
                 throw new SimulationException($"Get error: Output with key {argRefId} not found");

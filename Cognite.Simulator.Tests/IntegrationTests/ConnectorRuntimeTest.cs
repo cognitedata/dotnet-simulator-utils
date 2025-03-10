@@ -176,7 +176,7 @@ connector:
                 return CommonUtils.GetAssemblyVersion();
             }
 
-            public string GetSimulatorVersion(CancellationToken _token) 
+            public string GetSimulatorVersion(CancellationToken _token)
             {
                 return "2.0.1";
             }

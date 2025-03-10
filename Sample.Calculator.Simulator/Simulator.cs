@@ -35,11 +35,12 @@ public class CalculatorSimulatorClient :
     }
 
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-        CalculatorModelFilestate modelState, 
-        SimulatorRoutineRevision routineRevision, 
+        CalculatorModelFilestate modelState,
+        SimulatorRoutineRevision routineRevision,
         Dictionary<string, SimulatorValueItem> inputData,
         CancellationToken token
-    ) {
+    )
+    {
         _logger.LogInformation("CalculatorClient Running a simulation");
         try
         {

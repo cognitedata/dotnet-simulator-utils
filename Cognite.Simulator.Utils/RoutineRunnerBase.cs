@@ -307,8 +307,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns></returns>
         Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            T modelState, 
-            V simulationConfiguration, 
+            T modelState,
+            V simulationConfiguration,
             Dictionary<string, SimulatorValueItem> inputData, CancellationToken token);
 
         Task ExtractModelInformation(T state, CancellationToken _token);

@@ -369,7 +369,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _output = null;
             _logger = logger;
         }
-        
+
         public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
         {
             SimulatorValue outputValue;
@@ -482,8 +482,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            TestFileState modelState, 
-            SimulatorRoutineRevision simulationConfiguration, 
+            TestFileState modelState,
+            SimulatorRoutineRevision simulationConfiguration,
             Dictionary<string, SimulatorValueItem> inputData,
             CancellationToken token)
         {
