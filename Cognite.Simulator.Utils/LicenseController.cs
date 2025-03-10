@@ -16,7 +16,7 @@ namespace Cognite.Simulator.Utils
         private readonly TimeSpan _licenseLockTime;
         private readonly object _lock = new object();
         private ITimer _releaseTimer;
-        private readonly Action _releaseLicenseFunc;
+        private readonly Action<CancellationToken> _releaseLicenseFunc;
         private readonly Action<CancellationToken> _acquireLicenseFunc;
         private bool _licenseHeld;
         private DateTimeOffset _lastUsageTime;
@@ -43,7 +43,7 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="releaseLicenseFunc"/> is null.</exception>
         public LicenseController(
             TimeSpan licenseLockTime,
-            Action releaseLicenseFunc,
+            Action<CancellationToken> releaseLicenseFunc,
             Action<CancellationToken> acquireLicenseFunc,
             ILogger logger,
             TimeProvider timeProvider = null,
@@ -169,7 +169,7 @@ namespace Cognite.Simulator.Utils
                     _controllerName, _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
                 _logger.LogInformation("{ControllerName}: Current time {ScheduledTime}", 
                     _controllerName, _timeProvider.GetUtcNow().ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                _releaseLicenseFunc();
+                _releaseLicenseFunc(_cts.Token);
                 _licenseHeld = false;  
                 _acquisitionTime = DateTimeOffset.MinValue;
                 _logger.LogInformation("{ControllerName}: License released successfully", _controllerName);

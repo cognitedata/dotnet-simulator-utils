@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 namespace Cognite.Simulator.Utils
 {
      public static class ProcessUtils {
+         
 
         /// <summary>
         /// Get the owner of a process using WMI
@@ -29,59 +30,61 @@ namespace Cognite.Simulator.Utils
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 throw new PlatformNotSupportedException("This method is only supported on Windows");
             }
+
             string query = $"SELECT * FROM Win32_Process WHERE ProcessId = {processId}";
             using (var searcher = new ManagementObjectSearcher(query))
             using (var results = searcher.Get())
             {
                 foreach (ManagementObject process in results)
                 {
-                    try
+                    object[] args = new object[] { "", "" };
+                    if (Convert.ToInt32(process.InvokeMethod("GetOwner", args)) == 0)
                     {
-                        object[] args = new object[] { "", "" };
-                        if (Convert.ToInt32(process.InvokeMethod("GetOwner", args)) == 0)
-                        {
-                            string user = (string)args[0];
-                            string domain = (string)args[1];
-                            return $"{domain}\\{user}";
-                        }
-                    }
-                    catch
-                    {
-                        throw new Exception("Access Denied or Process Exited");
+                        string user = (string)args[0];
+                        string domain = (string)args[1];
+                        return $"{domain}\\{user}";
                     }
                 }
             }
+
             throw new Exception("Process not found");
+        }
+        
+        private static void KillProcessUnsafe(string processId, ILogger logger) {
+            Process[] processes = Process.GetProcessesByName(processId);
+            logger.LogDebug("Searching for process : " + processId);
+            logger.LogDebug("Found {Count} matching processes", processes.Length);
+            bool found = false;
+    
+            foreach (Process process in processes) {
+                string owner = GetProcessOwnerWmi(process.Id);
+                logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
+        
+                if (owner.ToLower() == GetCurrentUsername().ToLower()) {
+                    logger.LogInformation("Killing process with PID {PID}", process.Id);
+                    process.Kill();
+                    process.WaitForExit();
+                    found = true;
+                } else {
+                    logger.LogWarning("Process with PID {PID} is owned by a different user ({Owner}). Skipping.", process.Id, owner);
+                }
+            }
+    
+            if (!found) {
+                throw new Exception("No processes found to kill for the current user");
+            }
         }
 
         /// <summary>
         /// Kill a process by ID. Can throw exceptions if it is unable to kill the process or if it cannot find the process owner.
         /// </summary>
         /// <param name="processId"></param>
-        /// <param name="_logger"></param>
-        public static void KillProcess(string processId, ILogger _logger) {
+        /// <param name="logger"></param>
+        public static void KillProcess(string processId, ILogger logger) {
             try {
-                Process[] processes = Process.GetProcessesByName(processId);
-                _logger.LogDebug("Searching for process : " + processId);
-                _logger.LogDebug("Found {Count} matching processes", processes.Length);
-                bool found = false;
-                foreach (Process process in processes) {
-                    string owner = GetProcessOwnerWmi(process.Id);
-                    _logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
-                    if (owner.ToLower() == GetCurrentUsername().ToLower()) {
-                        _logger.LogInformation("Killing process with PID {PID}", process.Id);
-                        process.Kill();
-                        process.WaitForExit();
-                        found = true;
-                    } else {
-                        _logger.LogWarning("Process with PID {PID} is owned by a different user ({Owner}). Skipping.", process.Id, owner);
-                    }
-                }
-                if (!found) {
-                    throw new Exception("No processes found to kill for the current user");
-                }
+                KillProcessUnsafe(processId, logger);
             } catch (Exception e) {
-                _logger.LogError("Failed to kill process: {Message}", e.Message);
+                logger.LogError("Failed to kill process: {Message}", e.Message);
                 throw;
             }
         }

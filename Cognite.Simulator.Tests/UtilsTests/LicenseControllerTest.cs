@@ -41,7 +41,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             
             var tracker = new LicenseController(
                 licenseLockTime ?? TimeSpan.FromMilliseconds(100),
-                () => { releaseMock.Object(); },
+                (CancellationToken _token) => { releaseMock.Object(); },
                 (CancellationToken _token) => { acquireMock.Object(); },
                 _loggerMock.Object,
                 fakeTimeProvider
