@@ -129,7 +129,7 @@ namespace Cognite.Simulator.Utils
         /// Returns the connector version. This is reported periodically to CDF
         /// </summary>
         /// <returns>Connector version</returns>
-        public abstract string GetConnectorVersion();
+        public abstract string GetConnectorVersion(CancellationToken token);
 
         /// <summary>
         /// Returns the version of the given simulator. The connector reads the version and
@@ -137,7 +137,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="simulator">Name of the simulator</param>
         /// <returns>Version</returns>
-        public abstract string GetSimulatorVersion(string simulator);
+        public abstract string GetSimulatorVersion(string simulator, CancellationToken token);
 
         /// <summary>
         /// Returns the connector name.This is reported periodically to CDF
@@ -203,8 +203,8 @@ namespace Cognite.Simulator.Utils
                         ExternalId = connectorName,
                         SimulatorExternalId = simulatorExternalId,
                         DataSetId = _config.DataSetId,
-                        ConnectorVersion = GetConnectorVersion() ?? "N/A",
-                        SimulatorVersion = GetSimulatorVersion(simulatorExternalId) ?? "N/A",
+                        ConnectorVersion = GetConnectorVersion(token) ?? "N/A",
+                        SimulatorVersion = GetSimulatorVersion(simulatorExternalId, token) ?? "N/A",
                     };
 
                     var res = await simulatorsApi.CreateSimulatorIntegrationAsync(new List<SimulatorIntegrationCreate> {
@@ -244,8 +244,8 @@ namespace Cognite.Simulator.Utils
                 var integrationUpdate = init ? new SimulatorIntegrationUpdate
                 {
                     DataSetId = new Update<long> { Set = _config.DataSetId },
-                    ConnectorVersion = new Update<string> { Set = GetConnectorVersion() ?? "N/A" },
-                    SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulatorExternalId) ?? "N/A" },
+                    ConnectorVersion = new Update<string> { Set = GetConnectorVersion(token) ?? "N/A" },
+                    SimulatorVersion = new Update<string> { Set = GetSimulatorVersion(simulatorExternalId, token) ?? "N/A" },
                     ConnectorStatus = new Update<string> { Set = ConnectorStatus.IDLE.ToString() },
                     ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                     Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
