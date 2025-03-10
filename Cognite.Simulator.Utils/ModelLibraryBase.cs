@@ -633,6 +633,7 @@ namespace Cognite.Simulator.Utils
                             filename);
                         modelState.LastAccessTime = _dateTimeProvider.UtcNow;
                         modelState.FilePath = filename;
+                        tcs.SetResult(true);
                         return true;
                     }
                 }
