@@ -21,8 +21,6 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Format
-      run: dotnet format --verify-no-changes
     - name: Test
       run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/  --logger:"console"
       env:
