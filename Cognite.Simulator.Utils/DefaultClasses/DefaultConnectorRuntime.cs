@@ -70,6 +70,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                 catch (Exception e)
                 {
                     logger.LogError(e, "Unhandled exception: {message}", e.Message);
+                    throw;
                 }
             }
         }
