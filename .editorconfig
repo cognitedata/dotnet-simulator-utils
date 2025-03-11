@@ -13,6 +13,10 @@ tab_width = 4
 
 #### .NET Coding Conventions ####
 
+# Organize using directives
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+
 # this. and Me. preferences
 dotnet_style_qualification_for_method = true
 
