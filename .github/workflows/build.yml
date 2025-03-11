@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-matrix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -36,6 +36,13 @@ jobs:
           name: coverage-${{ matrix.os }}
           path: ./Cognite.Simulator.Tests/TestResults/coverage.opencover.xml
           retention-days: 1
+  
+  build:
+    needs: build-matrix
+    runs-on: ubuntu-latest  # Can be any runner, just for reporting
+    steps:
+      - name: Report build status
+        run: echo "All matrix builds completed successfully"
 
   upload-coverage:
     needs: build
