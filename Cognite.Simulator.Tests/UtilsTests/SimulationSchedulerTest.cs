@@ -15,6 +15,7 @@ using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using CogniteSdk;
 using CogniteSdk.Alpha;
+using System.Diagnostics;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -112,6 +113,40 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 1000 * 60); // less than a minute
                 Assert.Equal(expectedRunTime, runTimeMs);
             }
+        }
+
+        [Fact]
+        public void ParseCronExpression_ShouldCompleteWithinThreshold()
+        {
+            const int iterations = 1000;
+            // Example cron expression: "*/5 * * * *" means every 5 minutes.
+            string cronExpression = "*/5 * * * *";
+            string cronExpression2 = "*/3 * * * *";
+            
+            // Warm-up: parse once so that any JIT overhead is minimized.
+            var fakeLogger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<SimulationSchedulerBase<SimulatorRoutineRevision>>();
+            var schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression, fakeLogger);
+
+            var stopwatch = Stopwatch.StartNew();
+
+            for (int i = 0; i < iterations; i++)
+            {
+                if (i % 2 == 0)
+                    schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression, fakeLogger);
+                else
+                    schedule = SimulationSchedulerBase<SimulatorRoutineRevision>.ParseCronTabSchedule(cronExpression2, fakeLogger);
+                
+                SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextOccurrence(schedule, DateTime.UtcNow);
+            }
+
+            stopwatch.Stop();
+
+            // Output the performance measurement
+            var elapsedMs = stopwatch.ElapsedMilliseconds;
+            Console.WriteLine($"Parsed cron expression {iterations} times in {elapsedMs}ms.");
+
+            // Example assertion: if parsing takes more than 1000ms overall, the test will fail.
+            Assert.True(elapsedMs < 1000, $"Parsing took too long: {elapsedMs}ms.");
         }
 
         [Fact]
