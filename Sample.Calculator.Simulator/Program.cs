@@ -1,7 +1,10 @@
 ﻿using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using SampleConnector;
 
 await SampleConnectorNamespace.SampleConnector.Run().ConfigureAwait(false);

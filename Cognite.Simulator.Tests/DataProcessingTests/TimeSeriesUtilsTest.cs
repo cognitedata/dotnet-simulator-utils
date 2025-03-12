@@ -1,5 +1,7 @@
 using System;
+
 using Cognite.DataProcessing;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.DataProcessingTests;
@@ -19,13 +21,13 @@ public class TimeSeriesUtilsTest
         double[] dataArray1 = new double[] { 1, 2, 5, 6, 8 };
         _tsTest1 = new TimeSeriesData(timeArray1, dataArray1, 1);
         _tsTestStep1 = new TimeSeriesData(timeArray1, dataArray1, 1, true);
-            
-        long[] timeArray2 = new long[]{ 2, 4, 5, 8, 8, 10, 11, 12, 14, 15, 17, 18 };
+
+        long[] timeArray2 = new long[] { 2, 4, 5, 8, 8, 10, 11, 12, 14, 15, 17, 18 };
         double[] dataArray2 = new double[] { 1.0, 1.0, 2.0, 3.0, 5.0, 6.0, 5.0, 5.0, 3.5, 3.2, 3.1, 1.0 };
         _tsTest2 = new TimeSeriesData(timeArray2, dataArray2, 1);
         _tsTestStep2 = new TimeSeriesData(timeArray2, dataArray2, 1, true);
     }
-    
+
     [Fact]
     public void TestMinMax()
     {
@@ -53,7 +55,7 @@ public class TimeSeriesUtilsTest
             Assert.Equal(dataArrayResampled[i], tsResampled.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestTimeSeriesInterpolation2()
     {
@@ -87,7 +89,7 @@ public class TimeSeriesUtilsTest
             Assert.Equal(dataArrayResampled[i], tsResampled.Data[i], 4);
         }
     }
-    
+
     [Fact]
     public void TestTimeSeriesStepInterpolation2()
     {
@@ -104,7 +106,7 @@ public class TimeSeriesUtilsTest
             Assert.Equal(dataArrayResampled[i], tsResampled.Data[i], 4);
         }
     }
-    
+
     [Fact]
     public void TestTimeSeriesStepInterpolationExtrapolate()
     {
@@ -112,7 +114,7 @@ public class TimeSeriesUtilsTest
         TimeSeriesData tsResampled = _tsTestStep1.EquallySpacedResampling(endTime: 10);
 
         // Expected results
-        long[] timeArrayResampled = new long[] { 1, 2, 3, 4, 5, 6, 7, 8 , 9, 10};
+        long[] timeArrayResampled = new long[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         double[] dataArrayResampled = new double[] { 1, 2, 2, 2, 5, 6, 6, 8, 8, 8 };
 
         for (int i = 0; i < timeArrayResampled.Length; i++)
@@ -121,7 +123,7 @@ public class TimeSeriesUtilsTest
             Assert.Equal(dataArrayResampled[i], tsResampled.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestTimeSeriesInterpolationExtrapolate()
     {
@@ -169,7 +171,7 @@ public class TimeSeriesUtilsTest
         double[] dataArray1 = new double[] { 1, 2, 5, 6, 8 };
         TimeSeriesData ts1 = new(timeArray1, dataArray1, 1);
 
-        long[] timeArray2 = new long[] { 2, 5, 6, 7, 8, 9};
+        long[] timeArray2 = new long[] { 2, 5, 6, 7, 8, 9 };
         double[] dataArray2 = new double[] { 4, 10, 12, 14, 16, 18 };
         TimeSeriesData ts2 = new(timeArray2, dataArray2, 1);
 
@@ -178,7 +180,7 @@ public class TimeSeriesUtilsTest
 
         // Expected results
         TimeSeriesData alignedTs1 = new(
-            new long[]{ 2, 3, 4, 5, 6, 7, 8}, new double[]{2, 3, 4, 5, 6, 7, 8 }, 1
+            new long[] { 2, 3, 4, 5, 6, 7, 8 }, new double[] { 2, 3, 4, 5, 6, 7, 8 }, 1
         );
         TimeSeriesData alignedTs2 = new(
             new long[] { 2, 3, 4, 5, 6, 7, 8 }, new double[] { 4, 6, 8, 10, 12, 14, 16 }, 1

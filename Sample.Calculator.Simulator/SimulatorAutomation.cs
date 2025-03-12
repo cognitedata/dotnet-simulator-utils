@@ -1,8 +1,11 @@
 using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
+
 using static SampleConnectorNamespace.SampleConnector;
 
 public class CalculatorModelFilestate : ModelStateBase
@@ -76,7 +79,8 @@ public class CalculatorSimulatorAutomationClient :
             throw new Exception("State is not defined");
         }
         Random random = new Random();
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             Thread.Sleep(200);
         }, _token).ConfigureAwait(false);
         state.ModelType = "PARSED" + random.Next().ToString() + "abc";
@@ -103,7 +107,8 @@ public class CalculatorSimulatorAutomationClient :
         CancellationToken token
     )
     {
-        if (modelState == null) {
+        if (modelState == null)
+        {
             throw new Exception("Model state is not defined");
         }
         _logger.LogInformation("CalculatorClient Running a simulation");

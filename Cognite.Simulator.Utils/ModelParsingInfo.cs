@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils
@@ -21,12 +22,12 @@ namespace Cognite.Simulator.Utils
         /// Status message
         /// </summary>
         public string StatusMessage { get; set; }
-        
+
         /// <summary>
         /// Whether or not the model was parsed
         /// </summary>
         public bool Parsed { get; set; }
-        
+
         /// <summary>
         /// If there were any errors during parsing
         /// </summary>
@@ -44,7 +45,7 @@ namespace Cognite.Simulator.Utils
         /// Update the model info status to failure
         /// </summary>
         /// <param name="statusMessage">Status message</param>
-        public void SetFailure( string statusMessage = "Model parsing failed")
+        public void SetFailure(string statusMessage = "Model parsing failed")
         {
             this.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
         }

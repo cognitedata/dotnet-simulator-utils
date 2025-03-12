@@ -1,16 +1,21 @@
-using Xunit;
 using System;
 using System.Threading;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Cognite.Simulator.Utils;
-using Cognite.Extractor.Common;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Utils;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+
+using Moq;
+
+using Xunit;
 
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 
-namespace Cognite.Simulator.Tests.UtilsTests{
+namespace Cognite.Simulator.Tests.UtilsTests
+{
 
     public enum TestLicenseState
     {
@@ -31,14 +36,14 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             TimeProvider timeProvider = null)
         {
             var stateHolder = new StateHolder<TestLicenseState> { State = TestLicenseState.Released };
-            
+
             releaseMock ??= new Mock<Func<object>>();
             acquireMock ??= new Mock<Func<object>>();
-            
+
             // Set up the mocks to track the state changes
             releaseMock.Setup(m => m()).Callback(() => stateHolder.State = TestLicenseState.Released);
             acquireMock.Setup(m => m()).Callback(() => stateHolder.State = TestLicenseState.Held);
-            
+
             var tracker = new LicenseController(
                 licenseLockTime ?? TimeSpan.FromMilliseconds(100),
                 (CancellationToken _token) => { releaseMock.Object(); },
@@ -46,7 +51,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
                 _loggerMock.Object,
                 fakeTimeProvider
             );
-            
+
             return (tracker, stateHolder);
         }
 
@@ -64,7 +69,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Mock<Func<object>> _releaseLicenseFuncMock = new Mock<Func<object>>();
             Mock<Func<object>> _acquireLicenseFuncMock = new Mock<Func<object>>();
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
-            var (tracker, license) = CreateTracker( _releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
+            var (tracker, license) = CreateTracker(_releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
 
             Assert.Equal(TestLicenseState.Released, license.State);
 
@@ -74,10 +79,10 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             Assert.Equal(TestLicenseState.Held, license.State);
             Assert.True(tracker.LicenseHeld);
 
-            using (tracker.BeginUsage()) { /* Use and immediately release */ } 
-            
+            using (tracker.BeginUsage()) { /* Use and immediately release */ }
+
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100));
-            
+
             _releaseLicenseFuncMock.Verify(f => f(), Times.Once);
 
             Assert.Equal(TestLicenseState.Released, license.State);
@@ -90,7 +95,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             // Arrange
             var licenseLockTime = TimeSpan.FromMilliseconds(100);
             var (tracker, license) = CreateTracker(licenseLockTime: licenseLockTime);
-            
+
             // Act
             tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
@@ -113,13 +118,13 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             // Act  
             tracker.AcquireLicense(CancellationToken.None);
             Assert.Equal(TestLicenseState.Held, license.State);
-            
-            using (tracker.BeginUsage()) { } 
+
+            using (tracker.BeginUsage()) { }
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
-            
+
             using (tracker.BeginUsage()) { } // This usage should reset the timeout timer
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(50));
-            
+
             // Assert
             Assert.True(tracker.LicenseHeld); // Should not be released yet due to timer reset
 
@@ -149,7 +154,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             }
 
             fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(100)); // Wait for the lock time to pass
-            
+
             // Assert
             Assert.True(license.State == TestLicenseState.Released);
         }
@@ -165,7 +170,7 @@ namespace Cognite.Simulator.Tests.UtilsTests{
 
             // Act
             tracker.ClearLicenseState();
-            
+
             // Assert
             Assert.False(tracker.LicenseHeld);
             // Should not change external license state (since this is a manual release)
@@ -181,13 +186,13 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             var licenseLockTime = TimeSpan.FromMinutes(5);
             var (tracker, license) = CreateTracker(_releaseLicenseFuncMock, _acquireLicenseFuncMock, licenseLockTime);
 
-            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1)); 
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1));
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently not held", Times.AtLeastOnce(), true);
 
             // Current time at this point is 2000-01-01 00:00:01
             tracker.AcquireLicense(CancellationToken.None);
-            using (tracker.BeginUsage()) {  }
-            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
+            using (tracker.BeginUsage()) { }
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2));
             // forcing logging for the Github action
             tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
@@ -195,18 +200,18 @@ namespace Cognite.Simulator.Tests.UtilsTests{
             VerifyLog(_loggerMock, LogLevel.Information, "License will be released in 3.0 minutes (at 2000-01-01 00:06:00)", Times.AtLeastOnce(), true);
 
             _loggerMock.Invocations.Clear();
-            
+
             // Act
             tracker.ClearLicenseState();
-            
-            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2)); 
+
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(2));
             tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License released forcefully", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently not held", Times.AtLeastOnce(), true);
 
             tracker.AcquireLicense(CancellationToken.None);
-            using (tracker.BeginUsage()) {  }
-            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1)); 
+            using (tracker.BeginUsage()) { }
+            fakeTimeProvider.Advance(TimeSpan.FromMinutes(1));
             tracker.LogLicenseStatus();
             VerifyLog(_loggerMock, LogLevel.Information, "License is currently held", Times.AtLeastOnce(), true);
             VerifyLog(_loggerMock, LogLevel.Information, "License has been held for 1.0 minutes", Times.AtLeastOnce(), true);

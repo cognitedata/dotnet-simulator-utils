@@ -1,18 +1,19 @@
 ﻿using System;
+
+using Cognite.Extractor.Common;
 using Cognite.Extractor.Configuration;
 using Cognite.Extractor.Logging;
 using Cognite.Extractor.Metrics;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
-using Cognite.Extractor.Common;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// Configuration for remote logging (logs are stored in CDF)
     /// </summary>
-    public class RemoteLogConfig: LogConfig
+    public class RemoteLogConfig : LogConfig
     {
         /// <summary>
         /// Whether remote logging is enabled
@@ -23,7 +24,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Logging configuration object
     /// </summary>
-    public class LoggerConfig: Extractor.Logging.LoggerConfig
+    public class LoggerConfig : Extractor.Logging.LoggerConfig
     {
         /// <summary>
         /// Remote logging configuration (optional)
@@ -87,7 +88,8 @@ namespace Cognite.Simulator.Utils
 
             if (Logger.Remote == null)
             {
-                Logger.Remote = new RemoteLogConfig() {
+                Logger.Remote = new RemoteLogConfig()
+                {
                     Enabled = true,
                     Level = "warning"
                 };
@@ -268,7 +270,7 @@ namespace Cognite.Simulator.Utils
         public RoutineLibraryConfig RoutineLibrary { get; set; }
     }
 
-    public class DefaultConfig<TAutomationConfig> : BaseConfig 
+    public class DefaultConfig<TAutomationConfig> : BaseConfig
     where TAutomationConfig : AutomationConfig, new()
     {
         public DefaultConnectorConfig Connector { get; set; }

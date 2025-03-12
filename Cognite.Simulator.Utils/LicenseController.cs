@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
@@ -57,15 +58,16 @@ namespace Cognite.Simulator.Utils
             _releaseLicenseFunc = releaseLicenseFunc ?? throw new ArgumentNullException(nameof(releaseLicenseFunc));
             _acquireLicenseFunc = acquireLicenseFunc ?? throw new ArgumentNullException(nameof(acquireLicenseFunc));
             _logger = logger;
-            _timeProvider = timeProvider == null? TimeProvider.System : timeProvider;
+            _timeProvider = timeProvider == null ? TimeProvider.System : timeProvider;
             _releaseTimer = _timeProvider.CreateTimer(ReleaseLicenseAfterTimeout, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            
+
             // Dispose the timer on cancellation
-            _cts.Token.Register(() => {
+            _cts.Token.Register(() =>
+            {
                 _releaseTimer?.Dispose();
                 _releaseTimer = null;
-            }); 
+            });
             _ = StartLoggingTask(_cts.Token);
         }
 
@@ -81,14 +83,14 @@ namespace Cognite.Simulator.Utils
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     LogLicenseStatus();
-                    
+
                     var tcs = new TaskCompletionSource<bool>();
-                    
+
                     using var delayTimer = _timeProvider.CreateTimer(_ => tcs.TrySetResult(true), null,
                         TimeSpan.FromMilliseconds(LoggingIntervalMs), Timeout.InfiniteTimeSpan);
-                    
+
                     using var registration = cancellationToken.Register(() => tcs.TrySetCanceled());
-                    
+
                     await tcs.Task.ConfigureAwait(false);
                 }
             }
@@ -102,20 +104,24 @@ namespace Cognite.Simulator.Utils
                 _logger.LogError(ex, $"{_controllerName}: Error in license status logging task");
             }
         }
-        
+
         /// <summary>
         /// Logs the current license status.
         /// </summary>
-        public void LogLicenseStatus() {
+        public void LogLicenseStatus()
+        {
             _logger.LogInformation("{ControllerName}: License is currently {Status}", _controllerName, _licenseHeld ? "held" : "not held");
-            if (_licenseHeld) {
+            if (_licenseHeld)
+            {
                 var duration = _timeProvider.GetUtcNow() - _lastUsageTime;
                 _logger.LogInformation("{ControllerName}: Duration of last license usage : {Duration} ", _controllerName, CommonUtils.FormatDuration(duration));
                 duration = _timeProvider.GetUtcNow() - _acquisitionTime;
-                if (_timerPaused) {
+                if (_timerPaused)
+                {
                     _logger.LogInformation("{ControllerName}: License release timer paused", _controllerName);
                 }
-                else {
+                else
+                {
                     _logger.LogInformation("{ControllerName}: License has been held for {Duration} ", _controllerName, CommonUtils.FormatDuration(duration));
                     var timeUntilRelease = _scheduledReleaseTime - _timeProvider.GetUtcNow();
                     var timeUntilReleaseFormatted = CommonUtils.FormatDuration(timeUntilRelease);
@@ -125,15 +131,17 @@ namespace Cognite.Simulator.Utils
                 }
             }
         }
-        
+
         /// <summary>
         /// Acquires a license by invoking the license acquisition function and sets the license status to held.
         /// Also updates the release timer to ensure the license is released after a certain period.
         /// </summary>
         /// <exception cref="Exception">Thrown when an error occurs while acquiring the license.</exception>
-        public void AcquireLicense(CancellationToken cancellationToken) {
+        public void AcquireLicense(CancellationToken cancellationToken)
+        {
             _logger.LogTrace($"{_controllerName}: Acquire license called, acquiring lock");
-            lock (_lock){
+            lock (_lock)
+            {
                 try
                 {
                     if (_licenseHeld)
@@ -165,12 +173,12 @@ namespace Cognite.Simulator.Utils
             _logger.LogTrace("{ControllerName}: Release license called by timer, acquiring lock", _controllerName);
             lock (_lock)
             {
-                _logger.LogInformation("{ControllerName}: Attempting to release license at scheduled time {ScheduledTime}", 
+                _logger.LogInformation("{ControllerName}: Attempting to release license at scheduled time {ScheduledTime}",
                     _controllerName, _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                _logger.LogInformation("{ControllerName}: Current time {ScheduledTime}", 
+                _logger.LogInformation("{ControllerName}: Current time {ScheduledTime}",
                     _controllerName, _timeProvider.GetUtcNow().ToString("yyyy-MM-dd HH:mm:ss.fff"));
                 _releaseLicenseFunc(_cts.Token);
-                _licenseHeld = false;  
+                _licenseHeld = false;
                 _acquisitionTime = DateTimeOffset.MinValue;
                 _logger.LogInformation("{ControllerName}: License released successfully", _controllerName);
             }
@@ -181,7 +189,8 @@ namespace Cognite.Simulator.Utils
         /// Releases the license immediately. This is used externally to reset the internal state when an external process finds out
         /// that the license is no longer held.
         /// </summary>
-        public void ClearLicenseState() {
+        public void ClearLicenseState()
+        {
             _licenseHeld = false;
             _lastUsageTime = _timeProvider.GetUtcNow();
             _scheduledReleaseTime = DateTimeOffset.MaxValue;
@@ -190,7 +199,8 @@ namespace Cognite.Simulator.Utils
             _logger.LogInformation($"{_controllerName}: License released forcefully");
         }
 
-        private void PauseTimer() {
+        private void PauseTimer()
+        {
             _logger.LogInformation($"{_controllerName}: License usage started: pausing release timer");
             _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _timerPaused = true;
@@ -217,7 +227,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogInformation("{ControllerName}: Ending license usage, scheduling release", _controllerName);
                 _lastUsageTime = _timeProvider.GetUtcNow();
                 _scheduledReleaseTime = _lastUsageTime.Add(_licenseLockTime);
-                _logger.LogInformation("{ControllerName}: License release scheduled for {ReleaseTime}", 
+                _logger.LogInformation("{ControllerName}: License release scheduled for {ReleaseTime}",
                     _controllerName, _scheduledReleaseTime.ToString("yyyy-MM-dd HH:mm:ss"));
                 _releaseTimer.Change(_licenseLockTime, Timeout.InfiniteTimeSpan);
                 _timerPaused = false;

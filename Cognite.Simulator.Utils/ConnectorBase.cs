@@ -1,17 +1,18 @@
-using Cognite.Extractor.Common;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using System.Threading;
 using System.Threading.Tasks;
 
-using CogniteSdk.Alpha;
-using CogniteSdk;
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -34,7 +35,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// License status
     /// </summary>
-    public enum LicenseStatus 
+    public enum LicenseStatus
     {
         /// <summary>
         /// License is available.
@@ -63,7 +64,7 @@ namespace Cognite.Simulator.Utils
         /// CDF client wrapper
         /// </summary>
         protected CogniteDestination Cdf { get; }
-        
+
         /// <summary>
         /// Simulator definition, containing the simulator name, supported units, etc.
         /// </summary>
@@ -116,7 +117,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public abstract Task Init(CancellationToken token);
-        
+
         /// <summary>
         /// Implements the connector loop. Should call the <see cref="HeartbeatLoop(CancellationToken)"/> method and any
         /// other thats that are done periodically by the connector
@@ -166,7 +167,7 @@ namespace Cognite.Simulator.Utils
             int interval = _config.LicenseCheck.Interval < ONE_HOUR ? ONE_HOUR : _config.LicenseCheck.Interval;
             return TimeSpan.FromSeconds(interval);
         }
-        
+
         /// <summary>
         /// If the connector should check and report the license status back to CDF
         /// </summary>
@@ -192,7 +193,7 @@ namespace Cognite.Simulator.Utils
                 var integrations = integrationRes.Items;
                 var connectorName = GetConnectorName();
                 var simulatorExternalId = SimulatorDefinition.ExternalId;
-                    
+
                 var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulatorExternalId);
                 if (existing == null)
                 {
@@ -232,7 +233,7 @@ namespace Cognite.Simulator.Utils
         protected async Task UpdateRemoteSimulatorIntegration(
             bool init,
             CancellationToken token)
-        {   
+        {
             if (init)
             {
                 LastLicenseCheckResult = ShouldLicenseCheck() ? LicenseStatus.UNKNOWN : LicenseStatus.DISABLED;
@@ -250,8 +251,9 @@ namespace Cognite.Simulator.Utils
                     ConnectorStatusUpdatedTime = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                     Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                     LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
-                    LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() }, 
-                } : new SimulatorIntegrationUpdate {
+                    LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
+                } : new SimulatorIntegrationUpdate
+                {
                     Heartbeat = new Update<long> { Set = DateTime.UtcNow.ToUnixTimeMilliseconds() },
                     LicenseLastCheckedTime = new Update<long> { Set = LastLicenseCheckTimestamp },
                     LicenseStatus = new Update<string> { Set = LastLicenseCheckResult.ToString() },
@@ -262,11 +264,11 @@ namespace Cognite.Simulator.Utils
                     throw new ConnectorException($"Simulator integration for {simulatorExternalId} not found");
                 }
                 var integrationUpdateItem = new UpdateItem<SimulatorIntegrationUpdate>(RemoteSimulatorIntegration.Id)
-                    {
-                        Update = integrationUpdate,
-                    };
+                {
+                    Update = integrationUpdate,
+                };
                 await simulatorsApi.UpdateSimulatorIntegrationAsync(
-                    new [] { integrationUpdateItem },
+                    new[] { integrationUpdateItem },
                     token).ConfigureAwait(false);
             }
             catch (CogniteException e)
@@ -301,7 +303,7 @@ namespace Cognite.Simulator.Utils
         /// <returns>True if the simulator has a valid license, false otherwise.</returns>
         public LicenseStatus GetLicenseStatus()
         {
-            return  LicenseStatus.AVAILABLE;
+            return LicenseStatus.AVAILABLE;
         }
         /// <summary>
         /// Task that runs in a loop, reporting the connector license status to CDF periodically
@@ -318,12 +320,12 @@ namespace Cognite.Simulator.Utils
                     .ConfigureAwait(false);
                 _logger.LogDebug("Updating connector license timestamp");
                 LastLicenseCheckTimestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
-                LastLicenseCheckResult = GetLicenseStatus() ;
+                LastLicenseCheckResult = GetLicenseStatus();
                 await UpdateRemoteSimulatorIntegration(false, token)
                     .ConfigureAwait(false);
             }
         }
-        
+
         /// <summary>
         /// Task that runs in a loop, checking for new config in extraction pipelines
         /// </summary>
@@ -351,7 +353,7 @@ namespace Cognite.Simulator.Utils
     public class NewConfigDetected : Exception
     {
     }
-    
+
     /// <summary>
     /// Represents errors related to the connector operation
     /// </summary>

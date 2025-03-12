@@ -1,6 +1,3 @@
-using Cognite.Simulator.Utils;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,6 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Simulator.Utils;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -33,7 +36,7 @@ namespace Cognite.Simulator.Utils
         public RoutineImplementationBase(
             SimulatorRoutineRevision routineRevision,
             Dictionary<string, SimulatorValueItem> inputData,
-            ILogger logger )
+            ILogger logger)
         {
             if (routineRevision == null)
             {
@@ -139,7 +142,7 @@ namespace Cognite.Simulator.Utils
                             throw new SimulationRoutineException($"Invalid stage step: {step.StepType}", stepNumber: step.Order);
                     };
                 }
-                catch (Exception e) when (e is SimulationException )
+                catch (Exception e) when (e is SimulationException)
                 {
                     throw new SimulationRoutineException(e.Message, stepNumber: step.Order);
                 }
@@ -165,15 +168,15 @@ namespace Cognite.Simulator.Utils
             }
             var extraArgs = arguments.Where(s => s.Key != "referenceId")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
-            
+
             var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
             if (matchingOutputs.Any())
-                {
-                    var output = matchingOutputs.First();
-                    string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
-                    _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
-                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
-                }
+            {
+                var output = matchingOutputs.First();
+                string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
+                _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
+                _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
+            }
             else
             {
                 throw new SimulationException($"Get error: Output with key {argRefId} not found");

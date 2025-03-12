@@ -1,5 +1,7 @@
 using System;
+
 using Cognite.DataProcessing;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.DataProcessingTests;
@@ -33,13 +35,13 @@ public class OptimizersTest
         // minimum at 1.5
         calcRoot = Optimizers.MinimizeScalarBounded(_testFunction2, 1, 5);
         Assert.Equal(1.5, calcRoot.X, 4);
-        
+
         // minimum at 0.8164965876370768
         calcRoot = Optimizers.MinimizeScalarBounded(_testFunction3, -5, 5);
         Assert.Equal(0.8164965876370768, calcRoot.X, 4);
         calcRoot = Optimizers.MinimizeScalarBounded(_testFunction3, -2, 4);
         Assert.Equal(0.8164965876370768, calcRoot.X, 4);
-        
+
         // minimum at -2
         calcRoot = Optimizers.MinimizeScalarBounded(_testFunction4, -2, -1);
         Assert.Equal(-2, calcRoot.X, 4);
