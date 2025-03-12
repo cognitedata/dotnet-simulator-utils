@@ -141,7 +141,7 @@ namespace Cognite.Simulator.Utils
                             }
                             throw new SimulationRoutineException($"Invalid stage step: {step.StepType}", stepNumber: step.Order);
                     };
-                }
+}
                 catch (Exception e) when (e is SimulationException)
                 {
                     throw new SimulationRoutineException(e.Message, stepNumber: step.Order);
