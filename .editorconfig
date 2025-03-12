@@ -1,6 +1,12 @@
 # Remove the line below if you want to inherit .editorconfig settings from higher directories
 root = true
 
+# Set the default line ending to LF (Unix style) to ensure consistency across platforms
+[*]
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+
 # C# files
 [*.cs]
 
@@ -10,11 +16,16 @@ root = true
 indent_size = 4
 indent_style = space
 tab_width = 4
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
 
 #### .NET Coding Conventions ####
 
 # this. and Me. preferences
 dotnet_style_qualification_for_method = true
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
 
 #### Diagnostic configuration ####
 
