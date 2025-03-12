@@ -1,15 +1,19 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests

@@ -1,8 +1,9 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Simulator.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Extensions;
 
 namespace Cognite.Simulator.Utils
 {

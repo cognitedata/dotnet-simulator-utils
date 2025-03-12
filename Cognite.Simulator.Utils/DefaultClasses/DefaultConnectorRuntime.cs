@@ -6,15 +6,19 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Polly.Timeout;
 
 /// <summary>

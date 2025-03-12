@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.Logging;
+
+using CogniteSdk;
+using CogniteSdk.Resources.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Serilog;
-using Serilog.Extensions.Logging;
 using Serilog.Core;
 using Serilog.Core.Enrichers;
 using Serilog.Events;
-
-using CogniteSdk;
-using Cognite.Extractor.Logging;
-using CogniteSdk.Resources.Alpha;
+using Serilog.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {

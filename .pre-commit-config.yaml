@@ -6,5 +6,4 @@ repos:
         name: dotnet-format
         language: system 
         entry: dotnet format --include 
-        # remove vb? test with extensions instead?
-        types_or: ["c#", "vb"]
+        types_or: ["c#"]

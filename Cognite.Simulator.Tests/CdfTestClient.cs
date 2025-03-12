@@ -1,13 +1,17 @@
-﻿using Cognite.Extensions;
+﻿using System;
+using System.Net.Http;
+using System.Threading;
+
+using Cognite.Extensions;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
+
 using CogniteSdk;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Net.Http;
-using System.Threading;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests

@@ -1,17 +1,20 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils.Automation;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extensions;
 using Cognite.Extractor.Common;
-using System.Collections.Concurrent;
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {

@@ -1,4 +1,5 @@
 using Cognite.DataProcessing;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.DataProcessingTests;

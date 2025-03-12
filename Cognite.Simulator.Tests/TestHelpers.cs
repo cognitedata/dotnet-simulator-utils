@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.Common;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
 

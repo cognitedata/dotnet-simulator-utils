@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils

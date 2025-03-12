@@ -1,4 +1,5 @@
 ﻿using System;
+
 using Cognite.Extractor.Configuration;
 using Cognite.Extractor.Logging;
 using Cognite.Extractor.Metrics;

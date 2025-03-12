@@ -1,15 +1,18 @@
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using CogniteSdk.Alpha;
-using Cognite.Extractor.Common;
-using CogniteSdk;
-using CogniteSdk.Resources.Alpha;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extensions;
+using Cognite.Extractor.Common;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+using CogniteSdk.Resources.Alpha;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cognite.Simulator.Extensions
 {

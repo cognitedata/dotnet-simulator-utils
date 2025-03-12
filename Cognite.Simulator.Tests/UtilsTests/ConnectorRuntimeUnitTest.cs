@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Moq;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Xunit;
-
+using Cognite.Extractor.Logging;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
 
-using Cognite.Simulator.Utils.Automation;
-using Cognite.Extractor.Logging;
-using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Moq;
+
+using Xunit;
 
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 

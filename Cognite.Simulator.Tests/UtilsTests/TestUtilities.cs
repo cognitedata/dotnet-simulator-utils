@@ -7,8 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
+
 using Moq;
 using Moq.Protected;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
