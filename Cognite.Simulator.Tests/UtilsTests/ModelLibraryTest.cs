@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class ModelLibraryTest
     {
-        public static void CleanUp(bool deleteDirectory, StateStoreConfig stateConfig)
+        private static void CleanUp(bool deleteDirectory, StateStoreConfig stateConfig)
         {
             try
             {
