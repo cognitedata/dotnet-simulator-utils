@@ -34,6 +34,23 @@ namespace Cognite.Simulator.Utils
                     "0.0.1");
         }
 
+
+        /// <summary>
+        /// Format a duration of a TimeSpan in a human readable format
+        /// </summary>
+        /// <param name="duration">Duration to format</param>
+        /// <returns>Formatted duration</returns>
+        public static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalDays >= 1)
+                return $"{duration.TotalDays:N1} days";
+            if (duration.TotalHours >= 1)
+                return $"{duration.TotalHours:N1} hours";
+            if (duration.TotalMinutes >= 1)
+                return $"{duration.TotalMinutes:N1} minutes";
+            return $"{duration.TotalSeconds:N1} seconds";
+        }
+
         /// <summary>
         /// Run all of the tasks in this enumeration. If any fail or is canceled, cancel the
         /// remaining tasks and return. The first found exception is thrown
