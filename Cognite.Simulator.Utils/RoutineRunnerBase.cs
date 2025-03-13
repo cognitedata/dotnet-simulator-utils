@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extensions;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
@@ -20,7 +23,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class RoutineRunnerBase<A, T, V> : SimulationRunnerBase<A, T, V>
-        where A: AutomationConfig
+        where A : AutomationConfig
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -43,13 +46,13 @@ namespace Cognite.Simulator.Utils
         /// <param name="simulatorClient">Simulator client</param>
         /// <param name="logger">Logger</param>
         protected RoutineRunnerBase(
-            ConnectorConfig connectorConfig, 
+            ConnectorConfig connectorConfig,
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
-            IModelProvider<A,T> modelLibrary, 
+            IModelProvider<A, T> modelLibrary,
             IRoutineProvider<V> configLibrary,
             ISimulatorClient<T, V> simulatorClient,
-            ILogger logger) : 
+            ILogger logger) :
             base(connectorConfig, simulatorDefinition, cdf, modelLibrary, configLibrary, logger)
         {
             _logger = logger;
@@ -57,7 +60,8 @@ namespace Cognite.Simulator.Utils
             SimulatorClient = simulatorClient;
         }
 
-        private async Task<Dictionary<string, SimulatorValueItem>> LoadSimulationInputOverrides(long runId, CancellationToken token) {
+        private async Task<Dictionary<string, SimulatorValueItem>> LoadSimulationInputOverrides(long runId, CancellationToken token)
+        {
             var inputDataOverrides = new Dictionary<string, SimulatorValueItem>();
 
             var dataRes = await _cdf.CogniteClient.Alpha.Simulators.ListSimulationRunsDataAsync(
@@ -85,11 +89,11 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="SimulationException">When it was not possible to sample data points</exception>
         /// <exception cref="ConnectorException">When it was not possible to save the results in CDF</exception>
         protected override async Task RunRoutine(
-            SimulationRunItem runItem, 
-            DateTime startTime, 
-            T modelState, 
-            V routineRevision, 
-            SamplingConfiguration samplingConfiguration, 
+            SimulationRunItem runItem,
+            DateTime startTime,
+            T modelState,
+            V routineRevision,
+            SamplingConfiguration samplingConfiguration,
             CancellationToken token)
         {
             if (modelState == null)
@@ -118,27 +122,29 @@ namespace Cognite.Simulator.Utils
             var inputTsToCreate = new List<SimulationInput>();
             IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
             var routineRevisionInfo = new SimulatorRoutineRevisionInfo()
+            {
+                ExternalId = routineRevision.ExternalId,
+                Model = new SimulatorModelInfo
                 {
-                    ExternalId = routineRevision.ExternalId,
-                    Model = new SimulatorModelInfo
-                    {
-                        ExternalId = modelState.ModelExternalId,
-                        Simulator = routineRevision.SimulatorExternalId,
-                    },
-                    RoutineExternalId = routineRevision.RoutineExternalId,
-                };
+                    ExternalId = modelState.ModelExternalId,
+                    Simulator = routineRevision.SimulatorExternalId,
+                },
+                RoutineExternalId = routineRevision.RoutineExternalId,
+            };
 
             var configObj = routineRevision.Configuration;
 
             // Collect constant inputs, to run simulations and to store as time series and data points
-            if (configObj.Inputs != null) {
+            if (configObj.Inputs != null)
+            {
                 foreach (var originalInput in configObj.Inputs.Where(i => i.IsConstant))
                 {
                     // constant values should be read directly from the run data as they may be overridden per run
-                    if (!inputDataOverrides.TryGetValue(originalInput.ReferenceId, out var inputValue)) {
+                    if (!inputDataOverrides.TryGetValue(originalInput.ReferenceId, out var inputValue))
+                    {
                         throw new SimulationException($"Could not find input value for {originalInput.Name} ({originalInput.ReferenceId}).");
                     }
-                    
+
                     var simInput = new SimulationInput
                     {
                         RoutineRevisionInfo = routineRevisionInfo,
@@ -147,21 +153,25 @@ namespace Cognite.Simulator.Utils
                         Unit = inputValue.Unit?.Name,
                         SaveTimeseriesExternalId = originalInput.SaveTimeseriesExternalId
                     };
-                    
+
                     inputData[inputValue.ReferenceId] = inputValue;
 
-                    if (simInput.ShouldSaveToTimeSeries) {
-                        if (inputValue.Value.Type == SimulatorValueType.DOUBLE) {
+                    if (simInput.ShouldSaveToTimeSeries)
+                    {
+                        if (inputValue.Value.Type == SimulatorValueType.DOUBLE)
+                        {
                             var inputConstValue = (inputValue.Value as SimulatorValue.Double).Value;
 
                             inputTsToCreate.Add(simInput);
                             dpsToCreate.Add(
                                 new Identity(simInput.SaveTimeseriesExternalId),
-                                new List<Datapoint> 
-                                { 
-                                    new Datapoint(samplingConfiguration.SimulationTime, inputConstValue) 
+                                new List<Datapoint>
+                                {
+                                    new Datapoint(samplingConfiguration.SimulationTime, inputConstValue)
                                 });
-                        } else {
+                        }
+                        else
+                        {
                             throw new SimulationException($"Could not save input value for {originalInput.Name} ({originalInput.ReferenceId}). Only double precision values can be saved to time series.");
                         }
                     }
@@ -172,7 +182,8 @@ namespace Cognite.Simulator.Utils
             foreach (var inputTs in configObj.Inputs.Where(i => i.IsTimeSeries))
             {
                 // time series inputs could be overridden per run, in these cases the constant value should be read from the run data
-                if (!inputDataOverrides.TryGetValue(inputTs.ReferenceId, out var inputValue)) {
+                if (!inputDataOverrides.TryGetValue(inputTs.ReferenceId, out var inputValue))
+                {
                     inputValue = await _cdf.CogniteClient.LoadTimeseriesSimulationInput(inputTs, configObj, samplingConfiguration, token).ConfigureAwait(false);
                 }
 
@@ -187,15 +198,16 @@ namespace Cognite.Simulator.Utils
                     SaveTimeseriesExternalId = inputTs.SaveTimeseriesExternalId
                 };
 
-                if (simInput.ShouldSaveToTimeSeries) {
+                if (simInput.ShouldSaveToTimeSeries)
+                {
                     var inputRawValue = (inputValue.Value as SimulatorValue.Double).Value;
 
                     inputTsToCreate.Add(simInput);
                     dpsToCreate.Add(
                         new Identity(simInput.SaveTimeseriesExternalId),
-                        new List<Datapoint> 
-                        { 
-                            new Datapoint(samplingConfiguration.SimulationTime, inputRawValue) 
+                        new List<Datapoint>
+                        {
+                            new Datapoint(samplingConfiguration.SimulationTime, inputRawValue)
                         });
                 }
             }
@@ -225,11 +237,13 @@ namespace Cognite.Simulator.Utils
                         var value = (valueItem.Value as SimulatorValue.Double).Value;
                         dpsToCreate.Add(
                             new Identity(outputTs.SaveTimeseriesExternalId),
-                            new List<Datapoint> 
-                            { 
-                                new Datapoint(samplingConfiguration.SimulationTime, value) 
-                            });  
-                    } else {
+                            new List<Datapoint>
+                            {
+                                new Datapoint(samplingConfiguration.SimulationTime, value)
+                            });
+                    }
+                    else
+                    {
                         throw new SimulationException($"Could not save output value for {output.Name} ({output.ReferenceId}). Only double precision values can be saved to time series.");
                     }
                 }
@@ -282,7 +296,7 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     /// <typeparam name="T">Type of the model state object</typeparam>
     /// <typeparam name="V">Type of the simulation configuration object</typeparam>
-    public interface ISimulatorClient<T, V> 
+    public interface ISimulatorClient<T, V>
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
@@ -296,8 +310,8 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns></returns>
         Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-            T modelState, 
-            V simulationConfiguration, 
+            T modelState,
+            V simulationConfiguration,
             Dictionary<string, SimulatorValueItem> inputData, CancellationToken token);
 
         Task ExtractModelInformation(T state, CancellationToken _token);
@@ -312,5 +326,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         /// <returns>A task representing the asynchronous operation</returns>
         Task TestConnection(CancellationToken token);
-    } 
+    }
 }

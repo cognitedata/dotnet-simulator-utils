@@ -1,12 +1,13 @@
-﻿using Cognite.Extensions;
-using Cognite.Extractor.StateStorage;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extensions;
+using Cognite.Extractor.StateStorage;
 
 namespace Cognite.Simulator.Utils
 {
@@ -21,7 +22,9 @@ namespace Cognite.Simulator.Utils
             {
                 var dirPath = Path.GetDirectoryName(filePath);
                 DeleteLocalDirectory(dirPath);
-            } else {
+            }
+            else
+            {
                 DeleteLocalFile(filePath);
             }
         }
@@ -30,7 +33,7 @@ namespace Cognite.Simulator.Utils
             this LiteDBStateStore store,
             string tableName,
             HashSet<string> idsToKeep)
-        {    
+        {
             var col = store.Database.GetCollection<FileStatePoco>(tableName);
             var stateToDelete = col
                 .Find(s => !idsToKeep.Contains(s.Id))
@@ -64,9 +67,10 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
             foreach (var (state, withFile) in states)
             {
-                if (withFile) {
+                if (withFile)
+                {
                     DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
-                }   
+                }
             }
         }
 

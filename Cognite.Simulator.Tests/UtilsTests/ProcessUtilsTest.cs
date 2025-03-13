@@ -1,14 +1,19 @@
-using Microsoft.Extensions.Logging;
-using Moq;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using Xunit;
+
 using Cognite.Simulator.Utils;
+
+using Microsoft.Extensions.Logging;
+
+using Moq;
+
+using Xunit;
+
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
-using System.Linq;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -42,8 +47,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Throws<PlatformNotSupportedException>(() => ProcessUtils.GetCurrentUsername());
             }
         }
-        
-        private bool IsProcessRunning(string processName, Process process) {
+
+        private bool IsProcessRunning(string processName, Process process)
+        {
             try
             {
                 return Process.GetProcessesByName(processName).Any(p => p.Id == process.Id);
@@ -62,7 +68,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Arrange
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
             var processName = "notepad";
-            
+
             // Create test process to ensure at least one exists
             Process testProcess = null;
             testProcess = Process.Start(processName + ".exe");
@@ -73,7 +79,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Verify log messages were called with correct parameters
             VerifyLog(mockLogger, LogLevel.Debug, "Searching for process : " + processName, Times.Once(), true);
             VerifyLog(mockLogger, LogLevel.Information, "Killing process with PID", Times.Once(), true);
-            
+
 
             bool processStillRunning = IsProcessRunning(processName, testProcess);
             Assert.False(processStillRunning, "Process should have been terminated");
@@ -84,10 +90,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             // Arrange
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
-            
+
             // Act 
             Assert.Throws<Exception>(() => ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object));
-            
+
             VerifyLog(mockLogger, LogLevel.Error, "No processes found to kill for the current user", Times.Once(), true);
         }
 
@@ -97,10 +103,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             // Arrange - get current process ID
             int processId = Process.GetCurrentProcess().Id;
-            
+
             // Act
             string owner = ProcessUtils.GetProcessOwnerWmi(processId);
-            
+
             // Assert
             Assert.Contains("\\", owner); // Owner format should be "domain\user"
         }

@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils.Automation
 {
@@ -54,7 +55,8 @@ namespace Cognite.Simulator.Utils.Automation
             else
             {
                 var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").ToLower() == "development";
-                if (!isDevelopment) {
+                if (!isDevelopment)
+                {
                     throw new SimulatorConnectionException("Simulator integration only available on Windows");
                 }
 
@@ -74,7 +76,8 @@ namespace Cognite.Simulator.Utils.Automation
             }
             finally
             {
-                if (Server != null) {
+                if (Server != null)
+                {
                     Marshal.ReleaseComObject(Server);
                     _logger.LogDebug("Released COM Object");
                     Server = null;
@@ -91,13 +94,14 @@ namespace Cognite.Simulator.Utils.Automation
 
         private dynamic ActivateAutomationServer()
         {
-            try {
+            try
+            {
                 var serverType = Type.GetTypeFromProgID(_config.ProgramId);
                 if (serverType == null)
                 {
                     _logger.LogError("Could not find automation server using the id: {ProgId}", _config.ProgramId);
                     throw new SimulatorConnectionException("Cannot connect to get automation server type");
-                }            
+                }
                 dynamic server = Activator.CreateInstance(serverType);
                 if (server == null)
                 {
@@ -106,14 +110,15 @@ namespace Cognite.Simulator.Utils.Automation
                 }
                 return server;
             }
-            catch(Exception e) {
+            catch (Exception e)
+            {
                 // wrap every exception in a SimulatorConnectionException
                 throw new SimulatorConnectionException("Cannot connect to automation server", e);
             }
 
         }
     }
-    
+
     /// <summary>
     /// Represents errors related to the connection to simulator instance
     /// </summary>
@@ -155,7 +160,7 @@ namespace Cognite.Simulator.Utils.Automation
         /// Identifier of the application/program to connect to
         /// </summary>
         public string ProgramId { get; set; }
-        
+
         /// <summary>
         /// Identifier of the process that should be terminated on shutdown, if any
         /// </summary>

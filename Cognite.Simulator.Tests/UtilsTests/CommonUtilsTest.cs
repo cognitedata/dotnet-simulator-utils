@@ -1,12 +1,16 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Utils;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
@@ -33,7 +37,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var dataPoints = cdf.DataPoints;
 
-            await SeedData.GetOrCreateTestTimeseries(cdf).ConfigureAwait(false);
+            await SeedData.GetOrCreateTestTimeseries(cdf);
 
             var config = NewRoutineConfig();
             config.LogicalCheck.First().Enabled = runLogicCheck;
@@ -43,7 +47,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 dataPoints,
                 config,
                 CogniteTime.FromUnixTimeMilliseconds(validationEnd),
-                System.Threading.CancellationToken.None).ConfigureAwait(false);
+                System.Threading.CancellationToken.None);
 
             Assert.True(result.Min.HasValue);
             Assert.Equal(expectedStart, result.Min.Value);

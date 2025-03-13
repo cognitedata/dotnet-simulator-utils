@@ -1,16 +1,16 @@
 ﻿using System;
-
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Simulator.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
-using Xunit;
 
-using Cognite.Simulator.Utils;
+using Xunit;
 
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 
@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 PipelineNotification = new PipelineNotificationConfig(),
             };
             services.AddExtractionPipeline(connectorConfig);
-            
+
             using var provider = services.BuildServiceProvider();
 
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();

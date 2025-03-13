@@ -1,6 +1,8 @@
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>

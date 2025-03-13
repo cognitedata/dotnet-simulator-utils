@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -116,8 +117,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="fileStream"></param>
         /// <returns></returns>
         /// <exception cref="HttpRequestException"></exception>
-        public async Task UploadFileAsync(Uri uri, StreamContent fileStream) {
-            if (fileStream == null) {
+        public async Task UploadFileAsync(Uri uri, StreamContent fileStream)
+        {
+            if (fileStream == null)
+            {
                 throw new ArgumentNullException(nameof(fileStream));
             }
 
@@ -126,7 +129,8 @@ namespace Cognite.Simulator.Utils
             var putResponse = await _client.PutAsync(uri, fileStream).ConfigureAwait(false);
 
             putResponse.EnsureSuccessStatusCode();
-            if (putResponse.StatusCode >= System.Net.HttpStatusCode.BadRequest) {
+            if (putResponse.StatusCode >= System.Net.HttpStatusCode.BadRequest)
+            {
                 throw new HttpRequestException(
                     $"Did not get a success HTTP response on file upload: {putResponse.StatusCode} url: {uri}"
                 );
