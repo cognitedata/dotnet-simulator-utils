@@ -1,15 +1,20 @@
 using Cognite.Simulator.Utils;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
+
 using static SampleConnectorNamespace.SampleConnector;
 
-public class CalculatorSimulatorClient : 
-        ISimulatorClient<CalculatorModelFilestate, SimulatorRoutineRevision> {
+public class CalculatorSimulatorClient :
+        ISimulatorClient<CalculatorModelFilestate, SimulatorRoutineRevision>
+{
 
-    
+
     private readonly ILogger<CalculatorSimulatorClient> _logger;
 
-    public CalculatorSimulatorClient(ILogger<CalculatorSimulatorClient> logger, DefaultConfig<CustomAutomationConfig> config) {
+    public CalculatorSimulatorClient(ILogger<CalculatorSimulatorClient> logger, DefaultConfig<CustomAutomationConfig> config)
+    {
         _logger = logger;
     }
 
@@ -33,11 +38,12 @@ public class CalculatorSimulatorClient :
     }
 
     public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-        CalculatorModelFilestate modelState, 
-        SimulatorRoutineRevision routineRevision, 
+        CalculatorModelFilestate modelState,
+        SimulatorRoutineRevision routineRevision,
         Dictionary<string, SimulatorValueItem> inputData,
         CancellationToken token
-    ) {
+    )
+    {
         _logger.LogInformation("CalculatorClient Running a simulation");
         try
         {
@@ -54,7 +60,7 @@ public class CalculatorSimulatorClient :
         finally
         {
         }
-        
+
     }
 
     public Task TestConnection(CancellationToken token)
@@ -72,7 +78,8 @@ internal class CalculatorRoutine : RoutineImplementationBase
     public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling outputs");
-        var resultItem = new SimulatorValueItem() {
+        var resultItem = new SimulatorValueItem()
+        {
             SimulatorObjectReference = new Dictionary<string, string> {
                 { "objectName", "a" },
                 { "objectProperty", "b" },

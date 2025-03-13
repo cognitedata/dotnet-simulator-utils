@@ -4,13 +4,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.Logging;
-using NCrontab;
-
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
+
+using NCrontab;
 
 
 namespace Cognite.Simulator.Utils
@@ -222,7 +224,7 @@ namespace Cognite.Simulator.Utils
             var now = DateTime.UtcNow;
             var nextOccurrence = schedule.GetNextOccurrence(now);
             var delay = nextOccurrence - now;
-            
+
             // Get the next occurrence time. Since cron expressions can go as far as minutes, we floor it to the
             // nearest minute, just to make sure the cron is respected
             var nextOccurrenceMs = nextOccurrence.ToUnixTimeMilliseconds();

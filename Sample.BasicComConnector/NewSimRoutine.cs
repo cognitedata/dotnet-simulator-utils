@@ -1,5 +1,7 @@
 using Cognite.Simulator.Utils;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 public class NewSimRoutine : RoutineImplementationBase
@@ -24,11 +26,14 @@ public class NewSimRoutine : RoutineImplementationBase
         {
             var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
             worksheet.Cells[row, col].Value = rawValue;
-        } else if (input.ValueType == SimulatorValueType.STRING)
+        }
+        else if (input.ValueType == SimulatorValueType.STRING)
         {
             var rawValue = (input.Value as SimulatorValue.String)?.Value;
             worksheet.Cells[row, col].Formula = rawValue;
-        } else {
+        }
+        else
+        {
             throw new NotImplementedException($"{input.ValueType} not implemented");
         }
 
@@ -51,7 +56,7 @@ public class NewSimRoutine : RoutineImplementationBase
             throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
         }
 
-        var rawValue = (double) cell.Value;
+        var rawValue = (double)cell.Value;
         SimulatorValue value = new SimulatorValue.Double(rawValue);
 
         var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };

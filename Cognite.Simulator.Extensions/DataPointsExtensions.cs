@@ -1,11 +1,13 @@
-﻿using CogniteSdk;
-using CogniteSdk.Resources;
-using Com.Cognite.V1.Timeseries.Proto;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using CogniteSdk;
+using CogniteSdk.Resources;
+
+using Com.Cognite.V1.Timeseries.Proto;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -164,7 +166,7 @@ namespace Cognite.Simulator.Extensions
                         values.Select(dp => dp.Timestamp).ToArray(),
                         values.Select(dp => dp.Average).ToArray());
                 case DataPointAggregate.Max:
-                    return(
+                    return (
                         values.Select(dp => dp.Timestamp).ToArray(),
                         values.Select(dp => dp.Max).ToArray());
                 case DataPointAggregate.Min:
@@ -172,7 +174,7 @@ namespace Cognite.Simulator.Extensions
                         values.Select(dp => dp.Timestamp).ToArray(),
                         values.Select(dp => dp.Min).ToArray());
                 case DataPointAggregate.Count:
-                    return(
+                    return (
                         values.Select(dp => dp.Timestamp).ToArray(),
                         values.Select(dp => dp.Count).ToArray());
                 case DataPointAggregate.Sum:
@@ -300,47 +302,47 @@ namespace Cognite.Simulator.Extensions
         /// Average
         /// </summary>
         Average,
-        
+
         /// <summary>
         /// Maximum
         /// </summary>
         Max,
-        
+
         /// <summary>
         /// Minimum
         /// </summary>
         Min,
-        
+
         /// <summary>
         /// Count
         /// </summary>
         Count,
-        
+
         /// <summary>
         /// Sum
         /// </summary>
         Sum,
-        
+
         /// <summary>
         /// Continuous interpolation
         /// </summary>
         Interpolation,
-        
+
         /// <summary>
         /// Stepwise interpolation
         /// </summary>
         StepInterpolation,
-        
+
         /// <summary>
         /// Total variance
         /// </summary>
         TotalVariation,
-        
+
         /// <summary>
         /// Continuous variance
         /// </summary>
         ContinuousVariance,
-        
+
         /// <summary>
         /// Discrete variance
         /// </summary>

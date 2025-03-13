@@ -1,26 +1,26 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
-using Microsoft.Extensions.Logging;
-
+using Cognite.Extensions;
+using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
-using Cognite.Extensions;
-using Cognite.Extractor.Common;
 
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils.Automation;
-using System.Reflection;
+using Microsoft.Extensions.Logging;
+
 using Serilog.Context;
 
 using static Cognite.Simulator.Utils.SimulatorLoggingUtils;
@@ -36,7 +36,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A,T>
+    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>
         where A : AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
@@ -55,7 +55,7 @@ namespace Cognite.Simulator.Utils
         /// This state is used to store temporary model file paths, used only in case a run item is received before the model file has been downloaded.
         /// </summary>
         public Dictionary<string, T> _temporaryState { get; private set; }
-        
+
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
         /// </summary>
@@ -65,7 +65,7 @@ namespace Cognite.Simulator.Utils
         /// CDF simulator resource. Can be used to read and write files in CDF
         /// </summary>
         protected SimulatorsResource _cdfSimulatorResources { get; private set; }
-        
+
         /// <summary>
         /// Logger object
         /// </summary>
@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Utils
 
         private List<(string, string)> _simulatorFileExtMap;
 
-        
+
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
@@ -94,12 +94,12 @@ namespace Cognite.Simulator.Utils
         /// <param name="downloadClient">HTTP client to download files</param>
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
-            ModelLibraryConfig config, 
+            ModelLibraryConfig config,
             SimulatorCreate simulatorDefinition,
-            CogniteDestination cdf, 
-            ILogger logger, 
+            CogniteDestination cdf,
+            ILogger logger,
             FileStorageClient downloadClient,
-            IExtractionStateStore store = null) 
+            IExtractionStateStore store = null)
         {
             if (cdf == null)
             {
@@ -134,11 +134,13 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private T GetOrUpdateState(string key, T inputValue) {
+        private T GetOrUpdateState(string key, T inputValue)
+        {
             var updatedValue = _state.AddOrUpdate(
                 key,
                 inputValue, // Value to add if key does not exist
-                (existingKey, existingValue) => {
+                (existingKey, existingValue) =>
+                {
                     // Copy non-base properties from existingValue to inputValue.
                     // This ensures that any properties saved by an extension of the ModelStateBase class
                     // are set back into the state.
@@ -150,7 +152,8 @@ namespace Cognite.Simulator.Utils
             return updatedValue;
         }
 
-        private void SetFileExtensionOnState(T state, string SimulatorExternalId) {
+        private void SetFileExtensionOnState(T state, string SimulatorExternalId)
+        {
             var fileExtension = _simulatorFileExtMap.Find(item => item.Item1 == SimulatorExternalId);
             state.FileExtension = fileExtension.Item2;
         }
@@ -164,7 +167,8 @@ namespace Cognite.Simulator.Utils
             var simulators = await _cdfSimulatorResources.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
 
 
-            _simulatorFileExtMap = simulators.Items.Select(sim => {
+            _simulatorFileExtMap = simulators.Items.Select(sim =>
+            {
                 var ext = sim.FileExtensionTypes.First();
                 return (sim.ExternalId, ext);
             }).ToList();
@@ -214,7 +218,7 @@ namespace Cognite.Simulator.Utils
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
                 var state = StateFromModelRevision(modelRevision);
-                SetFileExtensionOnState(state, modelRevision.SimulatorExternalId );
+                SetFileExtensionOnState(state, modelRevision.SimulatorExternalId);
                 var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
                 if (downloaded)
                 {
@@ -238,7 +242,7 @@ namespace Cognite.Simulator.Utils
                     && s.IsExtracted
                     && !string.IsNullOrEmpty(s.FilePath))
                 .OrderByDescending(s => s.CreatedTime);
-            
+
             var model = modelVersions.FirstOrDefault();
 
             if (model != null)
@@ -283,11 +287,12 @@ namespace Cognite.Simulator.Utils
                     var revisionsInCdfRes = await _cdfSimulatorResources.ListSimulatorModelRevisionsAsync(
                         new SimulatorModelRevisionQuery
                         {
-                            Filter = new SimulatorModelRevisionFilter() {
+                            Filter = new SimulatorModelRevisionFilter()
+                            {
                                 ModelExternalIds = new List<string> { state.ModelExternalId }
                             }
                         }, token).ConfigureAwait(false);
-                    
+
                     var revisionsInCdf = revisionsInCdfRes.Items.ToDictionarySafe(r => r.Id.ToString(), r => r);
 
                     var statesToDelete = new List<T>();
@@ -317,21 +322,23 @@ namespace Cognite.Simulator.Utils
                             .RemoveFileStates(_config.FilesTable, statesToDeleteWithFile, token)
                             .ConfigureAwait(false);
                     }
-                }   
+                }
             }
             catch (System.Exception e)
             {
                 _logger.LogError("Error verifying local model state: {Message}", e.Message);
                 return;
             }
-            
+
         }
 
         private async Task ExtractModelInformationAndPersist(T modelState, CancellationToken token)
         {
-            if (modelState.ShouldProcess()) {
+            if (modelState.ShouldProcess())
+            {
                 var logId = modelState.LogId;
-                using (LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false))) {
+                using (LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false)))
+                {
                     try
                     {
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
@@ -356,12 +363,13 @@ namespace Cognite.Simulator.Utils
             // Find all model files for which we need to extract data
             // The models are grouped by (model external id)
             var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath)) 
+                .Where(f => !string.IsNullOrEmpty(f.FilePath))
                 .GroupBy(f => new { f.ModelExternalId });
             foreach (var group in modelGroups)
             {
                 // Extract the data for each model file (version) in this group
-                foreach (var item in group){
+                foreach (var item in group)
+                {
                     await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
                 }
             }
@@ -404,7 +412,8 @@ namespace Cognite.Simulator.Utils
             {
                 var isError = status == SimulatorModelRevisionStatus.failure;
                 var parsed = isError || status == SimulatorModelRevisionStatus.success;
-                V info = new V(){
+                V info = new V()
+                {
                     Parsed = parsed,
                     Status = status,
                     Error = isError,
@@ -443,7 +452,7 @@ namespace Cognite.Simulator.Utils
             SimulatorModelRevision modelRevision)
         {
             T newState = StateFromModelRevision(modelRevision);
-            SetFileExtensionOnState(newState, modelRevision.SimulatorExternalId );
+            SetFileExtensionOnState(newState, modelRevision.SimulatorExternalId);
             if (newState == null || modelRevision == null)
             {
                 return null;
@@ -465,17 +474,20 @@ namespace Cognite.Simulator.Utils
             bool onlyLatest,
             CancellationToken token)
         {
-            try {
+            try
+            {
 
-                long updatedAfter = 
+                long updatedAfter =
                     onlyLatest && !_libState.DestinationExtractedRange.IsEmpty ?
                         _libState.DestinationExtractedRange.Last.ToUnixTimeMilliseconds() : 0;
 
                 var modelRevisionsAllRes = await _cdfSimulatorResources
                     .ListSimulatorModelRevisionsAsync(
-                        new SimulatorModelRevisionQuery() {
-                            Filter = new SimulatorModelRevisionFilter() {
-                                LastUpdatedTime = new CogniteSdk.TimeRange() {  Min = updatedAfter + 1 },
+                        new SimulatorModelRevisionQuery()
+                        {
+                            Filter = new SimulatorModelRevisionFilter()
+                            {
+                                LastUpdatedTime = new CogniteSdk.TimeRange() { Min = updatedAfter + 1 },
                             },
                             Sort = new List<SimulatorSortItem>() {
                                 new SimulatorSortItem() {
@@ -490,7 +502,8 @@ namespace Cognite.Simulator.Utils
                     .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
                     .ToList();
 
-                foreach (var revision in modelRevisionsRes) {
+                foreach (var revision in modelRevisionsRes)
+                {
                     UpsertModelRevisionInState(revision);
                 }
             }
@@ -531,7 +544,7 @@ namespace Cognite.Simulator.Utils
             }
             _temporaryState.Clear();
         }
-        
+
         /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// </summary>
@@ -552,7 +565,8 @@ namespace Cognite.Simulator.Utils
                 modelState.ExternalId,
                 modelState.DownloadAttempts);
 
-            try {
+            try
+            {
                 var response = await _cdfFiles
                     .DownloadAsync(new[] { fileId })
                     .ConfigureAwait(false);
@@ -561,7 +575,7 @@ namespace Cognite.Simulator.Utils
                     var uri = response.First().DownloadUrl;
 
                     string filename;
-                                                
+
                     var modelFolder = _modelFolder;
                     if (isTemporary) // Temporary files are stored in a different folder
                     {
@@ -572,7 +586,7 @@ namespace Cognite.Simulator.Utils
                     CreateDirectoryIfNotExists(storageFolder);
                     filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
-                    
+
                     bool downloaded = await _downloadClient
                         .DownloadFileAsync(uri, filename, failLargeFiles: isTemporary)
                         .ConfigureAwait(false);
@@ -586,18 +600,24 @@ namespace Cognite.Simulator.Utils
                         return true;
                     }
                 }
-            } catch (ResponseException e) {
+            }
+            catch (ResponseException e)
+            {
                 // File cannot be downloaded, skip for now and try again later
                 _logger.LogWarning("Failed to fetch file url from CDF: {Message}. Model revision: {ExternalId}",
                     e.Message,
                     modelState.ExternalId
                 );
-            } catch (ConnectorException e) {
+            }
+            catch (ConnectorException e)
+            {
                 _logger.LogWarning("Failed to download file: {Message}. Model revision: {ExternalId}",
                     e.Message,
                     modelState.ExternalId
                 );
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 _logger.LogError("Error occurred while downloading the file for model revision {ExternalId}: {Error}",
                     modelState.ExternalId,
                     e
@@ -634,7 +654,8 @@ namespace Cognite.Simulator.Utils
                 foreach (var file in files)
                 {
                     var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
-                    if (downloaded) {
+                    if (downloaded)
+                    {
                         _libState.UpdateDestinationRange(
                             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
                             CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
@@ -693,7 +714,8 @@ namespace Cognite.Simulator.Utils
             await _store.StoreExtractionState(
                 _state.Values,
                 _config.FilesTable,
-                (state) => {
+                (state) =>
+                {
                     var poco = state.GetPoco();
                     return poco;
                 },
@@ -706,7 +728,7 @@ namespace Cognite.Simulator.Utils
     /// Interface for libraries that can provide model information
     /// </summary>
     /// <typeparam name="T">Model state type</typeparam>
-    public interface IModelProvider<A,T>
+    public interface IModelProvider<A, T>
     {
         /// <summary>
         /// Returns the state object of the given version of the given model

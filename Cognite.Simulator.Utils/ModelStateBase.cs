@@ -1,7 +1,7 @@
 using System;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Extensions;
 
 
 namespace Cognite.Simulator.Utils
@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Utils
         /// Indicates if information has been extracted from the model file
         /// </summary>
         public abstract bool IsExtracted { get; }
-        
+
         /// <summary>
         /// Indicates if the simulator can read the model file and
         /// its data

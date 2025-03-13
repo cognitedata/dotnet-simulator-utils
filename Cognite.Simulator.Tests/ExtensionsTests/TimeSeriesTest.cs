@@ -3,11 +3,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using CogniteSdk;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
-
 using Cognite.Simulator.Extensions;
+
+using CogniteSdk;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.ExtensionsTests
 {
@@ -58,7 +60,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     {
                         { "sourceAddress", "TEST.IN.B" }
                     },
-                SaveTimeseriesExternalId = "TestSimulator-Input_B-TestCalc-CTM" 
+                SaveTimeseriesExternalId = "TestSimulator-Input_B-TestCalc-CTM"
             };
 
             var inputs = new List<SimulationInput>
@@ -79,7 +81,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     },
                 SaveTimeseriesExternalId = "TestSimulator-Output_A-TestCalc-GasRate"
             };
-            var outputs = new List<SimulationOutput> { 
+            var outputs = new List<SimulationOutput> {
                 outA
             };
 
@@ -95,7 +97,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 var inputTs = await timeSeries.GetOrCreateSimulationInputs(
                     inputs,
                     dataSetId,
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None);
                 Assert.True(inputTs.Any());
                 Assert.Equal(2, inputTs.Count());
                 var inTsA = inputTs.First(ts => ts.ExternalId == inA.SaveTimeseriesExternalId);
@@ -117,7 +119,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                 var outputTs = await timeSeries.GetOrCreateSimulationOutputs(
                     outputs,
                     dataSetId,
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None);
                 Assert.Single(outputTs);
                 var outTsA = outputTs.First(ts => ts.ExternalId == outA.SaveTimeseriesExternalId);
                 Assert.Equal(outA.Unit, outTsA.Unit);
@@ -137,7 +139,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
                     {
                         IgnoreUnknownIds = true,
                         Items = tsToDelete,
-                    }, CancellationToken.None).ConfigureAwait(false);
+                    }, CancellationToken.None);
                 }
 
             }
