@@ -1,6 +1,9 @@
 using Cognite.Simulator.Utils;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
+
 using static SampleConnectorNamespace.SampleConnector;
 
 public class CalculatorSimulatorClient :

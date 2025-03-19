@@ -1,16 +1,20 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using Xunit;
 
 using DataPointsQuery = CogniteSdk.DataPointsQuery;

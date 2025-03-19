@@ -1,6 +1,8 @@
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 
 public static class ConnectorRuntime

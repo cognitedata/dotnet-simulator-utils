@@ -1,15 +1,12 @@
 using System.Collections.Generic;
 
-
-using Microsoft.Extensions.Logging;
-
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 using CogniteSdk.Alpha;
 
-
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils.Automation;
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -28,7 +25,7 @@ namespace Cognite.Simulator.Utils
             SimulatorCreate simulatorDefinition,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> client,
             ILogger<DefaultSimulationRunner<TAutomationConfig, TModelStateBase, TModelStateBasePoco>> logger) :
-            base(config?.Connector,
+            base(config.Connector,
                 simulatorDefinition,
                 cdf,
                 modelLibrary,

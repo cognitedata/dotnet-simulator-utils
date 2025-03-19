@@ -7,31 +7,66 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  build-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Format
-      run: dotnet format --verify-no-changes
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/  --logger:"console"
-      env:
-        COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
-        COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
-        AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Format
+        run: dotnet format --verify-no-changes --severity=error
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal /p:Exclude="[*.Test]*" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/ ./Cognite.Simulator.Tests/ --logger:"console"
+        env:
+          COGNITE_PROJECT: ${{ secrets.COGNITE_PROJECT }}
+          COGNITE_HOST: ${{ secrets.COGNITE_HOST }}
+          AZURE_TENANT: ${{ secrets.AZURE_TENANT }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: ./Cognite.Simulator.Tests/TestResults/coverage.opencover.xml
+          retention-days: 1
+  
+  build:
+    needs: build-matrix
+    runs-on: ubuntu-latest 
+    steps:
+      - name: Report build status
+        run: echo "All matrix builds completed successfully"
+
+  upload-coverage:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Ubuntu coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-ubuntu-latest
+          path: ./coverage-ubuntu
+      
+      - name: Download Windows coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-windows-latest
+          path: ./coverage-windows
+      
+      - name: Upload combined coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-ubuntu/coverage.opencover.xml,./coverage-windows/coverage.opencover.xml
+          fail_ci_if_error: true

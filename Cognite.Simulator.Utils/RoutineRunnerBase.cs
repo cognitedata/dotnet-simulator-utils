@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extensions;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils

@@ -1,16 +1,19 @@
-﻿using Cognite.DataProcessing;
-using Cognite.Extractor.Common;
-using Cognite.Simulator.Extensions;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using CogniteSdk.Resources;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.DataProcessing;
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Extensions;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+using CogniteSdk.Resources;
+
 using TimeRange = CogniteSdk.TimeRange;
 
 namespace Cognite.Simulator.Utils
@@ -29,6 +32,23 @@ namespace Cognite.Simulator.Utils
             return Extractor.Metrics.Version.GetVersion(
                     Assembly.GetExecutingAssembly(),
                     "0.0.1");
+        }
+
+
+        /// <summary>
+        /// Format a duration of a TimeSpan in a human readable format
+        /// </summary>
+        /// <param name="duration">Duration to format</param>
+        /// <returns>Formatted duration</returns>
+        public static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalDays >= 1)
+                return $"{duration.TotalDays:N1} days";
+            if (duration.TotalHours >= 1)
+                return $"{duration.TotalHours:N1} hours";
+            if (duration.TotalMinutes >= 1)
+                return $"{duration.TotalMinutes:N1} minutes";
+            return $"{duration.TotalSeconds:N1} seconds";
         }
 
         /// <summary>

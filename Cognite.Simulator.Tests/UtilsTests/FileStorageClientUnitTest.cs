@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
-
-using Moq;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Xunit;
 
 using Cognite.Simulator.Utils;
 
-using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Moq;
+
+using Xunit;
 
 using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 

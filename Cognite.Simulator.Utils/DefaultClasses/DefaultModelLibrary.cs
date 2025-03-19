@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -53,11 +56,6 @@ namespace Cognite.Simulator.Utils
             CancellationToken token
         )
         {
-            if (state == null)
-            {
-                throw new Exception("State is not defined");
-            }
-
             if (simulatorClient != null)
             {
                 await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);

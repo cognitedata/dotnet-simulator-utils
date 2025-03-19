@@ -1,15 +1,17 @@
-using Serilog.Core;
-using Serilog.Events;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Simulator.Extensions;
+
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources.Alpha;
-using System.Collections.Concurrent;
-using System.Threading;
 
-using System.Linq;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Cognite.Simulator.Utils
 {

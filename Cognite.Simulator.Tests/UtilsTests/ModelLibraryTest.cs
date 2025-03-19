@@ -5,24 +5,44 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Xunit;
-
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils.Automation;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
     public class ModelLibraryTest
     {
+        private static void CleanUp(bool deleteDirectory, StateStoreConfig stateConfig)
+        {
+            try
+            {
+                if (deleteDirectory && Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning up: {ex.Message}");
+            }
+        }
+
         [Fact]
         public async Task TestModelLibrary()
         {
@@ -124,14 +144,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (Directory.Exists("./files"))
-                {
-                    Directory.Delete("./files", true);
-                }
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
+                CleanUp(true, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -257,14 +270,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (Directory.Exists("./files"))
-                {
-                    Directory.Delete("./files", true);
-                }
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
+                CleanUp(true, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -350,14 +356,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (Directory.Exists("./files"))
-                {
-                    Directory.Delete("./files", true);
-                }
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
+                CleanUp(true, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -434,10 +433,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
+                CleanUp(false, stateConfig);
                 await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -504,10 +500,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
+                CleanUp(false, stateConfig);
                 await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
 
             }

@@ -1,8 +1,9 @@
-﻿using Cognite.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+
+using Cognite.Extensions;
 
 namespace Cognite.Simulator.Extensions
 {
