@@ -1,6 +1,3 @@
-using Cognite.Simulator.Utils;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,6 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Simulator.Utils;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {

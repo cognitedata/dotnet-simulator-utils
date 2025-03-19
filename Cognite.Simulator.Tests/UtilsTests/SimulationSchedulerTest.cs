@@ -4,17 +4,20 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using NCrontab;
-using Xunit;
-
-using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using NCrontab;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {

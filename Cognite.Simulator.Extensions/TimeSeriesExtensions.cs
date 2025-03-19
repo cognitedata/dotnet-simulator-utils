@@ -1,13 +1,15 @@
-﻿using CogniteSdk.Resources;
-using Cognite.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cognite.Extensions;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+using CogniteSdk.Resources;
 
 namespace Cognite.Simulator.Extensions
 {

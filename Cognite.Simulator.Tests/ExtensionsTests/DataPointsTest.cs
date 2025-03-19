@@ -1,8 +1,12 @@
-using Cognite.Simulator.Extensions;
-using CogniteSdk;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
+
+using Cognite.Simulator.Extensions;
+
+using CogniteSdk;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.ExtensionsTests

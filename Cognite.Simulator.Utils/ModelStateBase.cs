@@ -1,7 +1,7 @@
 using System;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Extensions;
 
 
 namespace Cognite.Simulator.Utils

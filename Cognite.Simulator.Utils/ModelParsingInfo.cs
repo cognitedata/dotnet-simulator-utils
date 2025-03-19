@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils

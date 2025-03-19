@@ -13,6 +13,10 @@ tab_width = 4
 
 #### .NET Coding Conventions ####
 
+# Organize using directives
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+
 # this. and Me. preferences
 dotnet_style_qualification_for_method = true
 
@@ -106,3 +110,16 @@ dotnet_diagnostic.CA2016.severity = warning
 dotnet_diagnostic.CA1816.severity = warning
 # CA2227: Collection properties should be read only
 dotnet_diagnostic.CA2227.severity = none
+
+
+# Set the default line ending to LF (Unix style) to ensure consistency across platforms
+[*]
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Ensure C# files follow the same rule
+[*.cs]
+end_of_line = lf
+trim_trailing_whitespace = true
+insert_final_newline = true

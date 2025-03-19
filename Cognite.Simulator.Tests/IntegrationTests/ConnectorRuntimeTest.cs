@@ -5,17 +5,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Xunit;
-
+using Cognite.Extractor.Logging;
 using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-using Cognite.Simulator.Utils.Automation;
-using Cognite.Extractor.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {

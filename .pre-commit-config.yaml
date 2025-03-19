@@ -1,10 +1,8 @@
 repos:
 -   repo: local
     hooks:
-    #Use dotnet format already installed on your machine
     -   id: dotnet-format
         name: dotnet-format
         language: system 
         entry: dotnet format --include 
-        # remove vb? test with extensions instead?
-        types_or: ["c#", "vb"]
+        types_or: ["c#"]

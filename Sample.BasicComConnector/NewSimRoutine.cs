@@ -1,5 +1,7 @@
 using Cognite.Simulator.Utils;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 public class NewSimRoutine : RoutineImplementationBase

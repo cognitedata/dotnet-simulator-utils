@@ -1,11 +1,13 @@
-﻿using CogniteSdk;
-using CogniteSdk.Resources;
-using Com.Cognite.V1.Timeseries.Proto;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using CogniteSdk;
+using CogniteSdk.Resources;
+
+using Com.Cognite.V1.Timeseries.Proto;
 
 namespace Cognite.Simulator.Extensions
 {

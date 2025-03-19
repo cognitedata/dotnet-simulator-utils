@@ -4,13 +4,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.Logging;
-using NCrontab;
-
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
+
+using NCrontab;
 
 
 namespace Cognite.Simulator.Utils

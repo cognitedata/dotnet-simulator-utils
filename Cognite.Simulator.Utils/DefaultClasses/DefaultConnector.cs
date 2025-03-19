@@ -5,9 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils.Automation;
+
 using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
@@ -73,7 +76,7 @@ namespace Cognite.Simulator.Utils
 
         public override async Task Init(CancellationToken token)
         {
-
+            await _simulatorClient.TestConnection(token).ConfigureAwait(false);
             await _pipeline.Init(_config.Connector, token).ConfigureAwait(false);
             await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
             if (RemoteSimulatorIntegration != null)
@@ -112,8 +115,6 @@ namespace Cognite.Simulator.Utils
             {
                 using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-
-                    await _simulatorClient.TestConnection(linkedTokenSource.Token).ConfigureAwait(false);
                     await RunAllTasks(linkedTokenSource).ConfigureAwait(false);
                 }
             }
@@ -137,6 +138,7 @@ namespace Cognite.Simulator.Utils
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred during task execution");
+                throw;
             }
         }
     }

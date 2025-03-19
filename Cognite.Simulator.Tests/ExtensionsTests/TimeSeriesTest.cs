@@ -3,11 +3,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using CogniteSdk;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
-
 using Cognite.Simulator.Extensions;
+
+using CogniteSdk;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.ExtensionsTests
 {

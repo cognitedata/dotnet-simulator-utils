@@ -1,26 +1,26 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
-using Microsoft.Extensions.Logging;
-
+using Cognite.Extensions;
+using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
+using Cognite.Simulator.Utils.Automation;
 
 using CogniteSdk;
 using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
-using Cognite.Extensions;
-using Cognite.Extractor.Common;
 
-using Cognite.Simulator.Extensions;
-using Cognite.Simulator.Utils.Automation;
-using System.Reflection;
+using Microsoft.Extensions.Logging;
+
 using Serilog.Context;
 
 using static Cognite.Simulator.Utils.SimulatorLoggingUtils;

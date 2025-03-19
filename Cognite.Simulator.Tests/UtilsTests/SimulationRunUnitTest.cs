@@ -1,8 +1,11 @@
-using CogniteSdk.Alpha;
-using Cognite.Simulator.Utils;
-using Xunit;
 using System;
+
 using Cognite.Extractor.Common;
+using Cognite.Simulator.Utils;
+
+using CogniteSdk.Alpha;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests;
 

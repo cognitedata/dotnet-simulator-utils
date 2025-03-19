@@ -1,12 +1,13 @@
-﻿using Cognite.Extensions;
-using Cognite.Extractor.StateStorage;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extensions;
+using Cognite.Extractor.StateStorage;
 
 namespace Cognite.Simulator.Utils
 {
