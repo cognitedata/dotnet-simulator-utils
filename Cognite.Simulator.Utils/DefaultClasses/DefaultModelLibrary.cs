@@ -56,6 +56,10 @@ namespace Cognite.Simulator.Utils
             CancellationToken token
         )
         {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
             if (simulatorClient != null)
             {
                 await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);

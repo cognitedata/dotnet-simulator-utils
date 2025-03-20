@@ -25,7 +25,7 @@ namespace Cognite.Simulator.Utils
             SimulatorCreate simulatorDefinition,
             ISimulatorClient<TModelStateBase, SimulatorRoutineRevision> client,
             ILogger<DefaultSimulationRunner<TAutomationConfig, TModelStateBase, TModelStateBasePoco>> logger) :
-            base(config.Connector,
+            base(config?.Connector,
                 simulatorDefinition,
                 cdf,
                 modelLibrary,
