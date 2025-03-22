@@ -51,6 +51,12 @@ namespace Cognite.Simulator.Utils
             this.simulatorClient = simulatorClient;
         }
 
+        /// <summary>
+        /// This method should open the model versions in the simulator, extract the required information and
+        /// ingest it to CDF. 
+        /// </summary>
+        /// <param name="state">Model file states</param>
+        /// <param name="token">Cancellation token</param>
         protected override async Task ExtractModelInformation(
             TModelStateBase state,
             CancellationToken token
@@ -71,6 +77,12 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Creates a state object of type <typeparamref name="TModelStateBase"/> from a
+        /// CDF Simulator model revision passed as parameter
+        /// </summary>
+        /// <param name="modelRevision">CDF Simulator model revision</param>
+        /// <returns>File state object</returns>
         protected override TModelStateBase StateFromModelRevision(SimulatorModelRevision modelRevision)
         {
             if (modelRevision == null)

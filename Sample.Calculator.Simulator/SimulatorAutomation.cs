@@ -37,7 +37,7 @@ public class CalculatorModelFilestate : ModelStateBase
     public override void Init(FileStatePoco poco)
     {
         base.Init(poco);
-        if (poco is CalculatorFileStatePoco mPoco)
+        if (poco is CalculatorFileStatePoco mPoco && mPoco.ModelType != null)
         {
             ModelType = mPoco.ModelType;
         }

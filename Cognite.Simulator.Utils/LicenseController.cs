@@ -242,7 +242,6 @@ namespace Cognite.Simulator.Utils
         {
             _releaseTimer?.Dispose();
             _releaseTimer = null;
-            GC.SuppressFinalize(this);
         }
 
         private class LicenseUsageScope : IDisposable
