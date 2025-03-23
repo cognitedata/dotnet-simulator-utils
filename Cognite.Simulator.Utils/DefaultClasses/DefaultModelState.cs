@@ -26,6 +26,9 @@ namespace Cognite.Simulator.Utils
 
         public bool Processed { get; set; } = true;
 
+        /// <summary>
+        /// Indicates if information has been extracted from the model file
+        /// </summary>
         public override bool IsExtracted => Processed;
     }
 }

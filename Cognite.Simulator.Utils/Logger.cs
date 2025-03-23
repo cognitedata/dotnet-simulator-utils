@@ -41,7 +41,6 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(cdf));
             }
-
             var enrichers = new List<PropertyEnricher>() {
                 new PropertyEnricher("LogId", logId)
             };
@@ -151,7 +150,7 @@ namespace Cognite.Simulator.Utils
         /// 
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
-        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/>
+        /// <see cref="Cognite.Extractor.Logging.LoggingUtils.GetConfiguration(Cognite.Extractor.Logging.LoggerConfig)"/>
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
