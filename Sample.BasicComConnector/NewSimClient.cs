@@ -13,7 +13,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config.Automation)
+            : base(logger, config?.Automation)
     {
         this.logger = logger;
         semaphore.Wait();
@@ -48,6 +48,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken token)
     {
+        ArgumentNullException.ThrowIfNull(state);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -80,6 +81,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
     {
+        ArgumentNullException.ThrowIfNull(modelState);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
         dynamic? workbook = null;
         try
