@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
     private readonly string _version = "N/A";
     private readonly ILogger logger;
 
@@ -27,7 +28,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             semaphore.Release();
         }
     }
-    
+
     public Task TestConnection(CancellationToken _token)
     {
         /* Attempt to connect to the simulator */
