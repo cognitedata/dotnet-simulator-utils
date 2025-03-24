@@ -22,7 +22,7 @@ public class NewSimRoutine : RoutineImplementationBase
         _workbook = workbook;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
     {
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
@@ -47,7 +47,7 @@ public class NewSimRoutine : RoutineImplementationBase
         input.SimulatorObjectReference = simulationObjectRef;
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken _token)
     {
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
@@ -77,7 +77,7 @@ public class NewSimRoutine : RoutineImplementationBase
         };
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
     {
         // No implementation is required for this simulator.
     }
@@ -95,7 +95,7 @@ Call the `PerformSimulation` method in the `NewSimRoutine` class. The `PerformSi
 Use a semaphore to ensure only one connection to the simulator is made at a time.
 
 ```csharp
-public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
+public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
     {
         await semaphore.WaitAsync().ConfigureAwait(false);
         dynamic? workbook = null;
@@ -105,7 +105,7 @@ public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFi
             workbook = OpenBook(modelState.FilePath);
 
             var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
-            return routine.PerformSimulation();
+            return routine.PerformSimulation(token);
         }
         finally
         {

@@ -13,7 +13,7 @@ public class NewSimRoutine : RoutineImplementationBase
         _workbook = workbook;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
     {
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
@@ -41,7 +41,7 @@ public class NewSimRoutine : RoutineImplementationBase
         input.SimulatorObjectReference = simulationObjectRef;
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken _token)
     {
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
@@ -71,7 +71,7 @@ public class NewSimRoutine : RoutineImplementationBase
         };
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
     {
         // No implementation needed for this simulator
     }

@@ -110,7 +110,7 @@ protected override void PreShutdown()
 Update the `GetSimulatorVersion` method to return the version number.
 
 ```csharp
-public string GetSimulatorVersion()
+public string GetSimulatorVersion(CancellationToken token)
 {
     return _version;
 }

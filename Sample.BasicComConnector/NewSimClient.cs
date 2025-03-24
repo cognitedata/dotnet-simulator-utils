@@ -27,6 +27,12 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             semaphore.Release();
         }
     }
+    
+    public Task TestConnection(CancellationToken _token)
+    {
+        /* Attempt to connect to the simulator */
+        return Task.CompletedTask;
+    }
 
     protected override void PreShutdown()
     {
@@ -39,9 +45,9 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return workbooks.Open(path);
     }
 
-    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
+    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken token)
     {
-        await semaphore.WaitAsync(_token).ConfigureAwait(false);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             Initialize();
@@ -61,19 +67,19 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         }
     }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken _token)
     {
         return "N/A";
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken _token)
     {
         return _version;
     }
 
-    public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData)
+    public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
     {
-        await semaphore.WaitAsync().ConfigureAwait(false);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
         dynamic? workbook = null;
         try
         {
@@ -81,7 +87,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             workbook = OpenBook(modelState.FilePath);
 
             var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
-            return routine.PerformSimulation();
+            return routine.PerformSimulation(token);
         }
         finally
         {
