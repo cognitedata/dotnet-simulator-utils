@@ -534,7 +534,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     public class ModeLibraryTest : ModelLibraryBase<DefaultAutomationConfig, TestFileState, ModelStateBasePoco, ModelParsingInfo>
     {
-        private ILogger<ModeLibraryTest> _logger;
+        private new ILogger<ModeLibraryTest> _logger;
         public ModeLibraryTest(
             CogniteDestination cdf,
             ILogger<ModeLibraryTest> logger,

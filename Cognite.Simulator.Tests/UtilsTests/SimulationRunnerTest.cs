@@ -363,7 +363,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleRoutine : RoutineImplementationBase
     {
-        public static List<double> _inputs;
+        public static List<double> _inputs = [];
         public static double? _output;
 
         private ILogger _logger;
