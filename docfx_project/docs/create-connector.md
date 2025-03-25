@@ -152,7 +152,6 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
     
     public Task TestConnection(CancellationToken _token)
     {
-        /* Attempt to connect to the simulator */
         return Task.CompletedTask;
     }
 
