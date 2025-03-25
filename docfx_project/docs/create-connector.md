@@ -149,18 +149,23 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
     {
         throw new NotImplementedException();
     }
+    
+    public Task TestConnection(CancellationToken _token)
+    {
+        return Task.CompletedTask;
+    }
 
-    public string GetConnectorVersion()
+    public string GetConnectorVersion(CancellationToken _token)
     {
         return "N/A";
     }
 
-    public string GetSimulatorVersion()
+    public string GetSimulatorVersion(CancellationToken _token)
     {
         return "N/A";
     }
 
-    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision simulationConfiguration, Dictionary<string, SimulatorValueItem> inputData)
+    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision simulationConfiguration, Dictionary<string, SimulatorValueItem> inputData, CancellationToken _token)
     {
         throw new NotImplementedException();
     }
