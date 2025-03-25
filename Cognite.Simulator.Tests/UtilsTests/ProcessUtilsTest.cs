@@ -70,8 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var processName = "notepad";
 
             // Create test process to ensure at least one exists
-            Process testProcess = null;
-            testProcess = Process.Start(processName + ".exe");
+            Process testProcess = Process.Start(processName + ".exe");
 
             // Act
             ProcessUtils.KillProcess(processName, mockLogger.Object);
