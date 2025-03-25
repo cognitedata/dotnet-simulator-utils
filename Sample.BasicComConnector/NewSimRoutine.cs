@@ -16,6 +16,7 @@ public class NewSimRoutine : RoutineImplementationBase
     public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
     {
         ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(arguments);
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
         var row = int.Parse(rowStr);
