@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Mock<Func<object>>? releaseMock = null,
             Mock<Func<object>>? acquireMock = null,
             TimeSpan? licenseLockTime = null,
-            TimeProvider timeProvider = null)
+            TimeProvider? timeProvider = null)
         {
             var stateHolder = new StateHolder<TestLicenseState> { State = TestLicenseState.Released };
 
@@ -58,7 +58,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         // Simple class to hold state that can be captured in lambdas
         private class StateHolder<T>
         {
-            public T State { get; set; }
+            public required T State { get; set; }
         }
 
 
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task LicenseTracker_ShouldResetTimer_OnNewUsage()
+        public void LicenseTracker_ShouldResetTimer_OnNewUsage()
         {
             // Arrange
             var licenseLockTime = TimeSpan.FromMilliseconds(100);

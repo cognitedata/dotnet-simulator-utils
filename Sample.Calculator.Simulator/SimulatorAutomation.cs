@@ -10,7 +10,10 @@ using static SampleConnectorNamespace.SampleConnector;
 
 public class CalculatorModelFilestate : ModelStateBase
 {
-    public CalculatorModelFilestate() : base() { }
+    public CalculatorModelFilestate() : base()
+    {
+        ModelType = string.Empty;
+    }
 
     public override CalculatorFileStatePoco GetPoco()
     {

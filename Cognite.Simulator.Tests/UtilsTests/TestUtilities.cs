@@ -40,9 +40,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     It.Is<LogLevel>(lvl => lvl == level),
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) =>
-                        isContainsCheck ? v.ToString().Contains(expectedMessage) : v.ToString() == expectedMessage),
+                        isContainsCheck ? v.ToString().Contains(expectedMessage) : v.ToString() == expectedMessage)
+                    ,
                     It.IsAny<Exception>(),
-                    It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                    It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
                 times,
                 $"Expected log message '{expectedMessage}' of level {level} to be logged {times} times"
             );

@@ -314,10 +314,25 @@ namespace Cognite.Simulator.Utils
             V simulationConfiguration,
             Dictionary<string, SimulatorValueItem> inputData, CancellationToken token);
 
+        /// <summary>
+        /// This method should open the model versions in the simulator, extract the required information and
+        /// ingest it to CDF. 
+        /// </summary>
+        /// <param name="state">Model file states</param>
+        /// <param name="_token">Cancellation token</param>
         Task ExtractModelInformation(T state, CancellationToken _token);
 
+        /// <summary>
+        /// Returns the version of the given simulator. The connector reads the version and
+        /// report it back to CDF
+        /// </summary>
+        /// <returns>Version</returns>
         string GetSimulatorVersion(CancellationToken _token);
 
+        /// <summary>
+        /// Returns the connector version. This is reported periodically to CDF
+        /// </summary>
+        /// <returns>Connector version</returns>
         string GetConnectorVersion(CancellationToken _token);
 
         /// <summary>

@@ -727,6 +727,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Interface for libraries that can provide model information
     /// </summary>
+    /// <typeparam name="A">Type of the automation configuration object</typeparam>
     /// <typeparam name="T">Model state type</typeparam>
     public interface IModelProvider<A, T>
     {

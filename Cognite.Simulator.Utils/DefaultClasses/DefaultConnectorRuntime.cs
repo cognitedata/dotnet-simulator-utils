@@ -46,7 +46,13 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
     /// </summary>
     public static SimulatorCreate SimulatorDefinition;
 
+    /// <summary>
+    /// The name of the connector.
+    /// </summary>
     public static string ConnectorName = "Default";
+    /// <summary>
+    /// Runs the connector in standalone mode.
+    /// </summary>
     public static async Task RunStandalone()
     {
         var logger = SimulatorLoggingUtils.GetDefault();
@@ -147,6 +153,11 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         }
     }
 
+    /// <summary>
+    /// Runs the connector.
+    /// </summary>
+    /// <param name="defaultLogger">Logger instance.</param>
+    /// <param name="token">Cancellation token.</param>
     public static async Task Run(ILogger defaultLogger, CancellationToken token)
     {
         var assembly = Assembly.GetEntryAssembly();
