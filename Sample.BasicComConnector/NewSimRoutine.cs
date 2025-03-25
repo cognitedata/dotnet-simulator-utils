@@ -13,8 +13,9 @@ public class NewSimRoutine : RoutineImplementationBase
         _workbook = workbook;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
     {
+        ArgumentNullException.ThrowIfNull(input);
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
         var row = int.Parse(rowStr);
@@ -41,8 +42,10 @@ public class NewSimRoutine : RoutineImplementationBase
         input.SimulatorObjectReference = simulationObjectRef;
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments)
+    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken _token)
     {
+        ArgumentNullException.ThrowIfNull(outputConfig);
+        ArgumentNullException.ThrowIfNull(arguments);
         var rowStr = arguments["row"];
         var colStr = arguments["col"];
         var row = int.Parse(rowStr);
@@ -71,7 +74,7 @@ public class NewSimRoutine : RoutineImplementationBase
         };
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments)
+    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
     {
         // No implementation needed for this simulator
     }
