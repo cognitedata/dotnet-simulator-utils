@@ -55,11 +55,6 @@ public class NewSimRoutine : RoutineImplementationBase
         dynamic worksheet = _workbook.ActiveSheet;
         var cell = worksheet.Cells[row, col];
 
-        if (outputConfig == null)
-        {
-            throw new ArgumentNullException(nameof(outputConfig));
-        }
-
         if (outputConfig.ValueType != SimulatorValueType.DOUBLE)
         {
             throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
