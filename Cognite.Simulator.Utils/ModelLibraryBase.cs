@@ -741,6 +741,6 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Delete all temporary model files stored in memory and on disk
         /// </summary>
-        void WipeTemporaryModelFiles(); // here
+        void WipeTemporaryModelFiles();
     }
 }
