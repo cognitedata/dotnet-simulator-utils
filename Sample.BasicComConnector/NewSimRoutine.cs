@@ -24,11 +24,6 @@ public class NewSimRoutine : RoutineImplementationBase
 
         dynamic worksheet = _workbook.ActiveSheet;
 
-        if (input == null)
-        {
-            throw new ArgumentNullException(nameof(input));
-        }
-
         if (input.ValueType == SimulatorValueType.DOUBLE)
         {
             var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
