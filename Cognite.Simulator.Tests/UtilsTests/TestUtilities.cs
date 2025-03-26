@@ -98,7 +98,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> MockRequestsAsync(IList<SimpleRequestMocker> endpointMockTemplates)
         {
 
-            return async (HttpRequestMessage message, CancellationToken token) =>
+            return (HttpRequestMessage message, CancellationToken token) =>
             {
                 var uri = message.RequestUri?.ToString();
                 if (uri == null)
@@ -110,10 +110,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 {
                     if (mockTemplate.Matches(uri))
                     {
-                        return mockTemplate.GetResponse();
+                        return Task.FromResult(mockTemplate.GetResponse());
                     }
                 }
-                return CreateResponse(HttpStatusCode.NotImplemented, "Not implemented");
+                return Task.FromResult(CreateResponse(HttpStatusCode.NotImplemented, "Not implemented"));
             };
         }
 
