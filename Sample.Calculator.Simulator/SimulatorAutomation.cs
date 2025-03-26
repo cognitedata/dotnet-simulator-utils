@@ -10,10 +10,7 @@ using static SampleConnectorNamespace.SampleConnector;
 
 public class CalculatorModelFilestate : ModelStateBase
 {
-    public CalculatorModelFilestate() : base()
-    {
-        ModelType = string.Empty;
-    }
+    public CalculatorModelFilestate() : base() { }
 
     public override CalculatorFileStatePoco GetPoco()
     {
@@ -40,7 +37,7 @@ public class CalculatorModelFilestate : ModelStateBase
     public override void Init(FileStatePoco poco)
     {
         base.Init(poco);
-        if (poco is CalculatorFileStatePoco mPoco && mPoco.ModelType != null)
+        if (poco is CalculatorFileStatePoco mPoco)
         {
             ModelType = mPoco.ModelType;
         }
@@ -50,7 +47,7 @@ public class CalculatorModelFilestate : ModelStateBase
 
     public override bool IsExtracted => Processed;
 
-    public string ModelType { get; set; }
+    public string? ModelType { get; set; }
 }
 
 public class CalculatorFileStatePoco : ModelStateBasePoco
