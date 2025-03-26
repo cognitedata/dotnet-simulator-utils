@@ -136,7 +136,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 DataSetId = SeedData.TestDataSetId,
             });
 
-            StateStoreConfig stateConfig = null;
+            StateStoreConfig? stateConfig = null;
 
             var tsToDelete = new List<string>();
 
@@ -226,6 +226,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.NotNull(runUpdated.SimulationTime);
                 var simulationTime = runUpdated.SimulationTime.Value;
 
+                Assert.NotNull(runUpdated.LogId);
                 var logsRes = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                     new List<Identity> { new Identity(runUpdated.LogId.Value) }, source.Token);
 
@@ -362,7 +363,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
     public class SampleRoutine : RoutineImplementationBase
     {
-        public static List<double> _inputs;
+        public static List<double> _inputs = [];
         public static double? _output;
 
         private ILogger _logger;

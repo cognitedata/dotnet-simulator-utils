@@ -293,12 +293,20 @@ namespace Cognite.Simulator.Utils
         RoutineLibraryBase<SimulatorRoutineRevision>
         where TAutomationConfig : AutomationConfig, new()
     {
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DefaultRoutineLibrary{TAutomationConfig}"/> class.
+        /// </summary>
+        /// <param name="config">The default configuration.</param>
+        /// <param name="simulatorDefinition">The simulator definition.</param>
+        /// <param name="cdf">The CDF destination object.</param>
+        /// <param name="logger">The logger.</param>
         public DefaultRoutineLibrary(
             DefaultConfig<TAutomationConfig> config,
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger<DefaultRoutineLibrary<TAutomationConfig>> logger) :
-            base(config.Connector.RoutineLibrary, simulatorDefinition, cdf, logger)
+            base(config?.Connector.RoutineLibrary, simulatorDefinition, cdf, logger)
         {
         }
     }

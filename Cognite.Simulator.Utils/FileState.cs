@@ -39,9 +39,8 @@ namespace Cognite.Simulator.Utils
         public DateTime? LastTimeModified { get; protected set; }
 
         /// <summary>
-        /// Creates a new file state with the provided id
+        /// Creates a new file state instance
         /// </summary>
-        /// <param name="id">File id</param>
         public FileState()
         {
         }

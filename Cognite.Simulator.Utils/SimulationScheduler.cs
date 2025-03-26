@@ -286,16 +286,26 @@ namespace Cognite.Simulator.Utils
         }
     }
 
+    /// <summary>
+    /// Default implementation of the simulation scheduler base class.
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">Type of the automation configuration</typeparam>
     public class DefaultSimulationScheduler<TAutomationConfig> : SimulationSchedulerBase<SimulatorRoutineRevision>
     where TAutomationConfig : AutomationConfig, new()
     {
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DefaultSimulationScheduler{TAutomationConfig}"/> class.
+        /// </summary>
+        /// <param name="config">The default configuration.</param>
+        /// <param name="configLib">The default routine library.</param>
+        /// <param name="logger">The logger instance.</param>
+        /// <param name="cdf">The Cognite destination client.</param>
         public DefaultSimulationScheduler(
             DefaultConfig<TAutomationConfig> config,
             DefaultRoutineLibrary<TAutomationConfig> configLib,
             ILogger<DefaultSimulationScheduler<TAutomationConfig>> logger,
             CogniteDestination cdf)
-            : base(config.Connector, configLib, logger, cdf)
+            : base(config?.Connector, configLib, logger, cdf)
         {
         }
     }

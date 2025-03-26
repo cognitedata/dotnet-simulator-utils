@@ -67,6 +67,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Assert.Equal("v0.0.1", integration.ConnectorVersion);
                 Assert.StartsWith($"Test Connector", integration.ExternalId);
                 Assert.True(integration.Heartbeat >= timestamp);
+                Assert.NotNull(cdfConfig.ExtractionPipeline);
+                Assert.NotNull(cdfConfig.ExtractionPipeline.PipelineId);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
                 // to report a heartbeat back to CDF at least once.

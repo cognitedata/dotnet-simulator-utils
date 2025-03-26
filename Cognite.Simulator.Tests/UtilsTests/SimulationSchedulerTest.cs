@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
 
-            StateStoreConfig stateConfig = null;
+            StateStoreConfig? stateConfig = null;
 
             var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             using var source = new CancellationTokenSource();

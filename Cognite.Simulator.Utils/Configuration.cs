@@ -264,19 +264,42 @@ namespace Cognite.Simulator.Utils
         public bool Enabled { get; set; }
     }
 
+    /// <summary>
+    /// Represents the default configuration for a connector, including model and routine libraries.
+    /// </summary>
     public class DefaultConnectorConfig : ConnectorConfig
     {
+        /// <summary>
+        /// Configuration for the model library
+        /// </summary>
         public ModelLibraryConfig ModelLibrary { get; set; }
+        /// <summary>
+        /// Configuration for the routine library
+        /// </summary>
         public RoutineLibraryConfig RoutineLibrary { get; set; }
     }
 
+    /// <summary>
+    /// Represents the default configuration for a connector, including model and routine libraries, and automation configuration.
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">The type of the automation configuration.</typeparam>
     public class DefaultConfig<TAutomationConfig> : BaseConfig
     where TAutomationConfig : AutomationConfig, new()
     {
+        /// <summary>
+        /// Configuration for the default connector
+        /// </summary>
         public DefaultConnectorConfig Connector { get; set; }
 
+        /// <summary>
+        /// Configuration for the automation settings.
+        /// </summary>
         public TAutomationConfig Automation { get; set; }
 
+        /// <summary>
+        /// Generate default configuration objects if the corresponding tags are not present
+        /// in the yaml config file/string
+        /// </summary>
         public override void GenerateDefaults()
         {
             base.GenerateDefaults();

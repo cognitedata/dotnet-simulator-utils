@@ -26,6 +26,7 @@ namespace Cognite.Simulator.Utils
     /// fetch simulation runs from CDF that are ready to run, validate them and find
     /// the time range to sample data where the process is in steady state.
     /// </summary>
+    /// <typeparam name="A">Type of automation configuration objects</typeparam>
     /// <typeparam name="T">Type of model state objects</typeparam>
     /// <typeparam name="V">Type of simulation configuration objects</typeparam>
     public abstract class SimulationRunnerBase<A, T, V>

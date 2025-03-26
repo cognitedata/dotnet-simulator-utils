@@ -47,7 +47,7 @@ public class CalculatorModelFilestate : ModelStateBase
 
     public override bool IsExtracted => Processed;
 
-    public string ModelType { get; set; }
+    public string? ModelType { get; set; }
 }
 
 public class CalculatorFileStatePoco : ModelStateBasePoco
@@ -66,7 +66,7 @@ public class CalculatorSimulatorAutomationClient :
 
     public CalculatorSimulatorAutomationClient(
         ILogger<CalculatorSimulatorAutomationClient> logger,
-        DefaultConfig<CustomAutomationConfig> config) : base(logger, config.Automation)
+        DefaultConfig<CustomAutomationConfig> config) : base(logger, config?.Automation)
     {
         _logger = logger;
     }

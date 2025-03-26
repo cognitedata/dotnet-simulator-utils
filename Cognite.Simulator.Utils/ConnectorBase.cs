@@ -137,6 +137,7 @@ namespace Cognite.Simulator.Utils
         /// report it back to CDF
         /// </summary>
         /// <param name="simulator">Name of the simulator</param>
+        /// /// <param name="token">Cancellation token</param>
         /// <returns>Version</returns>
         public abstract string GetSimulatorVersion(string simulator, CancellationToken token);
 

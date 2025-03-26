@@ -31,9 +31,8 @@ namespace Cognite.Simulator.Utils
         public bool CanRead { get; set; } = true;
 
         /// <summary>
-        /// Creates a new model file state with the provided id
+        /// Creates a new model file state instance
         /// </summary>
-        /// <param name="id"></param>
         public ModelStateBase() : base()
         {
         }

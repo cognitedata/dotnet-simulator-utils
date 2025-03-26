@@ -17,6 +17,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Provides utility methods for managing processes.
+    /// </summary>
     public static class ProcessUtils
     {
 
@@ -103,6 +106,11 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Get the current platform username
+        /// </summary>
+        /// <returns>The current username</returns>
+        /// <exception cref="PlatformNotSupportedException">Thrown when the method is called on a non-Windows platform</exception>
         public static string GetCurrentUsername()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

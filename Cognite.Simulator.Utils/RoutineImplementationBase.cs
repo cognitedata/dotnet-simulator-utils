@@ -33,6 +33,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="routineRevision">Routine revision object</param>
         /// <param name="inputData">Data to use as input</param>
+        /// <param name="logger">Logger instance</param>
         public RoutineImplementationBase(
             SimulatorRoutineRevision routineRevision,
             Dictionary<string, SimulatorValueItem> inputData,

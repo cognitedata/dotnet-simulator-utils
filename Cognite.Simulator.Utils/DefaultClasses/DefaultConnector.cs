@@ -15,6 +15,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
+    /// <summary>
+    /// Default implementation of a model library for a simulator
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">Type of the automation configuration</typeparam>
+    /// <typeparam name="TModelState">Type of the model state</typeparam>
+    /// <typeparam name="TModelStateBasePoco">Type of the model state POCO</typeparam>
     public class DefaultConnector<TAutomationConfig, TModelState, TModelStateBasePoco> : ConnectorBase<DefaultConfig<TAutomationConfig>>
         where TAutomationConfig : AutomationConfig, new()
          where TModelState : ModelStateBase, new()
@@ -33,6 +39,9 @@ namespace Cognite.Simulator.Utils
 
         private ISimulatorClient<TModelState, SimulatorRoutineRevision> _simulatorClient;
 
+        /// <summary>
+        /// Creates an instance of the default connector
+        /// </summary>
         public DefaultConnector(
             CogniteDestination cdf,
             DefaultConfig<TAutomationConfig> config,
@@ -46,7 +55,7 @@ namespace Cognite.Simulator.Utils
             RemoteConfigManager<DefaultConfig<TAutomationConfig>> remoteConfigManager,
             ISimulatorClient<TModelState, SimulatorRoutineRevision> simulatorClient,
             ScopedRemoteApiSink sink)
-            : base(cdf, config.Connector, simulatorDefinition, logger, remoteConfigManager, sink)
+            : base(cdf, config?.Connector, simulatorDefinition, logger, remoteConfigManager, sink)
         {
             _config = config;
             _logger = logger;
@@ -64,16 +73,32 @@ namespace Cognite.Simulator.Utils
                     "0.0.1");
         }
 
+        /// <summary>
+        /// Returns the connector version. This is reported periodically to CDF
+        /// </summary>
+        /// <returns>Connector version</returns>
         public override string GetConnectorVersion(CancellationToken token)
         {
             return _simulatorClient.GetConnectorVersion(token);
         }
 
+        /// <summary>
+        /// Returns the version of the given simulator. The connector reads the version and
+        /// report it back to CDF
+        /// </summary>
+        /// <param name="simulator">Name of the simulator</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Version</returns>
         public override string GetSimulatorVersion(string simulator, CancellationToken token)
         {
             return _simulatorClient.GetSimulatorVersion(token);
         }
 
+        /// <summary>
+        /// Initialize the connector. Should include any initialization tasks to be performed before the connector loop.
+        /// This should include a call to InitRemoteSimulatorIntegration
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
         public override async Task Init(CancellationToken token)
         {
             await _simulatorClient.TestConnection(token).ConfigureAwait(false);
