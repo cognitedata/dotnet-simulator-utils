@@ -30,6 +30,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockExtPipesEndpoint, 1).ShouldBeCalled(Times.Once()),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/runs"), MockExtPipesEndpoint),
         };
+        private static readonly ConnectorConfig ConnectorConfig = new ConnectorConfig
+        {
+            NamePrefix = SeedData.TestIntegrationExternalId,
+            DataSetId = SeedData.TestDataSetId,
+            PipelineNotification = new PipelineNotificationConfig(),
+        };
 
         [Fact]
         /// <summary>
@@ -53,20 +59,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockedLogger = new Mock<ILogger<ExtractionPipeline>>();
             services.AddSingleton(mockedLogger.Object);
 
-            var connectorConfig = new ConnectorConfig
-            {
-                NamePrefix = SeedData.TestIntegrationExternalId,
-                DataSetId = SeedData.TestDataSetId,
-                PipelineNotification = new PipelineNotificationConfig(),
-            };
-            services.AddExtractionPipeline(connectorConfig);
+            services.AddExtractionPipeline(ConnectorConfig);
 
             using var provider = services.BuildServiceProvider();
 
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
 
             // Act
-            await extPipeline.Init(connectorConfig, CancellationToken.None);
+            await extPipeline.Init(ConnectorConfig, CancellationToken.None);
 
             using var tokenSource = new CancellationTokenSource();
             tokenSource.CancelAfter(TimeSpan.FromSeconds(5));
@@ -108,13 +108,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockedLogger = new Mock<ILogger<ExtractionPipeline>>();
             services.AddSingleton(mockedLogger.Object);
 
-            var connectorConfig = new ConnectorConfig
-            {
-                NamePrefix = SeedData.TestIntegrationExternalId,
-                DataSetId = SeedData.TestDataSetId,
-                PipelineNotification = new PipelineNotificationConfig(),
-            };
-            services.AddExtractionPipeline(connectorConfig);
+            services.AddExtractionPipeline(ConnectorConfig);
 
             using var provider = services.BuildServiceProvider();
 
@@ -124,7 +118,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
 
             // Act
-            await extPipeline.Init(connectorConfig, CancellationToken.None);
+            await extPipeline.Init(ConnectorConfig, CancellationToken.None);
 
             using var tokenSource = new CancellationTokenSource();
             tokenSource.CancelAfter(TimeSpan.FromSeconds(5));
