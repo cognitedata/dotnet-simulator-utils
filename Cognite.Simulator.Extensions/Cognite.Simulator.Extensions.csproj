@@ -22,9 +22,9 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup> 
   <ItemGroup>
-    <PackageReference Include="CogniteSdk" Version="4.13.1" />
+    <PackageReference Include="CogniteSdk" Version="4.13.3" />
     <!-- <ProjectReference Include="..\..\cognite-sdk-dotnet\CogniteSdk\src\CogniteSdk.csproj" /> -->
-    <PackageReference Include="Cognite.Extensions" Version="1.29.0" />
+    <PackageReference Include="Cognite.Extensions" Version="1.21.0" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" /> -->
   </ItemGroup> 
 
