@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-016 (2025-04-03)
+
+* Fixes a missing dependency that would cause a runtime error on connectors built using the simulator utils. 
+
 ## Release v1.0.0-beta-015 (2025-03-06)
 
 ### Features
