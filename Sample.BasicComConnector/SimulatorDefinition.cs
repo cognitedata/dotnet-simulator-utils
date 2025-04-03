@@ -20,9 +20,14 @@ static class SimulatorDefinition
                         StepType = "get/set",
                         Fields = new List<SimulatorStepFieldParam> {
                             new SimulatorStepFieldParam {
-                                Name = "address",
-                                Label = "Address",
-                                Info = "Enter the address to set",
+                                Name = "row",
+                                Label = "Row",
+                                Info = "Row number of the cell in the table",
+                            },
+                            new SimulatorStepFieldParam {
+                                Name = "col",
+                                Label = "Column",
+                                Info = "Column number of the cell in the table",
                             },
                         },
                     },
