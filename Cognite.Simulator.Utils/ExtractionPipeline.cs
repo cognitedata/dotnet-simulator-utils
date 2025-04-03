@@ -175,6 +175,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         public async Task PipelineUpdate(CancellationToken token)
         {
+            if (_disabled)
+            {
+                return;
+            }
             var startMessage = LastErrorMessage != null ?
                 $"Connector restarted after error: {LastErrorMessage}" :
                 "Connector started";
