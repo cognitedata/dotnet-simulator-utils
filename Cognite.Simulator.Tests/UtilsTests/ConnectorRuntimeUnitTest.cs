@@ -28,6 +28,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+            new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
             new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint),

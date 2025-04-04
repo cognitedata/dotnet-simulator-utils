@@ -204,6 +204,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockTokenInspectEndpoint()
+        {
+            var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
+            var item = $@"{{
+                ""subject"": ""test"",
+                ""projects"": [
+                    {{
+                        ""projectUrlName"": ""{project}"",
+                        ""groups"": [3746490342025788]
+                    }}
+                ]
+            }}";
+            return CreateResponse(HttpStatusCode.OK, item);
+        }
+
         public static HttpResponseMessage MockSimulatorsEndpoint()
         {
             var item = $@"{{
