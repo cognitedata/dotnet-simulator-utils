@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-016 (2025-03-04)
+
+### Bug Fixes
+
+* Upgraded dependencies to fix the issue with the connector not being able to run without `Microsoft.Bcl.AsyncInterfaces` package.
+* Fixed bug introduced in v1.0.0-beta-015 where disabled extraction pipeline would cause null reference exceptions.
+
+### Other
+
+* Numerous code improvements and refactoring.
+
 ## Release v1.0.0-beta-015 (2025-03-06)
 
 ### Features
