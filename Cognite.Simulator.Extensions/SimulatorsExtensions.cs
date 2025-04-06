@@ -119,5 +119,40 @@ namespace Cognite.Simulator.Extensions
             return res.FirstOrDefault();
         }
 
+        /// <summary>
+        /// Updates the simulation model revision status and status message in CDF.
+        /// </summary>
+        /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
+        /// <param name="modelRevisionExternalId">The externalId of the simulator model revision.</param>
+        /// <param name="flowsheet">Flowsheet.</param>
+        /// <param name="info">Information.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>The updated SimulatorModelRevisionData instance.</returns>
+        public static async Task<SimulatorModelRevisionData> UpdateSimulatorModelRevisionData(
+            this SimulatorsResource cdfSimulators,
+            string modelRevisionExternalId,
+            SimulatorModelRevisionDataFlowsheet flowsheet = null,
+            Dictionary<string, string> info = null,
+            CancellationToken token = default
+        )
+        {
+            
+            var revData = new SimulatorModelRevisionDataUpdateItem
+            {
+                ModelRevisionExternalId = modelRevisionExternalId,
+                Update = new SimulatorModelRevisionDataUpdate
+                {
+                    Flowsheet = new Update<SimulatorModelRevisionDataFlowsheet>(flowsheet),
+                    Info = new Update<Dictionary<string, string>>(info)
+                }
+            };
+
+            var res = await cdfSimulators.UpdateSimulatorModelRevisionDataAsync(
+                new List<SimulatorModelRevisionDataUpdateItem> { revData },
+                token).ConfigureAwait(false);
+
+            return res.Items.FirstOrDefault();
+        }
+
     }
 }

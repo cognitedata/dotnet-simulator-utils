@@ -347,6 +347,7 @@ namespace Cognite.Simulator.Utils
                     finally
                     {
                         await PersistModelStatus(modelState, token).ConfigureAwait(false);
+                        await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -395,6 +396,20 @@ namespace Cognite.Simulator.Utils
                     long.Parse(modelState.Id),
                     newStatus,
                     modelState.ParsingInfo.StatusMessage,
+                    token).ConfigureAwait(false);
+            }
+        }
+
+
+        private async Task PersistModelInformation(T modelState, CancellationToken token)
+        {
+            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
+            {
+
+                await _cdfSimulatorResources.UpdateSimulatorModelRevisionData(
+                    modelState.ExternalId,
+                    modelState.ParsingInfo.Flowsheet,
+                    modelState.ParsingInfo.RevDataInfo,
                     token).ConfigureAwait(false);
             }
         }
