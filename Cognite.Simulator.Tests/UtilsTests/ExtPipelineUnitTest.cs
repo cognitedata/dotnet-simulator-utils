@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.Utils;
 using Cognite.Simulator.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes"), MockExtPipesEndpoint, 1).ShouldBeCalled(Times.Once()),
             new SimpleRequestMocker(uri => uri.EndsWith("/extpipes/runs"), MockExtPipesEndpoint),
         };
+        private static readonly ConnectorConfig ConnectorConfig = new ConnectorConfig
+        {
+            NamePrefix = SeedData.TestIntegrationExternalId,
+            DataSetId = SeedData.TestDataSetId,
+            PipelineNotification = new PipelineNotificationConfig(),
+        };
 
         [Fact]
         /// <summary>
@@ -52,20 +59,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockedLogger = new Mock<ILogger<ExtractionPipeline>>();
             services.AddSingleton(mockedLogger.Object);
 
-            var connectorConfig = new ConnectorConfig
-            {
-                NamePrefix = SeedData.TestIntegrationExternalId,
-                DataSetId = SeedData.TestDataSetId,
-                PipelineNotification = new PipelineNotificationConfig(),
-            };
-            services.AddExtractionPipeline(connectorConfig);
+            services.AddExtractionPipeline(ConnectorConfig);
 
             using var provider = services.BuildServiceProvider();
 
             var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
 
             // Act
-            await extPipeline.Init(connectorConfig, CancellationToken.None);
+            await extPipeline.Init(ConnectorConfig, CancellationToken.None);
 
             using var tokenSource = new CancellationTokenSource();
             tokenSource.CancelAfter(TimeSpan.FromSeconds(5));
@@ -79,6 +80,55 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "Notifying extraction pipeline, status: seen", Times.AtLeastOnce());
 
             foreach (var mocker in endpointMappings)
+            {
+                mocker.AssertCallCount();
+            }
+        }
+
+        private static readonly List<SimpleRequestMocker> endpointMappingsDisabled = new List<SimpleRequestMocker>
+        {
+            new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint).ShouldBeCalled(Times.Never()),
+        };
+
+        [Fact]
+        /// <summary>
+        /// Test extraction pipeline doesn't produce an error when disabled.
+        /// </summary>
+        public async Task TestExtPipelineDisabledNoError()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddSingleton(SeedData.SimulatorCreate);
+
+            var httpMock = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappingsDisabled));
+            var mockFactory = httpMock.factory;
+            services.AddSingleton(mockFactory.Object);
+            services.AddCogniteTestClient();
+
+            var mockedLogger = new Mock<ILogger<ExtractionPipeline>>();
+            services.AddSingleton(mockedLogger.Object);
+
+            services.AddExtractionPipeline(ConnectorConfig);
+
+            using var provider = services.BuildServiceProvider();
+
+            CogniteConfig cdfConfig = provider.GetRequiredService<CogniteConfig>();
+            cdfConfig.ExtractionPipeline = null; // disabling the extraction pipeline
+
+            var extPipeline = provider.GetRequiredService<ExtractionPipeline>();
+
+            // Act
+            await extPipeline.Init(ConnectorConfig, CancellationToken.None);
+
+            using var tokenSource = new CancellationTokenSource();
+            tokenSource.CancelAfter(TimeSpan.FromSeconds(5));
+
+            await extPipeline.PipelineUpdate(tokenSource.Token);
+
+            // Assert
+            VerifyLog(mockedLogger, LogLevel.Debug, "Extraction pipeline is not configured", Times.Once());
+
+            foreach (var mocker in endpointMappingsDisabled)
             {
                 mocker.AssertCallCount();
             }
