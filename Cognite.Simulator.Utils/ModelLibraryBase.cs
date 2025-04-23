@@ -344,10 +344,9 @@ namespace Cognite.Simulator.Utils
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
                         await ExtractModelInformation(modelState, token).ConfigureAwait(false);
                     }
-                    finally
-                    {
-                        await PersistModelStatus(modelState, token).ConfigureAwait(false);
-                        await PersistModelInformation(modelState, token).ConfigureAwait(false);
+                    finally{
+                         await PersistModelStatus(modelState, token).ConfigureAwait(false);
+                         await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -403,14 +402,23 @@ namespace Cognite.Simulator.Utils
 
         private async Task PersistModelInformation(T modelState, CancellationToken token)
         {
-            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
+            if (modelState.ParsingInfo != null && 
+            (modelState.ParsingInfo.Flowsheet != null || 
+            modelState.ParsingInfo.RevisionDataInfo != null))
             {
-
-                await _cdfSimulatorResources.UpdateSimulatorModelRevisionData(
-                    modelState.ExternalId,
-                    modelState.ParsingInfo.Flowsheet,
-                    modelState.ParsingInfo.RevDataInfo,
-                    token).ConfigureAwait(false);
+                try
+                {
+                    await _cdfSimulatorResources.UpdateSimulatorModelRevisionData(
+                        modelState.ExternalId,
+                        modelState.ParsingInfo.Flowsheet,
+                        modelState.ParsingInfo.RevisionDataInfo,
+                        token
+                    ).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error persisting model information: {Message}", e.Message);
+                }
             }
         }
 

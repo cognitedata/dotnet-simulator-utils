@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿#nullable enable
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 using CogniteSdk.Alpha;
+
+using Google.Protobuf.WellKnownTypes;
 
 namespace Cognite.Simulator.Utils
 {
@@ -22,7 +25,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Status message
         /// </summary>
-        public string StatusMessage { get; set; }
+        public string? StatusMessage { get; set; }
 
         /// <summary>
         /// Whether or not the model was parsed
@@ -34,9 +37,9 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public bool Error { get; set; }
         
-        public SimulatorModelRevisionDataFlowsheet Flowsheet { get; set; } = new SimulatorModelRevisionDataFlowsheet();
+        public SimulatorModelRevisionDataFlowsheet? Flowsheet { get; set; }
 
-        public Dictionary<string, string> RevDataInfo { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string>? RevisionDataInfo { get; set; }
         
 
         /// <summary>

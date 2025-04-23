@@ -573,6 +573,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
                         modelState.ParsingInfo.SetSuccess();
                         modelState.Processed = true;
+                        modelState.ParsingInfo.Flowsheet = new SimulatorModelRevisionDataFlowsheet
+                        {
+                            SimulatorObjectNodes = new List<SimulatorModelRevisionDataObjectNode>(),
+                            SimulatorObjectEdges = new List<SimulatorModelRevisionDataObjectEdge>(),
+                            Thermodynamics = new SimulatorModelRevisionDataThermodynamic()
+                        };
+                        modelState.ParsingInfo.RevisionDataInfo = new Dictionary<string, string>
+                        {
+                            { "cronExpression", "* * * *"},
+                        };
+
                         return;
                     }
                 }
