@@ -9,6 +9,7 @@
     <Company>Cognite AS</Company>
     <Copyright>Cognite AS</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <NoWarn>NU1605</NoWarn>
     <RootNamespace>Cognite.Simulator.Extensions</RootNamespace>
     <Description>
       A library containing extensions to the Cognite SDK with utility methods for simulator integrations
@@ -22,7 +23,7 @@
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup> 
   <ItemGroup>
-    <PackageReference Include="CogniteSdk" Version="4.13.3" />
+    <PackageReference Include="CogniteSdk" Version="4.17.0" />
     <!-- <ProjectReference Include="..\..\cognite-sdk-dotnet\CogniteSdk\src\CogniteSdk.csproj" /> -->
     <PackageReference Include="Cognite.Extensions" Version="1.31.0" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\Cognite.Extensions\Cognite.Extensions.csproj" /> -->

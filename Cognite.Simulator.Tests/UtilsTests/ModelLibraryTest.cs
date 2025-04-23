@@ -573,6 +573,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                         _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
                         modelState.ParsingInfo.SetSuccess();
                         modelState.Processed = true;
+                        modelState.ParsingInfo.Flowsheet = SeedData.SimulatorModelRevisionData;
+                        modelState.ParsingInfo.RevisionDataInfo = SeedData.SimulatorModelRevisionDataDictionary;
                         return;
                     }
                 }

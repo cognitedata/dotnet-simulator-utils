@@ -342,6 +342,93 @@ namespace Cognite.Simulator.Tests
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };
 
+
+        public static SimulatorModelRevisionDataFlowsheet SimulatorModelRevisionData = new SimulatorModelRevisionDataFlowsheet
+        {
+            SimulatorObjectNodes = new List<SimulatorModelRevisionDataObjectNode>(){
+                new SimulatorModelRevisionDataObjectNode
+                {
+                    Id = "Node1",
+                    Name = "Node1-Name",
+                    Type = "Node1-Type",
+                    GraphicalObject = new SimulatorModelRevisionDataGraphicalObject
+                    {
+                        Position = new SimulatorModelRevisionDataPosition
+                        {
+                            X = 100,
+                            Y = 100,
+                        },
+                        Width = 100,
+                        Height = 100,
+                        Angle = 30,
+                        Active = true,
+                    },
+                    Properties = new List<SimulatorModelRevisionDataProperty>()
+                    {
+                        new SimulatorModelRevisionDataProperty
+                        {
+                            Name = "Node1-Property1",
+                            ReadOnly = true,
+                            ReferenceObject = new Dictionary<string, string>
+                            {
+                                { "Node1-key", "Node2-val" },
+                            },
+
+                        },
+                    },
+                },
+                new SimulatorModelRevisionDataObjectNode
+                {
+                    Id = "Node2",
+                    Name = "Node2-Name",
+                    Type = "Node2-Type",
+                    GraphicalObject = new SimulatorModelRevisionDataGraphicalObject
+                    {
+                        Position = new SimulatorModelRevisionDataPosition
+                        {
+                            X = 75,
+                            Y = 60,
+                        },
+                        Width = 20,
+                        Height = 20,
+                        Active = false,
+                    },
+                    Properties = new List<SimulatorModelRevisionDataProperty>()
+                    {
+                        new SimulatorModelRevisionDataProperty
+                        {
+                            Name = "Node2-Property2",
+                            ValueType = SimulatorValueType.STRING
+                        },
+                    },
+                },
+            },
+            SimulatorObjectEdges = new List<SimulatorModelRevisionDataObjectEdge>(){
+                new SimulatorModelRevisionDataObjectEdge
+                {
+                    Id = "Edge1",
+                    Name = "Edge1-Name",
+                    SourceId = "Node1",
+                    TargetId = "Node2",
+                    ConnectionType = SimulatorModelRevisionDataConnectionType.Information
+                },
+                new SimulatorModelRevisionDataObjectEdge
+                {
+                    Id = "Edge2",
+                    Name = "Edge2-Name",
+                    SourceId = "Node2",
+                    TargetId = "Node1",
+                    ConnectionType = SimulatorModelRevisionDataConnectionType.Energy
+                }
+            },
+            Thermodynamics = new SimulatorModelRevisionDataThermodynamic()
+        };
+
+        public static Dictionary<string, string> SimulatorModelRevisionDataDictionary = new Dictionary<string, string>
+        {
+            { "cronExpression", "*/5 * * * *"},
+        };
+
         public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateScheduled = new SimulatorRoutineCreateCommandItem()
         {
             ExternalId = $"{TestScheduledRoutineExternalId} - 1",

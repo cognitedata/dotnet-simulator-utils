@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <IsPackable>false</IsPackable>
+    <NoWarn>NU1605</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
