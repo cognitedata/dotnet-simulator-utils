@@ -6,13 +6,13 @@ static class SimulatorDefinition
     {
         return new SimulatorCreate()
         {
-            ExternalId = "NewSim",
-            Name = "NewSim",
+            ExternalId = "Excel",
+            Name = "Excel",
             FileExtensionTypes = new List<string> { "xlsx" },
             ModelTypes = new List<SimulatorModelType> {
                     new SimulatorModelType {
-                        Name = "Steady State",
-                        Key = "SteadyState",
+                        Name = "Spreadsheet",
+                        Key = "Spreadsheet",
                     }
                 },
             StepFields = new List<SimulatorStepField> {
@@ -20,14 +20,14 @@ static class SimulatorDefinition
                         StepType = "get/set",
                         Fields = new List<SimulatorStepFieldParam> {
                             new SimulatorStepFieldParam {
-                                Name = "row",
-                                Label = "Row",
-                                Info = "Row number of the cell in the table",
+                                Name = "sheet",
+                                Label = "Sheet Name",
+                                Info = "Name of the worksheet (e.g., 'Sheet1')",
                             },
                             new SimulatorStepFieldParam {
-                                Name = "col",
-                                Label = "Column",
-                                Info = "Column number of the cell in the table",
+                                Name = "cell",
+                                Label = "Cell Reference",
+                                Info = "Excel cell reference (e.g., 'A1', 'B2', 'C3')",
                             },
                         },
                     },
@@ -35,21 +35,31 @@ static class SimulatorDefinition
                         StepType = "command",
                         Fields = new List<SimulatorStepFieldParam> {
                             new SimulatorStepFieldParam {
-                                Name = "command",
-                                Label = "Command",
-                                Info = "Enter the command to run",
-                            },
+                                    Name = "command",
+                                    Label = "Command",
+                                    Info = "Select a command",
+                                    Options = new List<SimulatorStepFieldOption> {
+                                        new SimulatorStepFieldOption {
+                                            Label = "Pause Calculations",
+                                            Value = "Pause",
+                                        },
+                                        new SimulatorStepFieldOption {
+                                            Label = "Perform Calculation",
+                                            Value = "Calculate",
+                                        }
+                                    },
+                                },
                         },
                     },
                 },
             UnitQuantities = new List<SimulatorUnitQuantity>() {
                     new SimulatorUnitQuantity {
-                        Name = "Temperature",
-                        Label = "Temperature",
+                        Name = "Unitless",
+                        Label = "Unitless",
                         Units = new List<SimulatorUnitEntry> {
                             new SimulatorUnitEntry {
-                                Name = "C",
-                                Label = "Celsius",
+                                Name = "",
+                                Label = "",
                             },
                         },
                     },

@@ -1,8 +1,9 @@
-using Cognite.Simulator.Utils;
+using Microsoft.Extensions.Logging;
 
 using CogniteSdk.Alpha;
 
-using Microsoft.Extensions.Logging;
+using Cognite.Simulator.Utils;
+
 
 public class NewSimRoutine : RoutineImplementationBase
 {
@@ -17,29 +18,74 @@ public class NewSimRoutine : RoutineImplementationBase
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(arguments);
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
 
-        dynamic worksheet = _workbook.ActiveSheet;
+        var sheetName = arguments["sheet"];
+        var cellReference = arguments["cell"];
+
+        dynamic worksheet = _workbook.Worksheets(sheetName);
+        dynamic cell = worksheet.Range(cellReference);
 
         if (input.ValueType == SimulatorValueType.DOUBLE)
         {
             var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
-            worksheet.Cells[row, col].Value = rawValue;
+            cell.Value = rawValue;
         }
         else if (input.ValueType == SimulatorValueType.STRING)
         {
             var rawValue = (input.Value as SimulatorValue.String)?.Value;
-            worksheet.Cells[row, col].Formula = rawValue;
+            cell.Formula = rawValue;
+        }
+        else if (input.ValueType == SimulatorValueType.DOUBLE_ARRAY)
+        {
+            var rawValues = (input.Value as SimulatorValue.DoubleArray)?.Value?.ToArray();
+            if (rawValues == null || rawValues.Length == 0)
+            {
+                throw new ArgumentException("Double array value cannot be null or empty");
+            }
+
+            dynamic range = worksheet.Range(cellReference);
+            int count = range.Cells.Count;
+
+            if (count != rawValues.Length)
+            {
+                throw new ArgumentException($"Expected {count} values but got {rawValues.Length}");
+            }
+
+            for (int i = 1; i <= count; i++)
+            {
+                range.Cells(1, i).Value = rawValues[i - 1];
+            }
+        }
+        else if (input.ValueType == SimulatorValueType.STRING_ARRAY)
+        {
+            var rawValues = (input.Value as SimulatorValue.StringArray)?.Value?.ToArray();
+            if (rawValues == null || rawValues.Length == 0)
+            {
+                throw new ArgumentException("String array value cannot be null or empty");
+            }
+
+            dynamic range = worksheet.Range(cellReference);
+            int count = range.Cells.Count;
+
+            if (count != rawValues.Length)
+            {
+                throw new ArgumentException($"Expected {count} values but got {rawValues.Length}");
+            }
+
+            for (int i = 1; i <= count; i++)
+            {
+                range.Cells(1, i).Formula = rawValues[i - 1];
+            }
         }
         else
         {
             throw new NotImplementedException($"{input.ValueType} not implemented");
         }
 
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
+        var simulationObjectRef = new Dictionary<string, string> {
+            { "sheet", sheetName },
+            { "cell", cellReference }
+        };
         input.SimulatorObjectReference = simulationObjectRef;
     }
 
@@ -47,27 +93,71 @@ public class NewSimRoutine : RoutineImplementationBase
     {
         ArgumentNullException.ThrowIfNull(outputConfig);
         ArgumentNullException.ThrowIfNull(arguments);
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
 
-        dynamic worksheet = _workbook.ActiveSheet;
-        var cell = worksheet.Cells[row, col];
+        var sheetName = arguments["sheet"];
+        var cellReference = arguments["cell"];
 
-        if (outputConfig.ValueType != SimulatorValueType.DOUBLE)
+        dynamic worksheet = _workbook.Worksheets(sheetName);
+        dynamic cell = worksheet.Range(cellReference);
+
+        // Wait for any pending calculations to complete
+        while (_workbook.Application.CalculationState != -4105) // -4105 is xlDone
+        {
+            Thread.Sleep(100);
+        }
+
+        SimulatorValue value;
+        if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
+        {
+            var rawValue = (double)cell.Value;
+            value = new SimulatorValue.Double(rawValue);
+        }
+        else if (outputConfig.ValueType == SimulatorValueType.STRING)
+        {
+            var rawValue = (string)cell.Text;
+            value = new SimulatorValue.String(rawValue);
+        }
+        else if (outputConfig.ValueType == SimulatorValueType.DOUBLE_ARRAY)
+        {
+            // Handle 1D array of doubles
+            dynamic range = worksheet.Range(cellReference);
+            int count = range.Cells.Count;
+            double[] rawValues = new double[count];
+
+            for (int i = 1; i <= count; i++)
+            {
+                rawValues[i - 1] = (double)range.Cells(1, i).Value;
+            }
+
+            value = new SimulatorValue.DoubleArray(rawValues);
+        }
+        else if (outputConfig.ValueType == SimulatorValueType.STRING_ARRAY)
+        {
+            // Handle 1D array of strings
+            dynamic range = worksheet.Range(cellReference);
+            int count = range.Cells.Count;
+            string[] rawValues = new string[count];
+
+            for (int i = 1; i <= count; i++)
+            {
+                rawValues[i - 1] = (string)range.Cells(1, i).Text;
+            }
+
+            value = new SimulatorValue.StringArray(rawValues);
+        }
+        else
         {
             throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
         }
 
-        var rawValue = (double)cell.Value;
-        SimulatorValue value = new SimulatorValue.Double(rawValue);
-
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
+        var simulationObjectRef = new Dictionary<string, string> {
+            { "sheet", sheetName },
+            { "cell", cellReference }
+        };
 
         return new SimulatorValueItem
         {
-            ValueType = SimulatorValueType.DOUBLE,
+            ValueType = outputConfig.ValueType,
             Value = value,
             ReferenceId = outputConfig.ReferenceId,
             SimulatorObjectReference = simulationObjectRef,
@@ -77,6 +167,25 @@ public class NewSimRoutine : RoutineImplementationBase
 
     public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
     {
-        // No implementation needed for this simulator
+        ArgumentNullException.ThrowIfNull(arguments);
+        var command = arguments["command"];
+
+        switch (command)
+        {
+            case "Pause":
+                {
+                    _workbook.Application.Calculation = -4135; // xlCalculationManual = -4135
+                    break;
+                }
+            case "Calculate":
+                {
+                    _workbook.Application.Calculate();
+                    break;
+                }
+            default:
+                {
+                    throw new NotImplementedException($"Unsupported command: '{command}'");
+                }
+        }
     }
 }
