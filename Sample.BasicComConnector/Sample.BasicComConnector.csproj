@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-beta-015" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.1" />
   </ItemGroup>
 
 </Project>
