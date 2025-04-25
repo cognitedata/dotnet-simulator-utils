@@ -100,10 +100,64 @@ public class NewSimRoutine : RoutineImplementationBase
         dynamic worksheet = _workbook.Worksheets(sheetName);
         dynamic cell = worksheet.Range(cellReference);
 
-        // Wait for any pending calculations to complete
-        while (_workbook.Application.CalculationState != -4105) // -4105 is xlDone
+        // Wait for calculation to complete with timeout
+        var timeout = TimeSpan.FromSeconds(120);
+        var startTime = DateTime.Now;
+        var lastValue = cell.Value;
+        var stableCount = 0;
+        var valueReady = false;
+
+        while (!valueReady && DateTime.Now - startTime <= timeout)
         {
+            if (_token.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Operation was cancelled");
+            }
+
+            try
+            {
+                // Try to read the value regardless of calculation state
+                var currentValue = cell.Value;
+
+                // Check if we have a valid value
+                if (currentValue != null)
+                {
+                    // If calculation is complete, we're done
+                    if (_workbook.Application.CalculationState == -4105)
+                    {
+                        valueReady = true;
+                        break;
+                    }
+
+                    // If value has stabilized, we can proceed
+                    if (currentValue == lastValue)
+                    {
+                        stableCount++;
+                        if (stableCount >= 3) // Value has remained stable for 3 consecutive checks
+                        {
+                            valueReady = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        stableCount = 0;
+                        lastValue = currentValue;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // If we can't read the value yet, just continue waiting
+                stableCount = 0;
+            }
+
             Thread.Sleep(100);
+        }
+
+        if (!valueReady)
+        {
+            throw new TimeoutException("Excel calculation timed out or value could not be read after 2 minutes");
         }
 
         SimulatorValue value;
