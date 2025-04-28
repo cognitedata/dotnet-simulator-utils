@@ -138,7 +138,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var revisionDataLatest = await cdf.Alpha.Simulators.RetrieveSimulatorModelRevisionDataAsync(v2.ExternalId, source.Token);
                 Assert.NotNull(revisionDataLatest);
-                Assert.Equivalent(SeedData.SimulatorModelRevisionData.Thermodynamics, revisionDataLatest.Flowsheet.Thermodynamics);
+                Assert.Equivalent(SeedData.SimulatorModelRevisionData, revisionDataLatest.Flowsheet);
                 Assert.Equal(SeedData.SimulatorModelRevisionDataDictionary, revisionDataLatest.Info);
 
                 var logv2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
