@@ -342,7 +342,6 @@ namespace Cognite.Simulator.Tests
             Script = new List<SimulatorRoutineRevisionScriptStage>(),
         };
 
-
         public static SimulatorModelRevisionDataFlowsheet SimulatorModelRevisionData = new SimulatorModelRevisionDataFlowsheet
         {
             SimulatorObjectNodes = new List<SimulatorModelRevisionDataObjectNode>(){
@@ -373,7 +372,8 @@ namespace Cognite.Simulator.Tests
                             {
                                 { "Node1-key", "Node2-val" },
                             },
-
+                            ValueType = SimulatorValueType.DOUBLE,
+                            Value = SimulatorValue.Create(42),
                         },
                     },
                 },
@@ -398,30 +398,22 @@ namespace Cognite.Simulator.Tests
                         new SimulatorModelRevisionDataProperty
                         {
                             Name = "Node2-Property2",
-                            ValueType = SimulatorValueType.STRING
+                            ValueType = SimulatorValueType.STRING,
+                            Value = SimulatorValue.Create("Node2-Property2-Value"),
+                            ReferenceObject = new Dictionary<string, string>
+                            {
+                                { "Node2-key", "Node1-val" },
+                            },
                         },
                     },
                 },
             },
-            SimulatorObjectEdges = new List<SimulatorModelRevisionDataObjectEdge>(){
-                new SimulatorModelRevisionDataObjectEdge
-                {
-                    Id = "Edge1",
-                    Name = "Edge1-Name",
-                    SourceId = "Node1",
-                    TargetId = "Node2",
-                    ConnectionType = SimulatorModelRevisionDataConnectionType.Information
-                },
-                new SimulatorModelRevisionDataObjectEdge
-                {
-                    Id = "Edge2",
-                    Name = "Edge2-Name",
-                    SourceId = "Node2",
-                    TargetId = "Node1",
-                    ConnectionType = SimulatorModelRevisionDataConnectionType.Energy
-                }
-            },
+            SimulatorObjectEdges = new List<SimulatorModelRevisionDataObjectEdge>() { },
             Thermodynamics = new SimulatorModelRevisionDataThermodynamic()
+            {
+                PropertyPackages = new List<string> { "Node1-PropertyPackage" },
+                Components = new List<string> { "Node1-Component" },
+            }
         };
 
         public static Dictionary<string, string> SimulatorModelRevisionDataDictionary = new Dictionary<string, string>
