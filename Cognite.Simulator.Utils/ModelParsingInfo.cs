@@ -25,8 +25,14 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public string StatusMessage { get; set; }
 
+        /// <summary>
+        /// Flowsheet information associated with the simulator model revision.
+        /// </summary>
         public SimulatorModelRevisionDataFlowsheet? Flowsheet { get; set; }
 
+        /// <summary>
+        /// Information related to the model revision data, stored as a dictionary.
+        /// </summary>
         public Dictionary<string, string>? RevisionDataInfo { get; set; }
 
         /// <summary>
