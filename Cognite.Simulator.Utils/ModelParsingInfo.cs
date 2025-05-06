@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿#nullable enable
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 using CogniteSdk.Alpha;
 
@@ -22,6 +24,16 @@ namespace Cognite.Simulator.Utils
         /// Status message
         /// </summary>
         public string StatusMessage { get; set; }
+
+        /// <summary>
+        /// Flowsheet information associated with the simulator model revision.
+        /// </summary>
+        public SimulatorModelRevisionDataFlowsheet? Flowsheet { get; set; }
+
+        /// <summary>
+        /// Information related to the model revision data, stored as a dictionary.
+        /// </summary>
+        public Dictionary<string, string>? RevisionDataInfo { get; set; }
 
         /// <summary>
         /// Whether or not the model was parsed
