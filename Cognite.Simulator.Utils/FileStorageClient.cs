@@ -21,9 +21,9 @@ namespace Cognite.Simulator.Utils
         public static readonly int DefaultBufferSize = 81920;
 
         /// <summary>
-        /// Maximum file size that can be downloaded (8 GB)
+        /// Maximum file size that can be downloaded (32 GB, stricter limits on API)
         /// </summary>
-        public static readonly long MaxFileDownloadSize = 8 * 1024 * 1024 * 1024L;
+        public static readonly long MaxFileDownloadSize = 32 * 1024 * 1024 * 1024L;
 
         /// <summary>
         /// Maximum file size that can be downloaded without throwing an exception (512 MB)
