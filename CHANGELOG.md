@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-018 (2025-05-12)
+
+### Features
+
+* Add support for storing model revision data in SimInt API.
+
 ## Release v1.0.0-beta-017 (2025-04-28)
 
 ### Features
