@@ -23,7 +23,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Status message
         /// </summary>
-        public string StatusMessage { get; set; }
+        public string? StatusMessage { get; set; }
 
         /// <summary>
         /// Flowsheet information associated with the simulator model revision.

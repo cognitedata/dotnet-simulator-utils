@@ -343,11 +343,11 @@ namespace Cognite.Simulator.Utils
                     {
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
                         await ExtractModelInformation(modelState, token).ConfigureAwait(false);
+                        await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                     finally
                     {
                         await PersistModelStatus(modelState, token).ConfigureAwait(false);
-                        await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                 }
             }
