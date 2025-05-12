@@ -80,7 +80,7 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// Updates the simulation model revision data (general information, flowsheet) in CDF.
+        /// Updates the simulation model revision status and status message in CDF.
         /// </summary>
         /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
         /// <param name="id">The ID of the simulator model revision.</param>
