@@ -136,14 +136,16 @@ namespace Cognite.Simulator.Extensions
             CancellationToken token = default
         )
         {
+            var revisionDataUpdateObj = new SimulatorModelRevisionDataUpdate
+            {
+                Flowsheet = flowsheet != null ? new Update<SimulatorModelRevisionDataFlowsheet>(flowsheet) : null,
+                Info = info != null ? new Update<Dictionary<string, string>>(info) : null
+            };
+
             var modelRevisionData = new SimulatorModelRevisionDataUpdateItem
             {
                 ModelRevisionExternalId = modelRevisionExternalId,
-                Update = new SimulatorModelRevisionDataUpdate
-                {
-                    Flowsheet = new Update<SimulatorModelRevisionDataFlowsheet>(flowsheet),
-                    Info = new Update<Dictionary<string, string>>(info)
-                }
+                Update = revisionDataUpdateObj
             };
 
             var res = await cdfSimulators.UpdateSimulatorModelRevisionDataAsync(
