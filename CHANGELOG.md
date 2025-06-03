@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-019 (2025-05-12)
+
+### Fixes
+
+* Fix multiple issues with the model revision data extraction.
+
 ## Release v1.0.0-beta-018 (2025-05-12)
 
 ### Features
