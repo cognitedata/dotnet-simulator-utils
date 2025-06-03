@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Release v1.0.0-beta-019 (2025-05-12)
+## Release v1.0.0-beta-019 (2025-06-03)
 
 ### Fixes
 
