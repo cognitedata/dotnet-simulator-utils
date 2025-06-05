@@ -1,27 +1,15 @@
 
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 
-using Cognite.Extractor.Common;
-using Cognite.Simulator.Tests.DataProcessingTests;
-using Cognite.Simulator.Utils;
-
-using CogniteSdk;
 using CogniteSdk.Alpha;
-
-using Com.Cognite.V1.Timeseries.Proto;
 
 namespace Cognite.Simulator.Tests
 {
     public class SeedDataFlowsheet
     {
-        public static Dictionary<string, string> SimulatorModelRevisionDataDictionary = new Dictionary<string, string>
+        public static Dictionary<int, Dictionary<string, string>> SimulatorModelRevisionDataInfoPerVersion = new()
         {
-            { "cronExpression", "*/5 * * * *"},
+            { 1, new () { { "prop", "value" } } },
         };
         public static SimulatorModelRevisionDataFlowsheet SimulatorModelRevisionData = new SimulatorModelRevisionDataFlowsheet
         {

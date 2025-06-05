@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var revisionDataLatest = await cdf.Alpha.Simulators.RetrieveSimulatorModelRevisionDataAsync(v2.ExternalId, source.Token);
                 Assert.NotNull(revisionDataLatest);
                 Assert.Equivalent(SeedDataFlowsheet.SimulatorModelRevisionData, revisionDataLatest.Flowsheet);
-                Assert.Equal(SeedDataFlowsheet.SimulatorModelRevisionDataDictionary, revisionDataLatest.Info);
+                Assert.Equal(SeedDataFlowsheet.SimulatorModelRevisionDataInfoPerVersion.GetValueOrDefault(v2.Version), revisionDataLatest.Info);
 
                 var logv2 = await cdf.Alpha.Simulators.RetrieveSimulatorLogsAsync(
                     new List<Identity> { new Identity(v2.LogId) }, source.Token);
@@ -577,7 +577,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     {
                         _logger.LogInformation("Model revision parsed successfully {ExternalId}", modelState.ExternalId);
                         modelState.ParsingInfo.Flowsheet = SeedDataFlowsheet.SimulatorModelRevisionData;
-                        modelState.ParsingInfo.RevisionDataInfo = SeedDataFlowsheet.SimulatorModelRevisionDataDictionary;
+                        modelState.ParsingInfo.RevisionDataInfo = SeedDataFlowsheet.SimulatorModelRevisionDataInfoPerVersion.GetValueOrDefault(modelState.Version);
                         modelState.ParsingInfo.SetSuccess();
                         modelState.Processed = true;
                         return;

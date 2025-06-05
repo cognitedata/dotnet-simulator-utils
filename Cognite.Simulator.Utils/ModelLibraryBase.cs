@@ -426,9 +426,7 @@ namespace Cognite.Simulator.Utils
 
         private async Task PersistModelInformation(T modelState, CancellationToken token)
         {
-            if (modelState.ParsingInfo != null &&
-            (modelState.ParsingInfo.Flowsheet != null ||
-            modelState.ParsingInfo.RevisionDataInfo != null))
+            if (modelState.ParsingInfo?.Flowsheet != null || modelState.ParsingInfo?.RevisionDataInfo != null)
             {
                 try
                 {
