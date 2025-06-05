@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Release v1.0.0-beta-019 (2025-06-05)
+
+### Bug fixes
+
+* Multiple fixes for model revision data support (previous release)
+    - Fixed JSON conversion for `SimulatorModelRevisionDataConnectionType`
+    - Fixed `SimulatorModelRevisionDataGraphicalObject`: changed properties with `float32` types to `double`.
+    - [Breaking] Renamed `SimulatorValueUnitQuantity` to `SimulatorValueUnitReference`
+
 ## Release v1.0.0-beta-018 (2025-05-12)
 
 ### Features
