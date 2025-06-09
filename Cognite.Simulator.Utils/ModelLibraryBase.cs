@@ -219,18 +219,29 @@ namespace Cognite.Simulator.Utils
                 var modelRevision = modelRevisionRes.FirstOrDefault();
                 var state = StateFromModelRevision(modelRevision);
                 SetFileExtensionOnState(state, modelRevision.SimulatorExternalId);
-                var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
-                if (downloaded)
-                {
-                    UpdateModelParsingInfo(state, modelRevision);
-                    await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    return state;
-                }
+                await ProcessModelRevision(state, token, true, modelRevision).ConfigureAwait(false);
+                return state;
             }
             catch (Exception e)
             {
                 _logger.LogError("Error reading model revision from CDF: {Message}", e.Message);
             }
+            return null;
+        }
+
+        public T GetModelRevisionInState(string modelRevisionExternalId)
+        {
+            var modelVersions = _state.Values
+                .Where(s => s.ExternalId == modelRevisionExternalId)
+                .OrderByDescending(s => s.CreatedTime);
+
+            var model = modelVersions.FirstOrDefault();
+
+            if (model != null)
+            {
+                return model;
+            }
+
             return null;
         }
 
@@ -402,25 +413,32 @@ namespace Cognite.Simulator.Utils
 
         private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
-            var status = modelRevision.Status;
-            var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
-            if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
+            try
             {
-                _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status", modelState.ModelExternalId);
-                modelState.DownloadAttempts = 0;
-            }
-            if (needsUpdate || modelState.ParsingInfo == null)
-            {
-                var isError = status == SimulatorModelRevisionStatus.failure;
-                var parsed = isError || status == SimulatorModelRevisionStatus.success;
-                V info = new V()
+                var status = modelRevision.Status;
+                var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
+                if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
                 {
-                    Parsed = parsed,
-                    Status = status,
-                    Error = isError,
-                };
-                modelState.ParsingInfo = info;
-                modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+                    _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status", modelState.ModelExternalId);
+                    modelState.DownloadAttempts = 0;
+                }
+                if (needsUpdate || modelState.ParsingInfo == null)
+                {
+                    var isError = status == SimulatorModelRevisionStatus.failure;
+                    var parsed = isError || status == SimulatorModelRevisionStatus.success;
+                    V info = new V()
+                    {
+                        Parsed = parsed,
+                        Status = status,
+                        Error = isError,
+                    };
+                    modelState.ParsingInfo = info;
+                    modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error updating model parsing info for {ModelExtid}: {Message}", modelState.ModelExternalId, e.Message);
             }
         }
 
@@ -528,6 +546,9 @@ namespace Cognite.Simulator.Utils
                 foreach (var revision in modelRevisionsRes)
                 {
                     UpsertModelRevisionInState(revision);
+                    var revInState = GetModelRevisionInState(revision.ExternalId);
+                    await ProcessModelRevision(revInState, token, false, revision)
+                        .ConfigureAwait(false);
                 }
             }
             catch (ResponseException e)
@@ -649,6 +670,40 @@ namespace Cognite.Simulator.Utils
             return false;
         }
 
+        private async Task<T> ProcessModelRevision(
+            T modelState,
+            CancellationToken token,
+            bool remote = false,
+            SimulatorModelRevision modelRevision = null
+        )
+        {
+
+            try
+            {
+                var downloaded = await DownloadFileAsync(modelState, remote).ConfigureAwait(false);
+                if (downloaded)
+                {
+                    if (remote)
+                    {
+                        UpdateModelParsingInfo(modelState, modelRevision);
+                    }
+                    await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
+                    UpdateModelParsingInfo(modelState, modelRevision);
+                    _libState.UpdateDestinationRange(
+                        CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime),
+                        CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime));
+
+                    return modelState;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error processing model revision {ExternalId}: {Message}", modelState.ExternalId, e.Message);
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
         /// Files are saved with the internal CDF id as name
@@ -674,18 +729,7 @@ namespace Cognite.Simulator.Utils
                     .OrderBy(f => f.UpdatedTime)
                     .ToList();
 
-                foreach (var file in files)
-                {
-                    var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
-                    if (downloaded)
-                    {
-                        _libState.UpdateDestinationRange(
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
-                    }
-                }
-
-                ProcessDownloadedFiles(token).Wait(token);
+                //ProcessDownloadedFiles(token).Wait(token);
 
                 if (_state.Any())
                 {
