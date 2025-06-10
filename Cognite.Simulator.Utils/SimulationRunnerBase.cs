@@ -248,7 +248,6 @@ namespace Cognite.Simulator.Utils
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
                                 PublishConnectorStatus(ConnectorStatus.IDLE, token);
-                                ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
                     }

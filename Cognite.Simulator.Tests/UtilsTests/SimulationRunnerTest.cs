@@ -213,7 +213,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2);
 
-                Assert.Empty(modelLib._temporaryState); // temporary state should be empty after running the model as it cleans up automatically
                 Assert.Empty(Directory.GetFiles("./files/temp"));
 
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
