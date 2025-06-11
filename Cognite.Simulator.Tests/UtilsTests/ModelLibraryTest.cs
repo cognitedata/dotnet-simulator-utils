@@ -343,7 +343,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId);
 
-                var newModelState = lib._temporaryState.GetValueOrDefault(revisionNew.Id.ToString());
+                var newModelState = lib._state.GetValueOrDefault(revisionNew.Id.ToString());
 
                 // Accessed revision should be processed and have a file path
                 if (accessedRevision.ExternalId == revisionNew.ExternalId)
@@ -353,12 +353,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(string.IsNullOrEmpty(newModelState.FilePath));
                     Assert.True(System.IO.File.Exists(newModelState.FilePath));
                 }
-                Assert.NotEmpty(Directory.GetFiles($"./files/temp/{revisionNew.FileId}"));
-
-                // cleanup temp state
-                lib.WipeTemporaryModelFiles();
-                Assert.Empty(Directory.GetDirectories($"./files/temp"));
-                Assert.Empty(lib._temporaryState);
+                Assert.NotEmpty(Directory.GetFiles($"./files/{revisionNew.FileId}"));
             }
             finally
             {
