@@ -375,19 +375,6 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         private async Task ProcessDownloadedFiles(CancellationToken token)
         {
-            // Find all model files for which we need to extract data
-            // The models are grouped by (model external id)
-            var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath))
-                .GroupBy(f => new { f.ModelExternalId });
-            foreach (var group in modelGroups)
-            {
-                // Extract the data for each model file (version) in this group
-                foreach (var item in group)
-                {
-                    await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
-                }
-            }
             // Verify that the local version history matches the one in CDF. Else,
             // delete the local state and files for the missing versions.
             // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
@@ -732,8 +719,6 @@ namespace Cognite.Simulator.Utils
                     .Where(f => string.IsNullOrEmpty(f.FilePath) && f.DownloadAttempts < _config.MaxDownloadAttempts)
                     .OrderBy(f => f.UpdatedTime)
                     .ToList();
-
-                //ProcessDownloadedFiles(token).Wait(token);
 
                 if (_state.Any())
                 {
