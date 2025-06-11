@@ -586,7 +586,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="isTemporary">True if the file is temporary and should be deleted after use.
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        private async Task<bool> DownloadFileAsync(T modelState, bool isTemporary = false)
+        private async Task<bool> DownloadFileAsync(T modelState)
         {
             if (modelState == null)
             {
@@ -617,7 +617,7 @@ namespace Cognite.Simulator.Utils
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(uri, filename, failLargeFiles: isTemporary)
+                        .DownloadFileAsync(uri, filename)
                         .ConfigureAwait(false);
                     if (downloaded)
                     {
@@ -677,7 +677,7 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
-                    var downloaded = await DownloadFileAsync(modelState, remote).ConfigureAwait(false);
+                    var downloaded = await DownloadFileAsync(modelState).ConfigureAwait(false);
                     if (downloaded)
                     {
                         if (remote)
