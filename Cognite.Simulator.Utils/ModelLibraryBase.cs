@@ -50,11 +50,10 @@ namespace Cognite.Simulator.Utils
         public ConcurrentDictionary<string, T> _state { get; private set; }
 
         /// <summary>
-        /// Temporary model states that are used once and then deleted after the run.
-        /// We keep them in memory to avoid saving them to the state store and hence to avoid the multi-threading issues.
-        /// This state is used to store temporary model file paths, used only in case a run item is received before the model file has been downloaded.
+        /// Dictionary holding tasks for processing model revisions. The keys are the external ids of the
+        /// CDF simulator model revisions and the values are TaskCompletionSource objects for the state objects of type <typeparamref name="T"/>.
         /// </summary>
-        public Dictionary<string, T> _temporaryState { get; private set; }
+        public ConcurrentDictionary<string, TaskCompletionSource<T>> _revisionsTasks { get; private set; }
 
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -113,7 +112,7 @@ namespace Cognite.Simulator.Utils
             _store = store;
             _logger = logger;
             _state = new ConcurrentDictionary<string, T>();
-            _temporaryState = new Dictionary<string, T>();
+            _revisionsTasks = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
@@ -217,20 +216,36 @@ namespace Cognite.Simulator.Utils
                 var modelRevisionRes = await _cdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
-                var state = StateFromModelRevision(modelRevision);
-                SetFileExtensionOnState(state, modelRevision.SimulatorExternalId);
-                var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
-                if (downloaded)
-                {
-                    UpdateModelParsingInfo(state, modelRevision);
-                    await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    return state;
-                }
+                UpsertModelRevisionInState(modelRevision);
+                var state = GetModelRevisionInState(modelRevision.ExternalId);
+                await ProcessModelRevision(state, token, true, modelRevision).ConfigureAwait(false);
+                return state;
             }
             catch (Exception e)
             {
                 _logger.LogError("Error reading model revision from CDF: {Message}", e.Message);
             }
+            return null;
+        }
+
+
+        /// <summary>
+        /// Returns the state object of the given model revision external id, if it exists in the local state.
+        /// </summary>
+        /// <param name="modelRevisionExternalId">Model revision external id</param>
+        public T GetModelRevisionInState(string modelRevisionExternalId)
+        {
+            var modelVersions = _state.Values
+                .Where(s => s.ExternalId == modelRevisionExternalId)
+                .OrderByDescending(s => s.CreatedTime);
+
+            var model = modelVersions.FirstOrDefault();
+
+            if (model != null)
+            {
+                return model;
+            }
+
             return null;
         }
 
@@ -402,25 +417,32 @@ namespace Cognite.Simulator.Utils
 
         private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
         {
-            var status = modelRevision.Status;
-            var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
-            if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
+            try
             {
-                _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status", modelState.ModelExternalId);
-                modelState.DownloadAttempts = 0;
-            }
-            if (needsUpdate || modelState.ParsingInfo == null)
-            {
-                var isError = status == SimulatorModelRevisionStatus.failure;
-                var parsed = isError || status == SimulatorModelRevisionStatus.success;
-                V info = new V()
+                var status = modelRevision.Status;
+                var needsUpdate = modelState.UpdatedTime < modelRevision.LastUpdatedTime;
+                if (needsUpdate && status == SimulatorModelRevisionStatus.unknown)
                 {
-                    Parsed = parsed,
-                    Status = status,
-                    Error = isError,
-                };
-                modelState.ParsingInfo = info;
-                modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+                    _logger.LogDebug("Resetting download attempts counter for {ModelExtid} due to unknown status", modelState.ModelExternalId);
+                    modelState.DownloadAttempts = 0;
+                }
+                if (needsUpdate || modelState.ParsingInfo == null)
+                {
+                    var isError = status == SimulatorModelRevisionStatus.failure;
+                    var parsed = isError || status == SimulatorModelRevisionStatus.success;
+                    V info = new V()
+                    {
+                        Parsed = parsed,
+                        Status = status,
+                        Error = isError,
+                    };
+                    modelState.ParsingInfo = info;
+                    modelState.CanRead = !isError; // when model parsing info is updated, this allows to read the model once again
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error updating model parsing info for {ModelExtid}: {Message}", modelState.ModelExternalId, e.Message);
             }
         }
 
@@ -528,6 +550,9 @@ namespace Cognite.Simulator.Utils
                 foreach (var revision in modelRevisionsRes)
                 {
                     UpsertModelRevisionInState(revision);
+                    var revInState = GetModelRevisionInState(revision.ExternalId);
+                    await ProcessModelRevision(revInState, token, false, revision)
+                        .ConfigureAwait(false);
                 }
             }
             catch (ResponseException e)
@@ -556,26 +581,12 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Wipes all temporary model files stored in memory
-        /// </summary>
-        public void WipeTemporaryModelFiles()
-        {
-            foreach (var state in _temporaryState.Values)
-            {
-                _logger.LogDebug("Deleting temporary file: {FilePath}", state.FilePath);
-                StateUtils.DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
-            }
-            _temporaryState.Clear();
-        }
-
-        /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// </summary>
         /// <param name="modelState">State object representing the file to download</param>
-        /// <param name="isTemporary">True if the file is temporary and should be deleted after use.
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        private async Task<bool> DownloadFileAsync(T modelState, bool isTemporary = false)
+        private async Task<bool> DownloadFileAsync(T modelState)
         {
             if (modelState == null)
             {
@@ -600,18 +611,13 @@ namespace Cognite.Simulator.Utils
                     string filename;
 
                     var modelFolder = _modelFolder;
-                    if (isTemporary) // Temporary files are stored in a different folder
-                    {
-                        modelFolder = Path.Combine(modelFolder, "temp");
-                        _temporaryState[modelState.Id] = modelState;
-                    }
                     var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
                     CreateDirectoryIfNotExists(storageFolder);
                     filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(uri, filename, failLargeFiles: isTemporary)
+                        .DownloadFileAsync(uri, filename)
                         .ConfigureAwait(false);
                     if (downloaded)
                     {
@@ -650,6 +656,67 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Processes a model revision by downloading the file, extracting the model information and persisting it.
+        /// If the model revision is already being processed, it will wait for the processing to finish and return the result.
+        /// </summary>
+        /// <param name="modelState">State object representing the file to download</param>
+        /// <param name="token">Cancellation token</param>
+        /// <param name="remote">True if the model revision is remote and should be downloaded from CDF</param>
+        /// <param name="modelRevision">Model revision to process.</param>
+        private async Task<T> ProcessModelRevision(
+            T modelState,
+            CancellationToken token,
+            bool remote = false,
+            SimulatorModelRevision modelRevision = null
+        )
+        {
+            var tcs = _revisionsTasks.GetOrAdd(modelRevision.ExternalId, _ => new TaskCompletionSource<T>());
+            bool shouldProcessModelRevision = false;
+
+            lock (tcs)
+            {
+                if (tcs.Task.Status == TaskStatus.WaitingForActivation)
+                {
+                    shouldProcessModelRevision = true;
+                }
+            }
+
+            if (shouldProcessModelRevision)
+            {
+                try
+                {
+                    var downloaded = await DownloadFileAsync(modelState).ConfigureAwait(false);
+                    if (downloaded)
+                    {
+                        if (remote)
+                        {
+                            UpdateModelParsingInfo(modelState, modelRevision);
+                        }
+                        await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
+                        UpdateModelParsingInfo(modelState, modelRevision);
+                        _libState.UpdateDestinationRange(
+                            CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime),
+                            CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime));
+                        return modelState;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error processing model revision {ExternalId}: {Message}", modelState.ExternalId, e.Message);
+                }
+
+                return null;
+            }
+
+            if (!shouldProcessModelRevision)
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Periodically searches for new files in CDF, in case new ones are found, download them and store locally.
         /// Files are saved with the internal CDF id as name
         /// </summary>
@@ -667,25 +734,6 @@ namespace Cognite.Simulator.Utils
                 // Find new model files in CDF and add the to the local state.
                 await FindModelRevisions(true, token)
                     .ConfigureAwait(false);
-
-                // Find the files that are not yet saved locally (no file path)
-                var files = _state.Values
-                    .Where(f => string.IsNullOrEmpty(f.FilePath) && f.DownloadAttempts < _config.MaxDownloadAttempts)
-                    .OrderBy(f => f.UpdatedTime)
-                    .ToList();
-
-                foreach (var file in files)
-                {
-                    var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
-                    if (downloaded)
-                    {
-                        _libState.UpdateDestinationRange(
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
-                    }
-                }
-
-                ProcessDownloadedFiles(token).Wait(token);
 
                 if (_state.Any())
                 {
@@ -760,10 +808,5 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelRevisionExternalId">Model revision external id</param>
         /// <returns>State object</returns>
         Task<T> GetModelRevision(string modelRevisionExternalId);
-
-        /// <summary>
-        /// Delete all temporary model files stored in memory and on disk
-        /// </summary>
-        void WipeTemporaryModelFiles();
     }
 }
