@@ -103,7 +103,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
-                    Assert.False(modelInState.Processed);
+                    Assert.True(modelInState.Processed); // Files get processed as soon as they are downloaded
                 }
 
 

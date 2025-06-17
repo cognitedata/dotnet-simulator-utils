@@ -171,10 +171,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token);
                 await configLib.Init(source.Token);
 
-                // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
-                // so this should be empty
+                // models are processed as soon as they are added to the library
                 var processedModels = modelLib._state.Values.Where(m => m.FilePath != null && m.Processed);
-                Assert.Empty(processedModels);
+                Assert.Equal(1, processedModels.Count());
 
                 var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
