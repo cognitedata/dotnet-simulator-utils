@@ -368,39 +368,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        /// <summary>
-        /// This method find all model versions that have not been processed and calls
-        /// the <see cref="ExtractModelInformation(T, CancellationToken)"/> method 
-        /// to process the models.  
-        /// </summary>
-        /// <param name="token">Cancellation token</param>
-        private async Task ProcessDownloadedFiles(CancellationToken token)
-        {
-            // Find all model files for which we need to extract data
-            // The models are grouped by (model external id)
-            var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath))
-                .GroupBy(f => new { f.ModelExternalId });
-            foreach (var group in modelGroups)
-            {
-                // Extract the data for each model file (version) in this group
-                foreach (var item in group)
-                {
-                    await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
-                }
-            }
-            // Verify that the local version history matches the one in CDF. Else,
-            // delete the local state and files for the missing versions.
-            // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
-            var modelGroupsToVerify = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
-                .GroupBy(f => new { f.ModelExternalId });
-            foreach (var group in modelGroupsToVerify)
-            {
-                await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
-            }
-        }
-
         private async Task PersistModelStatus(T modelState, CancellationToken token)
         {
             if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
@@ -553,6 +520,14 @@ namespace Cognite.Simulator.Utils
                     var revInState = GetModelRevisionInState(revision.ExternalId);
                     await ProcessModelRevision(revInState, token, false, revision)
                         .ConfigureAwait(false);
+                }
+
+                var modelGroupsToVerify = _state.Values
+                    .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
+                    .GroupBy(f => new { f.ModelExternalId });
+                foreach (var group in modelGroupsToVerify)
+                {
+                    await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
                 }
             }
             catch (ResponseException e)
