@@ -685,18 +685,27 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
-                    var downloaded = await DownloadFileAsync(modelState).ConfigureAwait(false);
-                    if (downloaded)
+                    var proceed = true;
+
+                    if (string.IsNullOrEmpty(modelState.FilePath))
+                    {
+                        proceed = await DownloadFileAsync(modelState).ConfigureAwait(false);
+                    }
+
+                    if (proceed)
                     {
                         if (remote)
                         {
                             UpdateModelParsingInfo(modelState, modelRevision);
                         }
+
                         await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
                         UpdateModelParsingInfo(modelState, modelRevision);
+
                         _libState.UpdateDestinationRange(
                             CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime),
                             CogniteTime.FromUnixTimeMilliseconds(modelState.UpdatedTime));
+
                         return modelState;
                     }
                 }
