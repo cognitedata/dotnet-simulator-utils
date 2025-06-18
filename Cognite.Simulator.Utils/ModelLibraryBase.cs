@@ -217,7 +217,7 @@ namespace Cognite.Simulator.Utils
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
                 UpsertModelRevisionInState(modelRevision);
-                var state = GetModelRevisionInState(modelRevision.ExternalId);
+                var state = await GetModelRevision(modelRevision.ExternalId, true).ConfigureAwait(false);
                 await ProcessModelRevision(state, token, true, modelRevision).ConfigureAwait(false);
                 return state;
             }
@@ -228,41 +228,24 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-
-        /// <summary>
-        /// Returns the state object of the given model revision external id, if it exists in the local state.
-        /// </summary>
-        /// <param name="modelRevisionExternalId">Model revision external id</param>
-        public T GetModelRevisionInState(string modelRevisionExternalId)
-        {
-            var modelVersions = _state.Values
-                .Where(s => s.ExternalId == modelRevisionExternalId)
-                .OrderByDescending(s => s.CreatedTime);
-
-            var model = modelVersions.FirstOrDefault();
-
-            if (model != null)
-            {
-                return model;
-            }
-
-            return null;
-        }
-
         /// <inheritdoc/>
-        public async Task<T> GetModelRevision(string modelRevisionExternalId)
+        public async Task<T> GetModelRevision(string modelRevisionExternalId, bool skipCheck = false)
         {
-            var modelVersions = _state.Values
-                .Where(s => s.ExternalId == modelRevisionExternalId
-                    && s.IsExtracted
-                    && !string.IsNullOrEmpty(s.FilePath))
-                .OrderByDescending(s => s.CreatedTime);
+            var modelRevisions = _state.Values
+                .Where(s => s.ExternalId == modelRevisionExternalId);
 
-            var model = modelVersions.FirstOrDefault();
-
-            if (model != null)
+            if (!skipCheck)
             {
-                return model;
+                modelRevisions = modelRevisions.Where(s => s.IsExtracted && !string.IsNullOrEmpty(s.FilePath));
+            }
+            
+            var modelRevision = modelRevisions
+                .OrderByDescending(s => s.CreatedTime)
+                .FirstOrDefault();
+
+            if (modelRevision != null)
+            {
+                return modelRevision;
             }
 
             return await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
@@ -517,7 +500,7 @@ namespace Cognite.Simulator.Utils
                 foreach (var revision in modelRevisionsRes)
                 {
                     UpsertModelRevisionInState(revision);
-                    var revInState = GetModelRevisionInState(revision.ExternalId);
+                    var revInState = await GetModelRevision(revision.ExternalId, true).ConfigureAwait(false);
                     await ProcessModelRevision(revInState, token, false, revision)
                         .ConfigureAwait(false);
                 }
@@ -691,13 +674,10 @@ namespace Cognite.Simulator.Utils
 
                 return null;
             }
-
-            if (!shouldProcessModelRevision)
+            else
             {
                 return await tcs.Task.ConfigureAwait(false);
             }
-
-            return null;
         }
 
         /// <summary>
@@ -790,7 +770,8 @@ namespace Cognite.Simulator.Utils
         /// Returns the state object of the given version of the given model
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision external id</param>
+        /// <param name="skipCheck">If true, skips the check for filtering model revisions with processed status and filepath.</param>
         /// <returns>State object</returns>
-        Task<T> GetModelRevision(string modelRevisionExternalId);
+        Task<T> GetModelRevision(string modelRevisionExternalId, bool skipCheck = false);
     }
 }
