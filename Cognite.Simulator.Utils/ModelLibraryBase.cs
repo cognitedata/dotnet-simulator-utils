@@ -238,7 +238,7 @@ namespace Cognite.Simulator.Utils
             {
                 modelRevisions = modelRevisions.Where(s => s.IsExtracted && !string.IsNullOrEmpty(s.FilePath));
             }
-            
+
             var modelRevision = modelRevisions
                 .OrderByDescending(s => s.CreatedTime)
                 .FirstOrDefault();

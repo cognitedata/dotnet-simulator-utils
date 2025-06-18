@@ -173,7 +173,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 // models are processed as soon as they are added to the library
                 var processedModels = modelLib._state.Values.Where(m => m.FilePath != null && m.Processed);
-                Assert.Equal(1, processedModels.Count());
+                Assert.Single(processedModels);
 
                 var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
