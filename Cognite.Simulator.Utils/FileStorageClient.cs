@@ -47,9 +47,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="uri">URI to download from</param>
         /// <param name="filePath">Path to save the file</param>
-        /// <param name="failLargeFiles">Set to true to throw an exception if the file is larger than <see cref="LargeFileSize"/></param>
         /// <returns><c>true</c> if success, else <c>false</c></returns>
-        public async Task<bool> DownloadFileAsync(Uri uri, string filePath, bool failLargeFiles = false)
+        public async Task<bool> DownloadFileAsync(Uri uri, string filePath)
         {
             try
             {
@@ -70,7 +69,7 @@ namespace Cognite.Simulator.Utils
                     return false;
                 }
 
-                if (failLargeFiles && response.Content.Headers.ContentLength > LargeFileSize)
+                if (response.Content.Headers.ContentLength > LargeFileSize)
                 {
                     _logger.LogWarning("File size exceeds the maximum allowed size to be downloded now, but can still be downloaded later: {LargeFileSize} bytes, actual size: {Size}, {uri}",
                         LargeFileSize, response.Content.Headers.ContentLength, uri);
