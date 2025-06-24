@@ -685,7 +685,7 @@ namespace Cognite.Simulator.Utils
                     }
                 }
 
-                ProcessDownloadedFiles(token).Wait(token);
+                await ProcessDownloadedFiles(token).ConfigureAwait(false);
 
                 if (_state.Any())
                 {
