@@ -259,7 +259,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""description"": ""Test model revision description"",
                 ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
                 ""modelExternalId"": ""TestModelExternalId"",
-                ""fileId"": 123456789,
+                ""fileId"": 100,
                 ""createdByUserId"": ""n/a"",
                 ""status"": ""success"",
                 ""statusMessage"": ""Model parsed successfully"",
@@ -291,7 +291,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
         {
             var item = $@"{{
-                ""id"": 1,
+                ""id"": 100,
                 ""downloadUrl"": ""https://fusion.com/files/download"",
             }}";
             return OkItemsResponse(item);

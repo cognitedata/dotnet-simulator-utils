@@ -32,8 +32,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list"), MockSimulatorRoutineRevEndpoint, 1),
-            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint, 1),
-            new SimpleRequestMocker(uri => uri.Contains("/simulators/models"), MockSimulatorModelsEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1), // Returns empty to simulate no revisions found on first call
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/list"), MockSimulatorModelsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
             new SimpleRequestMocker(uri => true, () => GoneResponse)
@@ -69,13 +70,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var source = new CancellationTokenSource();
             var lib = provider.GetRequiredService<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             await lib.Init(source.Token);
+            Assert.Empty(lib._state);
 
             var libState = (ConcurrentDictionary<string, DefaultModelFilestate>)lib._state;
-            Assert.NotEmpty(lib._state);
 
-            var modelInState = lib._state.GetValueOrDefault("1234567890");
+            var modelInState = await lib.GetModelRevision("TestModelExternalId-v1", true);
+
+            Assert.NotEmpty(lib._state);
             Assert.NotNull(modelInState);
-            Assert.Equal(123456789, modelInState.CdfId);
+            Assert.Equal(100, modelInState.CdfId);
             Assert.Equal(123, modelInState.DataSetId);
             Assert.Equal("TestModelExternalId-v1", modelInState.ExternalId);
             Assert.Equal("TestModelExternalId", modelInState.ModelExternalId);
