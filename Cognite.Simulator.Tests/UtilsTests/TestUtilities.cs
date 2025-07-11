@@ -250,6 +250,60 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockSimulatorModelRevEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId-v1"",
+                ""name"": ""Test Model Revision"",
+                ""description"": ""Test model revision description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""TestModelExternalId"",
+                ""fileId"": 100,
+                ""createdByUserId"": ""n/a"",
+                ""status"": ""success"",
+                ""statusMessage"": ""Model parsed successfully"",
+                ""dataSetId"": 123,
+                ""versionNumber"": 1,
+                ""logId"": 1234567890,
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": 1234567890000
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockSimulatorModelsEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId"",
+                ""name"": ""Test Model"",
+                ""description"": ""Test model description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""type"": ""TestType"",
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": 1234567890000,
+                ""dataSetId"": 123
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 100,
+                ""downloadUrl"": ""https://fusion.com/files/download"",
+            }}";
+            return OkItemsResponse(item);
+        }
+
+       public static HttpResponseMessage MockFilesDownloadEndpoint(long size)
+        {
+            var response = new HttpResponseMessage() { Content = new ByteArrayContent([1]) };
+            response.Content.Headers.Add("Content-Length", size.ToString());
+            return response;
+        }
+
         public static HttpResponseMessage OkItemsResponse(string item)
         {
             return CreateResponse(HttpStatusCode.OK, $"{{\"items\":[{item}]}}");
