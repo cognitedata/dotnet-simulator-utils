@@ -19,13 +19,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
     [Collection(nameof(SequentialTestCollection))]
     public class FileStorageCLientUnitTest
     {
-        HttpResponseMessage MockFilesDownloadEndpoint(long size)
-        {
-            var response = new HttpResponseMessage() { Content = new ByteArrayContent(new byte[1]) };
-            response.Content.Headers.Add("Content-Length", size.ToString());
-            return response;
-        }
-
         HttpResponseMessage MockFilesDownloadEndpointMaxSize()
         {
             return MockFilesDownloadEndpoint(FileStorageClient.MaxFileDownloadSize + 1);
