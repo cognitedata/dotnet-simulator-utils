@@ -60,16 +60,16 @@ namespace Cognite.Simulator.Utils
         private static void KillProcessUnsafe(string processId, ILogger logger)
         {
             Process[] processes = Process.GetProcessesByName(processId);
-            logger.LogDebug("Searching for process : " + processId);
+            logger.LogDebug("Searching for process: {ProcessId}", processId);
             logger.LogDebug("Found {Count} matching processes", processes.Length);
             bool found = false;
 
             foreach (Process process in processes)
             {
                 string owner = GetProcessOwnerWmi(process.Id);
-                logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
+                logger.LogDebug("Found process. Process owner is: {Owner}. Current user is: {CurrentUser}", owner.ToLower(), GetCurrentUsername().ToLower());
 
-                if (owner.ToLower() == GetCurrentUsername().ToLower())
+                if (string.Equals(owner, GetCurrentUsername(), StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogInformation("Killing process with PID {PID}", process.Id);
                     process.Kill();
