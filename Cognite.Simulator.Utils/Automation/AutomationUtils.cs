@@ -54,7 +54,7 @@ namespace Cognite.Simulator.Utils.Automation
             }
             else
             {
-                var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").ToLower() == "development";
+                var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").Equals("development", StringComparison.CurrentCultureIgnoreCase);
                 if (!isDevelopment)
                 {
                     throw new SimulatorConnectionException("Simulator integration only available on Windows");

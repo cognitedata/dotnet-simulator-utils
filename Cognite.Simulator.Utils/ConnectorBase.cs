@@ -198,7 +198,7 @@ namespace Cognite.Simulator.Utils
                 var existing = integrations.FirstOrDefault(i => i.ExternalId == connectorName && i.SimulatorExternalId == simulatorExternalId);
                 if (existing == null)
                 {
-                    _logger.LogInformation($"Creating new simulator integration for {SimulatorDefinition.Name}");
+                    _logger.LogInformation("Creating new simulator integration for {SimulatorDefinitionName}", SimulatorDefinition.Name);
 
                     var integrationToCreate = new SimulatorIntegrationCreate
                     {
@@ -216,7 +216,7 @@ namespace Cognite.Simulator.Utils
                 }
                 else
                 {
-                    _logger.LogInformation($"Found existing simulator integration for {simulatorExternalId}");
+                    _logger.LogInformation("Found existing simulator integration for {simulatorExternalId}", simulatorExternalId);
                     RemoteSimulatorIntegration = existing;
                 }
             }

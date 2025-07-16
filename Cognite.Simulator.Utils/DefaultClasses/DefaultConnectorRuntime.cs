@@ -74,7 +74,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                 }
                 catch (NewConfigDetected newConfigException) // If NewConfigDetected, restart connector
                 {
-                    logger.LogInformation($"New remote config detected, restarting... {newConfigException}");
+                    logger.LogInformation("New remote config detected, restarting... {newConfigException}", newConfigException);
                     continue;
                 }
                 catch (Exception e)
@@ -100,12 +100,12 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
     {
         if (existingSimulatorDefinition == null)
         {
-            throw new Exception("Simulator definition from remote is null");
+            throw new ArgumentNullException(nameof(existingSimulatorDefinition), "Simulator definition from remote is null");
         }
 
         if (newSimulatorDefinition == null)
         {
-            throw new Exception("New simulator definition is null");
+            throw new ArgumentNullException(nameof(newSimulatorDefinition), "New simulator definition is null");
         }
 
         var update = new SimulatorUpdate
@@ -133,7 +133,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == definition.ExternalId);
         if (definition == null && existingSimulator == null)
         {
-            throw new Exception("Simulator definition not found in either the remote API or locally.");
+            throw new InvalidOperationException("Simulator definition not found in either the remote API or locally.");
         }
         if (definition != null)
         {
@@ -205,7 +205,7 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
 
         logger.LogInformation("Starting the connector...");
 
-        logger.LogInformation($"Cognite SDK Retry Config : Max delay : {config.Cognite.CdfRetries.MaxDelay} - Max Retries : {config.Cognite.CdfRetries.MaxRetries}");
+        logger.LogInformation("Cognite SDK Retry Config : Max delay : {maxDelay} - Max Retries : {maxRetries}", config.Cognite.CdfRetries.MaxDelay, config.Cognite.CdfRetries.MaxRetries);
 
         var destination = provider.GetRequiredService<CogniteDestination>();
         var cdfClient = provider.GetRequiredService<Client>();
@@ -272,8 +272,8 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
                     else if (e is SimulatorConnectionException sue)
                     {
                         // If the simulator is not available, log to Windows events and exit
-                        defaultLogger.LogError(sue.Message);
-                        logger.LogError(sue, sue.Message);
+                        defaultLogger.LogError("{Message}", sue.Message);
+                        logger.LogError(sue, "{Message}", sue.Message);
                         break;
                     }
                     else

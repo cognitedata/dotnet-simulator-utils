@@ -136,7 +136,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Extension utilities for logging
     /// </summary>
-    public static partial class LoggingExtensions
+    public static class LoggingExtensions
     {
 
 
@@ -181,15 +181,5 @@ namespace Cognite.Simulator.Utils
                 loggingBuilder.AddFilter<SerilogLoggerProvider>(null, LogLevel.Trace);
             });
         }
-
-
-        /// <summary>
-        /// Logs an information message.
-        /// </summary>
-
-        [LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "{message}")]
-        public static partial void LogInformation(this Microsoft.Extensions.Logging.ILogger logger, string message);
-
-
     }
 }
