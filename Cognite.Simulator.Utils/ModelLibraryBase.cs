@@ -228,11 +228,10 @@ namespace Cognite.Simulator.Utils
         /// If the model revision is already in the local state and has not been changed, it will return the existing state.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
-        /// <param name="remoteRevision">Remote model revision object, if available, otherwise it will be fetched from CDF</param>
         /// <param name="token">Cancellation token</param>
-        private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
+        private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, CancellationToken token = default)
         {
-            var modelRevision = remoteRevision ?? await TryReadRemoteModelRevision(modelRevisionExternalId, token).ConfigureAwait(false);
+            var modelRevision = await TryReadRemoteModelRevision(modelRevisionExternalId, token).ConfigureAwait(false);
 
             if (modelRevision == null)
             {
@@ -278,7 +277,7 @@ namespace Cognite.Simulator.Utils
         /// <inheritdoc/>
         public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
         {
-            return GetOrAddModelRevision(modelRevisionExternalId, null, token);
+            return GetOrAddModelRevision(modelRevisionExternalId, token);
         }
 
         /// <summary>
@@ -286,9 +285,8 @@ namespace Cognite.Simulator.Utils
         /// Internally, it uses a Lazy Task to ensure that only one thread processes a given model revision at a time.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
-        /// <param name="remoteRevision">Remote model revision object, if available, otherwise it will be fetched from CDF</param>
         /// <param name="token">Cancellation token</param>
-        private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
+        private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
         {
             var lazyTask = _revisionsTasks.GetOrAdd(modelRevisionExternalId, id =>
                 new Lazy<Task<T>>(async () =>
@@ -296,7 +294,7 @@ namespace Cognite.Simulator.Utils
                     // It will only ever be executed ONCE for a given key, by the first thread that accesses ".Value".
                     try
                     {
-                        return await GetOrAddModelRevisionImpl(id, remoteRevision, token).ConfigureAwait(false);
+                        return await GetOrAddModelRevisionImpl(id, token).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -313,9 +311,11 @@ namespace Cognite.Simulator.Utils
                 // Subsequent threads will get the same, already-running or completed Task.
                 return await lazyTask.Value.ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _logger.LogDebug("Processing failed for model revision {ExternalId}", modelRevisionExternalId);
+                _logger.LogError(e, "Processing failed for model revision {ExternalId}: {Message}",
+                    modelRevisionExternalId,
+                    e.Message);
                 return null;
             }
         }
@@ -560,7 +560,7 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes)
                 {
-                    var state = await GetOrAddModelRevision(revision.ExternalId, revision, token).ConfigureAwait(false);
+                    var state = await GetOrAddModelRevision(revision.ExternalId, token).ConfigureAwait(false);
                     if (state != null && state.Downloaded)
                     {
                         _libState.UpdateDestinationRange(

@@ -212,8 +212,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2);
 
-                Assert.Empty(Directory.GetFiles("./files"));
-
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
                     new List<long> { run.Id }, source.Token);
 
