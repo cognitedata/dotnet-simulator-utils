@@ -232,7 +232,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="token">Cancellation token</param>
         private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
         {
-            var modelRevision = remoteRevision ?? await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
+            var modelRevision = remoteRevision ?? await TryReadRemoteModelRevision(modelRevisionExternalId, token).ConfigureAwait(false);
 
             if (modelRevision == null)
             {

@@ -48,10 +48,6 @@ namespace Cognite.Simulator.Utils
                 client,
                 store)
         {
-            if (simulatorClient == null)
-            {
-                throw new ArgumentNullException(nameof(simulatorClient));
-            }
             this.simulatorClient = simulatorClient;
         }
 
