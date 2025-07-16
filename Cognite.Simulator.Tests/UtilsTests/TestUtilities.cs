@@ -278,7 +278,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var item = $@"{{
                 ""id"": 100,
-                ""downloadUrl"": ""https://fusion.com/files/download"",
+                ""downloadUrl"": ""https://fusion.cognite.com/files/download"",
             }}";
             return OkItemsResponse(item);
         }

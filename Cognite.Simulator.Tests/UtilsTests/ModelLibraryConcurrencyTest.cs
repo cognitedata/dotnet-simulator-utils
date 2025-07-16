@@ -47,12 +47,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestModelLibraryConcurrentCalls()
         {
             var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            // var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
 
             var services = new ServiceCollection();
             services.AddSingleton(httpMocks.factory.Object);
             services.AddCogniteTestClient();
-            // services.AddSingleton(mockedLogger.Object);
+            services.AddSingleton(mockedLogger.Object);
             services.AddSingleton<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, FakeSimulatorClient>();
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
@@ -84,7 +84,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }));
             }
 
-            // Wait for all tasks to complete
             var results = await Task.WhenAll(tasks);
 
             var modelInState = results[0];
@@ -111,10 +110,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.True(modelInState.CanRead);
             Assert.False(modelInState.ParsingInfo.Error);
             Assert.True(modelInState.ParsingInfo.Parsed);
-            Assert.Null(modelInState.ParsingInfo.Flowsheet);
-            Assert.NotNull(modelInState.FilePath);
 
-            Assert.True(System.IO.File.Exists(modelInState.FilePath));
+            Assert.True(modelInState.Downloaded);
             var fileBytes = System.IO.File.ReadAllBytes(modelInState.FilePath);
             Assert.Single(fileBytes);
             Assert.Equal(1, fileBytes[0]);
@@ -123,6 +120,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 mocker.AssertCallCount();
             }
+
+            VerifyLog(mockedLogger, LogLevel.Debug, "Model revision not found locally, adding to the local state: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 100. Model revision external id: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
         }
 
         public class FakeSimulatorClient : ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>

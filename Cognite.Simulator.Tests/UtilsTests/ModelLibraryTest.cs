@@ -315,14 +315,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
                 Assert.NotEmpty(lib._state);
 
-                // Start the library update loop that download and parses the files, stop after 5 secs
-                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedTokenSource.Token);
-                await modelLibTasks
-                    .RunAll(linkedTokenSource)
-;
-
                 foreach (var revision in revisions)
                 {
                     var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());

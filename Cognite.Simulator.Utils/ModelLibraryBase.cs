@@ -204,12 +204,11 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Used when model library state lacks a model file needed for the current simulation run.
+        /// Used when an operation (model parsing, simulation, etc.) needs to be performed on the model.
         /// This method will try to read the model revision from CDF and return it.
         /// </summary>
         private async Task<SimulatorModelRevision> TryReadRemoteModelRevision(string modelRevisionExternalId, CancellationToken token)
         {
-            _logger.LogDebug("Model file not found locally, will try to download from CDF: {ModelRevisionExternalId}", modelRevisionExternalId);
             try
             {
                 var modelRevisionRes = await _cdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
@@ -228,6 +227,9 @@ namespace Cognite.Simulator.Utils
         /// If model revision is not found in the local state, this method will try to read it from CDF, download the file and extract the model information.
         /// If the model revision is already in the local state and has not been changed, it will return the existing state.
         /// </summary>
+        /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="remoteRevision">Remote model revision object, if available, otherwise it will be fetched from CDF</param>
+        /// <param name="token">Cancellation token</param>
         private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
         {
             var modelRevision = remoteRevision ?? await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
@@ -246,6 +248,7 @@ namespace Cognite.Simulator.Utils
 
             if (modelState == null)
             {
+                _logger.LogDebug("Model revision not found locally, adding to the local state: {ModelRevisionExternalId}", modelRevisionExternalId);
                 modelState = UpsertModelRevisionInState(modelRevision);
             }
 
@@ -273,9 +276,9 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <inheritdoc/>
-        public Task<T> GetModelRevision(string modelRevisionExternalId)
+        public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
         {
-            return GetOrAddModelRevision(modelRevisionExternalId);
+            return GetOrAddModelRevision(modelRevisionExternalId, null, token);
         }
 
         /// <summary>
@@ -284,6 +287,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
         /// <param name="remoteRevision">Remote model revision object, if available, otherwise it will be fetched from CDF</param>
+        /// <param name="token">Cancellation token</param>
         private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
         {
             var lazyTask = _revisionsTasks.GetOrAdd(modelRevisionExternalId, id =>
@@ -753,7 +757,8 @@ namespace Cognite.Simulator.Utils
         /// Returns the state object of the given version of the given model
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision external id</param>
+        /// <param name="token">Cancellation token</param>
         /// <returns>State object</returns>
-        Task<T> GetModelRevision(string modelRevisionExternalId);
+        Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default);
     }
 }
