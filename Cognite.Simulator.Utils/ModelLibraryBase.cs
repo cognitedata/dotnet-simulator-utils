@@ -227,6 +227,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// If model revision is not found in the local state, this method will try to read it from CDF, download the file and extract the model information.
         /// If the model revision is already in the local state and has not been changed, it will return the existing state.
+        /// </summary>
         private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
         {
             var modelRevision = remoteRevision ?? await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
@@ -279,8 +280,9 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// This method gives a safe way to get a processed model revision.
-        /// Internally, it uses a Lazy<T> to ensure that only one thread processes a given model revision at a time.
-        /// <param name="modelRevisionExternalId"></param>
+        /// Internally, it uses a Lazy Task to ensure that only one thread processes a given model revision at a time.
+        /// </summary>
+        /// <param name="modelRevisionExternalId">Model revision External ID</param>
         /// <param name="remoteRevision">Remote model revision object, if available, otherwise it will be fetched from CDF</param>
         private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, SimulatorModelRevision remoteRevision = null, CancellationToken token = default)
         {
@@ -562,7 +564,8 @@ namespace Cognite.Simulator.Utils
                             CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime));
                     }
                 }
-
+                // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
+                // JIRA: https://cognitedata.atlassian.net/jira/software/c/projects/POFSP/boards/852/backlog?selectedIssue=POFSP-914
                 var modelGroupsToVerify = _state.Values
                     .Where(f => f.Downloaded && !f.IsExtracted && f.CanRead)
                     .GroupBy(f => new { f.ModelExternalId });
