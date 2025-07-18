@@ -98,7 +98,7 @@ dotnet_diagnostic.CA2013.severity = error
 # CA2014: Do not use stackalloc in loops
 dotnet_diagnostic.CA2014.severity = error
 # CA2015: Do not define finalizers for types derived from MemoryManager<T>
-
+dotnet_diagnostic.CA2015.severity = error
 
 
 #### Usage rules ####
@@ -140,8 +140,6 @@ dotnet_diagnostic.CA1852.severity = none
 dotnet_diagnostic.CA1859.severity = warning
 # CA1050: Declare types in namespaces
 dotnet_diagnostic.CA1050.severity = none
-# CA2015: Forward the CancellationToken parameter to methods that take one
-dotnet_diagnostic.CA2015.severity = warning
 # CA2016: Forward the CancellationToken parameter to methods that take one
 dotnet_diagnostic.CA2016.severity = warning
 
