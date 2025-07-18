@@ -117,7 +117,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Arrange - unlikely that process ID 999999 exists
             int nonExistentProcessId = 999999;
 
-            var exception = Assert.Throws<Exception>(() => ProcessUtils.GetProcessOwnerWmi(nonExistentProcessId));
+            var exception = Assert.Throws<InvalidOperationException>(() => ProcessUtils.GetProcessOwnerWmi(nonExistentProcessId));
             Assert.Equal("Process not found", exception.Message);
         }
     }
