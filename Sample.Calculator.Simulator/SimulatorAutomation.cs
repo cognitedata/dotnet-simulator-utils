@@ -76,7 +76,7 @@ public class CalculatorSimulatorAutomationClient :
         _logger.LogInformation("Begin model information extraction");
         if (state == null)
         {
-            throw new Exception("State is not defined");
+            throw new InvalidOperationException("State is not defined");
         }
         Random random = new Random();
         await Task.Run(() =>
@@ -109,7 +109,7 @@ public class CalculatorSimulatorAutomationClient :
     {
         if (modelState == null)
         {
-            throw new Exception("Model state is not defined");
+            throw new InvalidOperationException("Model state is not defined");
         }
         _logger.LogInformation("CalculatorClient Running a simulation");
         _logger.LogInformation($"Model type : {modelState.ModelType}");
