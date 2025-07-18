@@ -38,18 +38,36 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
     /// <summary>
     /// Delegate to configure services. This will be called before the services are built.
     /// </summary>
-    public static ServiceConfiguratorDelegate ConfigureServices;
+    private static ServiceConfiguratorDelegate _configureServices;
+
+    /// <summary>
+    /// Gets or sets the delegate to configure services. This will be called before the services are built.
+    /// </summary>
+    public static ServiceConfiguratorDelegate ConfigureServices
+    {
+        get => _configureServices;
+        set => _configureServices = value;
+    }
 
     /// <summary>
     /// The simulator definition. This will be used to create a simulator if the simulator definition
     /// is not found on CDF.
     /// </summary>
-    public static SimulatorCreate SimulatorDefinition;
+    public static SimulatorCreate SimulatorDefinition { get; set; }
 
     /// <summary>
     /// The name of the connector.
     /// </summary>
-    public static string ConnectorName = "Default";
+    private static string _connectorName = "Default";
+
+    /// <summary>
+    /// Gets or sets the name of the connector.
+    /// </summary>
+    public static string ConnectorName
+    {
+        get => _connectorName;
+        set => _connectorName = value;
+    }
     /// <summary>
     /// Runs the connector in standalone mode.
     /// </summary>

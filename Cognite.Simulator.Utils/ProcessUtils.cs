@@ -67,7 +67,7 @@ namespace Cognite.Simulator.Utils
             foreach (Process process in processes)
             {
                 string owner = GetProcessOwnerWmi(process.Id);
-                logger.LogDebug("Found process . Process owner is : {owner} . Current user is : {currentUserName}", owner.ToLower(), GetCurrentUsername().ToLower());
+                logger.LogDebug("Found process . Process owner is : {owner} . Current user is : {currentUserName}", owner.ToLower(CultureInfo.InvariantCulture), GetCurrentUsername().ToLower(CultureInfo.InvariantCulture));
 
                 if (owner.Equals(GetCurrentUsername(), StringComparison.CurrentCultureIgnoreCase))
                 {
