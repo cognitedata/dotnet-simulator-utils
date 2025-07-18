@@ -91,7 +91,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockLogger = new Mock<ILogger<ProcessUtilsTests>>();
 
             // Act 
-            Assert.Throws<Exception>(() => ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object));
+            Assert.Throws<InvalidOperationException>(() => ProcessUtils.KillProcess("ThisProcessDoesNotExist_12345", mockLogger.Object));
 
             VerifyLog(mockLogger, LogLevel.Error, "No processes found to kill for the current user", Times.Once(), true);
         }
