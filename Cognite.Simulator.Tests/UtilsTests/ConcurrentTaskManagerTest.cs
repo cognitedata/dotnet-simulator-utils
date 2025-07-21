@@ -269,7 +269,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var manager = new ConcurrentTaskManager<string, int>();
 
             // Act
-            var result = await manager.ExecuteAsync("test", () => Task.FromResult(42));
+            var result = await manager.ExecuteAsync("test", _ => Task.FromResult(42));
 
             // Assert
             Assert.Equal(42, result);
@@ -407,7 +407,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var manager = new ConcurrentTaskManager<string, int>();
 
             // Act
-            var result = await manager.ExecuteAsyncPriority("test", () => Task.FromResult(42));
+            var result = await manager.ExecuteAsyncPriority("test", _ => Task.FromResult(42));
 
             // Assert
             Assert.Equal(42, result);
@@ -681,7 +681,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var key = $"key-{i}";
                 var startTime = DateTime.UtcNow;
                 // Fixed compilation error by using Task.FromResult
-                await manager.ExecuteAsync(key, () => Task.FromResult(i));
+                await manager.ExecuteAsync(key, _ => Task.FromResult(i));
                 executionTime += DateTime.UtcNow - startTime;
             }
 
@@ -696,6 +696,137 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             // Always pass for demonstration purposes - real test might fail based on threshold
             Assert.True(true, "This test demonstrates Task.Run overhead measurement");
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_RaceCondition_ExceptionMidExecution()
+        {
+            // Arrange - Test for race condition when an exception occurs mid-execution
+            var manager = new ConcurrentTaskManager<string, int>();
+            var firstTaskStarted = new TaskCompletionSource<bool>();
+            var canThrow = new TaskCompletionSource<bool>();
+            var secondTaskExecuted = false;
+            var executionCount = 0;
+            var expectedException = new InvalidOperationException("Mid-execution failure");
+
+            // Act - Start first task that will throw an exception mid-execution
+            var firstTask = manager.ExecuteAsync("key", async token =>
+            {
+                firstTaskStarted.SetResult(true);
+                await canThrow.Task;
+                Interlocked.Increment(ref executionCount);
+                throw expectedException;
+            });
+
+            await firstTaskStarted.Task; // Wait for first task to start
+
+            // Start second task with same key - should wait for first task
+            var secondTask = manager.ExecuteAsync("key", token =>
+            {
+                secondTaskExecuted = true;
+                Interlocked.Increment(ref executionCount);
+                return Task.FromResult(2);
+            });
+
+            // Trigger exception in first task
+            canThrow.SetResult(true);
+
+            // Assert - First task should throw, and second task should either throw same exception or execute
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => firstTask);
+            Assert.Same(expectedException, ex);
+
+            // Wait for second task - if cleanup race condition exists, it might start a new task
+            // Do not await secondTask twice; check if it throws the same exception
+
+            // Check if second task executed separately (indicating cleanup after exception)
+            // Due to deduplication, it should throw the same exception unless cleanup was premature
+            // In current implementation, it should reuse the failed task result
+            Assert.False(secondTaskExecuted); // Should reuse failed result, not execute
+            Assert.Equal(1, executionCount); // Only first task attempted execution
+            var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() => secondTask);
+            Assert.Same(expectedException, ex2); // Should throw same exception due to deduplication
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_RaceCondition_DisposalDuringExecution()
+        {
+            // Arrange - Test for race condition when disposal happens during task execution
+            var manager = new ConcurrentTaskManager<string, int>();
+            var taskStarted = new TaskCompletionSource<bool>();
+            var canComplete = new TaskCompletionSource<bool>();
+            var secondTaskExecuted = false;
+            var executionCount = 0;
+
+            // Act - Start first task that blocks
+            var firstTask = manager.ExecuteAsync("key", async token =>
+            {
+                taskStarted.SetResult(true);
+                await canComplete.Task;
+                Interlocked.Increment(ref executionCount);
+                return 1;
+            });
+
+            await taskStarted.Task; // Wait for first task to start
+
+            // Start second task with same key - should wait for first
+            var secondTask = manager.ExecuteAsync("key", token =>
+            {
+                secondTaskExecuted = true;
+                Interlocked.Increment(ref executionCount);
+                return Task.FromResult(2);
+            });
+
+            // Dispose while first task is running
+            manager.Dispose();
+
+            // Complete first task (should still complete despite disposal)
+            canComplete.SetResult(true);
+
+            // Assert - First task should complete
+            var firstResult = await firstTask;
+            Assert.Equal(1, firstResult);
+
+            // Second task should either complete with same result or throw ObjectDisposedException
+            try
+            {
+                var secondResult = await secondTask;
+                Assert.Equal(1, secondResult); // Should reuse first task result due to deduplication
+                Assert.False(secondTaskExecuted); // Should not execute separately
+                Assert.Equal(1, executionCount); // Only first task executed
+            }
+            catch (ObjectDisposedException)
+            {
+                // Acceptable if disposal affected waiting task, though deduplication should prevent this
+            }
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_RaceCondition_HighContentionManyThreads()
+        {
+            // Arrange - Test for race condition under high contention with many threads
+            var manager = new ConcurrentTaskManager<string, int>(maxConcurrentTasks: 2);
+            const int threadCount = 20; // Simulate many concurrent threads
+            var executionCount = 0;
+            var tasks = new List<Task<int>>();
+
+            // Act - Create many tasks with the same key to simulate high contention
+            for (int i = 0; i < threadCount; i++)
+            {
+                tasks.Add(manager.ExecuteAsync("key", async token =>
+                {
+                    Interlocked.Increment(ref executionCount);
+                    // Small delay to simulate work and increase contention
+                    await Task.Delay(1);
+                    return 42;
+                }));
+            }
+
+            // Wait for all tasks to complete
+            var results = await Task.WhenAll(tasks);
+
+            // Assert - Only one task should execute due to deduplication, despite high contention
+            Assert.Equal(1, executionCount); // Only one task should have executed
+            Assert.All(results, result => Assert.Equal(42, result)); // All should get same result
         }
 
         [Fact]
