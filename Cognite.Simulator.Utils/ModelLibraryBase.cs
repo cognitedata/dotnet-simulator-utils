@@ -27,6 +27,8 @@ using static Cognite.Simulator.Utils.SimulatorLoggingUtils;
 
 namespace Cognite.Simulator.Utils
 {
+
+
     /// <summary>
     /// Represents a local model file library.
     /// It fetches simulator model files from CDF, save a local copy and process the model (extract information).
@@ -50,11 +52,9 @@ namespace Cognite.Simulator.Utils
         public ConcurrentDictionary<string, T> _state { get; private set; }
 
         /// <summary>
-        /// Dictionary holding tasks for processing model revisions. The keys are the external ids of the
-        /// CDF simulator model revisions and the values are LazyTask objects for the state objects of type <typeparamref name="T"/>.
-        /// This ensures that only one thread processes a given model revision at a time.
+        /// Manager for concurrent processing of model revisions
         /// </summary>
-        private readonly ConcurrentDictionary<string, Lazy<Task<T>>> _revisionsTasks = new();
+        private readonly ConcurrentTaskManager<string, T> _taskManager;
 
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -116,6 +116,7 @@ namespace Cognite.Simulator.Utils
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
+            _taskManager = new ConcurrentTaskManager<string, T>(5);
         }
 
         private void CopyNonBaseProperties(T source, T target)
@@ -223,6 +224,15 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
+        /// <inheritdoc/>
+        public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
+        {
+            return _taskManager.ExecuteAsync(
+                modelRevisionExternalId,
+                ct => GetOrAddModelRevisionImpl(modelRevisionExternalId, ct),
+                token);
+        }
+
         /// <summary>
         /// If model revision is not found in the local state, this method will try to read it from CDF, download the file and extract the model information.
         /// If the model revision is already in the local state and has not been changed, it will return the existing state.
@@ -272,52 +282,6 @@ namespace Cognite.Simulator.Utils
             }
 
             return modelState;
-        }
-
-        /// <inheritdoc/>
-        public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
-        {
-            return GetOrAddModelRevision(modelRevisionExternalId, token);
-        }
-
-        /// <summary>
-        /// This method gives a safe way to get a processed model revision.
-        /// Internally, it uses a Lazy Task to ensure that only one thread processes a given model revision at a time.
-        /// </summary>
-        /// <param name="modelRevisionExternalId">Model revision External ID</param>
-        /// <param name="token">Cancellation token</param>
-        private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
-        {
-            var lazyTask = _revisionsTasks.GetOrAdd(modelRevisionExternalId, id =>
-                new Lazy<Task<T>>(async () =>
-                {
-                    // It will only ever be executed ONCE for a given key, by the first thread that accesses ".Value".
-                    try
-                    {
-                        return await GetOrAddModelRevisionImpl(id, token).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        _logger.LogDebug("Processing finished. Removing processing task for model revision {ExternalId}", id);
-                        _revisionsTasks.TryRemove(id, out _);
-                    }
-                })
-            );
-
-            try
-            {
-                // All threads (the winner and the waiters) simply await the lazy task's Value.
-                // The first thread to access .Value will trigger the factory.
-                // Subsequent threads will get the same, already-running or completed Task.
-                return await lazyTask.Value.ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Processing failed for model revision {ExternalId}: {Message}",
-                    modelRevisionExternalId,
-                    e.Message);
-                return null;
-            }
         }
 
         /// <inheritdoc/>
@@ -560,7 +524,10 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes)
                 {
-                    var state = await GetOrAddModelRevision(revision.ExternalId, token).ConfigureAwait(false);
+                    var state = await _taskManager.ExecuteAsync(
+                        revision.ExternalId,
+                        ct => GetOrAddModelRevisionImpl(revision.ExternalId, ct),
+                        token).ConfigureAwait(false);
                     if (state != null && state.Downloaded)
                     {
                         _libState.UpdateDestinationRange(
@@ -607,7 +574,6 @@ namespace Cognite.Simulator.Utils
         /// Downloads a file from CDF and stores it locally
         /// </summary>
         /// <param name="modelState">State object representing the file to download</param>
-        /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
         private async Task<bool> DownloadFileAsync(T modelState)
         {
