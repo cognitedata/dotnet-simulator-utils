@@ -245,7 +245,7 @@ namespace Cognite.Simulator.Utils
             GC.SuppressFinalize(this);
         }
 
-        private class LicenseUsageScope : IDisposable
+        private sealed class LicenseUsageScope : IDisposable
         {
             private readonly LicenseController _tracker;
             private bool _disposed;
