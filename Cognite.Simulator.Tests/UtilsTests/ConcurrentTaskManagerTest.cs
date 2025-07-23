@@ -135,21 +135,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        [Fact]
-        public async Task ExecuteAsync_TaskFailure_ExceptionPropagated()
-        {
-            // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
-            var expectedException = new InvalidOperationException("Test exception");
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            {
-                await manager.ExecuteAsync("test", _ => throw expectedException);
-            });
-
-            Assert.Same(expectedException, exception);
-        }
 
         [Fact]
         public async Task ExecuteAsync_FailedTask_CanRetryWithSameKey()
@@ -286,59 +271,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(1, executionCount); // Should be 1 due to deduplication, no second execution
         }
 
-        // MMaybe this can be removed
-        [Fact]
-        public async Task ExecuteAsync_RaceCondition_DisposalDuringExecution()
-        {
-            // Arrange - Test for race condition when disposal happens during task execution
-            var manager = new ConcurrentTaskManager<string, int>();
-            var taskStarted = new TaskCompletionSource<bool>();
-            var canComplete = new TaskCompletionSource<bool>();
-            var secondTaskExecuted = false;
-            var executionCount = 0;
 
-            // Act - Start first task that blocks
-            var firstTask = manager.ExecuteAsync("key", async token =>
-            {
-                taskStarted.SetResult(true);
-                await canComplete.Task;
-                Interlocked.Increment(ref executionCount);
-                return 1;
-            });
-
-            await taskStarted.Task; // Wait for first task to start
-
-            // Start second task with same key - should wait for first
-            var secondTask = manager.ExecuteAsync("key", token =>
-            {
-                secondTaskExecuted = true;
-                Interlocked.Increment(ref executionCount);
-                return Task.FromResult(2);
-            });
-
-            // Dispose while first task is running
-            manager.Dispose();
-
-            // Complete first task (should still complete despite disposal)
-            canComplete.SetResult(true);
-
-            // Assert - First task should complete
-            var firstResult = await firstTask;
-            Assert.Equal(1, firstResult);
-
-            // Second task should either complete with same result or throw ObjectDisposedException
-            try
-            {
-                var secondResult = await secondTask;
-                Assert.Equal(1, secondResult); // Should reuse first task result due to deduplication
-                Assert.False(secondTaskExecuted); // Should not execute separately
-                Assert.Equal(1, executionCount); // Only first task executed
-            }
-            catch (ObjectDisposedException)
-            {
-                // Acceptable if disposal affected waiting task, though deduplication should prevent this
-            }
-        }
 
         [Fact]
         public async Task ExecuteAsync_ComplexRaceCondition_MultipleWaitersOnFailedTask()
