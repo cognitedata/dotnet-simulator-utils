@@ -38,38 +38,12 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="ObjectDisposedException">Thrown if the manager has been disposed.</exception>
         public Task<TResult> ExecuteAsync(TKey key, Func<CancellationToken, Task<TResult>> taskFactory, CancellationToken token = default)
         {
-            return ExecuteAsyncInternal(key, taskFactory, token, isPriority: false);
-        }
-
-        /// <summary>
-        /// Executes a task for a given key with high priority, canceling any existing task with the same key.
-        /// Note: Even existing priority tasks will be canceled to ensure the latest priority task takes precedence.
-        /// Be aware that cancellation effectiveness depends on the task honoring the cancellation token; tasks that ignore
-        /// the token may continue to execute, potentially wasting resources.
-        /// </summary>
-        /// <param name="key">Unique key identifying the task.</param>
-        /// <param name="taskFactory">Function creating the task. It receives the <paramref name="token"/> so it can honour cancellation.</param>
-        /// <param name="token">Cancellation token.</param>
-        /// <returns>The task result.</returns>
-        /// <exception cref="ObjectDisposedException">Thrown if the manager has been disposed.</exception>
-        public Task<TResult> ExecuteAsyncPriority(TKey key, Func<CancellationToken, Task<TResult>> taskFactory, CancellationToken token = default)
-        {
-            return ExecuteAsyncInternal(key, taskFactory, token, isPriority: true);
-        }
-
-        private Task<TResult> ExecuteAsyncInternal(TKey key, Func<CancellationToken, Task<TResult>> taskFactory, CancellationToken token, bool isPriority)
-        {
             if (key == null) throw new ArgumentNullException(nameof(key));
             if (taskFactory == null) throw new ArgumentNullException(nameof(taskFactory));
             if (_disposed) throw new ObjectDisposedException(nameof(ConcurrentTaskManager<TKey, TResult>));
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             Task<TResult> task = null;
-
-            if (isPriority && _ongoingTasks.TryGetValue(key, out var existing))
-            {
-                try { existing.Cts?.Cancel(); } catch (ObjectDisposedException) { /* Ignore: CTS may be disposed during shutdown or concurrent cancellation */ }
-            }
 
             var entry = _ongoingTasks.GetOrAdd(key, k =>
             {
@@ -79,21 +53,8 @@ namespace Cognite.Simulator.Utils
 
             if (task == null)
             {
-                if (isPriority)
-                {
-                    try { entry.Cts?.Cancel(); } catch (ObjectDisposedException) { /* Ignore: CTS may be disposed if task completed or during shutdown */ }
-                    task = CreateManagedTask(key, taskFactory, cts.Token);
-                    _ongoingTasks.AddOrUpdate(key, (task, cts), (k, e) =>
-                    {
-                        try { e.Cts?.Cancel(); } catch (ObjectDisposedException) { /* Ignore: CTS may be disposed during concurrent operations or shutdown */ }
-                        return (task, cts);
-                    });
-                }
-                else
-                {
-                    cts.Dispose();
-                    return entry.Task;
-                }
+                cts.Dispose();
+                return entry.Task;
             }
 
             return task;
