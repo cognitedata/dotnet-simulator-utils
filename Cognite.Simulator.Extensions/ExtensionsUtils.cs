@@ -38,7 +38,7 @@ namespace Cognite.Simulator.Extensions
             this Dictionary<string, string> dict,
             Dictionary<string, string> newEntries)
         {
-            if (newEntries != null && newEntries.Any())
+            if (newEntries != null && newEntries.Count > 0)
             {
                 foreach (var pair in newEntries)
                 {
