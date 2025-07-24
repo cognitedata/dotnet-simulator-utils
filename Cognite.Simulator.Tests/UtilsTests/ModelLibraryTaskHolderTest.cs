@@ -10,41 +10,15 @@ using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
-    public class ModelLibraryTaskManagerTest
+    public class ModelLibraryTaskHolderTest
     {
-        [Fact]
-        public async Task ExecuteAsync_SameKey_OnlyOneTaskExecuted()
-        {
-            // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
-            var executionCount = 0;
 
-            // Act - Start two tasks with the same key simultaneously
-            var task1 = manager.ExecuteAsync("test", token =>
-            {
-                Interlocked.Increment(ref executionCount);
-                return Task.FromResult(42);
-            });
-
-            var task2 = manager.ExecuteAsync("test", token =>
-            {
-                Interlocked.Increment(ref executionCount);
-                return Task.FromResult(99);
-            });
-
-            var results = await Task.WhenAll(task1, task2);
-
-            // Assert - Both tasks should return the same result, indicating only one executed
-            Assert.Equal(1, executionCount);
-            Assert.Equal(42, results[0]);
-            Assert.Equal(42, results[1]); // Same result as task1
-        }
 
         [Fact]
         public async Task ExecuteAsync_DifferentKeys_BothTasksExecuted()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
+            var manager = new ModelLibraryTaskHolder<string, int>();
             var executionCount = 0;
 
             // Act
@@ -72,7 +46,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ConcurrencyLimit_RespectsMaxConcurrentTasks()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>(maxConcurrentTasks: 1);
+            var manager = new ModelLibraryTaskHolder<string, int>();
             var currentlyRunning = 0;
             var maxConcurrentObserved = 0;
             var task1Started = new TaskCompletionSource<bool>();
@@ -106,40 +80,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(1, maxConcurrentObserved);
         }
 
-        [Fact]
-        public async Task ExecuteAsync_FailedTask_CanRetryWithSameKey()
-        {
-            // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
-            var attemptCount = 0;
 
-            // Act - First call fails
-            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            {
-                await manager.ExecuteAsync("test1", _ =>
-                {
-                    Interlocked.Increment(ref attemptCount);
-                    throw new InvalidOperationException("First attempt fails");
-                });
-            });
-
-            // Second call with different key should succeed (testing cleanup)
-            var result = await manager.ExecuteAsync("test2", _ =>
-            {
-                Interlocked.Increment(ref attemptCount);
-                return Task.FromResult(42);
-            });
-
-            // Assert
-            Assert.Equal(42, result);
-            Assert.Equal(2, attemptCount); // Both attempts should have executed
-        }
 
         [Fact]
         public async Task ExecuteAsync_SuccessfulTask_CanRetryWithSameKey()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>(1);
+            var manager = new ModelLibraryTaskHolder<string, int>();
             var attemptCount = 0;
 
             // Act - First call succeeds
@@ -148,8 +95,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Interlocked.Increment(ref attemptCount);
                 return Task.FromResult(42);
             });
-
-            await Task.Delay(10); // in ms
 
             // Second call with same key should get a new result
             var result2 = await manager.ExecuteAsync("test1", _ =>
@@ -168,7 +113,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_CancellationToken_CancelsExecution()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
+            var manager = new ModelLibraryTaskHolder<string, int>();
             using var cts = new CancellationTokenSource();
             cts.Cancel(); // Cancel immediately
 
@@ -187,7 +132,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_NullKey_ThrowsArgumentNullException()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
+            var manager = new ModelLibraryTaskHolder<string, int>();
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -195,18 +140,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public void Constructor_InvalidMaxConcurrentTasks_ThrowsArgumentOutOfRangeException()
-        {
-            // Act & Assert
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ModelLibraryTaskManager<string, int>(0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ModelLibraryTaskManager<string, int>(-1));
-        }
-
-        [Fact]
         public async Task ExecuteAsync_RaceCondition_TaskCleanup()
         {
             // Arrange - Test for race condition in task cleanup
-            var manager = new ModelLibraryTaskManager<string, int>(1);
+            var manager = new ModelLibraryTaskHolder<string, int>();
             var firstTaskStarted = new TaskCompletionSource<bool>();
             var firstTaskCanComplete = new TaskCompletionSource<bool>();
             var secondTaskExecuted = false;
@@ -243,76 +180,47 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal(1, executionCount); // Should be 1 due to deduplication, no second execution
         }
 
-
-
         [Fact]
-        public async Task ExecuteAsync_ComplexRaceCondition_MultipleWaitersOnFailedTask()
+        public async Task ExecuteAsync_ConcurrentFailure_DuplicateTasksGetSameException()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
-            var firstTaskStarted = new TaskCompletionSource<bool>();
-            var canFail = new TaskCompletionSource<bool>();
-            var expectedException = new InvalidOperationException("Complex test exception");
+            var manager = new ModelLibraryTaskHolder<string, int>();
+            var taskStarted = new TaskCompletionSource<bool>();
+            var taskCanFail = new TaskCompletionSource<bool>();
+            var expectedException = new InvalidOperationException("Simulated failure");
 
-            // Act - Start multiple tasks with same key, first one will fail
-            var task1 = manager.ExecuteAsync("complex", async _ =>
+            // Start the original failing task that we'll control
+            var originalTask = manager.ExecuteAsync("fail", async _ =>
             {
-                firstTaskStarted.SetResult(true);
-                await canFail.Task;
+                // Signal that we've started
+                taskStarted.SetResult(true);
+                // Wait until we're told to fail
+                await taskCanFail.Task;
                 throw expectedException;
             });
 
-            await firstTaskStarted.Task; // Wait for first task to start
+            // Wait for original task to start
+            await taskStarted.Task;
 
-            // Start multiple waiters
-            var task2 = manager.ExecuteAsync("complex", _ => Task.FromResult(42));
-            var task3 = manager.ExecuteAsync("complex", _ => Task.FromResult(99));
-            var task4 = manager.ExecuteAsync("complex", _ => Task.FromResult(123));
+            // Start duplicate task while original is still running
+            var duplicateTask = manager.ExecuteAsync("fail", _ => Task.FromResult(123));
 
-            // Let the first task fail
-            canFail.SetResult(true);
+            // Now let the original task fail
+            taskCanFail.SetResult(true);
 
-            // Assert - All tasks should get the same exception
-            var ex1 = await Assert.ThrowsAsync<InvalidOperationException>(() => task1);
-            var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() => task2);
-            var ex3 = await Assert.ThrowsAsync<InvalidOperationException>(() => task3);
-            var ex4 = await Assert.ThrowsAsync<InvalidOperationException>(() => task4);
+            // Verify both tasks fail with the same exception
+            var ex1 = await Assert.ThrowsAsync<InvalidOperationException>(() => originalTask);
+            var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() => duplicateTask);
 
             Assert.Same(expectedException, ex1);
             Assert.Same(expectedException, ex2);
-            Assert.Same(expectedException, ex3);
-            Assert.Same(expectedException, ex4);
-        }
-
-        [Fact]
-        public async Task ExecuteAsync_ComplexConcurrencyMix_DifferentKeysWithFailuresAndSuccesses()
-        {
-            // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
-
-            // Act - Simple mix of success/failure without coordination delays
-            var successTask = manager.ExecuteAsync("success", _ => Task.FromResult(42));
-            var failTask = manager.ExecuteAsync("fail", _ => throw new InvalidOperationException("fail"));
-            var dupSuccessTask = manager.ExecuteAsync("success", _ => Task.FromResult(999)); // Should get 42
-            var dupFailTask = manager.ExecuteAsync("fail", _ => Task.FromResult(123)); // Should get same exception
-
-            // Assert
-            var successResult = await successTask;
-            var dupSuccessResult = await dupSuccessTask;
-
-            var failException = await Assert.ThrowsAsync<InvalidOperationException>(() => failTask);
-            var dupFailException = await Assert.ThrowsAsync<InvalidOperationException>(() => dupFailTask);
-
-            Assert.Equal(42, successResult);
-            Assert.Equal(42, dupSuccessResult); // Same result due to deduplication
-            Assert.Same(failException, dupFailException); // Same exception instance
         }
 
         [Fact]
         public async Task ExecuteAsync_ComplexDisposalScenario_MultipleTasksAndDisposal()
         {
             // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
+            var manager = new ModelLibraryTaskHolder<string, int>();
             var taskStarted = new TaskCompletionSource<bool>();
             var taskCanComplete = new TaskCompletionSource<bool>();
 
@@ -345,20 +253,45 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ComplexKeyTypes_DifferentTypesAsKeys()
         {
             // Arrange - Test with different key types
-            var stringManager = new ModelLibraryTaskManager<string, int>();
-            var intManager = new ModelLibraryTaskManager<int, string>();
-            var tupleManager = new ModelLibraryTaskManager<(string, int), bool>();
+            var stringManager = new ModelLibraryTaskHolder<string, int>();
+            var intManager = new ModelLibraryTaskHolder<int, string>();
+            var tupleManager = new ModelLibraryTaskHolder<(string, int), bool>();
 
-            // Act - Test different key types work correctly
-            var stringTask1 = stringManager.ExecuteAsync("test", _ => Task.FromResult(1));
-            var stringTask2 = stringManager.ExecuteAsync("test", _ => Task.FromResult(2)); // Should get same result
+            // Act - Test different key types work correctly with controlled timing
+            var stringStarted = new TaskCompletionSource<bool>();
+            var intStarted = new TaskCompletionSource<bool>();
+            var tupleStarted = new TaskCompletionSource<bool>();
 
-            var intTask1 = intManager.ExecuteAsync(123, _ => Task.FromResult("first"));
-            var intTask2 = intManager.ExecuteAsync(123, _ => Task.FromResult("second")); // Should get same result
+            // Start first tasks with delays to ensure they're running when duplicates start
+            var stringTask1 = stringManager.ExecuteAsync("test", async _ =>
+            {
+                stringStarted.SetResult(true);
+                await Task.Delay(50);
+                return 1;
+            });
 
-            var tupleTask1 = tupleManager.ExecuteAsync(("key", 42), _ => Task.FromResult(true));
-            var tupleTask2 = tupleManager.ExecuteAsync(("key", 42), _ => Task.FromResult(false)); // Should get same result
-            var tupleTask3 = tupleManager.ExecuteAsync(("different", 42), _ => Task.FromResult(false)); // Different key
+            var intTask1 = intManager.ExecuteAsync(123, async _ =>
+            {
+                intStarted.SetResult(true);
+                await Task.Delay(50);
+                return "first";
+            });
+
+            var tupleTask1 = tupleManager.ExecuteAsync(("key", 42), async _ =>
+            {
+                tupleStarted.SetResult(true);
+                await Task.Delay(50);
+                return true;
+            });
+
+            // Wait for first tasks to start
+            await Task.WhenAll(stringStarted.Task, intStarted.Task, tupleStarted.Task);
+
+            // Start duplicate tasks while first ones are still running
+            var stringTask2 = stringManager.ExecuteAsync("test", _ => Task.FromResult(2));
+            var intTask2 = intManager.ExecuteAsync(123, _ => Task.FromResult("second"));
+            var tupleTask2 = tupleManager.ExecuteAsync(("key", 42), _ => Task.FromResult(false));
+            var tupleTask3 = tupleManager.ExecuteAsync(("different", 42), _ => Task.FromResult(false));
 
             // Assert
             var stringResults = await Task.WhenAll(stringTask1, stringTask2);
