@@ -51,6 +51,7 @@ namespace Cognite.Simulator.Utils
 
             var entry = _ongoingTasks.GetOrAdd(key, k =>
             {
+                if (_disposed) throw new ObjectDisposedException(nameof(ModelLibraryTaskManager<TKey, TResult>));
                 task = CreateManagedTask(k, taskFactory, cts.Token);
                 return (task, cts);
             });
@@ -68,6 +69,7 @@ namespace Cognite.Simulator.Utils
         {
             return Task.Run(async () =>
             {
+                if (_disposed) throw new ObjectDisposedException(nameof(ModelLibraryTaskManager<TKey, TResult>));
                 await _semaphore.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
