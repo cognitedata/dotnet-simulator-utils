@@ -9,18 +9,22 @@ namespace Cognite.Simulator.Utils
     /// A generic class to manage concurrent execution of tasks keyed by <typeparamref name="TKey"/>.
     /// Only one task per key is executed at a time and the total number of concurrently executing
     /// tasks is limited by the constructor parameter.
+    /// 
+    /// This is a best-effort implementation intended for slow or infrequent operations like model library tasks.
+    /// It may exhibit race conditions under high concurrency or rapid task creation/completion cycles.
+    /// Do not use for high-frequency or latency-sensitive operations.
     /// </summary>
-    public class ConcurrentTaskManager<TKey, TResult> : IDisposable
+    public class ModelLibraryTaskManager<TKey, TResult> : IDisposable
     {
         private readonly SemaphoreSlim _semaphore;
         private readonly ConcurrentDictionary<TKey, (Task<TResult> Task, CancellationTokenSource Cts)> _ongoingTasks;
         private volatile bool _disposed;
 
         /// <summary>
-        /// Creates a new <see cref="ConcurrentTaskManager{TKey, TResult}"/>.
+        /// Creates a new <see cref="ModelLibraryTaskManager{TKey, TResult}"/>.
         /// </summary>
         /// <param name="maxConcurrentTasks">Maximum number of tasks allowed to run concurrently.</param>
-        public ConcurrentTaskManager(int maxConcurrentTasks = 5)
+        public ModelLibraryTaskManager(int maxConcurrentTasks = 5)
         {
             if (maxConcurrentTasks <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxConcurrentTasks), "maxConcurrentTasks must be greater than 0.");
@@ -40,7 +44,7 @@ namespace Cognite.Simulator.Utils
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
             if (taskFactory == null) throw new ArgumentNullException(nameof(taskFactory));
-            if (_disposed) throw new ObjectDisposedException(nameof(ConcurrentTaskManager<TKey, TResult>));
+            if (_disposed) throw new ObjectDisposedException(nameof(ModelLibraryTaskManager<TKey, TResult>));
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             Task<TResult> task = null;

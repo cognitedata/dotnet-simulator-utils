@@ -10,13 +10,13 @@ using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
-    public class ConcurrentTaskManagerTest
+    public class ModelLibraryTaskManagerTest
     {
         [Fact]
         public async Task ExecuteAsync_SameKey_OnlyOneTaskExecuted()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             var executionCount = 0;
 
             // Act - Start two tasks with the same key simultaneously
@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_DifferentKeys_BothTasksExecuted()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             var executionCount = 0;
 
             // Act
@@ -72,7 +72,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ConcurrencyLimit_RespectsMaxConcurrentTasks()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>(maxConcurrentTasks: 1);
+            var manager = new ModelLibraryTaskManager<string, int>(maxConcurrentTasks: 1);
             var currentlyRunning = 0;
             var maxConcurrentObserved = 0;
             var task1Started = new TaskCompletionSource<bool>();
@@ -110,7 +110,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_HighConcurrency_RaceConditionStressTest()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             const int concurrentRequests = 40; // Small number for speed
             var executionCounts = new ConcurrentDictionary<string, int>();
 
@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_FailedTask_CanRetryWithSameKey()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             var attemptCount = 0;
 
             // Act - First call fails
@@ -168,7 +168,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_SuccessfulTask_CanRetryWithSameKey()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>(1);
+            var manager = new ModelLibraryTaskManager<string, int>(1);
             var attemptCount = 0;
 
             // Act - First call succeeds
@@ -195,7 +195,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_CancellationToken_CancelsExecution()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             using var cts = new CancellationTokenSource();
             cts.Cancel(); // Cancel immediately
 
@@ -214,7 +214,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_NullKey_ThrowsArgumentNullException()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -225,15 +225,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public void Constructor_InvalidMaxConcurrentTasks_ThrowsArgumentOutOfRangeException()
         {
             // Act & Assert
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ConcurrentTaskManager<string, int>(0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ConcurrentTaskManager<string, int>(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ModelLibraryTaskManager<string, int>(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ModelLibraryTaskManager<string, int>(-1));
         }
 
         [Fact]
         public async Task ExecuteAsync_RaceCondition_TaskCleanup()
         {
             // Arrange - Test for race condition in task cleanup
-            var manager = new ConcurrentTaskManager<string, int>(1);
+            var manager = new ModelLibraryTaskManager<string, int>(1);
             var firstTaskStarted = new TaskCompletionSource<bool>();
             var firstTaskCanComplete = new TaskCompletionSource<bool>();
             var secondTaskExecuted = false;
@@ -276,7 +276,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ComplexRaceCondition_MultipleWaitersOnFailedTask()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             var firstTaskStarted = new TaskCompletionSource<bool>();
             var canFail = new TaskCompletionSource<bool>();
             var expectedException = new InvalidOperationException("Complex test exception");
@@ -315,7 +315,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ComplexConcurrencyMix_DifferentKeysWithFailuresAndSuccesses()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
 
             // Act - Simple mix of success/failure without coordination delays
             var successTask = manager.ExecuteAsync("success", _ => Task.FromResult(42));
@@ -339,7 +339,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ComplexDisposalScenario_MultipleTasksAndDisposal()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ModelLibraryTaskManager<string, int>();
             var taskStarted = new TaskCompletionSource<bool>();
             var taskCanComplete = new TaskCompletionSource<bool>();
 
@@ -372,9 +372,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_ComplexKeyTypes_DifferentTypesAsKeys()
         {
             // Arrange - Test with different key types
-            var stringManager = new ConcurrentTaskManager<string, int>();
-            var intManager = new ConcurrentTaskManager<int, string>();
-            var tupleManager = new ConcurrentTaskManager<(string, int), bool>();
+            var stringManager = new ModelLibraryTaskManager<string, int>();
+            var intManager = new ModelLibraryTaskManager<int, string>();
+            var tupleManager = new ModelLibraryTaskManager<(string, int), bool>();
 
             // Act - Test different key types work correctly
             var stringTask1 = stringManager.ExecuteAsync("test", _ => Task.FromResult(1));
