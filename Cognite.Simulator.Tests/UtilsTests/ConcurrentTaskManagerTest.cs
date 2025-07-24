@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -169,7 +168,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task ExecuteAsync_SuccessfulTask_CanRetryWithSameKey()
         {
             // Arrange
-            var manager = new ConcurrentTaskManager<string, int>();
+            var manager = new ConcurrentTaskManager<string, int>(1);
             var attemptCount = 0;
 
             // Act - First call succeeds
