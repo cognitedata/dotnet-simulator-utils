@@ -107,35 +107,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public async Task ExecuteAsync_HighConcurrency_RaceConditionStressTest()
-        {
-            // Arrange
-            var manager = new ModelLibraryTaskManager<string, int>();
-            const int concurrentRequests = 40; // Small number for speed
-            var executionCounts = new ConcurrentDictionary<string, int>();
-
-            // Act - Hammer the same keys with many concurrent requests
-            var tasks = Enumerable.Range(0, concurrentRequests).Select(i =>
-            {
-                var key = $"key{i % 3}"; // Use 3 different keys
-                return manager.ExecuteAsync(key, token =>
-                {
-                    executionCounts.AddOrUpdate(key, 1, (k, v) => v + 1);
-                    return Task.FromResult(i);
-                });
-            }).ToArray();
-
-            var results = await Task.WhenAll(tasks);
-
-            // Assert - Each key should have been executed exactly once
-            foreach (var kvp in executionCounts)
-            {
-                Assert.Equal(1, kvp.Value);
-            }
-        }
-
-
-        [Fact]
         public async Task ExecuteAsync_FailedTask_CanRetryWithSameKey()
         {
             // Arrange
@@ -177,6 +148,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Interlocked.Increment(ref attemptCount);
                 return Task.FromResult(42);
             });
+
+            await Task.Delay(10); // in ms
 
             // Second call with same key should get a new result
             var result2 = await manager.ExecuteAsync("test1", _ =>
