@@ -69,7 +69,6 @@ namespace Cognite.Simulator.Utils
         {
             return Task.Run(async () =>
             {
-                if (_disposed) throw new ObjectDisposedException(nameof(ModelLibraryTaskManager<TKey, TResult>));
                 await _semaphore.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
