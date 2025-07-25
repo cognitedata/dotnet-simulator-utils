@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +31,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
             new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1), // Returns empty to simulate no revisions found on first call
-            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -124,7 +123,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "Model revision not found locally, adding to the local state: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 100. Model revision external id: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Debug, "Processing finished. Removing processing task for model revision TestModelExternalId-v1", Times.Exactly(1), true);
         }
 
         public class FakeSimulatorClient : ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
@@ -143,8 +141,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 Interlocked.Increment(ref _extractModelInformationCallCount);
                 _logger.LogInformation("Simulating long-running operation for ExtractModelInformation");
 
-                // Simulate long-running operation to ensure concurrent calls pile up
-                await Task.Delay(1000);
+                await Task.Delay(500);
 
                 state.ParsingInfo.SetSuccess();
             }

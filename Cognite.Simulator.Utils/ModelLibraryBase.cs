@@ -36,7 +36,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>
+    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>, IDisposable
         where A : AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
@@ -49,12 +49,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public ConcurrentDictionary<string, T> _state { get; private set; }
 
-        /// <summary>
-        /// Dictionary holding tasks for processing model revisions. The keys are the external ids of the
-        /// CDF simulator model revisions and the values are LazyTask objects for the state objects of type <typeparamref name="T"/>.
-        /// This ensures that only one thread processes a given model revision at a time.
-        /// </summary>
-        private readonly ConcurrentDictionary<string, Lazy<Task<T>>> _revisionsTasks = new();
 
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -76,6 +70,20 @@ namespace Cognite.Simulator.Utils
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
+
+        /// <summary>
+        /// This manages the tasks for processing model revisions. It ensures:
+        /// 1. Only one task executes at a time across all model revisions (serialized execution)
+        /// 2. Concurrent requests for the same model revision return the same task result (deduplication)
+        /// 3. Proper cleanup of resources after task completion or failure
+        /// 4. Cancellation propagation to ongoing tasks
+        /// </summary>
+        /// <remarks>
+        /// The task holder maintains a semaphore to serialize execution and a dictionary of ongoing tasks.
+        /// When a model revision is requested, if a task is already processing that revision, subsequent
+        /// callers will receive the result of the ongoing task rather than starting a new one.
+        /// </remarks>
+        private readonly ModelLibraryTaskHolder<string, T> _revisionsTasks = new();
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -282,42 +290,13 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// This method gives a safe way to get a processed model revision.
-        /// Internally, it uses a Lazy Task to ensure that only one thread processes a given model revision at a time.
+        /// Internally, it uses a <see cref="ModelLibraryTaskHolder{TKey,TValue}"/> to ensure that only one thread processes a given model revision at a time.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
         /// <param name="token">Cancellation token</param>
-        private async Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
+        private Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
         {
-            var lazyTask = _revisionsTasks.GetOrAdd(modelRevisionExternalId, id =>
-                new Lazy<Task<T>>(async () =>
-                {
-                    // It will only ever be executed ONCE for a given key, by the first thread that accesses ".Value".
-                    try
-                    {
-                        return await GetOrAddModelRevisionImpl(id, token).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        _logger.LogDebug("Processing finished. Removing processing task for model revision {ExternalId}", id);
-                        _revisionsTasks.TryRemove(id, out _);
-                    }
-                })
-            );
-
-            try
-            {
-                // All threads (the winner and the waiters) simply await the lazy task's Value.
-                // The first thread to access .Value will trigger the factory.
-                // Subsequent threads will get the same, already-running or completed Task.
-                return await lazyTask.Value.ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Processing failed for model revision {ExternalId}: {Message}",
-                    modelRevisionExternalId,
-                    e.Message);
-                return null;
-            }
+            return _revisionsTasks.ExecuteAsync(modelRevisionExternalId, (cancellationToken) => GetOrAddModelRevisionImpl(modelRevisionExternalId, cancellationToken), token);
         }
 
         /// <inheritdoc/>
@@ -606,7 +585,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// </summary>
-        /// <param name="modelState">State object representing the file to download</param>
+        /// <param name="modelState">State object representing the file to download
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
         private async Task<bool> DownloadFileAsync(T modelState)
@@ -744,6 +723,14 @@ namespace Cognite.Simulator.Utils
             token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Disposes the model library and releases any resources it holds.
+        /// </summary>
+        public void Dispose()
+        {
+            _revisionsTasks?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 
     /// <summary>
