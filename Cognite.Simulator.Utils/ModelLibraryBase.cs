@@ -118,7 +118,7 @@ namespace Cognite.Simulator.Utils
             _downloadClient = downloadClient;
         }
 
-        private void CopyNonBaseProperties(T source, T target)
+        private static void CopyNonBaseProperties(T source, T target)
         {
             Type type = typeof(T);
             Type baseType = type.BaseType;
@@ -376,7 +376,7 @@ namespace Cognite.Simulator.Utils
                     var filesInUseMap = _state.Values
                         .Where(f => !string.IsNullOrEmpty(f.FilePath))
                         .ToDictionarySafe(f => f.FilePath, f => true);
-                    if (statesToDelete.Any())
+                    if (statesToDelete.Count != 0)
                     {
                         _logger.LogWarning("Removing {Num} model versions not found in CDF: {Versions}",
                             statesToDelete.Count,
@@ -595,7 +595,7 @@ namespace Cognite.Simulator.Utils
             return new List<Task> { SearchAndDownloadFiles(token) };
         }
 
-        private void CreateDirectoryIfNotExists(string directoryPath)
+        private static void CreateDirectoryIfNotExists(string directoryPath)
         {
             if (!Directory.Exists(directoryPath))
             {

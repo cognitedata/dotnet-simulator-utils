@@ -54,22 +54,22 @@ namespace Cognite.Simulator.Utils
                 }
             }
 
-            throw new Exception("Process not found");
+            throw new InvalidOperationException("Process not found");
         }
 
         private static void KillProcessUnsafe(string processId, ILogger logger)
         {
             Process[] processes = Process.GetProcessesByName(processId);
-            logger.LogDebug("Searching for process : " + processId);
+            logger.LogDebug("Searching for process : {processId}", processId);
             logger.LogDebug("Found {Count} matching processes", processes.Length);
             bool found = false;
 
             foreach (Process process in processes)
             {
                 string owner = GetProcessOwnerWmi(process.Id);
-                logger.LogDebug($"Found process . Process owner is : {owner.ToLower()} . Current user is : {GetCurrentUsername().ToLower()}");
+                logger.LogDebug("Found process . Process owner is : {owner} . Current user is : {currentUserName}", owner.ToLower(CultureInfo.InvariantCulture), GetCurrentUsername().ToLower(CultureInfo.InvariantCulture));
 
-                if (owner.ToLower() == GetCurrentUsername().ToLower())
+                if (owner.Equals(GetCurrentUsername(), StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogInformation("Killing process with PID {PID}", process.Id);
                     process.Kill();
@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Utils
 
             if (!found)
             {
-                throw new Exception("No processes found to kill for the current user");
+                throw new InvalidOperationException("No processes found to kill for the current user");
             }
         }
 

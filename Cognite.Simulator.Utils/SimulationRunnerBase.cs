@@ -229,7 +229,7 @@ namespace Cognite.Simulator.Utils
                             {
                                 foreach (var error in ce.Errors)
                                 {
-                                    _logger.LogError(error.Message);
+                                    _logger.LogError("{Message}", error.Message);
                                 }
                             }
                             _logger.LogWarning("Simulation run {id} failed with error: {Message}", runId, ex);

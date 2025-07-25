@@ -64,7 +64,7 @@ namespace Cognite.Simulator.Extensions
                     IgnoreUnknownIds = true
                 }, token
             ).ConfigureAwait(false);
-            if (dps.Items.Any() && dps.Items.First().DatapointTypeCase ==
+            if (dps.Items.Count > 0 && dps.Items.First().DatapointTypeCase ==
             DataPointListItem.DatapointTypeOneofCase.AggregateDatapoints)
             {
                 return dps.Items.First().ToTimeSeriesData(aggregate);
@@ -89,7 +89,7 @@ namespace Cognite.Simulator.Extensions
                         IgnoreUnknownIds = true
                     }, token
                 ).ConfigureAwait(false);
-                if (firstDp.Items.Any() && firstDp.Items.First().DatapointTypeCase ==
+                if (firstDp.Items.Count > 0 && firstDp.Items.First().DatapointTypeCase ==
                 DataPointListItem.DatapointTypeOneofCase.NumericDatapoints)
                 {
                     return firstDp.Items.First().ToTimeSeriesData(aggregate);
