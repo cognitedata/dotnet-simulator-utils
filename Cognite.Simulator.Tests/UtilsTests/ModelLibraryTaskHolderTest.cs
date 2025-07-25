@@ -12,8 +12,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public class ModelLibraryTaskHolderTest
     {
-
-
         [Fact]
         public async Task ExecuteAsync_DifferentKeys_BothTasksExecuted()
         {
@@ -88,15 +86,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Arrange
             var manager = new ModelLibraryTaskHolder<string, int>();
             var attemptCount = 0;
+            var firstTaskStarted = new TaskCompletionSource<bool>();
+            var firstTaskCanComplete = new TaskCompletionSource<bool>();
 
-            // Act - First call succeeds
-            var result1 = await manager.ExecuteAsync("test1", _ =>
+            // Act - First call with controlled completion
+            var task1 = manager.ExecuteAsync("test1", async _ =>
             {
                 Interlocked.Increment(ref attemptCount);
-                return Task.FromResult(42);
+                firstTaskStarted.SetResult(true);
+                await firstTaskCanComplete.Task;
+                return 42;
             });
 
-            // Second call with same key should get a new result
+            // Wait for first task to start executing
+            await firstTaskStarted.Task;
+
+            // Let it complete and wait for completion
+            firstTaskCanComplete.SetResult(true);
+            var result1 = await task1;
+
+            // Second call should execute as a new task since the first one is complete
             var result2 = await manager.ExecuteAsync("test1", _ =>
             {
                 Interlocked.Increment(ref attemptCount);
