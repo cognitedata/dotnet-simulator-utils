@@ -93,11 +93,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Gets the number of tasks currently in progress.
-        /// </summary>
-        public int OngoingTaskCount => _ongoingTasks.Count;
-
-        /// <summary>
         /// Disposes the task manager and releases all resources.
         /// </summary>
         public void Dispose()
