@@ -247,11 +247,7 @@ namespace Cognite.Simulator.Utils
                 return null;
             }
 
-            var modelVersions = _state.Values
-                .Where(state => state.Id == modelRevision.Id.ToString())
-                .OrderByDescending(s => s.CreatedTime);
-
-            var modelState = modelVersions.FirstOrDefault();
+            _state.TryGetValue(modelRevision.Id.ToString(), out var modelState);
 
             if (modelState == null)
             {

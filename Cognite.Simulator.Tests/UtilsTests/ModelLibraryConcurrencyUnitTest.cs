@@ -55,7 +55,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, FakeSimulatorClient>();
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
-            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton(SeedData.SimulatorCreate);
 
             var config = new DefaultConfig<AutomationConfig>();
