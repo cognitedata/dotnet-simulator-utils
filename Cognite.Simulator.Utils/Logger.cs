@@ -67,7 +67,7 @@ namespace Cognite.Simulator.Utils
 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
-        class UtcTimestampEnricher : ILogEventEnricher
+        sealed class UtcTimestampEnricher : ILogEventEnricher
         {
             public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf)
             {

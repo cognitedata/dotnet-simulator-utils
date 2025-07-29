@@ -99,8 +99,7 @@ dotnet_diagnostic.CA2013.severity = error
 dotnet_diagnostic.CA2014.severity = error
 # CA2015: Do not define finalizers for types derived from MemoryManager<T>
 dotnet_diagnostic.CA2015.severity = error
-# CA2016: Forward the CancellationToken parameter to methods that take one
-dotnet_diagnostic.CA2016.severity = warning
+
 
 #### Usage rules ####
 
@@ -108,3 +107,28 @@ dotnet_diagnostic.CA2016.severity = warning
 dotnet_diagnostic.CA1816.severity = warning
 # CA2227: Collection properties should be read only
 dotnet_diagnostic.CA2227.severity = none
+
+#### Overidden Rules (customized for dotnet-simulator-utils) ####
+
+# CA1727: Use PascalCase for named placeholders
+dotnet_diagnostic.CA1727.severity = none
+
+# CA1707: Identifiers should not contain underscores
+dotnet_diagnostic.CA1707.severity = none
+
+# Reason: Changing parameter order would break backwards compatibility for existing consumers
+# CA1068: CancellationToken as last parameter
+dotnet_diagnostic.CA1068.severity = none
+
+# Reason: Library allows simulator connector implementations to define types in global namespace
+# This provides flexibility for developers building connectors with this simulator utilities library
+# CA1050: Declare types in namespaces
+dotnet_diagnostic.CA1050.severity = none
+
+# Reason: Generic base classes with static members provide simpler APIs for connector implementations
+# CA1000: Do not declare static members on generic types 
+dotnet_diagnostic.CA1000.severity = none
+
+# Reason: Prioritizing code simplicity and maintainability over micro-optimizations
+# CA1848: Use the LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none

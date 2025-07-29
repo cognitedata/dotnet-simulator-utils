@@ -153,9 +153,9 @@ namespace Cognite.Simulator.Extensions
         /// <returns>Metadata value, if key exists. Else, <c>null</c></returns>
         public string GetMetadata(string key)
         {
-            if (Metadata != null && Metadata.ContainsKey(key))
+            if (Metadata != null && Metadata.TryGetValue(key, out var value))
             {
-                return Metadata[key];
+                return value;
             }
             return null;
         }
