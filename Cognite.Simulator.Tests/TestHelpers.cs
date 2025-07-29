@@ -2,24 +2,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Cognite.Extractor.Common;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
 
-namespace Cognite.Simulator.Tests {
-    public class TestHelpers {
-        
-        public static async Task SimulateASimulatorRunning(Client cdf, string connectorName = "scheduler-test-connector" ) {
+namespace Cognite.Simulator.Tests
+{
+    public class TestHelpers
+    {
+
+        public static async Task SimulateASimulatorRunning(Client cdf, string connectorName = "scheduler-test-connector")
+        {
             var integrations = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                 new SimulatorIntegrationQuery
                 {
-                    Filter = new SimulatorIntegrationFilter() {
-                        simulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
+                    Filter = new SimulatorIntegrationFilter()
+                    {
+                        SimulatorExternalIds = new List<string> { SeedData.TestSimulatorExternalId },
                     }
                 }
             ).ConfigureAwait(false);
             var existing = integrations.Items.FirstOrDefault(i => i.ExternalId == connectorName);
-            if (existing == null) {
+            if (existing == null)
+            {
                 await cdf.Alpha.Simulators.CreateSimulatorIntegrationAsync(
                     new List<SimulatorIntegrationCreate>
                     {
@@ -34,7 +41,9 @@ namespace Cognite.Simulator.Tests {
                         }
                     }
                 ).ConfigureAwait(false);
-            } else {
+            }
+            else
+            {
                 await cdf.Alpha.Simulators.UpdateSimulatorIntegrationAsync(
                     new List<SimulatorIntegrationUpdateItem>
                     {

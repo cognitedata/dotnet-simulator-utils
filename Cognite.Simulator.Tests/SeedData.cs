@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Tests.DataProcessingTests;
+using Cognite.Simulator.Utils;
 
 using CogniteSdk;
 using CogniteSdk.Alpha;
-using Com.Cognite.V1.Timeseries.Proto;
 
-using Cognite.Simulator.Tests.DataProcessingTests;
-using Cognite.Simulator.Utils;
-using Cognite.Extractor.Common;
+using Com.Cognite.V1.Timeseries.Proto;
 
 namespace Cognite.Simulator.Tests
 {
@@ -20,11 +21,14 @@ namespace Cognite.Simulator.Tests
         private static readonly long Now = DateTime.UtcNow.ToUnixTimeMilliseconds();
         public static string TestSimulatorExternalIdPrefix = "UTILS_TEST_SIMULATOR_";
         public static string TestSimulatorExternalId = TestSimulatorExternalIdPrefix + Now;
+        public static string TestExtPipelineId = "utils-tests-pipeline-" + Now;
         public static string TestIntegrationExternalId = "utils-integration-tests-connector-" + Now;
         public static string TestModelExternalId = "Utils-Connector_Test_Model_" + Now;
         public static string TestRoutineExternalId = "Test Routine with extended IO " + Now;
         public static string TestScheduledRoutineExternalId = "Test Scheduled Routine " + Now;
         public static string TestRoutineExternalIdWithTs = "Test Routine with Input TS and extended IO " + Now;
+        public static string TestRoutineExternalIdWithTsNoDataSampling = "Test Routine with no data sampling " + Now;
+        public static string TestRoutineTsPrefix = "utils-tests-" + Now;
         public static long TestDataSetId = 386820206154952;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
@@ -56,7 +60,7 @@ namespace Cognite.Simulator.Tests
 
             // delete all test simulators older than 3 minutes and the one with the given externalId
             var createdTime = DateTime.UtcNow.AddMinutes(-3).ToUnixTimeMilliseconds();
-            var simulatorRes = simulators.Items.Where(s => 
+            var simulatorRes = simulators.Items.Where(s =>
                 (s.ExternalId.StartsWith(TestSimulatorExternalIdPrefix) && s.CreatedTime < createdTime) || s.ExternalId == externalId
             );
             if (simulatorRes.Count() > 0)
@@ -104,13 +108,15 @@ namespace Cognite.Simulator.Tests
             return res.First();
         }
 
-        public static FileCreate SimpleModelFileCreate = new FileCreate() {
+        public static FileCreate SimpleModelFileCreate = new FileCreate()
+        {
             Name = "simutils-tests-model.out",
             ExternalId = "simutils-tests-model-single-byte",
             DataSetId = TestDataSetId,
         };
 
-        public static FileCreate SimpleModelFileCreate2 = new FileCreate() {
+        public static FileCreate SimpleModelFileCreate2 = new FileCreate()
+        {
             Name = "simutils-tests-model-2.out",
             ExternalId = "simutils-tests-model-single-byte-2",
             DataSetId = TestDataSetId,
@@ -149,7 +155,8 @@ namespace Cognite.Simulator.Tests
             var uploadUrl = res.UploadUrl;
             var bytes = new byte[1] { 42 };
 
-            using (var fileStream = new StreamContent(new MemoryStream(bytes))) {
+            using (var fileStream = new StreamContent(new MemoryStream(bytes)))
+            {
                 await fileStorageClient.UploadFileAsync(uploadUrl, fileStream).ConfigureAwait(false);
             }
 
@@ -158,29 +165,23 @@ namespace Cognite.Simulator.Tests
 
         public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevision(Client sdk, SimulatorModelCreate model, SimulatorModelRevisionCreate revision)
         {
-            var modelRes = await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
+            await GetOrCreateSimulatorModel(sdk, model).ConfigureAwait(false);
 
-            var revisions = await sdk.Alpha.Simulators.ListSimulatorModelRevisionsAsync(
-                new SimulatorModelRevisionQuery
-                {
-                    Filter = new SimulatorModelRevisionFilter
-                    {
-                        ModelExternalIds = new List<string> { modelRes.ExternalId },
-                    },
-                }).ConfigureAwait(false);
-
-            var revisionRes = revisions.Items.Where(r => r.ExternalId == revision.ExternalId);
-            if (revisionRes.Count() > 0)
+            try
             {
-                return revisionRes.First();
+                var rev = await sdk.Alpha.Simulators.RetrieveSimulatorModelRevisionsAsync(
+                    new List<Identity> { new Identity(revision.ExternalId) }).ConfigureAwait(false);
+                return rev.First();
             }
-
-            var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
+            catch
+            {
+                var res = await sdk.Alpha.Simulators.CreateSimulatorModelRevisionsAsync(
                 new List<SimulatorModelRevisionCreate>
                 {
                     revision
                 }).ConfigureAwait(false);
-            return res.First();
+                return res.First();
+            }
         }
 
         public static async Task<SimulatorModelRevision> GetOrCreateSimulatorModelRevisionWithFile(Client sdk, FileStorageClient fileStorageClient, FileCreate file, SimulatorModelRevisionCreate revision)
@@ -190,7 +191,8 @@ namespace Cognite.Simulator.Tests
             return await GetOrCreateSimulatorModelRevision(sdk, SimulatorModelCreate, revision).ConfigureAwait(false);
         }
 
-        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient) {            
+        public static async Task<List<SimulatorModelRevision>> GetOrCreateSimulatorModelRevisions(Client sdk, FileStorageClient fileStorageClient)
+        {
             var rev1 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate, SimulatorModelRevisionCreateV1).ConfigureAwait(false);
             var rev2 = await GetOrCreateSimulatorModelRevisionWithFile(sdk, fileStorageClient, SimpleModelFileCreate2, SimulatorModelRevisionCreateV2).ConfigureAwait(false);
             return new List<SimulatorModelRevision> { rev1, rev2 };
@@ -221,31 +223,38 @@ namespace Cognite.Simulator.Tests
 
         public static TimeSeriesCreate OnOffValuesTimeSeries = new TimeSeriesCreate()
         {
-            ExternalId = "SimConnect-IntegrationTests-OnOffValues",
+            ExternalId = "utils-tests-OnOffValues",
             Name = "On/Off Values",
             DataSetId = TestDataSetId,
         };
 
         public static TimeSeriesCreate SsdSensorDataTimeSeries = new TimeSeriesCreate()
         {
-            ExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+            ExternalId = "utils-tests-SsdSensorData",
             Name = "SSD Sensor Data",
             DataSetId = TestDataSetId,
         };
 
-        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries)
         {
-            var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
-                new List<string>() { timeSeries.ExternalId }, true
-            ).ConfigureAwait(false);
-
-            if (timeSeriesRes.Count() > 0)
+            try
             {
+                var res = await sdk.TimeSeries.CreateAsync(
+                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+                return res.First();
+            }
+            catch (ResponseException e) when (e.Code == 409)
+            {
+                var timeSeriesRes = await sdk.TimeSeries.RetrieveAsync(
+                    new List<string>() { timeSeries.ExternalId }, true
+                ).ConfigureAwait(false);
                 return timeSeriesRes.First();
             }
+        }
 
-            var res = await sdk.TimeSeries.CreateAsync(
-                new List<TimeSeriesCreate> { timeSeries }).ConfigureAwait(false);
+        public static async Task<TimeSeries> GetOrCreateTimeSeries(Client sdk, TimeSeriesCreate timeSeries, long[] timestamps, double[] values)
+        {
+            var res = await GetOrCreateTimeSeries(sdk, timeSeries).ConfigureAwait(false);
 
             var dataPoints = new NumericDatapoints();
 
@@ -267,15 +276,23 @@ namespace Cognite.Simulator.Tests
 
             await sdk.DataPoints.CreateAsync(points).ConfigureAwait(false);
 
-            return res.First();
+            return res;
+        }
+
+        public static async Task<IEnumerable<TimeSeries>> GetOrCreateTestTimeseries(Client sdk)
+        {
+            var testValues = new TestValues();
+            var task1 = GetOrCreateTimeSeries(sdk, OnOffValuesTimeSeries, testValues.TimeLogic, testValues.DataLogic);
+            var task2 = GetOrCreateTimeSeries(sdk, SsdSensorDataTimeSeries, testValues.TimeSsd, testValues.DataSsd);
+            var res = await Task.WhenAll(task1, task2).ConfigureAwait(false);
+            return res.ToList();
         }
 
 
         public static async Task<SimulatorRoutineRevision> GetOrCreateSimulatorRoutineRevision(Client sdk, FileStorageClient fileStorageClient, SimulatorRoutineCreateCommandItem routineToCreate, SimulatorRoutineRevisionCreate revisionToCreate)
         {
             var testValues = new TestValues();
-            await GetOrCreateTimeSeries(sdk, OnOffValuesTimeSeries, testValues.TimeLogic, testValues.DataLogic).ConfigureAwait(false);
-            await GetOrCreateTimeSeries(sdk, SsdSensorDataTimeSeries, testValues.TimeSsd, testValues.DataSsd).ConfigureAwait(false);
+            await GetOrCreateTestTimeseries(sdk).ConfigureAwait(false);
             await GetOrCreateSimulatorModelRevisions(sdk, fileStorageClient).ConfigureAwait(false);
             var routine = await GetOrCreateSimulatorRoutine(sdk, routineToCreate).ConfigureAwait(false);
 
@@ -313,10 +330,7 @@ namespace Cognite.Simulator.Tests
                 },
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
-                    Enabled = true,
-                    ValidationWindow = 1440,
-                    SamplingWindow = 60,
-                    Granularity = 1,
+                    Enabled = false,
                 },
                 LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
@@ -356,7 +370,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionLogicalCheck
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        TimeseriesExternalId = "utils-tests-OnOffValues",
                         Aggregate = "stepInterpolation",
                         Operator = "eq",
                         Value = 1
@@ -367,7 +381,7 @@ namespace Cognite.Simulator.Tests
                     new SimulatorRoutineRevisionSteadyStateDetection
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        TimeseriesExternalId = "utils-tests-SsdSensorData",
                         Aggregate = "average",
                         MinSectionSize = 60,
                         VarThreshold = 1.0,
@@ -384,7 +398,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC1-SampledSsd",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IC1-SampledSsd",
                     },
                     new SimulatorRoutineRevisionInput() {
                         Name = "Input Constant 2",
@@ -395,7 +409,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IC2-SampledSsd",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IC2-SampledSsd",
                     },
                 },
                 Outputs = new List<SimulatorRoutineRevisionOutput>() {
@@ -407,7 +421,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-OT1-Output",
                     },
                 },
             },
@@ -485,7 +499,7 @@ namespace Cognite.Simulator.Tests
                 DataSampling = new SimulatorRoutineRevisionDataSampling()
                 {
                     Enabled = true,
-                    ValidationWindow = 1440,
+                    ValidationWindow = null,
                     SamplingWindow = 60,
                     Granularity = 1,
                 },
@@ -595,7 +609,7 @@ namespace Cognite.Simulator.Tests
                 {
                     new SimulatorRoutineRevisionLogicalCheck {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        TimeseriesExternalId = "utils-tests-OnOffValues",
                         Aggregate = "stepInterpolation",
                         Operator = "eq",
                         Value = 1,
@@ -603,10 +617,10 @@ namespace Cognite.Simulator.Tests
                 },
                 SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>()
                 {
-                    new SimulatorRoutineRevisionSteadyStateDetection 
+                    new SimulatorRoutineRevisionSteadyStateDetection
                     {
                         Enabled = true,
-                        TimeseriesExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        TimeseriesExternalId = "utils-tests-SsdSensorData",
                         Aggregate = "average",
                         MinSectionSize = 60,
                         VarThreshold = 1.0,
@@ -622,7 +636,7 @@ namespace Cognite.Simulator.Tests
                             Name = "STB/MMscf",
                             Quantity = "LiqRate/GasRate",
                         },
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-OT1-Output",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-OT1-Output",
                     },
                     new SimulatorRoutineRevisionOutput() {
                         Name = "Output Test 2",
@@ -639,14 +653,14 @@ namespace Cognite.Simulator.Tests
                             Quantity = "LiqRate/GasRate",
                         },
                         Aggregate = "average",
-                        SaveTimeseriesExternalId = "SimConnect-IntegrationTests-IT1-SampledSsd",
-                        SourceExternalId = "SimConnect-IntegrationTests-SsdSensorData",
+                        SaveTimeseriesExternalId = TestRoutineTsPrefix + "-IT1-SampledSsd",
+                        SourceExternalId = "utils-tests-SsdSensorData",
                     },
                     new SimulatorRoutineRevisionInput() {
                         Name = "Input Test 2",
                         ReferenceId = "IT2",
                         Aggregate = "average",
-                        SourceExternalId = "SimConnect-IntegrationTests-OnOffValues",
+                        SourceExternalId =  "utils-tests-OnOffValues",
                     },
                 },
             },
@@ -713,6 +727,95 @@ namespace Cognite.Simulator.Tests
             Name = "Simulation Runner Test With TS and Extended IO",
         };
 
+        public static SimulatorRoutineRevisionCreate SimulatorRoutineRevisionWithTsNoDataSampling = new SimulatorRoutineRevisionCreate()
+        {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
+                Schedule = new SimulatorRoutineRevisionSchedule()
+                {
+                    Enabled = false,
+                },
+                DataSampling = new SimulatorRoutineRevisionDataSampling()
+                {
+                    Enabled = false,
+                },
+                LogicalCheck = new List<SimulatorRoutineRevisionLogicalCheck>(),
+                SteadyStateDetection = new List<SimulatorRoutineRevisionSteadyStateDetection>(),
+                Outputs = new List<SimulatorRoutineRevisionOutput>() {
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 1",
+                        ReferenceId = "OT1",
+                        ValueType = SimulatorValueType.DOUBLE,
+                    },
+                    new SimulatorRoutineRevisionOutput() {
+                        Name = "Output Test 2",
+                        ReferenceId = "OT2",
+                        ValueType = SimulatorValueType.DOUBLE
+                    },
+                },
+                Inputs = new List<SimulatorRoutineRevisionInput>() {
+                    new SimulatorRoutineRevisionInput() {
+                        Name = "Input Test 1",
+                        ReferenceId = "IT1",
+                        SourceExternalId = "utils-tests-SsdSensorData",
+                    },
+                },
+            },
+            ExternalId = $"{TestRoutineExternalIdWithTsNoDataSampling} - 1",
+            RoutineExternalId = TestRoutineExternalIdWithTsNoDataSampling,
+            Script = new List<SimulatorRoutineRevisionScriptStage>() {
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 1,
+                    Description = "Set simulation inputs",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Set",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "IT1" },
+                                { "address", "42" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 2,
+                    Description = "Perform simulation",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Command",
+                            Arguments = new Dictionary<string, string>() {
+                                { "command", "Simulate" },
+                            },
+                        },
+                    },
+                },
+                new SimulatorRoutineRevisionScriptStage() {
+                    Order = 3,
+                    Description = "Get output time series",
+                    Steps = new List<SimulatorRoutineRevisionScriptStep>() {
+                        new SimulatorRoutineRevisionScriptStep() {
+                            Order = 1,
+                            StepType = "Get",
+                            Arguments = new Dictionary<string, string>() {
+                                { "referenceId", "OT1" },
+                                { "address", "42" },
+                            },
+                        }
+                    },
+                },
+            },
+        };
+
+        public static SimulatorRoutineCreateCommandItem SimulatorRoutineCreateWithTsNoDataSampling = new SimulatorRoutineCreateCommandItem()
+        {
+            ExternalId = SimulatorRoutineRevisionWithTsNoDataSampling.RoutineExternalId,
+            ModelExternalId = TestModelExternalId,
+            SimulatorIntegrationExternalId = TestIntegrationExternalId,
+            Name = "Simulation Runner Test with disabled Data Sampling",
+        };
+
         public static SimulatorModelCreate SimulatorModelCreate = new SimulatorModelCreate()
         {
             ExternalId = TestModelExternalId,
@@ -727,7 +830,8 @@ namespace Cognite.Simulator.Tests
 
         public static SimulatorModelRevisionCreate SimulatorModelRevisionCreateV2 = GenerateSimulatorModelRevisionCreate(TestModelExternalId, 2);
 
-        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1) {
+        public static SimulatorModelRevisionCreate GenerateSimulatorModelRevisionCreate(string externalId, int version = 1)
+        {
             return new SimulatorModelRevisionCreate()
             {
                 ExternalId = $"{externalId}-{version}",
@@ -739,8 +843,8 @@ namespace Cognite.Simulator.Tests
         public static SimulatorCreate SimulatorCreate = new SimulatorCreate()
         {
             ExternalId = TestSimulatorExternalId,
-            Name =  TestSimulatorExternalId,
-            FileExtensionTypes= new List<string> { "out" },
+            Name = TestSimulatorExternalId,
+            FileExtensionTypes = new List<string> { "out" },
             StepFields = new List<SimulatorStepField> {
                 new SimulatorStepField {
                     StepType = "get/set",

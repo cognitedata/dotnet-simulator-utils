@@ -1,92 +1,153 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Configuration;
 using Cognite.Extractor.Logging;
-using Serilog.Events;
+using Cognite.Extractor.Metrics;
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils.Automation;
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
-    /// Represents a simulator configuration, holding the simulator name and dataset id in CDF.
-    /// Ideally, all the data related to the simulator should be in this dataset 
+    /// Configuration for remote logging (logs are stored in CDF)
     /// </summary>
-    public class SimulatorConfig
+    public class RemoteLogConfig : LogConfig
     {
         /// <summary>
-        /// Name or Id of the simulator. E.g. PROSPER, PetroSim
+        /// Whether remote logging is enabled
         /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Simulator data, such as model files, simulation configuration files and events,
-        /// should be in this data set. Result inputs and outputs should be
-        /// written to this data set
-        /// </summary>
-        public long DataSetId { get; set; }
+        public bool Enabled { get; set; }
     }
 
     /// <summary>
-    /// Represents the simulator logging configuration.
-    /// This sets the minimum logging level and whether logging is enabled or not.
+    /// Logging configuration object
     /// </summary>
-    public class SimulatorLoggingConfig
+    public class LoggerConfig : Extractor.Logging.LoggerConfig
     {
         /// <summary>
-        /// Gets or sets the minimum log event level.
+        /// Remote logging configuration (optional)
+        /// Enabled by default, with warning level
+        /// Writes logs to CDF simulator logs
         /// </summary>
-        public LogEventLevel Level { get; set; } = LogEventLevel.Warning;
-
-        /// <summary>
-        /// Gets or sets a value indicating whether logging to the API is enabled.
-        /// </summary>
-        public bool Enabled { get; set; } = true;
+        public RemoteLogConfig Remote { get; set; }
     }
 
     /// <summary>
-    /// Represents the configuration for a model library. Used to configure <seealso cref="ModelLibraryBase{T, U, V}"/>
+    /// Base configuration object for simulators.
+    /// </summary>
+    public class BaseConfig : VersionedConfig
+    {
+        /// <summary>
+        /// Type of configuration this represents, local or remote. Will generally always
+        /// be local.
+        /// </summary>
+        public ConfigurationMode Type { get; set; }
+
+        /// <summary>
+        /// Logging configuration (optional)
+        /// </summary>
+        public LoggerConfig Logger { get; set; }
+
+        /// <summary>
+        /// Metrics configuration (optional)
+        /// </summary>
+        public MetricsConfig Metrics { get; set; }
+
+        /// <summary>
+        /// Cognite configuration (optional)
+        /// </summary>
+        public CogniteConfig Cognite { get; set; }
+
+        /// <summary>
+        /// State store configuration (optional)
+        /// </summary>
+        public StateStoreConfig StateStore { get; set; }
+
+        /// <summary>
+        /// Generate default configuration objects if the corresponding tags are not present
+        /// in the yaml config file/string
+        /// </summary>
+        public override void GenerateDefaults()
+        {
+            if (Cognite == null)
+            {
+                Cognite = new CogniteConfig();
+            }
+
+            if (Metrics == null)
+            {
+                Metrics = new MetricsConfig();
+            }
+
+            if (Logger == null)
+            {
+                Logger = new LoggerConfig();
+            }
+
+            if (Logger.Remote == null)
+            {
+                Logger.Remote = new RemoteLogConfig()
+                {
+                    Enabled = true,
+                    Level = "warning"
+                };
+            }
+
+            if (StateStore == null)
+            {
+                StateStore = new StateStoreConfig();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents the configuration for a model library. Used to configure <seealso cref="ModelLibraryBase{A, T, U, V}"/>
     /// and derived classes
     /// </summary>
     public class ModelLibraryConfig
     {
         /// <summary>
-        /// Interval for writing the library state to the local store.
-        /// </summary>
-        public int StateStoreInterval { get; set; } = 10;
-        
-        /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
-        public int LibraryUpdateInterval { get; set; } = 5;
-        
+        public int LibraryUpdateInterval { get; set; } = 10;
+
         /// <summary>
         /// Id of the library object
         /// </summary>
         public string LibraryId { get; set; }
-        
+
         /// <summary>
         /// Table containing the state of the library itself (extracted range)
         /// </summary>
         public string LibraryTable { get; set; }
-        
+
         /// <summary>
         /// Table containing the state of the downloaded files (last time updated)
         /// </summary>
         public string FilesTable { get; set; }
-        
+
         /// <summary>
         /// Local directory that contains the downloaded files
         /// </summary>
         public string FilesDirectory { get; set; }
+
+        /// <summary>
+        /// Maximum number of download attempts before giving up. Default is 3.
+        /// </summary>
+        public int MaxDownloadAttempts { get; set; } = 3;
     }
 
     /// <summary>
     /// Represents configuration for a local routine library. Used to configure <seealso cref="RoutineLibraryBase{V}"/>
     /// </summary>
-    public class RoutineLibraryConfig {
+    public class RoutineLibraryConfig
+    {
         /// <summary>
         /// Interval for fetching new data from CDF and updating the library
         /// </summary>
-        public int LibraryUpdateInterval { get; set; } = 5;
+        public int LibraryUpdateInterval { get; set; } = 10;
     }
 
     /// <summary>
@@ -94,7 +155,7 @@ namespace Cognite.Simulator.Utils
     /// connector properties such as name and intervals for status report and
     /// for fetching events
     /// </summary>
-    public class ConnectorConfig 
+    public class ConnectorConfig
     {
         /// <summary>
         /// The connector name prefix. If <see cref="AddMachineNameSuffix"/> is set to <c>false</c>
@@ -107,6 +168,13 @@ namespace Cognite.Simulator.Utils
         /// the name of the machine running the connector
         /// </summary>
         public bool AddMachineNameSuffix { get; set; } = true;
+
+        /// <summary>
+        /// Simulator data, such as model files, simulation configuration files and events,
+        /// should be in this data set. Result inputs and outputs should be
+        /// written to this data set
+        /// </summary>
+        public long DataSetId { get; set; }
 
         /// <summary>
         /// The connector will update its heartbeat in CDF with this interval (in seconds)
@@ -123,7 +191,7 @@ namespace Cognite.Simulator.Utils
         /// this value (in seconds). In case it finds items older than this, the runs will
         /// fail due to timeout
         /// </summary>
-        public int SimulationRunTolerance { get; set; } = 1800; // 30 min
+        public int SimulationRunTolerance { get; set; } = 3600; // 1h
 
         /// <summary>
         /// The connector will check if scheduled simulations should be triggered with
@@ -148,12 +216,6 @@ namespace Cognite.Simulator.Utils
         public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
 
         /// <summary>
-        /// If <c>true</c>, the connector will use Cognite's Simulator Integration API (requires enabling
-        /// capabilities in CDF). Else, the connector will use only core CDF resources
-        /// </summary>
-        public bool UseSimulatorsApi { get; set; }
-
-        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
@@ -165,11 +227,6 @@ namespace Cognite.Simulator.Utils
             }
             return $"{NamePrefix}{Environment.MachineName}";
         }
-
-        /// <summary>
-        /// Configuration for the simulator API logger.
-        /// </summary>
-        public SimulatorLoggingConfig ApiLogger { get; set; } = new SimulatorLoggingConfig();
     }
 
     /// <summary>
@@ -205,5 +262,61 @@ namespace Cognite.Simulator.Utils
         /// Only check for license if this is set to true
         /// </summary>
         public bool Enabled { get; set; }
+    }
+
+    /// <summary>
+    /// Represents the default configuration for a connector, including model and routine libraries.
+    /// </summary>
+    public class DefaultConnectorConfig : ConnectorConfig
+    {
+        /// <summary>
+        /// Configuration for the model library
+        /// </summary>
+        public ModelLibraryConfig ModelLibrary { get; set; }
+        /// <summary>
+        /// Configuration for the routine library
+        /// </summary>
+        public RoutineLibraryConfig RoutineLibrary { get; set; }
+    }
+
+    /// <summary>
+    /// Represents the default configuration for a connector, including model and routine libraries, and automation configuration.
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">The type of the automation configuration.</typeparam>
+    public class DefaultConfig<TAutomationConfig> : BaseConfig
+    where TAutomationConfig : AutomationConfig, new()
+    {
+        /// <summary>
+        /// Configuration for the default connector
+        /// </summary>
+        public DefaultConnectorConfig Connector { get; set; }
+
+        /// <summary>
+        /// Configuration for the automation settings.
+        /// </summary>
+        public TAutomationConfig Automation { get; set; }
+
+        /// <summary>
+        /// Generate default configuration objects if the corresponding tags are not present
+        /// in the yaml config file/string
+        /// </summary>
+        public override void GenerateDefaults()
+        {
+            base.GenerateDefaults();
+
+            if (Connector == null) Connector = new DefaultConnectorConfig();
+
+            if (Automation == null) Automation = new TAutomationConfig();
+
+            if (Connector.ModelLibrary == null) Connector.ModelLibrary = new ModelLibraryConfig();
+            if (Connector.ModelLibrary.LibraryId == null) Connector.ModelLibrary.LibraryId = "ModelLibraryState";
+            if (Connector.ModelLibrary.LibraryTable == null) Connector.ModelLibrary.LibraryTable = "ModelLibrary";
+            if (Connector.ModelLibrary.FilesTable == null) Connector.ModelLibrary.FilesTable = "ModelLibraryFiles";
+            if (Connector.ModelLibrary.FilesDirectory == null) Connector.ModelLibrary.FilesDirectory = "./files";
+
+            if (Connector.RoutineLibrary == null) Connector.RoutineLibrary = new RoutineLibraryConfig();
+
+            if (Connector.PipelineNotification == null) Connector.PipelineNotification = new PipelineNotificationConfig();
+        }
     }
 }

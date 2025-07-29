@@ -1,8 +1,20 @@
 on:
-  # pull_request:
-  #   branches: [ master ]
   push:
     branches: [ main ]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+# and creating releases.
+permissions:
+  actions: read
+  pages: write
+  id-token: write
+  contents: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "publish"
+  cancel-in-progress: false
 
 name: Release
 jobs:
@@ -16,14 +28,14 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         fetch-depth: 0
 
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
-        dotnet-version: 7
+        dotnet-version: 8
     
     - name: Get version
       id: get-version
@@ -66,7 +78,7 @@ jobs:
       run: echo "Will release nuget package"
     
     - name: Upload nuget packages
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       if: ${{ steps.get-branch.outputs.branch == 'main' && steps.confirm-release.outputs.test == 0 }}
       with:
         name: nuget-packages
@@ -82,11 +94,11 @@ jobs:
       - build
       steps:
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
-          dotnet-version: 7
+          dotnet-version: 8
       - name: Download nuget packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: nuget-packages
           path: nuget-packages/
@@ -98,7 +110,8 @@ jobs:
           CERTIFICATE_SHA1_HASH: ${{ secrets.CODE_SIGNING_CERT_SHA1_HASH }}
           CLIENT_CERTIFICATE: ${{ secrets.CODE_SIGNING_CLIENT_CERT }}
           CLIENT_CERTIFICATE_PASSWORD: ${{ secrets.CODE_SIGNING_CLIENT_CERT_PASSWORD }}
-        uses: cognitedata/code-sign-action/@v2
+          KEYPAIR_ALIAS: ${{ secrets.CODE_SIGNING_KEYPAIR_ALIAS }}
+        uses: cognitedata/code-sign-action/@5f2df722040f2a061476cf171f67ec6014382f2b # v3
         with:
           path-to-binary: 'nuget-packages/'
 
@@ -115,3 +128,36 @@ jobs:
           release_name: Release v${{ needs.build.outputs.version }}
           draft: false
           prerelease: false
+
+  publish-docs:
+    environment:
+      name: CD
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+      with:
+        dotnet-version: 8
+      
+    - name: Restore docfx
+      run: dotnet tool restore
+      working-directory: docfx_project
+
+    - name: Build docfx-powered documentation site
+      run: dotnet tool run docfx ./docfx.json
+      working-directory: docfx_project
+
+    - name: Upload Documentation Pages Artifact
+      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+      with:
+        path: 'docfx_project/_site'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

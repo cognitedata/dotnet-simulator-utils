@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿#nullable enable
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
 using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils
@@ -20,55 +23,51 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Status message
         /// </summary>
-        public string StatusMessage { get; set; }
-        
+        public string? StatusMessage { get; set; }
+
+        /// <summary>
+        /// Flowsheet information associated with the simulator model revision.
+        /// </summary>
+        public SimulatorModelRevisionDataFlowsheet? Flowsheet { get; set; }
+
+        /// <summary>
+        /// Information related to the model revision data, stored as a dictionary.
+        /// </summary>
+        public Dictionary<string, string>? RevisionDataInfo { get; set; }
+
         /// <summary>
         /// Whether or not the model was parsed
         /// </summary>
         public bool Parsed { get; set; }
-        
+
         /// <summary>
         /// If there were any errors during parsing
         /// </summary>
         public bool Error { get; set; }
-        /// <summary>
-        /// Timestamp of when this entry was updated last
-        /// </summary>
-        public long LastUpdatedTime { get; set; }
-    }
-
-    /// <summary>
-    /// Extension utilities for the model parsing info
-    /// </summary>
-    public static class ModelParsingExtensions
-    {
 
         /// <summary>
         /// Update the model info status to success
         /// </summary>
-        /// <param name="mpi">Model parsing info object</param>
-        public static void SetSuccess(this ModelParsingInfo mpi)
+        public void SetSuccess()
         {
-            mpi.SetStatus(SimulatorModelRevisionStatus.success, true, false, "Model parsed successfully");
+            this.SetStatus(SimulatorModelRevisionStatus.success, true, false, "Model parsed successfully");
         }
 
         /// <summary>
         /// Update the model info status to failure
         /// </summary>
-        /// <param name="mpi">Model parsing info object</param>
         /// <param name="statusMessage">Status message</param>
-        public static void SetFailure(this ModelParsingInfo mpi, string statusMessage = "Model parsing failed")
+        public void SetFailure(string statusMessage = "Model parsing failed")
         {
-            mpi.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
+            this.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
         }
 
-        private static void SetStatus(this ModelParsingInfo mpi, SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
+        private void SetStatus(SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
         {
-            mpi.Status = status;
-            mpi.Parsed = isParsed;
-            mpi.Error = isError;
-            mpi.StatusMessage = statusMessage;
-            mpi.LastUpdatedTime = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            this.Status = status;
+            this.Parsed = isParsed;
+            this.Error = isError;
+            this.StatusMessage = statusMessage;
         }
     }
 }

@@ -1,11 +1,21 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+using Cognite.Extractor.Logging;
+
+using CogniteSdk;
+using CogniteSdk.Resources.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Serilog;
-using Serilog.Extensions.Logging;
-using Cognite.Extractor.Logging;
 using Serilog.Core;
+using Serilog.Core.Enrichers;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -15,13 +25,52 @@ namespace Cognite.Simulator.Utils
     /// Loggers are created according to a <see cref="LoggerConfig"/> configuration object.
     /// Log messages contain UTC timestamps.
     /// </summary>
-    public static class SimulatorLoggingUtils 
+    public static class SimulatorLoggingUtils
     {
+        /// <summary>
+        /// Used to enrich log events with the simulator log id and min severity.
+        /// Example usage:
+        ///     LogContext.Push(await GetLogEnrichers(_cdfSimulatorResources, logId).ConfigureAwait(false))
+        /// </summary>
+        /// <param name="cdf">Simulators resource</param>
+        /// <param name="logId">Log id to push</param>
+        /// <param name="checkForSeverityOverride">True to check for severity override</param>
+        public static async Task<PropertyEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
+        {
+            if (cdf == null)
+            {
+                throw new ArgumentNullException(nameof(cdf));
+            }
+            var enrichers = new List<PropertyEnricher>() {
+                new PropertyEnricher("LogId", logId)
+            };
+
+            if (checkForSeverityOverride && logId.HasValue)
+            {
+                try
+                {
+                    var logRes = await cdf.RetrieveSimulatorLogsAsync([new Identity(logId.Value)]).ConfigureAwait(false);
+                    var logItem = logRes.First();
+                    if (logItem.Severity != null)
+                    {
+                        enrichers.Add(new PropertyEnricher("Severity", logItem.Severity));
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignore, we don't want to fail everything if we can't get the log item
+                }
+            }
+
+            return enrichers.ToArray();
+        }
 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
-        class UtcTimestampEnricher : ILogEventEnricher {
-            public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf) {
+        sealed class UtcTimestampEnricher : ILogEventEnricher
+        {
+            public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf)
+            {
                 logEvent.AddPropertyIfAbsent(
                     lepf.CreateProperty("UtcTimestamp", logEvent.Timestamp.UtcDateTime));
             }
@@ -31,7 +80,8 @@ namespace Cognite.Simulator.Utils
         /// Create a default Serilog console logger and returns it.
         /// </summary>
         /// <returns>A <see cref="Serilog.ILogger"/> logger with default properties</returns>
-        public static Serilog.ILogger GetSerilogDefault() {
+        public static Serilog.ILogger GetSerilogDefault()
+        {
             return new LoggerConfiguration()
                 .Enrich.With<UtcTimestampEnricher>()
                 .Enrich.FromLogContext()
@@ -58,7 +108,8 @@ namespace Cognite.Simulator.Utils
         /// Create a default console logger and returns it.
         /// </summary>
         /// <returns>A <see cref="Microsoft.Extensions.Logging.ILogger"/> logger with default properties</returns>
-        public static Microsoft.Extensions.Logging.ILogger GetDefault() {
+        public static Microsoft.Extensions.Logging.ILogger GetDefault()
+        {
             using (var loggerFactory = new LoggerFactory())
             {
                 loggerFactory.AddSerilog(GetSerilogDefault(), true);
@@ -66,12 +117,29 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        /// <summary>
+        /// Flattens a dictionary into a string representation.
+        /// </summary>
+        /// <param name="dict">The dictionary to flatten.</param>
+        /// <returns>A string representation of the dictionary.</returns>
+        public static string FlattenDictionary(Dictionary<string, string> dict)
+        {
+            if (dict == null)
+            {
+                return "";
+            }
+            return string.Join(";", dict.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        }
+
     }
-   
+
     /// <summary>
     /// Extension utilities for logging
     /// </summary>
-    public static class LoggingExtensions {
+    public static class LoggingExtensions
+    {
+
+
 
         /// <summary>
         /// Adds a configured Serilog logger as singleton of the <see cref="Microsoft.Extensions.Logging.ILogger"/> and
@@ -79,23 +147,21 @@ namespace Cognite.Simulator.Utils
         /// This is a Simulator specific logger as it writes logs to the remote sink (Simulators Logs resource in CDF).
         /// A configuration object of type <see cref="LoggerConfig"/> is required, and should have been added to the
         /// collection as well.
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="apiLoggerConfig">Sets the logger configuration, minimum log level and if it is enabled or not.</param>
-        /// <param name="buildLogger">Method to build the logger.
-        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
+        /// 
         /// This defaults to <see cref="SimulatorLoggingUtils.GetConfiguredLogger(LoggerConfig, ILogEventSink)"/>
         /// which creates logging configuration for file and console using
-        /// <see cref="LoggingUtils.GetConfiguration(LoggerConfig)"/></param>
-        public static void AddLogger(this IServiceCollection services, SimulatorLoggingConfig apiLoggerConfig = null, Func<LoggerConfig, Serilog.ILogger> buildLogger = null, bool alternativeLogger = false)
+        /// <see cref="Cognite.Extractor.Logging.LoggingUtils.GetConfiguration(Cognite.Extractor.Logging.LoggerConfig)"/>
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="alternativeLogger">True to allow alternative loggers, i.e. allow config.Console and config.File to be null</param>
+        public static void AddLogger(this IServiceCollection services, bool alternativeLogger = false)
         {
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<LoggerTraceListener>();
-            services.AddSingleton<Serilog.ILogger>(p =>
+            services.AddSingleton(p =>
             {
-                var remoteApiSink = p.GetRequiredService<ScopedRemoteApiSink>();
+                var remoteApiSink = p.GetService<ScopedRemoteApiSink>();
                 var config = p.GetService<LoggerConfig>();
-                remoteApiSink.SetConfig(apiLoggerConfig);
                 if (config == null || !alternativeLogger && (config.Console == null && config.File == null))
                 {
                     // No logging configuration

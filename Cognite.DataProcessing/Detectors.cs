@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using MathNet.Numerics;
 using MathNet.Numerics.Statistics;
 
@@ -203,7 +204,7 @@ namespace Cognite.DataProcessing
         /// In case if there are several minimum elements in the given list, the index of the first one will be
         /// returned.
         /// </summary>
-        private static int WhichMin(IList<double> values)
+        private static int WhichMin(List<double> values)
         {
             if (values.Count == 0)
                 throw new InvalidOperationException("Array should contain elements");

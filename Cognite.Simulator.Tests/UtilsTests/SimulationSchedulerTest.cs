@@ -1,16 +1,23 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+
+using Cognite.Extractor.Common;
+using Cognite.Extractor.StateStorage;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+
+using CogniteSdk;
 using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using NCrontab;
+
+using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
 {
@@ -37,9 +44,83 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
     }
 
+    /// <summary>
+    /// Fake local time zone for testing purposes
+    /// </summary>
+    public class FakeLocalTimeZone : IDisposable
+    {
+        private readonly TimeZoneInfo _actualLocalTimeZoneInfo;
+        private static void SetLocalTimeZone(TimeZoneInfo timeZoneInfo)
+        {
+            var cachedDataField = typeof(TimeZoneInfo).GetField("s_cachedData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var cachedData = cachedDataField?.GetValue(null);
+            var localTimeZoneField = cachedData?.GetType().GetField("_localTimeZone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            localTimeZoneField?.SetValue(cachedData, timeZoneInfo);
+        }
+
+        public FakeLocalTimeZone(TimeZoneInfo timeZoneInfo)
+        {
+            _actualLocalTimeZoneInfo = TimeZoneInfo.Local;
+            SetLocalTimeZone(timeZoneInfo);
+        }
+
+        public void Dispose()
+        {
+            SetLocalTimeZone(_actualLocalTimeZoneInfo);
+        }
+    }
+
     [Collection(nameof(SequentialTestCollection))]
     public class SimulationSchedulerTest
     {
+
+        [Fact]
+        public void TestNextRunTimeAndDelay_Midnight()
+        {
+            using (new FakeLocalTimeZone(TimeZoneInfo.FindSystemTimeZoneById("US/Eastern")))
+            {
+                // every day at 00:00
+                var schedule = CrontabSchedule.Parse("0 0 * * *");
+                var (delay, runTimeMs) = SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextJobDelayAndRunTimeMs(schedule);
+
+                // get the next midnight
+                var now = DateTime.UtcNow;
+                var nowDate = DateTime.UtcNow.Date;
+                var nextMidnight = nowDate.AddDays(1);
+                var nextMidnightMs = nextMidnight.ToUnixTimeMilliseconds();
+                var expectedDelay = nextMidnight - now;
+
+                var diffBetweenExpectedAndActual = (expectedDelay - delay).TotalMilliseconds;
+
+                Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 60 * 1000); // less than a minute
+                Assert.Equal(nextMidnightMs, runTimeMs);
+            }
+        }
+
+        [Fact]
+        public void TestNextRunTimeAndDelay_In15Minutes()
+        {
+            using (new FakeLocalTimeZone(TimeZoneInfo.FindSystemTimeZoneById("India Standard Time")))
+            {
+                // get current time
+                var now = DateTime.UtcNow;
+                var nowPlus15Minutes = now.AddMinutes(15);
+
+                // cron expression at every day current UTC time + 15 minutes
+                var schedule = CrontabSchedule.Parse($"{nowPlus15Minutes.Minute} {nowPlus15Minutes.Hour} * * *");
+                var (delay, runTimeMs) = SimulationSchedulerBase<SimulatorRoutineRevision>.GetNextJobDelayAndRunTimeMs(schedule);
+
+                // get the next midnight
+                var expectedRunTime = nowPlus15Minutes.ToUnixTimeMilliseconds() / 60000 * 60000; // round to the nearest minute
+                var expectedDelay = nowPlus15Minutes - now;
+
+                var diffBetweenExpectedAndActual = (expectedDelay - delay).TotalMilliseconds;
+
+                Assert.True(Math.Abs(diffBetweenExpectedAndActual) < 1000 * 60); // less than a minute
+                Assert.Equal(expectedRunTime, runTimeMs);
+            }
+        }
+
         [Fact]
         public async Task TestSimulationSchedulerBase()
         {
@@ -51,32 +132,23 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 NamePrefix = SeedData.TestIntegrationExternalId,
                 AddMachineNameSuffix = false,
-                UseSimulatorsApi = true,
                 SchedulerUpdateInterval = 2,
+                DataSetId = SeedData.TestDataSetId,
             });
-            services.AddSingleton<IEnumerable<SimulatorConfig>>(new List<SimulatorConfig>
-            {
-                new SimulatorConfig
-                {
-                    Name = SeedData.TestSimulatorExternalId,
-                    DataSetId = SeedData.TestDataSetId
-                }
-            });
+            services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ITimeManager, FakeTimeManager>();
             services.AddSingleton<SampleSimulationScheduler>();
 
-            StateStoreConfig stateConfig = null;
-
-            List<string> eventIds = new List<string>();
+            StateStoreConfig? stateConfig = null;
 
             var testStartTimeMillis = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             using var source = new CancellationTokenSource();
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
             var FileStorageClient = provider.GetRequiredService<FileStorageClient>();
-            
-            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate).ConfigureAwait(false);
-            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId).ConfigureAwait(false);
+
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate);
+            await TestHelpers.SimulateASimulatorRunning(cdf, SeedData.TestIntegrationExternalId);
 
             /// prepopulate the routine revision
             var revision = await SeedData.GetOrCreateSimulatorRoutineRevision(
@@ -84,7 +156,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 FileStorageClient,
                 SeedData.SimulatorRoutineCreateScheduled,
                 SeedData.SimulatorRoutineRevisionCreateScheduled
-            ).ConfigureAwait(false);
+            );
 
             // this helps diagnose issues where the above function is giving an old revision
             Assert.Equal(SeedData.SimulatorRoutineRevisionCreateScheduled.Configuration.Schedule.CronExpression, revision.Configuration.Schedule.CronExpression);
@@ -94,14 +166,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var configLib = provider.GetRequiredService<RoutineLibraryTest>();
                 var scheduler = provider.GetRequiredService<SampleSimulationScheduler>();
 
-                await configLib.Init(source.Token).ConfigureAwait(false);
+                await configLib.Init(source.Token);
 
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
                 var taskList = new List<Task> { scheduler.Run(linkedToken) };
                 taskList.AddRange(configLib.GetRunTasks(linkedToken));
-                await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);
+                await taskList.RunAll(linkedTokenSource);
 
                 var configObj = configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(configObj);
@@ -126,7 +198,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                             }
                         },
                         Limit = 20,
-                    }, source.Token).ConfigureAwait(false);
+                    }, source.Token);
                 Assert.NotEmpty(simRuns.Items);
 
                 var firstEvent = simRuns.Items.First();
@@ -144,13 +216,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId ).ConfigureAwait(false);
+                await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
 
-                if (eventIds.Any())
-                {
-                    await cdf.Events.DeleteAsync(eventIds, source.Token)
-                        .ConfigureAwait(false);
-                }
                 provider.Dispose(); // Dispose provider to also dispose managed services
                 if (stateConfig != null)
                 {
@@ -164,17 +231,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
         SimulationSchedulerBase<SimulatorRoutineRevision>
     {
         public SampleSimulationScheduler(
-            RoutineLibraryTest configLib, 
+            RoutineLibraryTest configLib,
             ConnectorConfig config,
-            ILogger<SampleSimulationScheduler> logger, 
+            ILogger<SampleSimulationScheduler> logger,
             CogniteDestination cdf,
-            IEnumerable<SimulatorConfig> simulators,
             ITimeManager timeManager
             ) : base(
                 config,
-                configLib, 
+                configLib,
                 logger,
-                simulators,
                 cdf,
                 timeManager)
         {

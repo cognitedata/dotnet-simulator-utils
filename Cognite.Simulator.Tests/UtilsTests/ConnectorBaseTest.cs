@@ -1,14 +1,19 @@
-﻿using Cognite.Extractor.Common;
-using Cognite.Extractor.Utils;
-using Cognite.Simulator.Utils;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.UtilsTests
@@ -24,19 +29,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestConnectorBase()
         {
             var timestamp = DateTime.UtcNow.ToUnixTimeMilliseconds();
-            var simulatorName = $"TestSim {timestamp}";
             var services = new ServiceCollection();
             services.AddCogniteTestClient();
-            services.AddSingleton<RemoteConfigManager<BaseConfig>>(provider => null!);
-            services.AddSingleton<BaseConfig>();
+            services.AddSingleton(SeedData.SimulatorCreate);
+            services.AddSingleton<RemoteConfigManager<Utils.BaseConfig>>(provider => null!);
+            services.AddSingleton<Utils.BaseConfig>();
             services.AddTransient<TestConnector>();
             services.AddSingleton<ExtractionPipeline>();
-            var simConfig = new SimulatorConfig
-            {
-                Name = simulatorName,
-                DataSetId = SeedData.TestDataSetId
-            };
-            services.AddSingleton(simConfig);
+            services.AddSingleton<DefaultConfig<AutomationConfig>>();
+            services.AddSingleton<ScopedRemoteApiSink>();
             var pipeConfig = new PipelineNotificationConfig();
             services.AddSingleton(pipeConfig);
             using var provider = services.BuildServiceProvider();
@@ -46,95 +47,52 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var cdf = provider.GetRequiredService<Client>();
             var cdfConfig = provider.GetRequiredService<CogniteConfig>();
 
-            // prepopulate the TestSim simulator
-            await cdf.Alpha.Simulators.CreateAsync(
-                new []
-                {
-                    new SimulatorCreate()
-                        {
-                            ExternalId = simulatorName,
-                            Name = "TestSim",
-                            FileExtensionTypes = new List<string> { "test" },
-                            ModelTypes = new List<SimulatorModelType> {
-                                new SimulatorModelType {
-                                    Name = "Oil and Water Well",
-                                    Key = "OilWell",
-                                },
-                                new SimulatorModelType {
-                                    Name = "Dry and Wet Gas Well",
-                                    Key = "GasWell",
-                                },
-                                new SimulatorModelType {
-                                    Name = "Retrograde Condensate Well",
-                                    Key = "RetrogradeWell",
-                                },
-                            },
-                            StepFields = new List<SimulatorStepField> {
-                                new SimulatorStepField {
-                                    StepType = "get/set",
-                                    Fields = new List<SimulatorStepFieldParam> {
-                                        new SimulatorStepFieldParam {
-                                            Name = "address",
-                                            Label = "OpenServer Address",
-                                            Info = "Enter the address of the PROSPER variable, i.e. PROSPER.ANL. SYS. Pres",
-                                        },
-                                    },
-                                },
-                                new SimulatorStepField {
-                                    StepType = "command",
-                                    Fields = new List<SimulatorStepFieldParam> {
-                                        new SimulatorStepFieldParam {
-                                            Name = "command",
-                                            Label = "OpenServer Command",
-                                            Info = "Enter the command to send to the PROSPER, i.e. Simulate",
-                                        },
-                                    },
-                                },
-                            },
-                        }
-                }
-            ).ConfigureAwait(false);
+            await SeedData.GetOrCreateSimulator(cdf, SeedData.SimulatorCreate);
 
             try
             {
                 await connector
                     .Init(source.Token)
-                    .ConfigureAwait(false);
+;
 
                 var integrationsRes = await cdf.Alpha.Simulators.ListSimulatorIntegrationsAsync(
                     new SimulatorIntegrationQuery(),
-                    source.Token).ConfigureAwait(false);
-                var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == simulatorName);
+                    source.Token);
+                var integration = integrationsRes.Items.FirstOrDefault(i => i.SimulatorExternalId == SeedData.TestSimulatorExternalId);
 
                 Assert.NotNull(integration);
-                Assert.Equal(simulatorName, integration.SimulatorExternalId);
+                Assert.Equal(SeedData.TestSimulatorExternalId, integration.SimulatorExternalId);
                 Assert.Equal("1.2.3", integration.SimulatorVersion);
                 Assert.Equal(SeedData.TestDataSetId, integration.DataSetId);
                 Assert.Equal("v0.0.1", integration.ConnectorVersion);
                 Assert.StartsWith($"Test Connector", integration.ExternalId);
                 Assert.True(integration.Heartbeat >= timestamp);
+                Assert.NotNull(cdfConfig.ExtractionPipeline);
+                Assert.NotNull(cdfConfig.ExtractionPipeline.PipelineId);
 
                 // Start the connector loop and cancel it after 5 seconds. Should be enough time
                 // to report a heartbeat back to CDF at least once.
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
                 var linkedToken = linkedTokenSource.Token;
                 linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
-                await connector.Run(linkedToken).ConfigureAwait(false);
+                await connector.Run(linkedToken);
 
                 var pipelines = await cdf.ExtPipes.RetrieveAsync(
                     new List<string> { cdfConfig.ExtractionPipeline.PipelineId },
                     true,
-                    source.Token).ConfigureAwait(false);
+                    source.Token);
                 Assert.Contains(pipelines, p => p.ExternalId == cdfConfig.ExtractionPipeline.PipelineId);
                 Assert.Contains(pipelines, p => p.LastSeen >= timestamp);
             }
             finally
             {
-                await cdf.Alpha.Simulators.DeleteAsync(
-                    new [] { new Identity(simulatorName) },
-                    source.Token).ConfigureAwait(false);
-                await cdf.ExtPipes
-                    .DeleteAsync(new []{ cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None).ConfigureAwait(false); 
+                await SeedData.DeleteSimulator(cdf, SeedData.TestSimulatorExternalId);
+                try
+                {
+                    await cdf.ExtPipes
+                        .DeleteAsync(new[] { cdfConfig.ExtractionPipeline?.PipelineId }, CancellationToken.None);
+                }
+                catch (Exception) { }
             }
         }
     }
@@ -144,59 +102,51 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Implements a simple mock connector that only reports
     /// status back to CDF (Heartbeat)
     /// </summary>
-    internal class TestConnector : ConnectorBase<BaseConfig>
+    internal class TestConnector : ConnectorBase<Utils.BaseConfig>
     {
+        static ConnectorConfig TestConnectorConfig = new ConnectorConfig()
+        {
+            NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
+            AddMachineNameSuffix = false,
+            StatusInterval = 2,
+            DataSetId = SeedData.TestDataSetId,
+        };
+
         private readonly ExtractionPipeline _pipeline;
-        private readonly SimulatorConfig _config;
 
         public TestConnector(
             CogniteDestination cdf,
             ExtractionPipeline pipeline,
-            SimulatorConfig config,
+            SimulatorCreate simulatorDefinition,
             Microsoft.Extensions.Logging.ILogger<TestConnector> logger,
-            RemoteConfigManager<BaseConfig> remoteConfigManager,
+            RemoteConfigManager<Utils.BaseConfig> remoteConfigManager,
             ScopedRemoteApiSink remoteSink) :
             base(
                 cdf,
-                new ConnectorConfig
-                {
-                    NamePrefix = $"Test Connector {DateTime.UtcNow.ToUnixTimeMilliseconds()}",
-                    AddMachineNameSuffix = false
-                },
-                new List<SimulatorConfig>
-                {
-                    config
-                },
+                TestConnectorConfig,
+                simulatorDefinition,
                 logger,
                 remoteConfigManager,
                 remoteSink)
         {
             _pipeline = pipeline;
-            _config = config;
         }
 
-        public override string GetConnectorVersion()
+        public override string GetConnectorVersion(CancellationToken _token)
         {
             return "v0.0.1";
         }
 
-        public override TimeSpan GetHeartbeatInterval()
-        {
-            return TimeSpan.FromSeconds(2);
-        }
-
-        public override string GetSimulatorVersion(string simulator)
+        public override string GetSimulatorVersion(string simulator, CancellationToken _token)
         {
             return "1.2.3";
         }
 
         public override async Task Init(CancellationToken token)
         {
-            await EnsureSimulatorIntegrationsExist(token).ConfigureAwait(false);
-            await UpdateSimulatorIntegrations(
-                true,
-                token).ConfigureAwait(false);
-            await _pipeline.Init(_config, token).ConfigureAwait(false);
+            await InitRemoteSimulatorIntegration(token).ConfigureAwait(false);
+            await UpdateRemoteSimulatorIntegration(true, token).ConfigureAwait(false);
+            await _pipeline.Init(TestConnectorConfig, token).ConfigureAwait(false);
         }
 
         public override async Task Run(CancellationToken token)
@@ -205,9 +155,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                 var linkedToken = linkedTokenSource.Token;
-                var taskList = new List<Task> 
-                { 
-                    Heartbeat(linkedToken),
+                var taskList = new List<Task>
+                {
+                    HeartbeatLoop(linkedToken),
                     _pipeline.PipelineUpdate(linkedToken)
                 };
                 await taskList.RunAll(linkedTokenSource).ConfigureAwait(false);

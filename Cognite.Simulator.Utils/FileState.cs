@@ -1,8 +1,9 @@
-﻿using Cognite.Extractor.StateStorage;
-using Cognite.Simulator.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Extensions;
 
 namespace Cognite.Simulator.Utils
 {
@@ -15,8 +16,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// File id. Typically CDF external id
         /// </summary>
-        public string Id { get; protected set; }
-        
+        public string Id { get; set; }
+
         private string _externalId;
         /// <summary>
         /// External ID of the entity that is represented by this object.
@@ -38,16 +39,14 @@ namespace Cognite.Simulator.Utils
         public DateTime? LastTimeModified { get; protected set; }
 
         /// <summary>
-        /// Creates a new file state with the provided id
+        /// Creates a new file state instance
         /// </summary>
-        /// <param name="id">File id</param>
-        public FileState(string id)
+        public FileState()
         {
-            Id = id;
         }
 
         private string _modelExternalId;
-        
+
         /// <summary>
         /// External ID of the model associated with this file. The model is
         /// typically the object being simulated.
@@ -71,7 +70,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// If the file is stored in a directory, or as a single file
         /// </summary>
-        public bool IsInDirectory {
+        public bool IsInDirectory
+        {
             get => _isInDirectory;
             set
             {
@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long? _dataSetId;
-        
+
         /// <summary>
         /// Dataset id that contains the file in CDF
         /// </summary>
@@ -112,7 +112,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private string _filePath;
-        
+
         /// <summary>
         /// Path of the file in the local disk. This is only available
         /// once the file has been downloaded from CDF and saved locally.
@@ -129,7 +129,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _createdTime;
-        
+
         /// <summary>
         /// Time the file was created in CDF
         /// </summary>
@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _updatedTime;
-        
+
         /// <summary>
         /// Last time the file was updated in CDF
         /// </summary>
@@ -161,7 +161,7 @@ namespace Cognite.Simulator.Utils
         }
 
         private long _cdfId;
-        
+
         /// <summary>
         /// Internal (numeric) id of the file in CDF
         /// </summary>
@@ -180,7 +180,8 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Model revision logId
         /// </summary>
-        public long LogId {
+        public long LogId
+        {
             get => _logId;
             set
             {
@@ -191,14 +192,52 @@ namespace Cognite.Simulator.Utils
         }
 
 
+        private string _fileExtension;
+
         /// <summary>
-        /// File extension to use when saving this file locally.
-        /// Should conform with the extension expected by the simulator
+        /// Model version
         /// </summary>
-        /// <returns>File extension</returns>
-        public virtual string GetExtension()
+        public string FileExtension
         {
-            return "bin";
+            get => _fileExtension;
+            set
+            {
+                if (value == _fileExtension) return;
+                LastTimeModified = DateTime.UtcNow;
+                _fileExtension = value;
+            }
+        }
+
+        private int _version;
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        public int Version
+        {
+            get => _version;
+            set
+            {
+                if (value == _version) return;
+                LastTimeModified = DateTime.UtcNow;
+                _version = value;
+            }
+        }
+
+        private int _downloadAttempts;
+
+        /// <summary>
+        /// Download attempts
+        /// </summary>
+        public int DownloadAttempts
+        {
+            get => _downloadAttempts;
+            set
+            {
+                if (value == _downloadAttempts) return;
+                LastTimeModified = DateTime.UtcNow;
+                _downloadAttempts = value;
+            }
         }
 
         /// <summary>
@@ -220,6 +259,10 @@ namespace Cognite.Simulator.Utils
             _isInDirectory = poco.IsInDirectory;
             _externalId = poco.ExternalId;
             _logId = poco.LogId;
+            _fileExtension = poco.FileExtension;
+            _downloadAttempts = poco.DownloadAttempts;
+            _version = poco.Version;
+
         }
 
         /// <summary>
@@ -240,16 +283,32 @@ namespace Cognite.Simulator.Utils
                 UpdatedTime = UpdatedTime,
                 IsInDirectory = IsInDirectory,
                 ExternalId = ExternalId,
+                LogId = LogId,
+                FileExtension = FileExtension,
+                DownloadAttempts = DownloadAttempts,
+                Version = Version
             };
         }
     }
-    
+
     /// <summary>
     /// Data object that contains the state properties to be persisted
     /// by the state store. These properties are restored to the state on initialization
     /// </summary>
     public class FileStatePoco : BaseStorableState
     {
+        /// <summary>
+        /// Model File extension
+        /// </summary>
+        [StateStoreProperty("fileext")]
+        public string FileExtension { get; set; }
+
+        /// <summary>
+        /// Model version
+        /// </summary>
+        [StateStoreProperty("version")]
+        public int Version { get; set; }
+
         /// <summary>
         /// External Id of the entity represented by this object
         /// </summary>
@@ -261,37 +320,37 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("model-external-id")]
         public string ModelExternalId { get; set; }
-        
+
         /// <summary>
         /// Source of the file (simulator)
         /// </summary>
         [StateStoreProperty("source")]
         public string Source { get; set; }
-        
+
         /// <summary>
         /// Dataset id in CDF
         /// </summary>
         [StateStoreProperty("data-set-id")]
         public long? DataSetId { get; set; }
-        
+
         /// <summary>
         /// Path to the file in the local disk
         /// </summary>
         [StateStoreProperty("file-path")]
         public string FilePath { get; set; }
-        
+
         /// <summary>
         /// Time the file was created in CDF
         /// </summary>
         [StateStoreProperty("created-time")]
         public long CreatedTime { get; set; }
-        
+
         /// <summary>
         /// CDF internal id of the file 
         /// </summary>
         [StateStoreProperty("cdf-id")]
         public long CdfId { get; set; }
-        
+
         /// <summary>
         /// Last time the file was updated in CDF
         /// </summary>
@@ -309,5 +368,11 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("log-id")]
         public long LogId { get; set; }
+
+        /// <summary>
+        /// Download attempts
+        /// </summary>
+        [StateStoreProperty("download-attempts")]
+        public int DownloadAttempts { get; set; }
     }
 }

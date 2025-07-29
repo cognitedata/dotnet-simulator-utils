@@ -1,13 +1,15 @@
-﻿using CogniteSdk.Resources;
-using Cognite.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cognite.Extensions;
+
 using CogniteSdk;
 using CogniteSdk.Alpha;
+using CogniteSdk.Resources;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -96,7 +98,7 @@ namespace Cognite.Simulator.Extensions
                 }
                 tsToCreate.Add(simTs.SaveTimeseriesExternalId, tsCreate);
             }
-            if (!tsToCreate.Any())
+            if (!(tsToCreate.Count > 0))
             {
                 return Enumerable.Empty<TimeSeries>();
             }
@@ -146,20 +148,6 @@ namespace Cognite.Simulator.Extensions
         /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
         /// </summary>
         public SimulationTimeSeriesCreationException(string message, IEnumerable<CogniteError> errors)
-            : base(message, errors)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Represent errors related to read/write simulation model version time series in CDF
-    /// </summary>
-    public class SimulationModelVersionCreationException : CogniteException
-    {
-        /// <summary>
-        /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
-        /// </summary>
-        public SimulationModelVersionCreationException(string message, IEnumerable<CogniteError> errors)
             : base(message, errors)
         {
         }

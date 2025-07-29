@@ -1,5 +1,7 @@
 using System;
+
 using Cognite.DataProcessing;
+
 using Xunit;
 
 namespace Cognite.Simulator.Tests.DataProcessingTests;
@@ -29,8 +31,8 @@ public class DataSamplingTest
         _unionResults = new TimeSeriesData(
             time: testData.UnionTimeExpected, data: testData.UnionDataExpected, granularity: 60000, isStep: false);
         _simpleSensor = new TimeSeriesData(
-            time: new long[] {2, 4, 5, 8, 8, 10, 11, 12, 14, 15, 17, 18},
-            data: new double[] {1, 1, 2, 3, 5, 6, 5, 5, 3.5, 3.2, 3.1, 1},
+            time: new long[] { 2, 4, 5, 8, 8, 10, 11, 12, 14, 15, 17, 18 },
+            data: new double[] { 1, 1, 2, 3, 5, 6, 5, 5, 3.5, 3.2, 3.1, 1 },
             granularity: 1,
             isStep: false);
         _oneDataPoint = new TimeSeriesData(
@@ -48,7 +50,7 @@ public class DataSamplingTest
         _check1 = testData.Check1;
         _threshold1 = testData.Threshold1;
     }
-    
+
     [Fact]
     public void TestUnionLogicTimeSeries()
     {
@@ -61,7 +63,7 @@ public class DataSamplingTest
             Assert.Equal(_unionResults.Data[i], unionTs.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestUnionLogicTimeSeries1()
     {
@@ -71,17 +73,17 @@ public class DataSamplingTest
         Assert.Throws<ArgumentException>(() => DataSampling.UnionLogicTimeSeries(
             ts1: _simpleSensor, ts2: _oneDataPoint));
     }
-    
+
     [Fact]
     public void TestUnionLogicTimeSeries2()
     {
         // as the time series with one datapoint is configured as step, we can extrapolate and a feasible union is found
         // 1) IsStep: true  { x  o  o  o  o  o  ... }
         // 2) IsStep: false       { x  x  x  x  ... }
-        
+
         // Call Method
         TimeSeriesData unionTs = DataSampling.UnionLogicTimeSeries(ts1: _simpleSensor, ts2: _oneDataPointStep);
-        
+
         // Expected
         TimeSeriesData expectedTs = new(
             time: new long[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 },
@@ -95,13 +97,13 @@ public class DataSamplingTest
             Assert.Equal(expectedTs.Data[i], unionTs.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestUnionLogicTimeSeries3()
     {
         // Call Method
         TimeSeriesData unionTs = DataSampling.UnionLogicTimeSeries(ts1: _simpleSensor, ts2: _twoDataPoints);
-        
+
         // Expected
         TimeSeriesData expectedTs = new(
             time: new long[] { 2, 3, 4, 5, 6, 7, 8, 9, 10 },
@@ -115,13 +117,13 @@ public class DataSamplingTest
             Assert.Equal(expectedTs.Data[i], unionTs.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestUnionLogicTimeSeries4()
     {
         // Call Method
         TimeSeriesData unionTs = DataSampling.UnionLogicTimeSeries(ts1: _simpleSensor, ts2: _twoDataPointsStep);
-        
+
         // Expected
         TimeSeriesData expectedTs = new(
             time: new long[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 },
@@ -150,7 +152,7 @@ public class DataSamplingTest
 
         if (sampleTime != null) Assert.Equal(expectedSampleTime, sampleTime.Value);
     }
-    
+
     [Fact]
     public void TestLogicalCheck()
     {
@@ -164,17 +166,17 @@ public class DataSamplingTest
             Assert.Equal(_logicalCheck1.Data[i], logicResult.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestLogicalCheckExtrapolate()
     {
         // input data
         TimeSeriesData input = new TimeSeriesData(
-            time: new long[] {1, 2, 3}, data: new double[] {5, 0, 3}, granularity: 1, isStep: true);
+            time: new long[] { 1, 2, 3 }, data: new double[] { 5, 0, 3 }, granularity: 1, isStep: true);
 
         TimeSeriesData output = new TimeSeriesData(
-            time: new long[] {1, 2, 3, 4, 5}, data: new double[] {1, 0, 1, 1, 1}, granularity: 1, isStep: true);
-        
+            time: new long[] { 1, 2, 3, 4, 5 }, data: new double[] { 1, 0, 1, 1, 1 }, granularity: 1, isStep: true);
+
         // Call Method
         TimeSeriesData logicResult = DataSampling.LogicalCheck(
             ts: input, threshold: 2.5, check: DataSampling.LogicOperator.Ge, endTime: 5);
@@ -185,17 +187,17 @@ public class DataSamplingTest
             Assert.Equal(output.Data[i], logicResult.Data[i]);
         }
     }
-    
+
     [Fact]
     public void TestLogicalCheckTryExtrapolate()
     {
         // input data
         TimeSeriesData input = new TimeSeriesData(
-            time: new long[] {1, 2, 3}, data: new double[] {5, 0, 3}, granularity: 1, isStep: false);
+            time: new long[] { 1, 2, 3 }, data: new double[] { 5, 0, 3 }, granularity: 1, isStep: false);
 
         TimeSeriesData output = new TimeSeriesData(
-            time: new long[] {1, 2, 3}, data: new double[] {1, 0, 1}, granularity: 1, isStep: false);
-        
+            time: new long[] { 1, 2, 3 }, data: new double[] { 1, 0, 1 }, granularity: 1, isStep: false);
+
         // Call Method
         TimeSeriesData logicResult = DataSampling.LogicalCheck(
             ts: input, threshold: 2.5, check: DataSampling.LogicOperator.Ge, endTime: 5);

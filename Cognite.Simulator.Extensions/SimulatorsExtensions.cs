@@ -1,22 +1,26 @@
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using CogniteSdk.Alpha;
-using Cognite.Extractor.Common;
-using CogniteSdk;
-using CogniteSdk.Resources.Alpha;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Cognite.Extensions;
+using Cognite.Extractor.Common;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+using CogniteSdk.Resources.Alpha;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cognite.Simulator.Extensions
 {
     /// <summary>
     /// Class containing extensions to the CDF Simulators resource with utility methods
     /// </summary>
-    public static class SimulatorsExtensions {
+    public static class SimulatorsExtensions
+    {
         private static ILogger _logger = new NullLogger<Client>();
 
         /// <summary>
@@ -47,7 +51,8 @@ namespace Cognite.Simulator.Extensions
             _logger.LogDebug("Updating logs. Number of log entries: {Number}. Number of chunks: {Chunks}", items.Count, logsByChunks.Count);
             var generators = logsByChunks
                 .Select<IEnumerable<SimulatorLogDataEntry>, Func<Task>>(
-                (chunk, idx) => async () => {
+                (chunk, idx) => async () =>
+                {
 
                     var item = new SimulatorLogUpdateItem(id)
                     {
@@ -64,7 +69,8 @@ namespace Cognite.Simulator.Extensions
             int taskNum = 0;
             await generators.RunThrottled(
                 1,
-                (_) => {
+                (_) =>
+                {
                     if (logsByChunks.Count > 1)
                         _logger.LogDebug("{MethodName} completed {NumDone}/{TotalNum} tasks",
                             nameof(UpdateLogsBatch), ++taskNum, logsByChunks.Count);
@@ -72,7 +78,7 @@ namespace Cognite.Simulator.Extensions
                 CancellationToken.None
             ).ConfigureAwait(false);
         }
-    
+
         /// <summary>
         /// Updates the simulation model revision status and status message in CDF.
         /// </summary>
@@ -91,9 +97,11 @@ namespace Cognite.Simulator.Extensions
         )
         {
             var modelRevisionPatch =
-                new SimulatorModelRevisionUpdateItem(id) {
+                new SimulatorModelRevisionUpdateItem(id)
+                {
                     Update =
-                        new SimulatorModelRevisionUpdate {
+                        new SimulatorModelRevisionUpdate
+                        {
                             Status = new Update<SimulatorModelRevisionStatus>(status),
                         }
                 };
@@ -110,6 +118,41 @@ namespace Cognite.Simulator.Extensions
 
             return res.FirstOrDefault();
         }
+
+        /// <summary>
+        /// Updates the simulation model revision data (general information, flowsheet) in CDF.
+        /// </summary>
+        /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
+        /// <param name="modelRevisionExternalId">The externalId of the simulator model revision.</param>
+        /// <param name="flowsheet">Flowsheet.</param>
+        /// <param name="info">Model revision information.</param>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>The updated SimulatorModelRevisionData instance.</returns>
+        public static async Task<SimulatorModelRevisionData> UpdateSimulatorModelRevisionData(
+            this SimulatorsResource cdfSimulators,
+            string modelRevisionExternalId,
+            SimulatorModelRevisionDataFlowsheet flowsheet = null,
+            Dictionary<string, string> info = null,
+            CancellationToken token = default
+        )
+        {
+            var modelRevisionData = new SimulatorModelRevisionDataUpdateItem
+            {
+                ModelRevisionExternalId = modelRevisionExternalId,
+                Update = new SimulatorModelRevisionDataUpdate
+                {
+                    Flowsheet = new Update<SimulatorModelRevisionDataFlowsheet>(flowsheet),
+                    Info = new Update<Dictionary<string, string>>(info)
+                }
+            };
+
+            var res = await cdfSimulators.UpdateSimulatorModelRevisionDataAsync(
+                new List<SimulatorModelRevisionDataUpdateItem> { modelRevisionData },
+                token).ConfigureAwait(false);
+
+            return res.Items.FirstOrDefault();
+        }
+
 
     }
 }

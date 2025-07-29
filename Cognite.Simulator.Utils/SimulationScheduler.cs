@@ -1,12 +1,19 @@
-﻿using Cognite.Extractor.Utils;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Extractor.Common;
+using Cognite.Extractor.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
+
 using NCrontab;
+
 
 namespace Cognite.Simulator.Utils
 {
@@ -21,7 +28,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         Task Delay(TimeSpan delay, CancellationToken token);
     }
-    
+
     /// <summary>
     /// Default implementation of the time manager.
     /// </summary>
@@ -44,7 +51,7 @@ namespace Cognite.Simulator.Utils
     {
         /// <summary>
         /// The schedule for the job.
-        /// </summary>        
+        /// </summary>
         public CrontabSchedule Schedule { get; set; }
 
         /// <summary>
@@ -83,7 +90,7 @@ namespace Cognite.Simulator.Utils
     /// Also, at some point scheduling the creation of CDF simulation runs should be done by a cloud service, instead
     /// of doing it in the connector.
     /// </summary>
-    public class SimulationSchedulerBase<V> 
+    public class SimulationSchedulerBase<V>
         where V : SimulatorRoutineRevision
     {
         private readonly ConnectorConfig _config;
@@ -91,27 +98,23 @@ namespace Cognite.Simulator.Utils
         private readonly ILogger _logger;
         private readonly CogniteDestination _cdf;
         private readonly ITimeManager _timeManager;
-        private readonly IEnumerable<SimulatorConfig> _simulators;
         /// <summary>
         /// Creates a new instance of a simulation scheduler
         /// </summary>
         /// <param name="config">Connector configuration</param>
         /// <param name="configLib">Simulation configuration library</param>
         /// <param name="logger">Logger</param>
-        /// <param name="simulators">List of simulators</param>
         /// <param name="timeManager">Time manager. Not required, will default to <see cref="TimeManager"/></param>
         /// <param name="cdf">CDF client</param>
         public SimulationSchedulerBase(
             ConnectorConfig config,
             IRoutineProvider<V> configLib,
             ILogger logger,
-            IEnumerable<SimulatorConfig> simulators,
             CogniteDestination cdf,
             ITimeManager timeManager = null)
         {
             _configLib = configLib;
             _logger = logger;
-            _simulators = simulators;
             _cdf = cdf;
             _config = config;
             _timeManager = timeManager ?? new TimeManager();
@@ -122,14 +125,14 @@ namespace Cognite.Simulator.Utils
         /// check the schedule and create simulation runs in CDF accordingly
         /// </summary>
         /// <param name="token">Cancellation token</param>
-        public async Task Run(CancellationToken token) {
+        public async Task Run(CancellationToken token)
+        {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
-            Dictionary<string,ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
+            Dictionary<string, ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
-            
-            var simulatorsDictionary = _simulators?.ToDictionary(s => s.Name, s => s.DataSetId);
-            var connectorIdList = CommonUtils.ConnectorsToExternalIds(simulatorsDictionary, _config.GetConnectorName());
-        
+
+            var connectorExternalId = _config.GetConnectorName();
+
             await Task.Run(async () =>
             {
                 while (!token.IsCancellationRequested)
@@ -138,12 +141,11 @@ namespace Cognite.Simulator.Utils
                     var routineRevisions = _configLib.RoutineRevisions.Values
                         .GroupBy(c => c.RoutineExternalId)
                         .Select(x => x.OrderByDescending(c => c.CreatedTime).First());
-                    
+
                     foreach (var routineRev in routineRevisions)
                     {
                         // Check if the configuration has a schedule for this connector.
-                        if (!connectorIdList.Contains(routineRev.SimulatorIntegrationExternalId) ||
-                            routineRev.Configuration.Schedule == null )
+                        if (connectorExternalId != routineRev.SimulatorIntegrationExternalId || routineRev.Configuration.Schedule == null)
                         {
                             continue;
                         }
@@ -154,18 +156,19 @@ namespace Cognite.Simulator.Utils
                         {
                             if (routineRev.CreatedTime > job.CreatedTime && job.TokenSource != null && !job.TokenSource.Token.IsCancellationRequested)
                             {
-                                _logger.LogDebug($"Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.");
+                                _logger.LogDebug("Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.", routineRev.ExternalId);
                                 job.TokenSource.Cancel();
                                 scheduledJobs.Remove(routineRev.RoutineExternalId);
                             }
                         }
 
-                        if (!scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var existingJob)) {
+                        if (!scheduledJobs.TryGetValue(routineRev.RoutineExternalId, out var existingJob))
+                        {
                             try
                             {
                                 if (routineRev.Configuration.Schedule.Enabled == false)
                                 {
-                                    continue;   
+                                    continue;
                                 }
                                 var schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
                                 var newJob = new ScheduledJob<V>
@@ -175,12 +178,12 @@ namespace Cognite.Simulator.Utils
                                     CreatedTime = routineRev.CreatedTime,
                                     RoutineRevision = routineRev,
                                 };
-                                _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
+                                _logger.LogDebug("Created new job for schedule: {cronExpression} with id {routineExtId}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
                                 scheduledJobs.Add(routineRev.RoutineExternalId, newJob);
                             }
                             catch (Exception e)
                             {
-                               _logger.LogError($"Exception while scheduling job for RoutineRevision : {job.RoutineRevision.ExternalId} Error: {e.Message}. Skipping.");
+                                _logger.LogError("Exception while scheduling job for RoutineRevision : {jobRoutineRevisionExternalId} Error: {errorMessage}. Skipping.", job.RoutineRevision.ExternalId, e.Message);
                             }
                         }
                     }
@@ -199,11 +202,35 @@ namespace Cognite.Simulator.Utils
                     if (tasks.Count != 0)
                     {
                         _ = Task.WhenAll(tasks);
-                    } 
+                    }
                     // Wait for interval seconds before checking again
-                    await Task.Delay(interval).ConfigureAwait(false);
+                    await Task.Delay(interval, token).ConfigureAwait(false);
                 }
             }, token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the next job delay and run time in milliseconds.
+        /// Delay is the actual time until the next job should run.
+        /// Run time is the "official" time job is considered to run at (used for inputs data sampling, etc).
+        /// Run time is floored to the nearest minute.
+        /// </summary>
+        public static (TimeSpan, long) GetNextJobDelayAndRunTimeMs(CrontabSchedule schedule)
+        {
+            if (schedule == null)
+            {
+                throw new ArgumentNullException(nameof(schedule));
+            }
+            var now = DateTime.UtcNow;
+            var nextOccurrence = schedule.GetNextOccurrence(now);
+            var delay = nextOccurrence - now;
+
+            // Get the next occurrence time. Since cron expressions can go as far as minutes, we floor it to the
+            // nearest minute, just to make sure the cron is respected
+            var nextOccurrenceMs = nextOccurrence.ToUnixTimeMilliseconds();
+            var nextJobRunTimeMs = nextOccurrenceMs - (nextOccurrenceMs % 60000);
+
+            return (delay, nextJobRunTimeMs);
         }
 
         /// <summary>
@@ -211,7 +238,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
         /// <param name="mainToken">The cancellation token.</param>
-        public async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
+        private async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
         {
             if (job == null)
             {
@@ -221,18 +248,18 @@ namespace Cognite.Simulator.Utils
             while (!mainToken.IsCancellationRequested || !job.TokenSource.Token.IsCancellationRequested)
             {
                 var routineRev = job.RoutineRevision;
-                var nextOccurrence = job.Schedule.GetNextOccurrence(DateTime.Now);
-                var delay = nextOccurrence - DateTime.Now;
+                var (delay, nextJobTimeMs) = GetNextJobDelayAndRunTimeMs(job.Schedule);
+
                 if (delay.TotalMilliseconds > 0)
                 {
                     try
                     {
                         await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.Now} for routine revision: {routineRev.ExternalId}");
+                        _logger.LogDebug("Job executed at: {DateTime.UtcNow} for routine revision: {routineRevExternalId}", DateTime.UtcNow, routineRev.ExternalId);
                     }
                     catch (TaskCanceledException)
                     {
-                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
+                        _logger.LogDebug("Job cancelled for routine revision: {routineRevExternalId} breaking out of loop", routineRev.ExternalId);
                         break;
                     }
                     bool revisionExists = await _configLib
@@ -240,20 +267,46 @@ namespace Cognite.Simulator.Utils
                         .ConfigureAwait(false);
                     if (!revisionExists)
                     {
-                        _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
+                        _logger.LogDebug("Job not found for routine: {routineRevRoutineExternalId} breaking out of loop", routineRev.RoutineExternalId);
                         break;
                     }
+
                     var runEvent = new SimulationRunCreate
-                        {
-                            RoutineExternalId = routineRev.RoutineExternalId,
-                            RunType = SimulationRunType.scheduled
-                        };
+                    {
+                        RoutineExternalId = routineRev.RoutineExternalId,
+                        RunType = SimulationRunType.scheduled,
+                        RunTime = nextJobTimeMs,
+                    };
                     await _cdf.CogniteClient.Alpha.Simulators.CreateSimulationRunsAsync(
                         items: new List<SimulationRunCreate> { runEvent },
                         token: job.TokenSource.Token
                     ).ConfigureAwait(false);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Default implementation of the simulation scheduler base class.
+    /// </summary>
+    /// <typeparam name="TAutomationConfig">Type of the automation configuration</typeparam>
+    public class DefaultSimulationScheduler<TAutomationConfig> : SimulationSchedulerBase<SimulatorRoutineRevision>
+    where TAutomationConfig : AutomationConfig, new()
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DefaultSimulationScheduler{TAutomationConfig}"/> class.
+        /// </summary>
+        /// <param name="config">The default configuration.</param>
+        /// <param name="configLib">The default routine library.</param>
+        /// <param name="logger">The logger instance.</param>
+        /// <param name="cdf">The Cognite destination client.</param>
+        public DefaultSimulationScheduler(
+            DefaultConfig<TAutomationConfig> config,
+            DefaultRoutineLibrary<TAutomationConfig> configLib,
+            ILogger<DefaultSimulationScheduler<TAutomationConfig>> logger,
+            CogniteDestination cdf)
+            : base(config?.Connector, configLib, logger, cdf)
+        {
         }
     }
 }

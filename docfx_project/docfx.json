@@ -1,0 +1,46 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "..",
+          "files": [
+            "Cognite.Simulator.Extensions/Cognite.Simulator.Extensions.csproj",
+            "Cognite.Simulator.Utils/Cognite.Simulator.Utils.csproj"
+          ]
+        }
+      ],
+      "dest": "api"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "dotnet-simulator-utils",
+      "_appTitle": "dotnet-simulator-utils",
+      "_enableSearch": true,
+      "pdf": false
+    }
+  }
+}

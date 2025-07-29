@@ -1,15 +1,19 @@
-﻿using Cognite.DataProcessing;
-using Cognite.Extractor.Common;
-using Cognite.Simulator.Extensions;
-using CogniteSdk;
-using CogniteSdk.Alpha;
-using CogniteSdk.Resources;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.DataProcessing;
+using Cognite.Extractor.Common;
+using Cognite.Simulator.Extensions;
+
+using CogniteSdk;
+using CogniteSdk.Alpha;
+using CogniteSdk.Resources;
+
 using TimeRange = CogniteSdk.TimeRange;
 
 namespace Cognite.Simulator.Utils
@@ -19,6 +23,34 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class CommonUtils
     {
+        /// <summary>
+        /// Returns the assembly version
+        /// </summary>
+        /// <returns></returns>
+        public static string GetAssemblyVersion()
+        {
+            return Extractor.Metrics.Version.GetVersion(
+                    Assembly.GetExecutingAssembly(),
+                    "0.0.1");
+        }
+
+
+        /// <summary>
+        /// Format a duration of a TimeSpan in a human readable format
+        /// </summary>
+        /// <param name="duration">Duration to format</param>
+        /// <returns>Formatted duration</returns>
+        public static string FormatDuration(TimeSpan duration)
+        {
+            if (duration.TotalDays >= 1)
+                return $"{duration.TotalDays:N1} days";
+            if (duration.TotalHours >= 1)
+                return $"{duration.TotalHours:N1} hours";
+            if (duration.TotalMinutes >= 1)
+                return $"{duration.TotalMinutes:N1} minutes";
+            return $"{duration.TotalSeconds:N1} seconds";
+        }
+
         /// <summary>
         /// Run all of the tasks in this enumeration. If any fail or is canceled, cancel the
         /// remaining tasks and return. The first found exception is thrown
@@ -33,7 +65,7 @@ namespace Cognite.Simulator.Utils
             }
             Exception ex = null;
             var taskList = tasks.ToList();
-            while (taskList.Any())
+            while (taskList.Count != 0)
             {
                 // Wait for any of the tasks to finish or fail
                 var task = await Task.WhenAny(taskList).ConfigureAwait(false);
@@ -53,31 +85,6 @@ namespace Cognite.Simulator.Utils
                 throw ex;
             }
         }
-
-        /// <summary>
-        /// Function to convert list of connectors to externalIds
-        /// </summary>
-        /// <param name="simulators">object of simulator connectors</param>
-        /// <param name="baseConnectorName">the base connector name to which prefix will be appended</param>
-        public static List<string> ConnectorsToExternalIds(Dictionary<string, long> simulators, string baseConnectorName)
-        {
-            var connectorIdList = new List<string>();
-            if (simulators != null) {
-                foreach (var simulator in simulators.Select((value, i) => new { i, value }))
-                {
-                    var value = simulator.value;
-                    if (simulator.i > 0){
-                        connectorIdList.Add($"{value.Key}-{baseConnectorName}");
-                    } else {
-                        connectorIdList.Add(baseConnectorName);
-                    }
-                }
-            } else {
-                connectorIdList.Add(baseConnectorName);
-            }
-            return connectorIdList;
-        }
-        
     }
 
     /// <summary>
@@ -85,9 +92,9 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public static class SimulationUtils
     {
-
         /// <summary>
-        /// Run logical check and steady state detection based on a simulation configuration. 
+        /// Run logical check and steady state detection based on a simulation configuration.
+        /// Runs only if data sampling is enabled
         /// </summary>
         /// <param name="dataPoints">CDF data points resource</param>
         /// <param name="config">Simulation configuration</param>
@@ -100,44 +107,60 @@ namespace Cognite.Simulator.Utils
             DateTime validationEnd,
             CancellationToken token)
         {
-            if (config == null || config.DataSampling == null)
-            {
-                throw new SimulationException("Data sampling configuration is missing");
-            }
-            var validationStart = validationEnd - TimeSpan.FromMinutes(config.DataSampling.ValidationWindow);
-            var validationRange = new TimeRange
-            {
-                Min = validationStart.ToUnixTimeMilliseconds(),
-                Max = validationEnd.ToUnixTimeMilliseconds()
-            };
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
+            if (config.DataSampling == null)
+                throw new ArgumentException("DataSampling configuration is missing", nameof(config));
+            if (config.DataSampling.SamplingWindow == null)
+                throw new ArgumentException("Sampling window is missing", nameof(config));
+            if (config.DataSampling.Granularity == null)
+                throw new ArgumentException("Granularity is missing", nameof(config));
 
-            // Check for sensor status, if enabled
-            TimeSeriesData validationDps = null;
+            var validationWindow = config.DataSampling.ValidationWindow;
             var logicalCheck = config.LogicalCheck.FirstOrDefault();
-            if (logicalCheck != null && logicalCheck.Enabled)
+            var logicalCheckEnabled = logicalCheck != null && logicalCheck.Enabled;
+            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
+            var steadyStateDetectionEnabled = steadyStateDetection != null && steadyStateDetection.Enabled;
+
+            if ((logicalCheckEnabled || steadyStateDetectionEnabled) && validationWindow == null)
+            {
+                // Validation window only required if logical check or steady state detection is enabled
+                // This is already validated on the API side
+                throw new SimulationException("Validation window is required for logical check and steady state detection");
+            }
+
+            var validationStart = validationEnd - TimeSpan.FromMinutes(validationWindow ?? 0);
+            var validationConfiguration = new SamplingConfiguration(
+                end: validationEnd.ToUnixTimeMilliseconds(),
+                start: validationStart.ToUnixTimeMilliseconds()
+            );
+
+            // Perform logical check, if enabled
+            TimeSeriesData validationDps = null;
+            if (logicalCheckEnabled)
             {
                 var dps = await dataPoints.GetSample(
                     logicalCheck.TimeseriesExternalId,
                     logicalCheck.Aggregate.ToDataPointAggregate(),
-                    config.DataSampling.Granularity,
-                    validationRange,
+                    config.DataSampling.Granularity.Value,
+                    validationConfiguration,
                     token).ConfigureAwait(false);
                 validationDps = dps.ToTimeSeriesData(
-                    config.DataSampling.Granularity,
+                    config.DataSampling.Granularity.Value,
                     logicalCheck.Aggregate.ToDataPointAggregate());
-                validationDps = LogicalCheckInternal(validationDps, validationRange, logicalCheck, config.DataSampling);
+                validationDps = LogicalCheckInternal(validationDps, validationConfiguration, logicalCheck);
             }
 
             // Check for steady state, if enabled
             TimeSeriesData ssdMap = null;
-            var steadyStateDetection = config.SteadyStateDetection.FirstOrDefault();
-            if (steadyStateDetection != null && steadyStateDetection.Enabled)
+
+            if (steadyStateDetectionEnabled)
             {
                 var ssDps = await dataPoints.GetSample(
                     steadyStateDetection.TimeseriesExternalId,
                     steadyStateDetection.Aggregate.ToDataPointAggregate(),
-                    config.DataSampling.Granularity,
-                    validationRange,
+                    config.DataSampling.Granularity.Value,
+                    validationConfiguration,
                     token).ConfigureAwait(false);
 
                 if (!steadyStateDetection.MinSectionSize.HasValue || !steadyStateDetection.VarThreshold.HasValue || !steadyStateDetection.SlopeThreshold.HasValue)
@@ -147,7 +170,7 @@ namespace Cognite.Simulator.Utils
 
                 ssdMap = Detectors.SteadyStateDetector(
                     ssDps.ToTimeSeriesData(
-                        config.DataSampling.Granularity,
+                        config.DataSampling.Granularity.Value,
                         steadyStateDetection.Aggregate.ToDataPointAggregate()),
                     steadyStateDetection.MinSectionSize.Value,
                     steadyStateDetection.VarThreshold.Value,
@@ -170,8 +193,8 @@ namespace Cognite.Simulator.Utils
             }
 
             // Find sampling start/end
-            var samplingEnd = validationRange.Max;
-            var samplingWindowMs = (long)TimeSpan.FromMinutes(config.DataSampling.SamplingWindow).TotalMilliseconds;
+            long? samplingEnd = validationConfiguration.End;
+            var samplingWindowMs = (long)TimeSpan.FromMinutes(config.DataSampling.SamplingWindow.Value).TotalMilliseconds;
             if (feasibleTimestamps != null)
             {
                 samplingEnd = DataSampling.FindSamplingTime(feasibleTimestamps, samplingWindowMs);
@@ -181,7 +204,7 @@ namespace Cognite.Simulator.Utils
                 }
             }
 
-            var samplingStart = samplingEnd - samplingWindowMs;
+            var samplingStart = samplingEnd.Value - samplingWindowMs;
             return new TimeRange
             {
                 Min = samplingStart,
@@ -189,7 +212,10 @@ namespace Cognite.Simulator.Utils
             };
         }
 
-        private static TimeSeriesData LogicalCheckInternal(TimeSeriesData ts, TimeRange validationRange, SimulatorRoutineRevisionLogicalCheck lcConfig, SimulatorRoutineRevisionDataSampling sampling)
+        private static TimeSeriesData LogicalCheckInternal(
+            TimeSeriesData ts,
+            SamplingConfiguration samplingConfiguration,
+            SimulatorRoutineRevisionLogicalCheck lcConfig)
         {
             if (!Enum.TryParse(lcConfig.Operator, true, out DataSampling.LogicOperator op))
             {
@@ -200,7 +226,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentException("Logical check value is missing", nameof(lcConfig));
             }
 
-            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, validationRange.Max);
+            return DataSampling.LogicalCheck(ts, lcConfig.Value.Value, op, samplingConfiguration.End);
         }
 
         /// <summary>
@@ -219,9 +245,82 @@ namespace Cognite.Simulator.Utils
             return new TimeSeriesData(
                 dataPoints.Timestamps,
                 dataPoints.Values,
-                granularity * 60_000,
+                (int)granularity * 60_000,
                 aggreagate == Extensions.DataPointAggregate.StepInterpolation);
         }
 
+        /// <summary>
+        /// Load the input time series data point for the given input configuration.
+        /// </summary>
+        public static async Task<SimulatorValueItem> LoadTimeseriesSimulationInput(
+            this Client _cdf,
+            SimulatorRoutineRevisionInput inputTs,
+            SimulatorRoutineRevisionConfiguration routineConfiguration,
+            SamplingConfiguration samplingConfiguration,
+            CancellationToken token)
+        {
+            if (inputTs == null)
+            {
+                throw new ArgumentNullException(nameof(inputTs));
+            }
+            if (routineConfiguration == null)
+            {
+                throw new ArgumentNullException(nameof(routineConfiguration));
+            }
+            if (samplingConfiguration == null)
+            {
+                throw new ArgumentNullException(nameof(samplingConfiguration));
+            }
+            if (_cdf == null)
+            {
+                throw new ArgumentNullException(nameof(_cdf));
+            }
+
+            double sampledValue;
+
+            if (routineConfiguration.DataSampling.Enabled)
+            {
+                if (routineConfiguration.DataSampling.Granularity == null)
+                {
+                    throw new ArgumentException("Granularity is missing in the configuration", nameof(routineConfiguration));
+                }
+                var dps = await _cdf.DataPoints.GetSample(
+                    inputTs.SourceExternalId,
+                    inputTs.Aggregate.ToDataPointAggregate(),
+                    routineConfiguration.DataSampling.Granularity.Value,
+                    samplingConfiguration,
+                    token).ConfigureAwait(false);
+                var inputDps = dps.ToTimeSeriesData(
+                    routineConfiguration.DataSampling.Granularity.Value,
+                    inputTs.Aggregate.ToDataPointAggregate());
+
+                if (inputDps.Count == 0)
+                {
+                    throw new SimulationException($"Could not find data points in input timeseries {inputTs.SourceExternalId}");
+                }
+
+                // This assumes the unit specified in the configuration is the same as the time series unit
+                // No unit conversion is made
+                sampledValue = inputDps.GetAverage();
+            }
+            else
+            {
+                var dp = await _cdf.DataPoints.GetLatestValue(inputTs.SourceExternalId, samplingConfiguration, token).ConfigureAwait(false);
+                sampledValue = dp.Value;
+            }
+
+            return new SimulatorValueItem()
+            {
+                Value = new SimulatorValue.Double(sampledValue),
+                Unit = inputTs.Unit != null ? new SimulatorValueUnit()
+                {
+                    Name = inputTs.Unit.Name
+                } : null,
+                Overridden = false,
+                ReferenceId = inputTs.ReferenceId,
+                TimeseriesExternalId = inputTs.SaveTimeseriesExternalId,
+                ValueType = SimulatorValueType.DOUBLE,
+            };
+        }
     }
 }

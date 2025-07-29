@@ -1,31 +1,18 @@
 using System;
 
-using Cognite.Simulator.Extensions;
 using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Extensions;
 
 
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
     /// This base class represents the state of a model file
+    /// TODO: See if we can remove FileState completely and move all the variables into this class
+    /// Jira: https://cognitedata.atlassian.net/browse/POFSP-558
     /// </summary>
     public abstract class ModelStateBase : FileState
     {
-        private int _version;
-        
-        /// <summary>
-        /// Model version
-        /// </summary>
-        public int Version
-        {
-            get => _version;
-            set
-            {
-                if (value == _version) return;
-                LastTimeModified = DateTime.UtcNow;
-                _version = value;
-            }
-        }
 
         /// <summary>
         /// Information about model parsing
@@ -36,7 +23,7 @@ namespace Cognite.Simulator.Utils
         /// Indicates if information has been extracted from the model file
         /// </summary>
         public abstract bool IsExtracted { get; }
-        
+
         /// <summary>
         /// Indicates if the simulator can read the model file and
         /// its data
@@ -44,10 +31,9 @@ namespace Cognite.Simulator.Utils
         public bool CanRead { get; set; } = true;
 
         /// <summary>
-        /// Creates a new model file state with the provided id
+        /// Creates a new model file state instance
         /// </summary>
-        /// <param name="id"></param>
-        public ModelStateBase(string id) : base(id)
+        public ModelStateBase() : base()
         {
         }
 
@@ -77,30 +63,33 @@ namespace Cognite.Simulator.Utils
         public override void Init(FileStatePoco poco)
         {
             base.Init(poco);
-            if (poco is ModelStateBasePoco mPoco)
-            {
-                _version = mPoco.Version;
-            }
         }
+
         /// <summary>
-        /// Get the data object with the model state properties to be persisted by
-        /// the state store
+        /// Copies matching properties from the source object to the target object.
+        /// Only properties with the same name and type are copied.
         /// </summary>
-        /// <returns>File data object</returns>
-        public override FileStatePoco GetPoco()
+        public static TTarget SyncProperties<TSource, TTarget>(TSource source, TTarget target) where TSource : class where TTarget : class
         {
-            return new ModelStateBasePoco
+            foreach (var sourceProperty in typeof(TSource).GetProperties())
             {
-                Id = Id,
-                ModelExternalId = ModelExternalId,
-                Source = Source,
-                DataSetId = DataSetId,
-                FilePath = FilePath,
-                CreatedTime = CreatedTime,
-                CdfId = CdfId,
-                Version = Version,
-                IsInDirectory = IsInDirectory
-            };
+                if (sourceProperty.CanWrite)
+                {
+                    try
+                    {
+                        var targetProperty = typeof(TTarget).GetProperty(sourceProperty.Name);
+                        if (targetProperty != null && targetProperty.CanWrite && targetProperty.PropertyType == sourceProperty.PropertyType)
+                        {
+                            targetProperty.SetValue(target, sourceProperty.GetValue(source));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error setting property {sourceProperty.Name}: {ex.Message}");
+                    }
+                }
+            }
+            return target;
         }
     }
 
@@ -110,10 +99,6 @@ namespace Cognite.Simulator.Utils
     /// </summary>
     public class ModelStateBasePoco : FileStatePoco
     {
-        /// <summary>
-        /// Model version
-        /// </summary>
-        [StateStoreProperty("version")]
-        public int Version { get; set; }
+
     }
 }

@@ -1,11 +1,16 @@
-using Cognite.Simulator.Utils;
-using CogniteSdk.Alpha;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+
+using Cognite.Simulator.Utils;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cognite.Simulator.Utils
 {
@@ -21,14 +26,18 @@ namespace Cognite.Simulator.Utils
         private readonly Dictionary<string, SimulatorValueItem> _inputData;
         private readonly Dictionary<string, SimulatorValueItem> _simulationResults;
 
+        private readonly ILogger _logger;
+
         /// <summary>
         /// Creates a new simulation routine with the given routine revision
         /// </summary>
         /// <param name="routineRevision">Routine revision object</param>
         /// <param name="inputData">Data to use as input</param>
+        /// <param name="logger">Logger instance</param>
         public RoutineImplementationBase(
             SimulatorRoutineRevision routineRevision,
-            Dictionary<string, SimulatorValueItem> inputData)
+            Dictionary<string, SimulatorValueItem> inputData,
+            ILogger logger)
         {
             if (routineRevision == null)
             {
@@ -38,6 +47,7 @@ namespace Cognite.Simulator.Utils
             _config = routineRevision.Configuration;
             _simulationResults = new Dictionary<string, SimulatorValueItem>();
             _inputData = inputData;
+            _logger = logger;
         }
 
         /// <summary>
@@ -46,10 +56,12 @@ namespace Cognite.Simulator.Utils
         /// <param name="inputConfig">Input configuration</param>
         /// <param name="input">Input value</param>
         /// <param name="arguments">Extra arguments</param>
+        /// <param name="token">Cancellation token</param>
         public abstract void SetInput(
             SimulatorRoutineRevisionInput inputConfig,
             SimulatorValueItem input,
-            Dictionary<string, string> arguments);
+            Dictionary<string, string> arguments,
+            CancellationToken token);
 
         /// <summary>
         /// Gets a numeric simulation result that should be saved
@@ -57,24 +69,29 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="outputConfig">Output time series configuration</param>
         /// <param name="arguments">Extra arguments</param>
+        /// <param name="token">Cancellation token</param>
         /// <returns></returns>
         public abstract SimulatorValueItem GetOutput(
             SimulatorRoutineRevisionOutput outputConfig,
-            Dictionary<string, string> arguments);
+            Dictionary<string, string> arguments,
+            CancellationToken token);
 
         /// <summary>
         /// Invoke the given command on the simulator using the provided arguments.
         /// </summary>
         /// <param name="arguments">Arguments</param>
-        public abstract void RunCommand(Dictionary<string, string> arguments);
+        /// <param name="token">Cancellation token</param>
+        public abstract void RunCommand(Dictionary<string, string> arguments, CancellationToken token);
 
         /// <summary>
         /// Perform the simulation routine and collect the results
         /// </summary>
+        /// <param name="token">Cancellation token</param>
         /// <returns>Simulation results</returns>
         /// <exception cref="SimulationException">When the simulation configuration is invalid</exception>
         /// <exception cref="SimulationRoutineException">When the routine execution fails</exception>
-        public virtual Dictionary<string, SimulatorValueItem> PerformSimulation()
+        /// <exception cref="OperationCanceledException">When the cancellation token is cancelled</exception>
+        public virtual Dictionary<string, SimulatorValueItem> PerformSimulation(CancellationToken token)
         {
             _simulationResults.Clear();
             if (_script == null || !_script.Any())
@@ -88,7 +105,7 @@ namespace Cognite.Simulator.Utils
             {
                 try
                 {
-                    ParseScriptStage(stage);
+                    ParseScriptStage(stage, token);
                 }
                 catch (SimulationRoutineException e)
                 {
@@ -99,7 +116,7 @@ namespace Cognite.Simulator.Utils
             return _simulationResults;
         }
 
-        private void ParseScriptStage(SimulatorRoutineRevisionScriptStage stage)
+        private void ParseScriptStage(SimulatorRoutineRevisionScriptStage stage, CancellationToken token)
         {
             var orderedSteps = stage.Steps.OrderBy(s => s.Order).ToList();
             foreach (var step in orderedSteps)
@@ -110,23 +127,23 @@ namespace Cognite.Simulator.Utils
                     {
                         case "Command":
                             {
-                                ParseCommand(step.Arguments);
+                                ParseCommand(step.Arguments, token);
                                 break;
                             }
                         case "Set":
                             {
-                                ParseSet(step.Arguments);
+                                ParseSet(step.Arguments, token);
                                 break;
                             }
                         case "Get":
                             {
-                                ParseGet(step.Arguments);
+                                ParseGet(step.Arguments, token);
                                 break;
                             }
                             throw new SimulationRoutineException($"Invalid stage step: {step.StepType}", stepNumber: step.Order);
-                    };
+                    }
                 }
-                catch (Exception e) when (e is SimulationException )
+                catch (Exception e) when (e is SimulationException)
                 {
                     throw new SimulationRoutineException(e.Message, stepNumber: step.Order);
                 }
@@ -137,13 +154,14 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        private void ParseCommand(Dictionary<string, string> arguments)
+        private void ParseCommand(Dictionary<string, string> arguments, CancellationToken token)
         {
+            _logger.LogDebug("Running command: {Command}", SimulatorLoggingUtils.FlattenDictionary(arguments));
             // Perform command
-            RunCommand(arguments);
+            RunCommand(arguments, token);
         }
 
-        private void ParseGet(Dictionary<string, string> arguments)
+        private void ParseGet(Dictionary<string, string> arguments, CancellationToken token)
         {
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
@@ -151,20 +169,22 @@ namespace Cognite.Simulator.Utils
             }
             var extraArgs = arguments.Where(s => s.Key != "referenceId")
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
-            
+
             var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
-            if (matchingOutputs.Any())
-                {
-                    var output = matchingOutputs.First();
-                    _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs);
-                }
+            if (matchingOutputs.Count != 0)
+            {
+                var output = matchingOutputs.First();
+                string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
+                _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
+                _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
+            }
             else
             {
                 throw new SimulationException($"Get error: Output with key {argRefId} not found");
             }
         }
 
-        private void ParseSet(Dictionary<string, string> arguments)
+        private void ParseSet(Dictionary<string, string> arguments, CancellationToken token)
         {
             if (!arguments.TryGetValue("referenceId", out string argRefId))
             {
@@ -174,9 +194,11 @@ namespace Cognite.Simulator.Utils
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
             var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();
-            if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
+            if (matchingInputs.Count != 0 && _inputData.TryGetValue(argRefId, out SimulatorValueItem value))
             {
-                SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs);
+                string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
+                _logger.LogDebug("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
+                SetInput(matchingInputs.First(), value, extraArgs, token);
             }
             else
             {

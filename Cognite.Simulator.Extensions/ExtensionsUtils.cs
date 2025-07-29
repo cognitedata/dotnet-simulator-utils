@@ -1,8 +1,9 @@
-﻿using Cognite.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+
+using Cognite.Extensions;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -37,7 +38,7 @@ namespace Cognite.Simulator.Extensions
             this Dictionary<string, string> dict,
             Dictionary<string, string> newEntries)
         {
-            if (newEntries != null && newEntries.Any())
+            if (newEntries != null && newEntries.Count > 0)
             {
                 foreach (var pair in newEntries)
                 {
@@ -64,7 +65,7 @@ namespace Cognite.Simulator.Extensions
             return metadata;
         }
 
-        internal static Dictionary<string, string> GetCommonMetadata(
+        private static Dictionary<string, string> GetCommonMetadata(
             this SimulatorModelInfo model,
             SimulatorDataType dataType)
         {
@@ -78,50 +79,73 @@ namespace Cognite.Simulator.Extensions
     }
 
     /// <summary>
-    /// Represents a time range used for sampling data points in a time series
+    /// Represents the configuration to sample data points in a time series
     /// </summary>
-    public class SamplingRange
+    public class SamplingConfiguration
     {
-        internal CogniteSdk.TimeRange TimeRange { get; }
-        
         /// <summary>
-        /// Midpoint between the start and end timestamps, in milliseconds
+        /// Time associated with the simulation, in milliseconds 
         /// </summary>
-        public long Midpoint { get; }
-        
+        public long SimulationTime { get; }
+
         /// <summary>
         /// Start of the sampling range, in milliseconds
         /// </summary>
-        public long? Start => TimeRange.Min;
-        
+        public long? Start { get; }
+
         /// <summary>
         /// End of the sampling range, in milliseconds
         /// </summary>
-        public long? End => TimeRange.Max;
+        public long End { get; }
 
         /// <summary>
-        /// Constructs a sampling range from a time range
+        /// Constructs a sampling configuration
         /// </summary>
-        /// <param name="timeRange">Time range</param>
-        /// <exception cref="ArgumentNullException">Thrown when the time range is null</exception>
-        public SamplingRange(CogniteSdk.TimeRange timeRange)
+        /// <param name="end">end time, in milliseconds</param>
+        /// <param name="start">start time, in milliseconds. Only required when data sampling is enabled.</param>
+        /// <param name="samplingPosition">Position of the simulation time relative to the sampling window. Only relevant when data sampling is enabled. Defaults to <see cref="SamplingPosition.Midpoint"/>.</param>
+        public SamplingConfiguration(
+            long end,
+            long? start = null,
+            SamplingPosition samplingPosition = SamplingPosition.Midpoint)
         {
-            if (timeRange == null)
+            End = end;
+            if (start.HasValue)
             {
-                throw new ArgumentNullException(nameof(timeRange));
+                Start = start;
+                if (samplingPosition == SamplingPosition.Start)
+                    SimulationTime = Start.Value;
+                else if (samplingPosition == SamplingPosition.Midpoint)
+                    SimulationTime = Start.Value + (End - Start.Value) / 2;
+                else if (samplingPosition == SamplingPosition.End)
+                    SimulationTime = End;
+                else
+                    throw new ArgumentException("Invalid sampling position");
             }
-            TimeRange = timeRange;
-            Midpoint = (long)(timeRange.Min + (timeRange.Max - timeRange.Min) / 2);
+            else
+            {
+                SimulationTime = end;
+            }
         }
+    }
 
+    /// <summary>
+    /// Defines the position of the simulation time relative to the sampling window
+    /// </summary>
+    public enum SamplingPosition
+    {
         /// <summary>
-        /// Implicitly constructs a sampling range from a time range
+        /// Simulation time is at the start of the sampling window
         /// </summary>
-        /// <param name="timeRange">Time range</param>
-        public static implicit operator SamplingRange(CogniteSdk.TimeRange timeRange)
-        {
-            return new SamplingRange(timeRange);
-        }
+        Start,
+        /// <summary>
+        /// Simulation time is at the midpoint of the sampling window
+        /// </summary>
+        Midpoint,
+        /// <summary>
+        /// Simulation time is at the end of the sampling window
+        /// </summary>
+        End
     }
 
     /// <summary>
@@ -137,7 +161,7 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// Create a new exception containing the provided <paramref name="errors"/> and <paramref name="message"/>
         /// </summary>
-        public CogniteException(string message, IEnumerable<CogniteError> errors)
+        protected CogniteException(string message, IEnumerable<CogniteError> errors)
             : base(message)
         {
             CogniteErrors = errors;
