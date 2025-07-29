@@ -103,6 +103,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
                     Assert.True(modelInState.Processed); // Files get processed as soon as they are downloaded
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
 
@@ -125,6 +126,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.EndsWith($"/files/{revision.FileId}/{revision.FileId}.out", modelInState.FilePath);
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
                 var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
@@ -219,6 +222,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                     Assert.Equal(1, modelInState.DownloadAttempts);
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
@@ -260,6 +264,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                     Assert.Equal(0, modelInState.DownloadAttempts); // This gets reset when the model is to set to be re-parsed
 
                     Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
@@ -319,6 +324,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
                 // delete current models

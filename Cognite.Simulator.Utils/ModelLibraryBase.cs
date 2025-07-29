@@ -89,8 +89,6 @@ namespace Cognite.Simulator.Utils
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
 
-        private List<(string, string)> _simulatorFileExtMap;
-
 
         /// <summary>
         /// Creates a new instance of the library using the provided parameters
@@ -159,27 +157,12 @@ namespace Cognite.Simulator.Utils
             return updatedValue;
         }
 
-        private void SetFileExtensionOnState(T state, string SimulatorExternalId)
-        {
-            var fileExtension = _simulatorFileExtMap.Find(item => item.Item1 == SimulatorExternalId);
-            state.FileExtension = fileExtension.Item2;
-        }
-
         /// <summary>
         /// Initializes the local model library from the state store (sqlite database)
         /// </summary>
         /// <param name="token">Cancellation token</param>
         public async Task Init(CancellationToken token)
         {
-            var simulators = await _cdfSimulatorResources.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
-
-
-            _simulatorFileExtMap = simulators.Items.Select(sim =>
-            {
-                var ext = sim.FileExtensionTypes.First();
-                return (sim.ExternalId, ext);
-            }).ToList();
-
             _logger.LogDebug("Ensuring directory to store files exists: {Path}", _modelFolder);
             var dir = Directory.CreateDirectory(_modelFolder);
             _modelFolder = dir.FullName;
@@ -486,7 +469,6 @@ namespace Cognite.Simulator.Utils
             SimulatorModelRevision modelRevision)
         {
             T newState = StateFromModelRevision(modelRevision);
-            SetFileExtensionOnState(newState, modelRevision.SimulatorExternalId);
             if (newState == null || modelRevision == null)
             {
                 return null;
@@ -601,19 +583,23 @@ namespace Cognite.Simulator.Utils
 
             try
             {
-                var response = await _cdfFiles
+                var fileRes = await _cdfFiles
+                    .RetrieveAsync([fileId])
+                    .ConfigureAwait(false);
+                var file = fileRes.FirstOrDefault();
+
+                var downloadUriRes = await _cdfFiles
                     .DownloadAsync(new[] { fileId })
                     .ConfigureAwait(false);
-                if (response.Any() && response.First().DownloadUrl != null)
+
+                if (file != null && downloadUriRes.Any() && downloadUriRes.First().DownloadUrl != null)
                 {
-                    var uri = response.First().DownloadUrl;
+                    var uri = downloadUriRes.First().DownloadUrl;
 
-                    string filename;
-
-                    var modelFolder = _modelFolder;
-                    var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
+                    var fileExtension = file.GetExtension();
+                    var storageFolder = Path.Combine(_modelFolder, $"{file.Id}");
+                    var filename = Path.Combine(storageFolder, $"{file.Id}.{fileExtension}");
                     CreateDirectoryIfNotExists(storageFolder);
-                    filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
@@ -626,6 +612,7 @@ namespace Cognite.Simulator.Utils
                             modelState.ExternalId,
                             filename);
                         modelState.FilePath = filename;
+                        modelState.FileExtension = fileExtension;
                         return true;
                     }
                 }
