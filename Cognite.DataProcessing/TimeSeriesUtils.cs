@@ -200,7 +200,7 @@ namespace Cognite.DataProcessing
 
             // check if the provided times do exist
             if ((i0 == -1) || (i1 == -1))
-                throw new IndexOutOfRangeException();
+                throw new ArgumentOutOfRangeException("startTime or endTime", "The specified start time or end time was not found in the time series.");
 
             i1++; // include the endTime
             return new TimeSeriesData(

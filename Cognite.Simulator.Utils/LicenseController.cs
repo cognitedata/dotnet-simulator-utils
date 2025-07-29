@@ -101,7 +101,7 @@ namespace Cognite.Simulator.Utils
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{_controllerName}: Error in license status logging task");
+                _logger.LogError(ex, "{_controllerName}: Error in license status logging task", _controllerName);
             }
         }
 
@@ -139,30 +139,30 @@ namespace Cognite.Simulator.Utils
         /// <exception cref="Exception">Thrown when an error occurs while acquiring the license.</exception>
         public void AcquireLicense(CancellationToken cancellationToken)
         {
-            _logger.LogTrace($"{_controllerName}: Acquire license called, acquiring lock");
+            _logger.LogTrace("{_controllerName}: Acquire license called, acquiring lock", _controllerName);
             lock (_lock)
             {
                 try
                 {
                     if (_licenseHeld)
                     {
-                        _logger.LogInformation($"{_controllerName}: License already held, skipping acquisition");
+                        _logger.LogInformation("{_controllerName}: License already held, skipping acquisition", _controllerName);
                         return;
                     }
-                    _logger.LogInformation($"{_controllerName}: Attempting to acquire license");
+                    _logger.LogInformation("{_controllerName}: Attempting to acquire license", _controllerName);
                     _acquireLicenseFunc(cancellationToken);
                     _licenseHeld = true;
                     _acquisitionTime = _timeProvider.GetUtcNow();
                     PauseTimer();
-                    _logger.LogInformation($"{_controllerName}: License acquired successfully");
+                    _logger.LogInformation("{_controllerName}: License acquired successfully", _controllerName);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"{_controllerName}: Error acquiring license");
+                    _logger.LogError(ex, "{_controllerName}: Error acquiring license", _controllerName);
                     throw;
                 }
             }
-            _logger.LogTrace($"{_controllerName}: Acquire license completed, releasing lock");
+            _logger.LogTrace("{_controllerName}: Acquire license completed, releasing lock", _controllerName);
         }
 
         /// <summary>
@@ -196,12 +196,12 @@ namespace Cognite.Simulator.Utils
             _scheduledReleaseTime = DateTimeOffset.MaxValue;
             _acquisitionTime = DateTimeOffset.MinValue;
             _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            _logger.LogInformation($"{_controllerName}: License released forcefully");
+            _logger.LogInformation("{_controllerName}: License released forcefully", _controllerName);
         }
 
         private void PauseTimer()
         {
-            _logger.LogInformation($"{_controllerName}: License usage started: pausing release timer");
+            _logger.LogInformation("{_controllerName}: License usage started: pausing release timer", _controllerName);
             _releaseTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _timerPaused = true;
         }
@@ -214,7 +214,7 @@ namespace Cognite.Simulator.Utils
         {
             lock (_lock)
             {
-                _logger.LogInformation($"{_controllerName}: Starting license usage");
+                _logger.LogInformation("{_controllerName}: Starting license usage", _controllerName);
                 PauseTimer();
                 return new LicenseUsageScope(this);
             }
@@ -245,7 +245,7 @@ namespace Cognite.Simulator.Utils
             GC.SuppressFinalize(this);
         }
 
-        private class LicenseUsageScope : IDisposable
+        private sealed class LicenseUsageScope : IDisposable
         {
             private readonly LicenseController _tracker;
             private bool _disposed;
