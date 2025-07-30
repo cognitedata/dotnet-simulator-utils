@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -108,7 +109,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.True(modelInState.CanRead);
             Assert.False(modelInState.ParsingInfo.Error);
             Assert.True(modelInState.ParsingInfo.Parsed);
-            Assert.EndsWith("/100/100.csv", modelInState.FilePath);
+            Assert.EndsWith(Path.Combine("100", "100.csv"), modelInState.FilePath);
             Assert.Equal("csv", modelInState.FileExtension);
 
             Assert.True(modelInState.Downloaded);

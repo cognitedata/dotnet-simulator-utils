@@ -121,12 +121,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 foreach (var revision in revisions)
                 {
                     var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
+                    var expectedPath = Path.Combine("files", revision.FileId.ToString(), $"{revision.FileId}.out");
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
-                    Assert.EndsWith($"/files/{revision.FileId}/{revision.FileId}.out", modelInState.FilePath);
+                    Assert.EndsWith(expectedPath, modelInState.FilePath);
                     Assert.Equal("out", modelInState.FileExtension);
                 }
 
