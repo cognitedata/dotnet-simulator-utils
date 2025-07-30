@@ -33,6 +33,16 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             Assert.Equal(expectedExtension, extension);
         }
 
+        [Fact]
+        public void GetExtension_NullFile_ThrowsArgumentNullException()
+        {
+            // Arrange
+            File? file = null;
+            // Act & Assert
+            var exception = Assert.Throws<ArgumentNullException>(() => file.GetExtension());
+            Assert.Equal("File cannot be null. (Parameter 'file')", exception.Message);
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData(null)]
