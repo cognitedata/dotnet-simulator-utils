@@ -17,6 +17,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [InlineData("path/to/file.DOC", "doc")]
         [InlineData("multi.part.name.XML", "xml")]
         [InlineData("file.with.dots.in.name.json", "json")]
+        [InlineData(".startswithdot", "startswithdot")]
         public void GetExtension_ValidFileName_ReturnsLowercaseExtension(string fileName, string expectedExtension)
         {
             // Arrange
@@ -63,7 +64,6 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [Theory]
         [InlineData("noextension")]
         [InlineData("ends.with.")]
-        [InlineData(".startswithdot")]
         [InlineData("   ")]
         public void GetExtension_InvalidFileName_ThrowsArgumentException(string fileName)
         {

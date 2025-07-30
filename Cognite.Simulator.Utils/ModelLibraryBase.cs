@@ -592,10 +592,10 @@ namespace Cognite.Simulator.Utils
                     .DownloadAsync(new[] { fileId })
                     .ConfigureAwait(false);
 
-                if (file != null && downloadUriRes.Any() && downloadUriRes.First().DownloadUrl != null)
-                {
-                    var uri = downloadUriRes.First().DownloadUrl;
+                var downloadUri = downloadUriRes.FirstOrDefault()?.DownloadUrl;
 
+                if (file != null && downloadUri != null)
+                {
                     var fileExtension = file.GetExtension();
                     var storageFolder = Path.Combine(_modelFolder, $"{file.Id}");
                     var filename = Path.Combine(storageFolder, $"{file.Id}.{fileExtension}");
@@ -603,7 +603,7 @@ namespace Cognite.Simulator.Utils
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(uri, filename)
+                        .DownloadFileAsync(downloadUri, filename)
                         .ConfigureAwait(false);
                     if (downloaded)
                     {

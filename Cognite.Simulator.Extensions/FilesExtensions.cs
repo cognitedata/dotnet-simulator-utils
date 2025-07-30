@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 using CogniteSdk;
 
@@ -14,7 +15,7 @@ namespace Cognite.Simulator.Extensions
         /// Returns the file extension of a given CDF file.
         /// This is based on the file name and returns the part after the last dot.
         /// </summary>
-        public static string GetExtension(this File file)
+        public static string GetExtension(this CogniteSdk.File file)
         {
             if (file == null)
             {
@@ -26,12 +27,14 @@ namespace Cognite.Simulator.Extensions
                 throw new ArgumentException($"File name cannot be null or empty. File ID: {file.Id}");
             }
 
-            var lastDotIndex = file.Name.LastIndexOf('.');
-            if (lastDotIndex > 0 && lastDotIndex < file.Name.Length - 1)
+            var extension = Path.GetExtension(file.Name);
+
+            if (string.IsNullOrEmpty(extension))
             {
-                return file.Name.Substring(lastDotIndex + 1).ToLowerInvariant();
+                throw new ArgumentException($"File name does not contain a valid extension: {file.Name}");
             }
-            throw new ArgumentException("File name does not contain a valid extension: {fileName}", file.Name);
+
+            return extension.TrimStart('.').ToLowerInvariant();
         }
     }
 }
