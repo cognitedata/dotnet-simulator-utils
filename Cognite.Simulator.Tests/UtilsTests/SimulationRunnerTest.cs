@@ -124,7 +124,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<RoutineLibraryTest>();
             services.AddSingleton<SampleSimulationRunner>();
             services.AddSingleton(SeedData.SimulatorCreate);
@@ -171,10 +170,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 await modelLib.Init(source.Token);
                 await configLib.Init(source.Token);
 
-                // models are only processed right before the run happens (because we don't run the tasks from ModelLibrary)
-                // so this should be empty
+                // models are processed as soon as they are added to the library
                 var processedModels = modelLib._state.Values.Where(m => m.FilePath != null && m.Processed);
-                Assert.Empty(processedModels);
+                Assert.Single(processedModels);
 
                 var routineRevision = await configLib.GetRoutineRevision(revision.ExternalId);
                 Assert.NotNull(routineRevision);
@@ -212,9 +210,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 linkedTokenSource2.CancelAfter(TimeSpan.FromSeconds(10));
                 var taskList2 = new List<Task> { runner.Run(linkedToken2) };
                 await taskList2.RunAll(linkedTokenSource2);
-
-                Assert.Empty(modelLib._temporaryState); // temporary state should be empty after running the model as it cleans up automatically
-                Assert.Empty(Directory.GetFiles("./files/temp"));
 
                 var runUpdatedRes = await cdf.Alpha.Simulators.RetrieveSimulationRunsAsync(
                     new List<long> { run.Id }, source.Token);

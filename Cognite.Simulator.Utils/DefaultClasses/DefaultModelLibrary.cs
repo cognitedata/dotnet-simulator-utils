@@ -66,15 +66,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(state));
             }
-            if (simulatorClient != null)
-            {
-                await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);
-            }
-            else
-            {
-                state.CanRead = true;
-                state.ParsingInfo.SetSuccess();
-            }
+            await simulatorClient.ExtractModelInformation(state, token).ConfigureAwait(false);
         }
 
         /// <summary>

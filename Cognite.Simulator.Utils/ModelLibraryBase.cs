@@ -36,7 +36,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="T">Type of the state object used in this library</typeparam>
     /// <typeparam name="U">Type of the data object used to serialize and deserialize state</typeparam>
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
-    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>
+    public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>, IDisposable
         where A : AutomationConfig
         where T : ModelStateBase
         where U : ModelStateBasePoco
@@ -49,12 +49,6 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public ConcurrentDictionary<string, T> _state { get; private set; }
 
-        /// <summary>
-        /// Temporary model states that are used once and then deleted after the run.
-        /// We keep them in memory to avoid saving them to the state store and hence to avoid the multi-threading issues.
-        /// This state is used to store temporary model file paths, used only in case a run item is received before the model file has been downloaded.
-        /// </summary>
-        public Dictionary<string, T> _temporaryState { get; private set; }
 
         /// <summary>
         /// CDF files resource. Can be used to read and write files in CDF
@@ -76,6 +70,20 @@ namespace Cognite.Simulator.Utils
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
+
+        /// <summary>
+        /// This manages the tasks for processing model revisions. It ensures:
+        /// 1. Only one task executes at a time across all model revisions (serialized execution)
+        /// 2. Concurrent requests for the same model revision return the same task result (deduplication)
+        /// 3. Proper cleanup of resources after task completion or failure
+        /// 4. Cancellation propagation to ongoing tasks
+        /// </summary>
+        /// <remarks>
+        /// The task holder maintains a semaphore to serialize execution and a dictionary of ongoing tasks.
+        /// When a model revision is requested, if a task is already processing that revision, subsequent
+        /// callers will receive the result of the ongoing task rather than starting a new one.
+        /// </remarks>
+        private readonly ModelLibraryTaskHolder<string, T> _revisionsTasks = new();
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -113,7 +121,6 @@ namespace Cognite.Simulator.Utils
             _store = store;
             _logger = logger;
             _state = new ConcurrentDictionary<string, T>();
-            _temporaryState = new Dictionary<string, T>();
             _libState = new BaseExtractionState(_config.LibraryId);
             _modelFolder = _config.FilesDirectory;
             _downloadClient = downloadClient;
@@ -205,27 +212,17 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Used when model library state lacks a model file needed for the current simulation run.
-        /// This method will download the file from CDF, extract the model information and run the simulation.
-        /// The file will be deleted after the simulation run, and only kept in TemporaryState dictionary.
+        /// Used when an operation (model parsing, simulation, etc.) needs to be performed on the model.
+        /// This method will try to read the model revision from CDF and return it.
         /// </summary>
-        private async Task<T> TryReadRemoteModelRevision(string modelRevisionExternalId, CancellationToken token)
+        private async Task<SimulatorModelRevision> TryReadRemoteModelRevision(string modelRevisionExternalId, CancellationToken token)
         {
-            _logger.LogDebug("Model file not found locally, will try to download from CDF: {ModelRevisionExternalId}", modelRevisionExternalId);
             try
             {
                 var modelRevisionRes = await _cdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
                     new List<Identity> { new Identity(modelRevisionExternalId) }, token).ConfigureAwait(false);
                 var modelRevision = modelRevisionRes.FirstOrDefault();
-                var state = StateFromModelRevision(modelRevision);
-                SetFileExtensionOnState(state, modelRevision.SimulatorExternalId);
-                var downloaded = await DownloadFileAsync(state, true).ConfigureAwait(false);
-                if (downloaded)
-                {
-                    UpdateModelParsingInfo(state, modelRevision);
-                    await ExtractModelInformationAndPersist(state, token).ConfigureAwait(false);
-                    return state;
-                }
+                return modelRevision;
             }
             catch (Exception e)
             {
@@ -234,23 +231,70 @@ namespace Cognite.Simulator.Utils
             return null;
         }
 
-        /// <inheritdoc/>
-        public async Task<T> GetModelRevision(string modelRevisionExternalId)
+        /// <summary>
+        /// This may do multiple steps depending on the local vs remote state of the model revision:
+        /// 1. Will try to read the model revision from CDF.
+        /// 2.  - If model revision is not available locally or has been changed since the last check check it will download the file and extract the model information.
+        ///     - If the model revision is already in the local state and has not been changed, it will return the existing state.
+        /// </summary>
+        /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="token">Cancellation token</param>
+        private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, CancellationToken token = default)
         {
-            var modelVersions = _state.Values
-                .Where(s => s.ExternalId == modelRevisionExternalId
-                    && s.IsExtracted
-                    && !string.IsNullOrEmpty(s.FilePath))
-                .OrderByDescending(s => s.CreatedTime);
+            var modelRevision = await TryReadRemoteModelRevision(modelRevisionExternalId, token).ConfigureAwait(false);
 
-            var model = modelVersions.FirstOrDefault();
-
-            if (model != null)
+            if (modelRevision == null)
             {
-                return model;
+                _logger.LogError("Model revision {ModelRevisionExternalId} not found in CDF", modelRevisionExternalId);
+                return null;
             }
 
-            return await TryReadRemoteModelRevision(modelRevisionExternalId, CancellationToken.None).ConfigureAwait(false);
+            _state.TryGetValue(modelRevision.Id.ToString(), out var modelState);
+
+            if (modelState == null)
+            {
+                _logger.LogDebug("Model revision not found locally, adding to the local state: {ModelRevisionExternalId}", modelRevisionExternalId);
+                modelState = UpsertModelRevisionInState(modelRevision);
+            }
+
+            if (modelState == null)
+            {
+                _logger.LogError("Failed to get model state for {ModelRevisionExternalId}", modelRevisionExternalId);
+                return null;
+            }
+
+            UpdateModelParsingInfo(modelState, modelRevision);
+
+            var downloaded = modelState.Downloaded;
+
+            if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
+            {
+                downloaded = await DownloadFileAsync(modelState).ConfigureAwait(false);
+            }
+
+            if (downloaded && modelState.ShouldProcess())
+            {
+                await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
+            }
+
+            return modelState;
+        }
+
+        /// <inheritdoc/>
+        public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
+        {
+            return GetOrAddModelRevision(modelRevisionExternalId, token);
+        }
+
+        /// <summary>
+        /// This method gives a safe way to get a processed model revision.
+        /// Internally, it uses a <see cref="ModelLibraryTaskHolder{TKey,TValue}"/> to ensure that only one thread processes a given model revision at a time.
+        /// </summary>
+        /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="token">Cancellation token</param>
+        private Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
+        {
+            return _revisionsTasks.ExecuteAsync(modelRevisionExternalId, (cancellationToken) => GetOrAddModelRevisionImpl(modelRevisionExternalId, cancellationToken), token);
         }
 
         /// <inheritdoc/>
@@ -353,39 +397,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-        /// <summary>
-        /// This method find all model versions that have not been processed and calls
-        /// the <see cref="ExtractModelInformation(T, CancellationToken)"/> method 
-        /// to process the models.  
-        /// </summary>
-        /// <param name="token">Cancellation token</param>
-        private async Task ProcessDownloadedFiles(CancellationToken token)
-        {
-            // Find all model files for which we need to extract data
-            // The models are grouped by (model external id)
-            var modelGroups = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath))
-                .GroupBy(f => new { f.ModelExternalId });
-            foreach (var group in modelGroups)
-            {
-                // Extract the data for each model file (version) in this group
-                foreach (var item in group)
-                {
-                    await ExtractModelInformationAndPersist(item, token).ConfigureAwait(false);
-                }
-            }
-            // Verify that the local version history matches the one in CDF. Else,
-            // delete the local state and files for the missing versions.
-            // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
-            var modelGroupsToVerify = _state.Values
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && !f.IsExtracted && f.CanRead)
-                .GroupBy(f => new { f.ModelExternalId });
-            foreach (var group in modelGroupsToVerify)
-            {
-                await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
-            }
-        }
-
         private async Task PersistModelStatus(T modelState, CancellationToken token)
         {
             if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status != SimulatorModelRevisionStatus.unknown)
@@ -482,7 +493,6 @@ namespace Cognite.Simulator.Utils
             }
             var revisionId = modelRevision.Id.ToString();
             var state = GetOrUpdateState(revisionId, newState);
-            UpdateModelParsingInfo(state, modelRevision);
             return state;
         }
 
@@ -527,7 +537,22 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes)
                 {
-                    UpsertModelRevisionInState(revision);
+                    var state = await GetOrAddModelRevision(revision.ExternalId, token).ConfigureAwait(false);
+                    if (state != null && state.Downloaded)
+                    {
+                        _libState.UpdateDestinationRange(
+                            CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime),
+                            CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime));
+                    }
+                }
+                // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently
+                // JIRA: https://cognitedata.atlassian.net/jira/software/c/projects/POFSP/boards/852/backlog?selectedIssue=POFSP-914
+                var modelGroupsToVerify = _state.Values
+                    .Where(f => f.Downloaded && !f.IsExtracted && f.CanRead)
+                    .GroupBy(f => new { f.ModelExternalId });
+                foreach (var group in modelGroupsToVerify)
+                {
+                    await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
                 }
             }
             catch (ResponseException e)
@@ -556,26 +581,12 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Wipes all temporary model files stored in memory
-        /// </summary>
-        public void WipeTemporaryModelFiles()
-        {
-            foreach (var state in _temporaryState.Values)
-            {
-                _logger.LogDebug("Deleting temporary file: {FilePath}", state.FilePath);
-                StateUtils.DeleteFileAndDirectory(state.FilePath, state.IsInDirectory);
-            }
-            _temporaryState.Clear();
-        }
-
-        /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// </summary>
-        /// <param name="modelState">State object representing the file to download</param>
-        /// <param name="isTemporary">True if the file is temporary and should be deleted after use.
+        /// <param name="modelState">State object representing the file to download
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        private async Task<bool> DownloadFileAsync(T modelState, bool isTemporary = false)
+        private async Task<bool> DownloadFileAsync(T modelState)
         {
             if (modelState == null)
             {
@@ -600,18 +611,13 @@ namespace Cognite.Simulator.Utils
                     string filename;
 
                     var modelFolder = _modelFolder;
-                    if (isTemporary) // Temporary files are stored in a different folder
-                    {
-                        modelFolder = Path.Combine(modelFolder, "temp");
-                        _temporaryState[modelState.Id] = modelState;
-                    }
                     var storageFolder = Path.Combine(modelFolder, $"{modelState.CdfId}");
                     CreateDirectoryIfNotExists(storageFolder);
                     filename = Path.Combine(storageFolder, $"{modelState.CdfId}.{modelState.FileExtension}");
                     modelState.IsInDirectory = true;
 
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(uri, filename, failLargeFiles: isTemporary)
+                        .DownloadFileAsync(uri, filename)
                         .ConfigureAwait(false);
                     if (downloaded)
                     {
@@ -668,36 +674,6 @@ namespace Cognite.Simulator.Utils
                 await FindModelRevisions(true, token)
                     .ConfigureAwait(false);
 
-                // Find the files that are not yet saved locally (no file path)
-                var files = _state.Values
-                    .Where(f => string.IsNullOrEmpty(f.FilePath) && f.DownloadAttempts < _config.MaxDownloadAttempts)
-                    .OrderBy(f => f.UpdatedTime)
-                    .ToList();
-
-                foreach (var file in files)
-                {
-                    var downloaded = await DownloadFileAsync(file).ConfigureAwait(false);
-                    if (downloaded)
-                    {
-                        _libState.UpdateDestinationRange(
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime),
-                            CogniteTime.FromUnixTimeMilliseconds(file.UpdatedTime));
-                    }
-                }
-
-                ProcessDownloadedFiles(token).Wait(token);
-
-                if (!_state.IsEmpty)
-                {
-                    var maxUpdatedMs = _state
-                        .Select(s => s.Value.UpdatedTime)
-                        .Max();
-                    var maxUpdatedDt = CogniteTime.FromUnixTimeMilliseconds(maxUpdatedMs);
-                    _libState.UpdateDestinationRange(
-                        maxUpdatedDt,
-                        maxUpdatedDt);
-                }
-
                 await SaveStates(token).ConfigureAwait(false);
 
                 await Task
@@ -745,6 +721,14 @@ namespace Cognite.Simulator.Utils
             token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Disposes the model library and releases any resources it holds.
+        /// </summary>
+        public void Dispose()
+        {
+            _revisionsTasks?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 
     /// <summary>
@@ -758,12 +742,8 @@ namespace Cognite.Simulator.Utils
         /// Returns the state object of the given version of the given model
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision external id</param>
+        /// <param name="token">Cancellation token</param>
         /// <returns>State object</returns>
-        Task<T> GetModelRevision(string modelRevisionExternalId);
-
-        /// <summary>
-        /// Delete all temporary model files stored in memory and on disk
-        /// </summary>
-        void WipeTemporaryModelFiles();
+        Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default);
     }
 }

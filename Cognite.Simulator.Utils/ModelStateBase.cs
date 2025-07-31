@@ -48,6 +48,17 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Indicates if the model file has been downloaded and the file exists on the disk.
+        /// </summary>
+        public bool Downloaded
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+            }
+        }
+
+        /// <summary>
         /// Model data associated with this state
         /// </summary>
         public SimulatorModelInfo Model => new SimulatorModelInfo()

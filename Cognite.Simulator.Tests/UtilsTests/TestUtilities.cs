@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -127,6 +128,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             private int _callCount = 0;
             private readonly int? _maxCalls = null;
             private Times _expectedCalls = Times.AtLeastOnce();
+            private readonly string _uriMatcherExpression;
 
             /// <summary>
             /// Creates a new SimpleRequestMocker.
@@ -134,9 +136,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             /// <param name="uriMatcher">Function to match the URI of the request.</param>
             /// <param name="responseFunc">Function to generate the response.</param>
             /// <param name="maxCalls">Maximum number of times this mocker can be called. If null, there is no limit.</param>
-            public SimpleRequestMocker(Func<string, bool> uriMatcher, Func<HttpResponseMessage> responseFunc, int? maxCalls = null)
+            public SimpleRequestMocker(Expression<Func<string, bool>> uriMatcher, Func<HttpResponseMessage> responseFunc, int? maxCalls = null)
             {
-                _uriMatcher = uriMatcher;
+                _uriMatcher = uriMatcher.Compile();
+                _uriMatcherExpression = uriMatcher.ToString();
                 _responseFunc = responseFunc;
                 _maxCalls = maxCalls;
             }
@@ -165,7 +168,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             public void AssertCallCount()
             {
-                Assert.True(_expectedCalls.Validate(_callCount), $"Unexpected number of calls to endpoint. Expected {_expectedCalls} but was {_callCount}.");
+                Assert.True(_expectedCalls.Validate(_callCount), $"Unexpected number of calls to endpoint. Expected {_expectedCalls} but was {_callCount}. Uri: {_uriMatcherExpression}");
             }
 
             public HttpResponseMessage GetResponse()
@@ -248,6 +251,43 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""createdTime"": 1234567890000
             }}";
             return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockSimulatorModelRevEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId-v1"",
+                ""name"": ""Test Model Revision"",
+                ""description"": ""Test model revision description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""TestModelExternalId"",
+                ""fileId"": 100,
+                ""createdByUserId"": ""n/a"",
+                ""status"": ""unknown"",
+                ""dataSetId"": 123,
+                ""versionNumber"": 1,
+                ""logId"": 1234567890,
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": 1234567890000
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 100,
+                ""downloadUrl"": ""https://fusion.cognite.com/files/download"",
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesDownloadEndpoint(long size)
+        {
+            var response = new HttpResponseMessage() { Content = new ByteArrayContent([1]) };
+            response.Content.Headers.Add("Content-Length", size.ToString());
+            return response;
         }
 
         public static HttpResponseMessage OkItemsResponse(string item)
