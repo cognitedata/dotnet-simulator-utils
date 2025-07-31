@@ -283,6 +283,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockFilesByIdsEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 100,
+                ""name"": ""test_model.csv"",
+                ""mimeType"": ""text/csv"",
+                ""dataSetId"": 123,
+                ""uploaded"": true,
+            }}";
+            return OkItemsResponse(item);
+        }
+
         public static HttpResponseMessage MockFilesDownloadEndpoint(long size)
         {
             var response = new HttpResponseMessage() { Content = new ByteArrayContent([1]) };
