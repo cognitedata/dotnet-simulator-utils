@@ -232,8 +232,10 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// If model revision is not found in the local state, this method will try to read it from CDF, download the file and extract the model information.
-        /// If the model revision is already in the local state and has not been changed, it will return the existing state.
+        /// This may do multiple steps depending on the local vs remote state of the model revision:
+        /// 1. Will try to read the model revision from CDF.
+        /// 2.  - If model revision is not available locally or has been changed since the last check check it will download the file and extract the model information.
+        ///     - If the model revision is already in the local state and has not been changed, it will return the existing state.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
         /// <param name="token">Cancellation token</param>
