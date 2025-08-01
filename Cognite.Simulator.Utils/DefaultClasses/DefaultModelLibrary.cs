@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -81,6 +82,8 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelRevision));
             }
+            var dependencyFiles = modelRevision.ExternalDependencies != null ?
+                modelRevision.ExternalDependencies.Select(dependency => new DependencyFile(dependency)).ToList() : null;
             var output = new TModelStateBase
             {
                 Id = modelRevision.Id.ToString(),
@@ -91,6 +94,7 @@ namespace Cognite.Simulator.Utils
                 CreatedTime = modelRevision.CreatedTime,
                 CdfId = modelRevision.FileId,
                 LogId = modelRevision.LogId,
+                DependencyFiles = dependencyFiles,
                 Version = modelRevision.VersionNumber,
                 ExternalId = modelRevision.ExternalId,
             };
