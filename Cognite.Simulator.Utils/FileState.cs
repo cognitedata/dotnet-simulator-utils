@@ -111,6 +111,24 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private List<DependencyFile> _dependencyFiles;
+
+        /// <summary>
+        /// List of dependency files that the main model file requires to function correctly.
+        /// Each dependency file has a unique identifier, a path on disk, and arguments providing additional metadata about how the file should be used in the model.
+        /// Only used by simulators that work with multi-file models.
+        /// </summary>
+        public List<DependencyFile> DependencyFiles
+        {
+            get => _dependencyFiles;
+            set
+            {
+                if (value == _dependencyFiles) return;
+                LastTimeModified = DateTime.UtcNow;
+                _dependencyFiles = value;
+            }
+        }
+
         private string _filePath;
 
         /// <summary>
@@ -292,6 +310,28 @@ namespace Cognite.Simulator.Utils
     }
 
     /// <summary>
+    /// Represents a dependency file that the main model file requires to function
+    /// </summary>
+    public class DependencyFile
+    {
+        /// <summary>
+        /// A unique identifier of a file in CDF.
+        /// </summary>
+        public long Id { get; set; }
+
+        /// <summary>
+        /// Additional arguments or parameters associated with this dependency, used to provide metadata about how the file should be used by the simulator.
+        /// For example: {"simulatorObject": "well_1"}
+        /// </summary>
+        public Dictionary<string, string> Arguments { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// The absolute path where the dependency file is stored on disk
+        /// </summary>
+        public string FilePath { get; set; }
+    }
+
+    /// <summary>
     /// Data object that contains the state properties to be persisted
     /// by the state store. These properties are restored to the state on initialization
     /// </summary>
@@ -332,6 +372,14 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("data-set-id")]
         public long? DataSetId { get; set; }
+
+        /// <summary>
+        /// List of dependency files that the main model file requires to function correctly.
+        /// Each dependency file has a unique identifier, a path on disk, and optional
+        /// arguments providing additional metadata about how the file should be used.
+        /// </summary>
+        [StateStoreProperty("dependency-files")]
+        public List<DependencyFile> DependencyFiles { get; set; } = new List<DependencyFile>();
 
         /// <summary>
         /// Path to the file in the local disk
