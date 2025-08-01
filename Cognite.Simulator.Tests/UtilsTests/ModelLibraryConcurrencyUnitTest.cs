@@ -127,7 +127,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
             VerifyLog(mockedLogger, LogLevel.Debug, "Model revision not found locally, adding to the local state: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 100. Model revision external id: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading files for model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (0/1): 100. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
         }
 

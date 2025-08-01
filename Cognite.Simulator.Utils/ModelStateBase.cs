@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
+using Cognite.Extensions;
 using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Extensions;
 
@@ -57,6 +60,61 @@ namespace Cognite.Simulator.Utils
                 return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
             }
         }
+
+        /// <summary>
+        /// Gets all file IDs that are yet to be downloaded.
+        /// This includes the main file ID and any dependency files.
+        /// </summary>
+        /// <returns>List of file IDs pending download</returns>
+        /// <exception cref="ArgumentNullException">Thrown if CdfId is not set</exception>
+        public List<long> GetPendingDownloadFileIds()
+        {
+            if (CdfId == 0)
+            {
+                throw new ArgumentNullException(nameof(CdfId), "Model state must have a valid CDF ID.");
+            }
+
+            var fileIds = new List<long> { CdfId };
+
+            if (DependencyFiles != null)
+            {
+                var dependencyFiles = DependencyFiles
+                    .ToDictionarySafe(file => file.Id, file => file);
+
+                fileIds.AddRange(dependencyFiles.Keys);
+            }
+
+            return fileIds;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fileId">The ID of the dependency file</param>
+        /// <param name="updateFunc">Function that takes a DependencyFile and returns an updated DependencyFile</param>
+        /// <returns>True if the operation was successful</returns>
+        /// <exception cref="ArgumentNullException">Thrown if dependencyFile is null</exception>
+        public bool UpdateDependencyFile(long fileId, Func<DependencyFile, DependencyFile> updateFunc)
+        {
+            if (updateFunc == null)
+            {
+                throw new ArgumentNullException(nameof(updateFunc), "Update function cannot be null.");
+            }
+
+            if (DependencyFiles != null)
+            {
+                var indexOf = DependencyFiles.FindIndex(file => file.Id == fileId);
+
+                if (indexOf >= 0)
+                {
+                    DependencyFiles[indexOf] = updateFunc(DependencyFiles[indexOf]);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         /// <summary>
         /// Model data associated with this state
