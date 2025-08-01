@@ -577,11 +577,13 @@ namespace Cognite.Simulator.Utils
 
             modelState.DownloadAttempts++;
 
-            _logger.LogInformation("Downloading files for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
-               modelState.ExternalId,
-               modelState.DownloadAttempts);
 
             var fileIds = modelState.GetPendingDownloadFileIds(); // TODO: this whould only list non-existing ones
+
+            _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
+                fileIds.Count,
+                modelState.ExternalId,
+                modelState.DownloadAttempts);
 
             var files = await _cdfFiles
                 .RetrieveAsync(fileIds, ignoreUnknownIds: true)
@@ -598,8 +600,8 @@ namespace Cognite.Simulator.Utils
                 var isMainFile = fileId == modelState.CdfId;
                 if (filesMap.TryGetValue(fileId, out var file))
                 {
-                    _logger.LogInformation("Downloading file ({FileIndex}/{FilesTotal}): {Id}. Model revision external ID: {ExternalId}.",
-                        fileIndex,
+                    _logger.LogInformation("Downloading file ({FileNumber}/{FilesTotal}): {Id}. Model revision external ID: {ExternalId}.",
+                        fileIndex + 1,
                         fileIds.Count,
                         fileId,
                         modelState.ExternalId);

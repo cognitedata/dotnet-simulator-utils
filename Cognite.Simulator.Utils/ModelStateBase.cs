@@ -94,7 +94,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="updateFunc">Function that takes a DependencyFile and returns an updated DependencyFile</param>
         /// <returns>True if the operation was successful</returns>
         /// <exception cref="ArgumentNullException">Thrown if dependencyFile is null</exception>
-        public bool UpdateDependencyFile(long fileId, Func<DependencyFile, DependencyFile> updateFunc)
+        public void UpdateDependencyFile(long fileId, Func<DependencyFile, DependencyFile> updateFunc)
         {
             if (updateFunc == null)
             {
@@ -108,11 +108,11 @@ namespace Cognite.Simulator.Utils
                 if (indexOf >= 0)
                 {
                     DependencyFiles[indexOf] = updateFunc(DependencyFiles[indexOf]);
-                    return true;
+                    return;
                 }
             }
 
-            return false;
+            throw new InvalidOperationException($"Dependency file with ID {fileId} not found in the model state.");
         }
 
 
