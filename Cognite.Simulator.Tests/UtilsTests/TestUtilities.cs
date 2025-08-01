@@ -7,6 +7,9 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Utils;
+
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -310,6 +313,25 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
         {
             return new HttpResponseMessage(statusCode) { Content = new StringContent(content) };
+        }
+
+        public static void CleanUpFiles(bool deleteDirectory, StateStoreConfig? stateConfig)
+        {
+            try
+            {
+                if (deleteDirectory && Directory.Exists("./files"))
+                {
+                    Directory.Delete("./files", true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning up: {ex.Message}");
+            }
         }
     }
 }

@@ -5,6 +5,8 @@ using System.Text;
 using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Extensions;
 
+using CogniteSdk.Alpha;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -329,6 +331,19 @@ namespace Cognite.Simulator.Utils
         /// The absolute path where the dependency file is stored on disk
         /// </summary>
         public string FilePath { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DependencyFile"/> class.
+        /// </summary>
+        public DependencyFile(SimulatorFileDependency fileDependency)
+        {
+            if (fileDependency == null)
+            {
+                throw new ArgumentNullException(nameof(fileDependency));
+            }
+            Id = fileDependency.File.Id;
+            Arguments = fileDependency.Arguments;
+        }
     }
 
     /// <summary>
