@@ -15,6 +15,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
         [InlineData("test.txt", "txt")]
         [InlineData("file.PDF", "pdf")]
         [InlineData("path/to/file.DOC", "doc")]
+        [InlineData("back\\slash\\file.txt", "txt")]
         [InlineData("multi.part.name.XML", "xml")]
         [InlineData("file.with.dots.in.name.json", "json")]
         [InlineData(".startswithdot", "startswithdot")]
