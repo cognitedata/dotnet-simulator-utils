@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Cognite.Extensions;
-using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Extensions;
 
 
@@ -78,10 +76,7 @@ namespace Cognite.Simulator.Utils
 
             if (DependencyFiles != null)
             {
-                var dependencyFiles = DependencyFiles
-                    .ToDictionarySafe(file => file.Id, file => file);
-
-                fileIds.AddRange(dependencyFiles.Keys);
+                fileIds.AddRange(DependencyFiles.Select(file => file.Id));
             }
 
             return fileIds;

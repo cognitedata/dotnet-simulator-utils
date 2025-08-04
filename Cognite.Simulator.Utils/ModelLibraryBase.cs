@@ -175,8 +175,6 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
 
-                await FindModelRevisions(false, token).ConfigureAwait(false);
-
                 await _store.RestoreExtractionState<U, T>(
                     _state,
                     _config.FilesTable,
@@ -185,6 +183,9 @@ namespace Cognite.Simulator.Utils
                         state.Init(poco);
                     },
                     token).ConfigureAwait(false);
+
+                await FindModelRevisions(false, token).ConfigureAwait(false);
+
                 if (_store is LiteDBStateStore ldbStore)
                 {
                     HashSet<string> idsToKeep = new HashSet<string>(_state.Select(s => s.Value.Id));
@@ -536,6 +537,8 @@ namespace Cognite.Simulator.Utils
                 {
                     await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
                 }
+
+                await SaveStates(token).ConfigureAwait(false);
             }
             catch (ResponseException e)
             {
@@ -578,7 +581,7 @@ namespace Cognite.Simulator.Utils
             modelState.DownloadAttempts++;
 
 
-            var fileIds = modelState.GetPendingDownloadFileIds(); // TODO: this whould only list non-existing ones
+            var fileIds = modelState.GetPendingDownloadFileIds(); // TODO: this should only list non-existing ones
 
             _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
                 fileIds.Count,
@@ -723,8 +726,6 @@ namespace Cognite.Simulator.Utils
                 // Find new model files in CDF and add the to the local state.
                 await FindModelRevisions(true, token)
                     .ConfigureAwait(false);
-
-                await SaveStates(token).ConfigureAwait(false);
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.LibraryUpdateInterval), token)
