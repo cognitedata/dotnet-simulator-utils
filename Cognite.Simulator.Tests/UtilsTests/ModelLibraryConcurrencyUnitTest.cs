@@ -25,8 +25,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Tests for the ModelLibraryBase class that focus on the concurrency aspects.
     /// Uses FakeModelLibrary and SimpleRequestMocker to mock the HTTP layer.
     /// </summary>
-    public class ModelLibraryConcurrencyTest
+    public class ModelLibraryConcurrencyTest : IDisposable
     {
+        StateStoreConfig? stateConfig;
+        ModelLibraryConfig? modelLibraryConfig;
+
+        public void Dispose()
+        {
+            CleanUpFiles(modelLibraryConfig, stateConfig);
+        }
+
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
@@ -60,7 +68,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             using var provider = services.BuildServiceProvider();
 
-            var stateConfig = provider.GetRequiredService<StateStoreConfig>();
+            stateConfig = provider.GetRequiredService<StateStoreConfig>();
+            modelLibraryConfig = provider.GetRequiredService<DefaultConfig<AutomationConfig>>().Connector.ModelLibrary;
             using var source = new CancellationTokenSource();
             var lib = provider.GetRequiredService<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             await lib.Init(source.Token);
