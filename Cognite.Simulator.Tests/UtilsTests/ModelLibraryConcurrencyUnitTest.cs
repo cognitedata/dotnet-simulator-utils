@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
-            new SimpleRequestMocker(uri => true, () => GoneResponse)
+            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter
         };
 
         /// <summary>
