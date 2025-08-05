@@ -24,32 +24,33 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public static class TestUtilities
     {
-        public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) GetMockedHttpClientFactory(
+        public static Mock<IHttpClientFactory> GetMockedHttpClientFactory(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
-            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-            mockHttpMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync",
-                                                  ItExpr.IsAny<HttpRequestMessage>(),
-                                                  ItExpr.IsAny<CancellationToken>())
-                .Returns<HttpRequestMessage, CancellationToken>(mockSendAsync);
-
-            var client = new HttpClient(mockHttpMessageHandler.Object);
             var mockFactory = new Mock<IHttpClientFactory>();
-            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
-            return (mockFactory, mockHttpMessageHandler);
+            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(
+                () =>
+                {
+                    var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+                    mockHttpMessageHandler.Protected()
+                        .Setup<Task<HttpResponseMessage>>("SendAsync",
+                                                          ItExpr.IsAny<HttpRequestMessage>(),
+                                                          ItExpr.IsAny<CancellationToken>())
+                        .Returns(mockSendAsync);
+                    return new HttpClient(mockHttpMessageHandler.Object);
+                });
+
+
+            return mockFactory;
         }
 
-        public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) AddMockedHttpClientFactory(
+        public static void AddMockedHttpClientFactory(
             this ServiceCollection services,
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
-            var (mockFactory, mockHttpMessageHandler) = GetMockedHttpClientFactory(mockSendAsync);
+            var mockFactory = GetMockedHttpClientFactory(mockSendAsync);
 
             services.AddSingleton(mockFactory.Object);
-            services.AddSingleton(mockHttpMessageHandler.Object);
-
-            return (mockFactory, mockHttpMessageHandler);
         }
 
         public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null)

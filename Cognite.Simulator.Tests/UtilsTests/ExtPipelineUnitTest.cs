@@ -51,8 +51,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddSingleton(SeedData.SimulatorCreate);
 
-            var httpMock = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappings));
-            var mockFactory = httpMock.factory;
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappings));
             services.AddSingleton(mockFactory.Object);
             services.AddCogniteTestClient();
 
@@ -100,8 +99,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var services = new ServiceCollection();
             services.AddSingleton(SeedData.SimulatorCreate);
 
-            var httpMock = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappingsDisabled));
-            var mockFactory = httpMock.factory;
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(endpointMappingsDisabled));
             services.AddSingleton(mockFactory.Object);
             services.AddCogniteTestClient();
 

@@ -50,8 +50,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
-            var mocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            var mockFactory = mocks.factory;
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
             {

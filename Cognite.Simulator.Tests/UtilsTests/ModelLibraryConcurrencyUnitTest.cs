@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,18 +23,13 @@ using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     /// <summary>
-    /// Tests for the ModelLibraryBase class that focus on the concurrency aspects.
+    /// Tests for the ModelLibraryBase class with focus on the concurrency aspects.
     /// Uses FakeModelLibrary and SimpleRequestMocker to mock the HTTP layer.
     /// </summary>
     public class ModelLibraryConcurrencyTest : IDisposable
     {
-        StateStoreConfig? stateConfig;
-        ModelLibraryConfig? modelLibraryConfig;
-
-        public void Dispose()
-        {
-            CleanUpFiles(modelLibraryConfig, stateConfig);
-        }
+        private StateStoreConfig? stateConfig;
+        private ModelLibraryConfig? modelLibraryConfig;
 
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
@@ -44,8 +40,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
-            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter
+            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
         };
+
+        public void Dispose()
+        {
+            CleanUpFiles(modelLibraryConfig, stateConfig);
+        }
 
         /// <summary>
         /// This test verifies that multiple concurrent calls to GetModelRevision for the same model
@@ -58,8 +59,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var services = new ServiceCollection();
             services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            services.AddCogniteTestClient();
             services.AddSingleton(mockedLogger.Object);
+            services.AddCogniteTestClient();
             services.AddSingleton<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, FakeSimulatorClient>();
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
@@ -68,11 +69,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             using var provider = services.BuildServiceProvider();
 
-            stateConfig = provider.GetRequiredService<StateStoreConfig>();
             modelLibraryConfig = provider.GetRequiredService<DefaultConfig<AutomationConfig>>().Connector.ModelLibrary;
-            using var source = new CancellationTokenSource();
+            stateConfig = provider.GetRequiredService<StateStoreConfig>();
             var lib = provider.GetRequiredService<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
-            await lib.Init(source.Token);
+            await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);
 
             var client = provider.GetRequiredService<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>() as FakeSimulatorClient;
