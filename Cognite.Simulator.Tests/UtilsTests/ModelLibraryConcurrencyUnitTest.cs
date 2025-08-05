@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,10 +30,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-            new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1), // Returns empty to simulate no revisions found on first call
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 1),
+            new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
             new SimpleRequestMocker(uri => true, () => GoneResponse)
@@ -108,6 +109,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.True(modelInState.CanRead);
             Assert.False(modelInState.ParsingInfo.Error);
             Assert.True(modelInState.ParsingInfo.Parsed);
+            Assert.EndsWith(Path.Combine("100", "100.csv"), modelInState.FilePath);
+            Assert.Equal("csv", modelInState.FileExtension);
 
             Assert.True(modelInState.Downloaded);
             var fileBytes = System.IO.File.ReadAllBytes(modelInState.FilePath);
