@@ -171,7 +171,7 @@ namespace Cognite.Simulator.Utils
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
             var matchingOutputs = _config.Outputs.Where(i => i.ReferenceId == argRefId).ToList();
-            if (matchingOutputs.Any())
+            if (matchingOutputs.Count != 0)
             {
                 var output = matchingOutputs.First();
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
@@ -194,11 +194,11 @@ namespace Cognite.Simulator.Utils
                 .ToDictionary(dict => dict.Key, dict => dict.Value);
 
             var matchingInputs = _config.Inputs.Where(i => i.ReferenceId == argRefId).ToList();
-            if (matchingInputs.Any() && _inputData.ContainsKey(argRefId))
+            if (matchingInputs.Count != 0 && _inputData.TryGetValue(argRefId, out SimulatorValueItem value))
             {
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                 _logger.LogDebug("Setting input for Reference Id: {Input}. Arguments: {Arguments}", matchingInputs.First().ReferenceId, flattenedArguments);
-                SetInput(matchingInputs.First(), _inputData[argRefId], extraArgs, token);
+                SetInput(matchingInputs.First(), value, extraArgs, token);
             }
             else
             {

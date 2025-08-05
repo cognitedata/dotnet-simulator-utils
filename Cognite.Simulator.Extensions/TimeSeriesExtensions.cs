@@ -98,7 +98,7 @@ namespace Cognite.Simulator.Extensions
                 }
                 tsToCreate.Add(simTs.SaveTimeseriesExternalId, tsCreate);
             }
-            if (!tsToCreate.Any())
+            if (!(tsToCreate.Count > 0))
             {
                 return Enumerable.Empty<TimeSeries>();
             }

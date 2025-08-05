@@ -51,7 +51,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<ModelParsingInfo>();
             var loggerConfig = new LoggerConfig
             {
                 Console = new Extractor.Logging.ConsoleConfig
@@ -103,7 +102,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.Equal(revision.ModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(SeedData.TestModelExternalId, modelInState.ModelExternalId);
                     Assert.Equal(revision.VersionNumber, modelInState.Version);
-                    Assert.False(modelInState.Processed);
+                    Assert.True(modelInState.Processed); // Files get processed as soon as they are downloaded
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
 
@@ -121,11 +121,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 foreach (var revision in revisions)
                 {
                     var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
+                    var expectedPath = Path.Combine("files", revision.FileId.ToString(), $"{revision.FileId}.out");
                     Assert.NotNull(modelInState);
                     Assert.Equal(revision.ExternalId, modelInState.ExternalId);
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.EndsWith(expectedPath, modelInState.FilePath);
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
                 var modelExternalIdV2 = $"{SeedData.TestModelExternalId}-2";
@@ -165,7 +168,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
             services.AddSingleton(SeedData.SimulatorCreate);
-            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
             StateStoreConfig? stateConfig = null;
@@ -221,6 +223,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                     Assert.Equal(1, modelInState.DownloadAttempts);
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
@@ -262,6 +265,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                     Assert.Equal(0, modelInState.DownloadAttempts); // This gets reset when the model is to set to be re-parsed
 
                     Assert.True(modelInState.IsExtracted); // this is only true if the file was parsed locally, which is the case here
@@ -288,7 +292,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddCogniteTestClient();
             services.AddHttpClient<FileStorageClient>();
             services.AddSingleton<ModeLibraryTest>();
-            services.AddSingleton<ModelParsingInfo>();
             services.AddSingleton<ScopedRemoteApiSink>();
             services.AddSingleton(SeedData.SimulatorCreate);
             services.AddSingleton<DefaultConfig<AutomationConfig>>();
@@ -315,14 +318,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var libState = (IReadOnlyDictionary<string, TestFileState>)lib._state;
                 Assert.NotEmpty(lib._state);
 
-                // Start the library update loop that download and parses the files, stop after 5 secs
-                using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token);
-                linkedTokenSource.CancelAfter(TimeSpan.FromSeconds(5)); // should be enough time to download the file from CDF and parse it
-                var modelLibTasks = lib.GetRunTasks(linkedTokenSource.Token);
-                await modelLibTasks
-                    .RunAll(linkedTokenSource)
-;
-
                 foreach (var revision in revisions)
                 {
                     var modelInState = lib._state.GetValueOrDefault(revision.Id.ToString());
@@ -330,6 +325,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.True(modelInState.Processed);
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
+                    Assert.Equal("out", modelInState.FileExtension);
                 }
 
                 // delete current models
@@ -343,7 +339,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
                 var accessedRevision = await lib.GetModelRevision(revisionNew.ExternalId);
 
-                var newModelState = lib._temporaryState.GetValueOrDefault(revisionNew.Id.ToString());
+                var newModelState = lib._state.GetValueOrDefault(revisionNew.Id.ToString());
 
                 // Accessed revision should be processed and have a file path
                 if (accessedRevision.ExternalId == revisionNew.ExternalId)
@@ -353,12 +349,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(string.IsNullOrEmpty(newModelState.FilePath));
                     Assert.True(System.IO.File.Exists(newModelState.FilePath));
                 }
-                Assert.NotEmpty(Directory.GetFiles($"./files/temp/{revisionNew.FileId}"));
-
-                // cleanup temp state
-                lib.WipeTemporaryModelFiles();
-                Assert.Empty(Directory.GetDirectories($"./files/temp"));
-                Assert.Empty(lib._temporaryState);
+                Assert.NotEmpty(Directory.GetFiles($"./files/{revisionNew.FileId}"));
             }
             finally
             {
