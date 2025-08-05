@@ -46,21 +46,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestModelLibraryConcurrentCalls()
         {
-            var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
 
             var services = new ServiceCollection();
-            services.AddSingleton(httpMocks.factory.Object);
+            services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             services.AddCogniteTestClient();
             services.AddSingleton(mockedLogger.Object);
             services.AddSingleton<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, FakeSimulatorClient>();
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             services.AddSingleton(SeedData.SimulatorCreate);
-
-            var config = new DefaultConfig<AutomationConfig>();
-            config.GenerateDefaults();
-            services.AddSingleton(config);
+            services.AddDefaultConfig();
 
             using var provider = services.BuildServiceProvider();
 

@@ -4,9 +4,15 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -32,6 +38,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockFactory = new Mock<IHttpClientFactory>();
             mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
             return (mockFactory, mockHttpMessageHandler);
+        }
+
+        public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) AddMockedHttpClientFactory(
+            this ServiceCollection services,
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
+        {
+            var (mockFactory, mockHttpMessageHandler) = GetMockedHttpClientFactory(mockSendAsync);
+
+            services.AddSingleton(mockFactory.Object);
+            services.AddSingleton(mockHttpMessageHandler.Object);
+
+            return (mockFactory, mockHttpMessageHandler);
+        }
+
+        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = "Default")
+        {
+            var config = new DefaultConfig<AutomationConfig>();
+            config.GenerateDefaults();
+            config.Connector.ModelLibrary.FilesDirectory = $"./files-{testCallerName}";
+            services.AddSingleton(config);
         }
 
         public static void VerifyLog<TLogger>(Mock<ILogger<TLogger>> logger, LogLevel level, string expectedMessage, Times times, bool isContainsCheck = false)
@@ -310,6 +336,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
         {
             return new HttpResponseMessage(statusCode) { Content = new StringContent(content) };
+        }
+
+        public static void CleanUpFiles(ModelLibraryConfig? modelLibraryConfig, StateStoreConfig? stateConfig)
+        {
+            var filesDirectory = modelLibraryConfig?.FilesDirectory ?? "./files";
+            try
+            {
+                if (Directory.Exists(filesDirectory))
+                {
+                    Directory.Delete(filesDirectory, true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning up: {ex.Message}");
+            }
         }
     }
 }
