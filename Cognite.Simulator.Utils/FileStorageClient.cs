@@ -26,11 +26,6 @@ namespace Cognite.Simulator.Utils
         public static readonly long MaxFileDownloadSize = 32 * 1024 * 1024 * 1024L;
 
         /// <summary>
-        /// Maximum file size that can be downloaded without throwing an exception (512 MB)
-        /// </summary>
-        public static readonly long LargeFileSize = 512 * 1024 * 1024L;
-
-        /// <summary>
         /// Initializes this object with the given HTTP client and logger
         /// </summary>
         /// <param name="client">HTTP client</param>
@@ -47,9 +42,8 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="uri">URI to download from</param>
         /// <param name="filePath">Path to save the file</param>
-        /// <param name="failLargeFiles">Set to true to throw an exception if the file is larger than <see cref="LargeFileSize"/></param>
         /// <returns><c>true</c> if success, else <c>false</c></returns>
-        public async Task<bool> DownloadFileAsync(Uri uri, string filePath, bool failLargeFiles = false)
+        public async Task<bool> DownloadFileAsync(Uri uri, string filePath)
         {
             try
             {
@@ -68,16 +62,6 @@ namespace Cognite.Simulator.Utils
                     _logger.LogError("File size exceeds the maximum allowed size: {MaxFileDownloadSize} bytes, actual size: {Size}, {uri}",
                         MaxFileDownloadSize, response.Content.Headers.ContentLength, uri);
                     return false;
-                }
-
-                if (failLargeFiles && response.Content.Headers.ContentLength > LargeFileSize)
-                {
-                    _logger.LogWarning("File size exceeds the maximum allowed size to be downloded now, but can still be downloaded later: {LargeFileSize} bytes, actual size: {Size}, {uri}",
-                        LargeFileSize, response.Content.Headers.ContentLength, uri);
-                    throw new ConnectorException(
-                        $"The file is larger than {LargeFileSize / 1024 / 1024} MB and needs to be pre-downloaded before any operations can be performed. " +
-                        "Please wait for the file to be downloaded and try again."
-                    );
                 }
 
                 if (File.Exists(filePath))

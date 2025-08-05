@@ -65,7 +65,7 @@ namespace Cognite.Simulator.Utils
             }
             Exception ex = null;
             var taskList = tasks.ToList();
-            while (taskList.Any())
+            while (taskList.Count != 0)
             {
                 // Wait for any of the tasks to finish or fail
                 var task = await Task.WhenAny(taskList).ConfigureAwait(false);

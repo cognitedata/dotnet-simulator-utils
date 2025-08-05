@@ -229,7 +229,7 @@ namespace Cognite.Simulator.Utils
                             {
                                 foreach (var error in ce.Errors)
                                 {
-                                    _logger.LogError(error.Message);
+                                    _logger.LogError("{Message}", error.Message);
                                 }
                             }
                             _logger.LogWarning("Simulation run {id} failed with error: {Message}", runId, ex);
@@ -248,7 +248,6 @@ namespace Cognite.Simulator.Utils
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
                                 PublishConnectorStatus(ConnectorStatus.IDLE, token);
-                                ModelLibrary.WipeTemporaryModelFiles();
                             }
                         }
                     }
