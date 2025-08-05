@@ -111,7 +111,6 @@ namespace Cognite.Simulator.Utils
             }
         }
 
-
         private string _filePath;
 
         /// <summary>
@@ -335,9 +334,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Initializes a new instance of the <see cref="DependencyFile"/> class.
         /// </summary>
-        public DependencyFile()
-        {
-        }
+        public DependencyFile() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DependencyFile"/> class.

@@ -29,9 +29,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// </summary>
     public class ModelLibraryExtDepsTest : IDisposable
     {
+        StateStoreConfig? stateConfig;
+        ModelLibraryConfig? modelLibraryConfig;
+
         public void Dispose()
         {
-            CleanUpFiles(true, null);
+            CleanUpFiles(modelLibraryConfig, stateConfig);
         }
 
         public static HttpResponseMessage MockFilesByIdsEndpoint()
@@ -84,7 +87,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }}";
             return OkItemsResponse(item);
         }
-
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
@@ -94,8 +96,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
-            new SimpleRequestMocker(uri => true, () => GoneResponse)
+            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
         };
+
 
         /// <summary>
         /// This test verifies that multiple concurrent calls to GetModelRevision for the same model
@@ -104,7 +107,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestModelLibraryWithExternalDependencies()
         {
-            var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
             var mockedSimulatorClient = new Mock<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>();
             mockedSimulatorClient.Setup(client => client.ExtractModelInformation(It.IsAny<DefaultModelFilestate>(), It.IsAny<CancellationToken>()))
@@ -115,21 +117,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 });
 
             var services = new ServiceCollection();
-            services.AddSingleton(httpMocks.factory.Object);
-            services.AddCogniteTestClient();
+            services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             services.AddSingleton(mockedLogger.Object);
+            services.AddCogniteTestClient();
             services.AddSingleton(mockedSimulatorClient.Object);
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             services.AddSingleton(SeedData.SimulatorCreate);
-
-            var config = new DefaultConfig<AutomationConfig>();
-            config.GenerateDefaults();
-            services.AddSingleton(config);
+            services.AddDefaultConfig();
 
             using var provider = services.BuildServiceProvider();
 
-            var stateConfig = provider.GetRequiredService<StateStoreConfig>();
+            stateConfig = provider.GetRequiredService<StateStoreConfig>();
+            modelLibraryConfig = provider.GetRequiredService<DefaultConfig<AutomationConfig>>().Connector.ModelLibrary;
             var lib = provider.GetRequiredService<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             await lib.Init(CancellationToken.None);
             Assert.NotEmpty(lib._state);
@@ -160,7 +160,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 .Select(i => new DependencyFile
                 {
                     Id = 100 + i,
-                    FilePath = Path.GetFullPath(Path.Combine($"files/{100 + i}", $"{100 + i}.xml")),
+                    FilePath = Path.GetFullPath(Path.Combine($"{modelLibraryConfig.FilesDirectory}/{100 + i}", $"{100 + i}.xml")),
                     Arguments = new Dictionary<string, string> { { "address", "test.address." + i } }
                 })
                 .ToArray();
@@ -186,6 +186,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             Assert.NotNull(modelInState);
             Assert.Equivalent(expectedDependencyFiles, modelInState.DependencyFiles);
+
         }
     }
 }
