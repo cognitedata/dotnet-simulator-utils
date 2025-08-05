@@ -52,11 +52,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return (mockFactory, mockHttpMessageHandler);
         }
 
-        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = "Default")
+        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null)
         {
             var config = new DefaultConfig<AutomationConfig>();
             config.GenerateDefaults();
-            config.Connector.ModelLibrary.FilesDirectory = $"./files-{testCallerName}";
+            var filesDirectory = testCallerName != null ? $"./files-{testCallerName}" : $"./files";
+            config.Connector.ModelLibrary.FilesDirectory = filesDirectory;
             services.AddSingleton(config);
         }
 
