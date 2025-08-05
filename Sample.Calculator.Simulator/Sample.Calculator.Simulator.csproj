@@ -12,4 +12,8 @@
     <ProjectReference Include="..\Cognite.Simulator.Utils\Cognite.Simulator.Utils.csproj" />
 	</ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
+  </ItemGroup>
+
 </Project>
