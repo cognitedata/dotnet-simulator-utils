@@ -175,6 +175,8 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
 
+                await FindModelRevisions(false, token).ConfigureAwait(false);
+
                 await _store.RestoreExtractionState<U, T>(
                     _state,
                     _config.FilesTable,
@@ -183,8 +185,6 @@ namespace Cognite.Simulator.Utils
                         state.Init(poco);
                     },
                     token).ConfigureAwait(false);
-
-                await FindModelRevisions(false, token).ConfigureAwait(false);
 
                 if (_store is LiteDBStateStore ldbStore)
                 {
@@ -253,7 +253,7 @@ namespace Cognite.Simulator.Utils
 
             if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
             {
-                downloaded = await DownloadAllFilesForModelAsync(modelState).ConfigureAwait(false);
+                downloaded = await DownloadAllModelFilesAsync(modelState).ConfigureAwait(false);
             }
 
             if (downloaded && modelState.ShouldProcess())
@@ -571,7 +571,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="modelState">State object representing the model to download
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        private async Task<bool> DownloadAllFilesForModelAsync(T modelState)
+        private async Task<bool> DownloadAllModelFilesAsync(T modelState)
         {
             if (modelState == null)
             {
@@ -643,7 +643,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Downloads a file from CDF and stores it locally
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.
-        /// Each file serve as either a main model file or as a dependency to a model.
+        /// Each file serves as either a main model file or as a dependency to a model.
         /// </summary>
         /// <param name="fileId">ID of the file to download</param>
         /// <param name="fileExtension">File extension to use for the downloaded file</param>
@@ -654,7 +654,7 @@ namespace Cognite.Simulator.Utils
             try
             {
                 var downloadUriRes = await _cdfFiles
-                    .DownloadAsync([new Identity(fileId)])
+                    .DownloadAsync(new[] { fileId })
                     .ConfigureAwait(false);
 
                 var downloadUri = downloadUriRes.FirstOrDefault()?.DownloadUrl;

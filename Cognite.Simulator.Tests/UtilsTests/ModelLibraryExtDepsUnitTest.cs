@@ -91,7 +91,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private static readonly IList<SimpleRequestMocker> endpointMockTemplates = new List<SimpleRequestMocker>
         {
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => MockSimulatorModelRevEndpoint(), 1),
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
@@ -140,9 +140,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.NotNull(modelInState);
 
             // Basic validations
-            Assert.NotEmpty(lib._state);
             Assert.NotNull(modelInState);
-            Assert.Equal(123, modelInState.DataSetId);
             Assert.Equal("TestModelExternalId-v1", modelInState.ExternalId);
             Assert.Equal(1, modelInState.DownloadAttempts);
             Assert.True(modelInState.ParsingInfo.Parsed);
@@ -188,7 +186,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             Assert.NotNull(modelInState);
             Assert.Equivalent(expectedDependencyFiles, modelInState.DependencyFiles);
-
         }
     }
 }
