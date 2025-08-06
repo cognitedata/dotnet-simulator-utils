@@ -34,8 +34,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             };
 
             var services = new ServiceCollection();
-            var httpMocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            var mockHttpClientFactory = httpMocks.factory;
+            var mockHttpClientFactory = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             var mockedLogger = new Mock<ILogger<FileStorageClient>>();
 
             services.AddSingleton(mockHttpClientFactory.Object);
