@@ -27,6 +27,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Tests for the DefaultModelLibrary class with focus on external dependencies. 
     /// Uses SimpleRequestMocker to mock the HTTP layer.
     /// </summary>
+    [Collection(nameof(SequentialTestCollection))]
     public class ModelLibraryExtDepsTest : IDisposable
     {
         StateStoreConfig? stateConfig;
@@ -96,13 +97,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
-            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
+            new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
         };
 
 
         /// <summary>
-        /// This test verifies that multiple concurrent calls to GetModelRevision for the same model
-        /// don't result in parallel processing of the same model revision.
+        /// This test verifies that the ModelLibrary can handle external dependencies correctly.
+        /// It checks that the model revision is fetched, files are downloaded, and model is processed correctly.
         /// </summary>
         [Fact]
         public async Task TestModelLibraryWithExternalDependencies()
@@ -182,7 +183,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             modelInState.DependencyFiles.Clear();
             Assert.NotNull(modelInState);
             Assert.Empty(modelInState.DependencyFiles);
-            await lib.Init(CancellationToken.None);
+            await lib.Init(CancellationToken.None); // TODO: we should be able to lib._state.Clear() & lib.Init() to restore state completely from LiteDB 
+            // And make sure redundant file download/processing is not happening https://cognitedata.atlassian.net/browse/POFSP-1138
 
             Assert.NotNull(modelInState);
             Assert.Equivalent(expectedDependencyFiles, modelInState.DependencyFiles);

@@ -581,7 +581,7 @@ namespace Cognite.Simulator.Utils
             modelState.DownloadAttempts++;
 
 
-            var fileIds = modelState.GetPendingDownloadFileIds(); // TODO: this should only list non-existing ones
+            var fileIds = modelState.GetPendingDownloadFileIds();
 
             _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
                 fileIds.Count,
@@ -590,7 +590,7 @@ namespace Cognite.Simulator.Utils
 
             var files = await _cdfFiles
                 .RetrieveAsync(fileIds, ignoreUnknownIds: true)
-                .ConfigureAwait(false); // todo: make batch version
+                .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
 
             var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
 

@@ -55,6 +55,7 @@ namespace Cognite.Simulator.Utils
         {
             get
             {
+                // TODO: extend this to verify the dependency files as well https://cognitedata.atlassian.net/browse/POFSP-1137
                 return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
             }
         }
@@ -72,6 +73,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(CdfId), "Model state must have a valid CDF ID.");
             }
 
+            // TOD0: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
             var fileIds = new List<long> { CdfId };
 
             if (DependencyFiles != null)
@@ -83,11 +85,11 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// 
+        /// Updates a dependency by calling the provided update function.
+        /// Throws an exception if the file does not exist in the state.
         /// </summary>
         /// <param name="fileId">The ID of the dependency file</param>
         /// <param name="updateFunc">Function that takes a DependencyFile and returns an updated DependencyFile</param>
-        /// <returns>True if the operation was successful</returns>
         /// <exception cref="ArgumentNullException">Thrown if dependencyFile is null</exception>
         public void UpdateDependencyFile(long fileId, Func<DependencyFile, DependencyFile> updateFunc)
         {
