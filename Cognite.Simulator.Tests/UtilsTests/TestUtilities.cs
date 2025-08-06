@@ -24,6 +24,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public static class TestUtilities
     {
+        /// <summary>
+        /// Creates a mocked IHttpClientFactory that provides a new HttpClient instance with a fresh mock handler for each invocation.
+        /// This approach ensures isolation between tests by preventing shared state in HTTP handlers.
+        /// </summary>
         public static Mock<IHttpClientFactory> GetMockedHttpClientFactory(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
