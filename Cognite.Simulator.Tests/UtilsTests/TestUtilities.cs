@@ -4,9 +4,15 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -18,20 +24,46 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public static class TestUtilities
     {
-        public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) GetMockedHttpClientFactory(
+        /// <summary>
+        /// Creates a mocked IHttpClientFactory that provides a new HttpClient instance with a fresh mock handler for each invocation.
+        /// This approach ensures isolation between tests by preventing shared state in HTTP handlers.
+        /// </summary>
+        public static Mock<IHttpClientFactory> GetMockedHttpClientFactory(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
-            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-            mockHttpMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync",
-                                                  ItExpr.IsAny<HttpRequestMessage>(),
-                                                  ItExpr.IsAny<CancellationToken>())
-                .Returns<HttpRequestMessage, CancellationToken>(mockSendAsync);
-
-            var client = new HttpClient(mockHttpMessageHandler.Object);
             var mockFactory = new Mock<IHttpClientFactory>();
-            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
-            return (mockFactory, mockHttpMessageHandler);
+            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(
+                () =>
+                {
+                    var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+                    mockHttpMessageHandler.Protected()
+                        .Setup<Task<HttpResponseMessage>>("SendAsync",
+                                                          ItExpr.IsAny<HttpRequestMessage>(),
+                                                          ItExpr.IsAny<CancellationToken>())
+                        .Returns(mockSendAsync);
+                    return new HttpClient(mockHttpMessageHandler.Object);
+                });
+
+
+            return mockFactory;
+        }
+
+        public static void AddMockedHttpClientFactory(
+            this ServiceCollection services,
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
+        {
+            var mockFactory = GetMockedHttpClientFactory(mockSendAsync);
+
+            services.AddSingleton(mockFactory.Object);
+        }
+
+        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null)
+        {
+            var config = new DefaultConfig<AutomationConfig>();
+            config.GenerateDefaults();
+            var filesDirectory = testCallerName != null ? $"./files-{testCallerName}" : $"./files";
+            config.Connector.ModelLibrary.FilesDirectory = filesDirectory;
+            services.AddSingleton(config);
         }
 
         public static void VerifyLog<TLogger>(Mock<ILogger<TLogger>> logger, LogLevel level, string expectedMessage, Times times, bool isContainsCheck = false)
@@ -310,6 +342,26 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
         {
             return new HttpResponseMessage(statusCode) { Content = new StringContent(content) };
+        }
+
+        public static void CleanUpFiles(ModelLibraryConfig? modelLibraryConfig, StateStoreConfig? stateConfig)
+        {
+            var filesDirectory = modelLibraryConfig?.FilesDirectory ?? "./files";
+            try
+            {
+                if (Directory.Exists(filesDirectory))
+                {
+                    Directory.Delete(filesDirectory, true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning up: {ex.Message}");
+            }
         }
     }
 }
