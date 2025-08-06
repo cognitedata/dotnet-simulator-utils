@@ -19,30 +19,13 @@ using Microsoft.Extensions.Logging;
 
 using Xunit;
 
+using static Cognite.Simulator.Tests.UtilsTests.TestUtilities;
+
 namespace Cognite.Simulator.Tests.UtilsTests
 {
     [Collection(nameof(SequentialTestCollection))]
     public class ModelLibraryTest
     {
-        private static void CleanUp(bool deleteDirectory, StateStoreConfig? stateConfig)
-        {
-            try
-            {
-                if (deleteDirectory && Directory.Exists("./files"))
-                {
-                    Directory.Delete("./files", true);
-                }
-                if (stateConfig != null)
-                {
-                    StateUtils.DeleteLocalFile(stateConfig.Location);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error cleaning up: {ex.Message}");
-            }
-        }
-
         [Fact]
         public async Task TestModelLibrary()
         {
@@ -153,7 +136,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                CleanUp(true, stateConfig);
+                CleanUpFiles(null, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -280,7 +263,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                CleanUp(true, stateConfig);
+                CleanUpFiles(null, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -353,7 +336,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                CleanUp(true, stateConfig);
+                CleanUpFiles(null, stateConfig);
                 await SeedData.DeleteSimulator(cdf, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -430,7 +413,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                CleanUp(false, stateConfig);
+                CleanUpFiles(null, stateConfig);
                 await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
             }
         }
@@ -497,7 +480,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                CleanUp(false, stateConfig);
+                CleanUpFiles(null, stateConfig);
                 await SeedData.DeleteSimulator(cdf.CogniteClient, SeedData.SimulatorCreate.ExternalId);
 
             }
