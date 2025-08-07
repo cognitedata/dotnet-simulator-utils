@@ -185,7 +185,6 @@ namespace Cognite.Simulator.Utils
                         state.Init(poco);
                     },
                     token).ConfigureAwait(false);
-
                 if (_store is LiteDBStateStore ldbStore)
                 {
                     HashSet<string> idsToKeep = new HashSet<string>(_state.Select(s => s.Value.Id));
@@ -578,9 +577,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-
             modelState.DownloadAttempts++;
-
 
             var fileIds = modelState.GetPendingDownloadFileIds();
 

@@ -74,10 +74,9 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentException(nameof(CdfId), "Model state must have a valid CDF ID.");
             }
 
-            // TOD0: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
             var fileIds = new List<long> { CdfId };
 
-            fileIds.AddRange(DependencyFiles.Select(file => file.Id));
+            fileIds.AddRange(DependencyFiles.Select(file => file.Id)); // TODO: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
 
             return fileIds;
         }

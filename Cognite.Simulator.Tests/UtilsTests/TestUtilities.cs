@@ -116,10 +116,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        public static HttpResponseMessage GoneResponse()
-        {
-            return CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
-        }
+        public static HttpResponseMessage GoneResponse() => CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
         /// Mocks the requests to the endpoints with the given templates.
