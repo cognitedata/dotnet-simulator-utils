@@ -233,7 +233,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         public List<DependencyFile> DependencyFiles
         {
-            get => _dependencyFiles;
+            get => _dependencyFiles ??= new List<DependencyFile>();
             set
             {
                 if (value == _dependencyFiles) return;

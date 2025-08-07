@@ -621,11 +621,7 @@ namespace Cognite.Simulator.Utils
                         }
                         else
                         {
-                            modelState.UpdateDependencyFile(fileId, (dependency) =>
-                            {
-                                dependency.FilePath = filePath;
-                                return dependency;
-                            });
+                            modelState.UpdateDependencyFilePath(fileId, filePath);
                         }
                     }
                 }

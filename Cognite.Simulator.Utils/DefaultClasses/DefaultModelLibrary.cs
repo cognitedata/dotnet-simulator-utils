@@ -83,7 +83,7 @@ namespace Cognite.Simulator.Utils
                 throw new ArgumentNullException(nameof(modelRevision));
             }
             var dependencyFiles = modelRevision.ExternalDependencies != null ?
-                modelRevision.ExternalDependencies.Select(dependency => new DependencyFile(dependency)).ToList() : null;
+                modelRevision.ExternalDependencies.Select(dependency => new DependencyFile(dependency)).ToList() : [];
             var output = new TModelStateBase
             {
                 Id = modelRevision.Id.ToString(),

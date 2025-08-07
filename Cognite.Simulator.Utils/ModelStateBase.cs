@@ -65,48 +65,42 @@ namespace Cognite.Simulator.Utils
         /// This includes the main file ID and any dependency files.
         /// </summary>
         /// <returns>List of file IDs pending download</returns>
-        /// <exception cref="ArgumentNullException">Thrown if CdfId is not set</exception>
+        /// <exception cref="ArgumentException">Thrown if CdfId is not set</exception>
         public List<long> GetPendingDownloadFileIds()
         {
             if (CdfId == 0)
             {
-                throw new ArgumentNullException(nameof(CdfId), "Model state must have a valid CDF ID.");
+                throw new ArgumentException(nameof(CdfId), "Model state must have a valid CDF ID.");
             }
 
             // TOD0: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
             var fileIds = new List<long> { CdfId };
 
-            if (DependencyFiles != null)
-            {
-                fileIds.AddRange(DependencyFiles.Select(file => file.Id));
-            }
+            fileIds.AddRange(DependencyFiles.Select(file => file.Id));
 
             return fileIds;
         }
 
         /// <summary>
-        /// Updates a dependency by calling the provided update function.
-        /// Throws an exception if the file does not exist in the state.
+        /// Updates the file path of a dependency file.
+        /// Throws an exception if the file reference does not exist in the state.
         /// </summary>
         /// <param name="fileId">The ID of the dependency file</param>
-        /// <param name="updateFunc">Function that takes a DependencyFile and returns an updated DependencyFile</param>
+        /// <param name="filePath">The new file path for the dependency file</param>
         /// <exception cref="ArgumentNullException">Thrown if dependencyFile is null</exception>
-        public void UpdateDependencyFile(long fileId, Func<DependencyFile, DependencyFile> updateFunc)
+        public void UpdateDependencyFilePath(long fileId, string filePath)
         {
-            if (updateFunc == null)
+            if (string.IsNullOrEmpty(filePath))
             {
-                throw new ArgumentNullException(nameof(updateFunc), "Update function cannot be null.");
+                throw new ArgumentNullException(nameof(filePath), "File path cannot be null or empty.");
             }
 
-            if (DependencyFiles != null)
-            {
-                var indexOf = DependencyFiles.FindIndex(file => file.Id == fileId);
+            var indexOf = DependencyFiles.FindIndex(file => file.Id == fileId);
 
-                if (indexOf >= 0)
-                {
-                    DependencyFiles[indexOf] = updateFunc(DependencyFiles[indexOf]);
-                    return;
-                }
+            if (indexOf >= 0)
+            {
+                DependencyFiles[indexOf].FilePath = filePath;
+                return;
             }
 
             throw new InvalidOperationException($"Dependency file with ID {fileId} not found in the model state.");
