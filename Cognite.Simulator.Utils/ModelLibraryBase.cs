@@ -567,6 +567,7 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Downloads all files associated with a model state and stores them locally.
+        /// Updates the model state with the file paths of the downloaded files.
         /// </summary>
         /// <param name="modelState">State object representing the model to download
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>

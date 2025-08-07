@@ -50,13 +50,14 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Indicates if the model file has been downloaded and the file exists on the disk.
+        /// Also checks if all dependency files have their paths assigned (without checking the file existence).
         /// </summary>
         public bool Downloaded
         {
             get
             {
-                // TODO: extend this to verify the dependency files as well https://cognitedata.atlassian.net/browse/POFSP-1137
-                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+                var dependenciesDownloaded = DependencyFiles.All(file => !string.IsNullOrEmpty(file.FilePath)); // too expensive to check file existence here
+                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath) && dependenciesDownloaded;
             }
         }
 

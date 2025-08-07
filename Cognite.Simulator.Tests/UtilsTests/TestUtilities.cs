@@ -358,6 +358,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 if (stateConfig != null)
                 {
                     StateUtils.DeleteLocalFile(stateConfig.Location);
+                    StateUtils.DeleteLocalFile(stateConfig.Location + "-log");
                 }
             }
             catch (Exception ex)
