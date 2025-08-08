@@ -9,6 +9,7 @@ namespace Cognite.Simulator.Extensions;
 /// </summary>
 public static class FilesExtensions
 {
+
     /// <summary>
     /// Returns the file extension of a given CDF file.
     /// This is based on the file name and returns the extension in lowercase without the leading period.
@@ -20,16 +21,24 @@ public static class FilesExtensions
             throw new ArgumentNullException(nameof(file), "File cannot be null.");
         }
 
-        if (string.IsNullOrEmpty(file.Name))
+        return GetFileExtension(file.Name);
+    }
+
+    /// <summary>
+    /// Returns the file extension of a given file name.
+    /// This is based on the file name and returns the extension in lowercase without the leading period
+    /// </summary>
+    public static string GetFileExtension(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
         {
-            throw new ArgumentException($"File name cannot be null or empty. File ID: {file.Id}");
+            throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
         }
 
-        var extension = Path.GetExtension(file.Name);
-
+        var extension = Path.GetExtension(fileName);
         if (string.IsNullOrEmpty(extension))
         {
-            throw new ArgumentException($"File name does not contain a valid extension: {file.Name}");
+            throw new ArgumentException($"File name does not contain a valid extension: {fileName}");
         }
 
         return extension.TrimStart('.').ToLowerInvariant();
