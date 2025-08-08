@@ -92,29 +92,19 @@ namespace Cognite.Simulator.Utils
             }
 
             // Find files that need to be downloaded (not in cache)
-            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id)).ToList();
-
+            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id));
             var fileIdsToDownload = new List<long>();
             var alreadyDownloadedFiles = new Dictionary<long, string>();
 
-            if (!currentFilesCache.TryGetValue(CdfId, out string value))
+            foreach (var expectedFile in expectedFileIds)
             {
-                fileIdsToDownload.Add(CdfId);
-            }
-            else
-            {
-                alreadyDownloadedFiles[CdfId] = value;
-            }
-
-            foreach (var depFile in DependencyFiles)
-            {
-                if (currentFilesCache.TryGetValue(depFile.Id, out var depFilePath))
+                if (currentFilesCache.TryGetValue(expectedFile, out var filePath))
                 {
-                    alreadyDownloadedFiles[depFile.Id] = depFilePath;
+                    alreadyDownloadedFiles[expectedFile] = filePath;
                 }
                 else
                 {
-                    fileIdsToDownload.Add(depFile.Id);
+                    fileIdsToDownload.Add(expectedFile);
                 }
             }
 

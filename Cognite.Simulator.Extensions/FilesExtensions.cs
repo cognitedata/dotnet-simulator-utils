@@ -32,7 +32,7 @@ public static class FilesExtensions
     {
         if (string.IsNullOrEmpty(fileName))
         {
-            throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
+            throw new ArgumentException("File name cannot be null or empty.");
         }
 
         var extension = Path.GetExtension(fileName);
