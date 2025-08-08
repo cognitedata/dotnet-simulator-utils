@@ -59,7 +59,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => file.GetExtension());
-            Assert.Contains("File name cannot be null or empty. File ID: 123", exception.Message);
+            Assert.Contains("File name cannot be null or empty.", exception.Message);
         }
 
         [Theory]

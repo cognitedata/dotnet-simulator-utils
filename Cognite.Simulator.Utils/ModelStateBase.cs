@@ -50,13 +50,13 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Indicates if the model file has been downloaded and the file exists on the disk.
-        /// Also checks if all dependency files have their paths assigned (without checking the file existence).
+        /// Also checks if all dependency files have their paths assigned.
         /// </summary>
         public bool Downloaded
         {
             get
             {
-                var dependenciesDownloaded = DependencyFiles.All(file => !string.IsNullOrEmpty(file.FilePath)); // too expensive to check file existence here
+                var dependenciesDownloaded = DependencyFiles.All(file => file.Downloaded);
                 return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath) && dependenciesDownloaded;
             }
         }
@@ -82,39 +82,33 @@ namespace Cognite.Simulator.Utils
         /// Gets all file IDs that are yet to be downloaded.
         /// This includes the main file ID and any dependency files.
         /// </summary>
-        /// <returns>List of file IDs pending download</returns>
-        /// <exception cref="ArgumentNullException">Thrown if CdfId is not set</exception>
+        /// <returns>List of file IDs pending download, and a dictionary of already downloaded files with their paths</returns>
+        /// <exception cref="InvalidOperationException">Thrown if CdfId is not set</exception>
         public (List<long>, Dictionary<long, string>) DeduplicateDownloadFileIds(Dictionary<long, string> currentFilesCache)
         {
-            if (currentFilesCache == null)
+            if (CdfId == 0)
             {
-                throw new ArgumentNullException(nameof(currentFilesCache), "Current files cache cannot be null.");
+                throw new InvalidOperationException("Model state must have a valid File ID.");
             }
 
-            // Find files that need to be downloaded (not in cache)
-            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id)).ToList();
+            if (currentFilesCache == null)
+            {
+                throw new ArgumentNullException(nameof(currentFilesCache));
+            }
 
+            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id));
             var fileIdsToDownload = new List<long>();
             var alreadyDownloadedFiles = new Dictionary<long, string>();
 
-            if (!currentFilesCache.TryGetValue(CdfId, out string value))
+            foreach (var expectedFile in expectedFileIds)
             {
-                fileIdsToDownload.Add(CdfId);
-            }
-            else
-            {
-                alreadyDownloadedFiles[CdfId] = value;
-            }
-
-            foreach (var depFile in DependencyFiles)
-            {
-                if (currentFilesCache.TryGetValue(depFile.Id, out var depFilePath))
+                if (currentFilesCache.TryGetValue(expectedFile, out var filePath))
                 {
-                    alreadyDownloadedFiles[depFile.Id] = depFilePath;
+                    alreadyDownloadedFiles[expectedFile] = filePath;
                 }
                 else
                 {
-                    fileIdsToDownload.Add(depFile.Id);
+                    fileIdsToDownload.Add(expectedFile);
                 }
             }
 
