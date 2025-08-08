@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list"), MockSimulatorRoutineRevEndpoint, 1),
-            new SimpleRequestMocker(uri => true, () => GoneResponse)
+            new SimpleRequestMocker(uri => true, GoneResponse)
         };
 
         // We need to mock the HttpClientFactory to return the mocked responses

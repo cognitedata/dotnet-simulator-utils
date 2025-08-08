@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
-using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Extensions;
 
 
@@ -49,14 +50,62 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Indicates if the model file has been downloaded and the file exists on the disk.
+        /// Also checks if all dependency files have their paths assigned (without checking the file existence).
         /// </summary>
         public bool Downloaded
         {
             get
             {
-                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+                var dependenciesDownloaded = DependencyFiles.All(file => !string.IsNullOrEmpty(file.FilePath)); // too expensive to check file existence here
+                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath) && dependenciesDownloaded;
             }
         }
+
+        /// <summary>
+        /// Gets all file IDs that are yet to be downloaded.
+        /// This includes the main file ID and any dependency files.
+        /// </summary>
+        /// <returns>List of file IDs pending download</returns>
+        /// <exception cref="ArgumentException">Thrown if CdfId is not set</exception>
+        public List<long> GetPendingDownloadFileIds()
+        {
+            if (CdfId == 0)
+            {
+                throw new ArgumentException(nameof(CdfId), "Model state must have a valid CDF ID.");
+            }
+
+            var fileIds = new List<long> { CdfId };
+
+            fileIds.AddRange(DependencyFiles.Select(file => file.Id)); // TODO: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
+
+            return fileIds;
+        }
+
+        /// <summary>
+        /// Updates the file path of a dependency file.
+        /// Throws an exception if the file reference does not exist in the state.
+        /// </summary>
+        /// <param name="fileId">The ID of the dependency file</param>
+        /// <param name="filePath">The new file path for the dependency file</param>
+        /// <exception cref="ArgumentNullException">Thrown if dependencyFile is null</exception>
+        public void UpdateDependencyFilePath(long fileId, string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                throw new ArgumentNullException(nameof(filePath), "File path cannot be null or empty.");
+            }
+
+            var indexOf = DependencyFiles.FindIndex(file => file.Id == fileId);
+
+            if (indexOf >= 0)
+            {
+                DependencyFiles[indexOf].FilePath = filePath;
+                return;
+            }
+
+            throw new InvalidOperationException($"Dependency file with ID {fileId} not found in the model state.");
+        }
+
 
         /// <summary>
         /// Model data associated with this state

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +26,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
     /// Tests for the ModelLibraryBase class with focus on the concurrency aspects.
     /// Uses FakeModelLibrary and SimpleRequestMocker to mock the HTTP layer.
     /// </summary>
+    [Collection(nameof(SequentialTestCollection))]
     public class ModelLibraryConcurrencyTest : IDisposable
     {
         private StateStoreConfig? stateConfig;
@@ -39,7 +41,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
-            new SimpleRequestMocker(uri => true, () => GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
+            new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
         };
 
         public void Dispose()
@@ -127,7 +129,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
             VerifyLog(mockedLogger, LogLevel.Debug, "Model revision not found locally, adding to the local state: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 100. Model revision external id: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading 1 file(s) for model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (1/1): 100. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
         }
 
