@@ -62,23 +62,66 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Sets the file path for the main file or a dependency file.
+        /// </summary>
+        public void SetFilePath(long fileId, string filePath, string fileExtension = null)
+        {
+            if (fileId == CdfId)
+            {
+                FilePath = filePath;
+                IsInDirectory = true;
+                FileExtension = fileExtension ?? FilesExtensions.GetFileExtension(filePath);
+            }
+            else
+            {
+                UpdateDependencyFilePath(fileId, filePath);
+            }
+        }
+
+        /// <summary>
         /// Gets all file IDs that are yet to be downloaded.
         /// This includes the main file ID and any dependency files.
         /// </summary>
         /// <returns>List of file IDs pending download</returns>
-        /// <exception cref="ArgumentException">Thrown if CdfId is not set</exception>
-        public List<long> GetPendingDownloadFileIds()
+        /// <exception cref="ArgumentNullException">Thrown if CdfId is not set</exception>
+        public (List<long>, Dictionary<long, string>) DeduplicateDownloadFileIds(Dictionary<long, string> currentFilesCache)
         {
-            if (CdfId == 0)
+            if (currentFilesCache == null)
             {
-                throw new ArgumentException(nameof(CdfId), "Model state must have a valid CDF ID.");
+                throw new ArgumentNullException(nameof(currentFilesCache), "Current files cache cannot be null.");
             }
 
-            var fileIds = new List<long> { CdfId };
+            // Find files that need to be downloaded (not in cache)
+            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id)).ToList();
 
-            fileIds.AddRange(DependencyFiles.Select(file => file.Id)); // TODO: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
+            var fileIdsToDownload = new List<long>();
+            var alreadyDownloadedFiles = new Dictionary<long, string>();
 
-            return fileIds;
+            if (!currentFilesCache.TryGetValue(CdfId, out string value))
+            {
+                fileIdsToDownload.Add(CdfId);
+            }
+            else
+            {
+                alreadyDownloadedFiles[CdfId] = value;
+            }
+
+            foreach (var depFile in DependencyFiles)
+            {
+                if (currentFilesCache.TryGetValue(depFile.Id, out var depFilePath))
+                {
+                    alreadyDownloadedFiles[depFile.Id] = depFilePath;
+                }
+                else
+                {
+                    fileIdsToDownload.Add(depFile.Id);
+                }
+            }
+
+            return (
+                fileIdsToDownload,
+                alreadyDownloadedFiles
+            );
         }
 
         /// <summary>
