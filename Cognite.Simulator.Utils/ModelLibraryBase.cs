@@ -252,7 +252,7 @@ namespace Cognite.Simulator.Utils
 
             if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
             {
-                downloaded = await DownloadFileAsync(modelState).ConfigureAwait(false);
+                downloaded = await DownloadAllModelFilesAsync(modelState).ConfigureAwait(false);
             }
 
             if (downloaded && modelState.ShouldProcess())
@@ -536,6 +536,8 @@ namespace Cognite.Simulator.Utils
                 {
                     await VerifyLocalModelState(group.First(), token).ConfigureAwait(false);
                 }
+
+                await SaveStates(token).ConfigureAwait(false);
             }
             catch (ResponseException e)
             {
@@ -563,83 +565,141 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Downloads a file from CDF and stores it locally
+        /// Downloads all files associated with a model state and stores them locally.
+        /// Updates the model state with the file paths of the downloaded files.
         /// </summary>
-        /// <param name="modelState">State object representing the file to download
+        /// <param name="modelState">State object representing the model to download
         /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.</param>
         /// <returns>True if the file was downloaded successfully, false otherwise</returns>
-        private async Task<bool> DownloadFileAsync(T modelState)
+        private async Task<bool> DownloadAllModelFilesAsync(T modelState)
         {
             if (modelState == null)
             {
                 throw new ArgumentNullException(nameof(modelState));
             }
-            var fileId = new Identity(modelState.CdfId);
             modelState.DownloadAttempts++;
-            _logger.LogInformation("Downloading file: {Id}. Model revision external id: {ExternalId}. Attempt: {DownloadAttempts}",
-                modelState.CdfId,
+
+            var fileIds = modelState.GetPendingDownloadFileIds();
+
+            _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
+                fileIds.Count,
                 modelState.ExternalId,
                 modelState.DownloadAttempts);
 
+            var files = await _cdfFiles
+                .RetrieveAsync(fileIds, ignoreUnknownIds: true)
+                .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
+
+            var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
+
+            bool allFilesDownloaded = true;
+
+            for (int fileIndex = 0; fileIndex < fileIds.Count; fileIndex++)
+            {
+                var downloaded = false;
+                var fileId = fileIds[fileIndex];
+                var isMainFile = fileId == modelState.CdfId;
+                if (filesMap.TryGetValue(fileId, out var file))
+                {
+                    _logger.LogInformation("Downloading file ({FileNumber}/{FilesTotal}): {Id}. Model revision external ID: {ExternalId}.",
+                        fileIndex + 1,
+                        fileIds.Count,
+                        fileId,
+                        modelState.ExternalId);
+                    var fileExtension = file.GetExtension();
+                    string filePath = await DownloadFileAsync(fileId, fileExtension, modelState.ExternalId).ConfigureAwait(false);
+                    downloaded = !string.IsNullOrEmpty(filePath);
+                    if (downloaded)
+                    {
+                        if (isMainFile)
+                        {
+                            modelState.IsInDirectory = true;
+                            modelState.FilePath = filePath;
+                            modelState.FileExtension = fileExtension;
+                        }
+                        else
+                        {
+                            modelState.UpdateDependencyFilePath(fileId, filePath);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("File with ID {FileId} not found in CDF for model revision {ExternalId}",
+                        fileId, modelState.ExternalId);
+                }
+                allFilesDownloaded &= downloaded;
+            }
+
+            return allFilesDownloaded;
+        }
+
+        /// <summary>
+        /// Downloads a file from CDF and stores it locally
+        /// Such files are used once to run a simulation with a model that is not available in the state upon at a give time.
+        /// Each file serves as either a main model file or as a dependency to a model.
+        /// </summary>
+        /// <param name="fileId">ID of the file to download</param>
+        /// <param name="fileExtension">File extension to use for the downloaded file</param>
+        /// <param name="modelRevisionExternalId">External ID of the model revision to which the file belongs.</param>
+        /// <returns>File path where the file was downloaded, or null if the download failed</returns>
+        private async Task<string> DownloadFileAsync(long fileId, string fileExtension, string modelRevisionExternalId)
+        {
             try
             {
-                var fileRes = await _cdfFiles
-                    .RetrieveAsync([fileId])
-                    .ConfigureAwait(false);
-                var file = fileRes.FirstOrDefault();
-
                 var downloadUriRes = await _cdfFiles
                     .DownloadAsync(new[] { fileId })
                     .ConfigureAwait(false);
 
                 var downloadUri = downloadUriRes.FirstOrDefault()?.DownloadUrl;
 
-                if (file != null && downloadUri != null)
+                if (downloadUri != null)
                 {
-                    var fileExtension = file.GetExtension();
-                    var storageFolder = Path.Combine(_modelFolder, $"{file.Id}");
-                    var filename = Path.Combine(storageFolder, $"{file.Id}.{fileExtension}");
+                    var storageFolder = Path.Combine(_modelFolder, $"{fileId}");
                     CreateDirectoryIfNotExists(storageFolder);
-                    modelState.IsInDirectory = true;
 
+                    var filePath = Path.Combine(storageFolder, $"{fileId}.{fileExtension}");
                     bool downloaded = await _downloadClient
-                        .DownloadFileAsync(downloadUri, filename)
+                        .DownloadFileAsync(downloadUri, filePath)
                         .ConfigureAwait(false);
+
                     if (downloaded)
                     {
                         _logger.LogDebug("File downloaded: {Id}. Model revision: {ExternalId}. File path: {FilePath}",
-                            modelState.CdfId,
-                            modelState.ExternalId,
-                            filename);
-                        modelState.FilePath = filename;
-                        modelState.FileExtension = fileExtension;
-                        return true;
+                            fileId,
+                            modelRevisionExternalId,
+                            filePath);
+
+                        return filePath;
                     }
                 }
             }
             catch (ResponseException e)
             {
                 // File cannot be downloaded, skip for now and try again later
-                _logger.LogWarning("Failed to fetch file url from CDF: {Message}. Model revision: {ExternalId}",
+                _logger.LogWarning("Failed to fetch file url from CDF: {Message}. Model revision: {ExternalId}. File ID: {FileId}",
                     e.Message,
-                    modelState.ExternalId
+                    modelRevisionExternalId,
+                    fileId
                 );
             }
             catch (ConnectorException e)
             {
-                _logger.LogWarning("Failed to download file: {Message}. Model revision: {ExternalId}",
+                _logger.LogWarning("Failed to download file: {Message}. Model revision: {ExternalId}. File ID: {FileId}",
                     e.Message,
-                    modelState.ExternalId
+                    modelRevisionExternalId,
+                    fileId
                 );
             }
             catch (Exception e)
             {
-                _logger.LogError("Error occurred while downloading the file for model revision {ExternalId}: {Error}",
-                    modelState.ExternalId,
+                _logger.LogError("Error occurred while downloading the file for model revision {ExternalId}. File ID {FileId}: {Error}",
+                    modelRevisionExternalId,
+                    fileId,
                     e
                 );
             }
-            return false;
+            return null;
         }
 
         /// <summary>
@@ -660,8 +720,6 @@ namespace Cognite.Simulator.Utils
                 // Find new model files in CDF and add the to the local state.
                 await FindModelRevisions(true, token)
                     .ConfigureAwait(false);
-
-                await SaveStates(token).ConfigureAwait(false);
 
                 await Task
                     .Delay(TimeSpan.FromSeconds(_config.LibraryUpdateInterval), token)

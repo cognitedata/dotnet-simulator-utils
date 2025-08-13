@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 using Cognite.Extractor.StateStorage;
-using Cognite.Simulator.Extensions;
+
+using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Utils
 {
@@ -224,6 +224,24 @@ namespace Cognite.Simulator.Utils
             }
         }
 
+        private List<DependencyFile> _dependencyFiles;
+
+        /// <summary>
+        /// List of dependency files that the main model file requires to function correctly.
+        /// Each dependency file has a unique identifier, a path on disk, and arguments providing additional metadata about how the file should be used in the model.
+        /// Only used by simulators that work with multi-file models.
+        /// </summary>
+        public List<DependencyFile> DependencyFiles
+        {
+            get => _dependencyFiles ??= new List<DependencyFile>();
+            set
+            {
+                if (value == _dependencyFiles) return;
+                LastTimeModified = DateTime.UtcNow;
+                _dependencyFiles = value;
+            }
+        }
+
         private int _downloadAttempts;
 
         /// <summary>
@@ -260,9 +278,9 @@ namespace Cognite.Simulator.Utils
             _externalId = poco.ExternalId;
             _logId = poco.LogId;
             _fileExtension = poco.FileExtension;
+            _dependencyFiles = poco.DependencyFiles;
             _downloadAttempts = poco.DownloadAttempts;
             _version = poco.Version;
-
         }
 
         /// <summary>
@@ -285,9 +303,50 @@ namespace Cognite.Simulator.Utils
                 ExternalId = ExternalId,
                 LogId = LogId,
                 FileExtension = FileExtension,
+                DependencyFiles = DependencyFiles,
                 DownloadAttempts = DownloadAttempts,
                 Version = Version
             };
+        }
+    }
+
+    /// <summary>
+    /// Represents a dependency file that the main model file requires to function
+    /// </summary>
+    public class DependencyFile
+    {
+        /// <summary>
+        /// A unique identifier of a file in CDF.
+        /// </summary>
+        public long Id { get; set; }
+
+        /// <summary>
+        /// Additional arguments or parameters associated with this dependency, used to provide metadata about how the file should be used by the simulator.
+        /// For example: {"simulatorObject": "well_1"}
+        /// </summary>
+        public Dictionary<string, string> Arguments { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// The absolute path where the dependency file is stored on disk
+        /// </summary>
+        public string FilePath { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DependencyFile"/> class.
+        /// </summary>
+        public DependencyFile() { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DependencyFile"/> class.
+        /// </summary>
+        public DependencyFile(SimulatorFileDependency fileDependency)
+        {
+            if (fileDependency == null)
+            {
+                throw new ArgumentNullException(nameof(fileDependency));
+            }
+            Id = fileDependency.File.Id;
+            Arguments = fileDependency.Arguments;
         }
     }
 
@@ -368,6 +427,14 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         [StateStoreProperty("log-id")]
         public long LogId { get; set; }
+
+        /// <summary>
+        /// List of dependency files that the main model file requires to function correctly.
+        /// Each dependency file has a unique identifier, a path on disk, and optional
+        /// arguments providing additional metadata about how the file should be used.
+        /// </summary>
+        [StateStoreProperty("dependency-files")]
+        public List<DependencyFile> DependencyFiles { get; set; }
 
         /// <summary>
         /// Download attempts
