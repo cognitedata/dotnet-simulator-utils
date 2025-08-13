@@ -105,6 +105,21 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     return Task.CompletedTask;
                 });
 
+            var simulatorDefinition = SeedData.GetSimulatorCreateObj();
+            simulatorDefinition.ModelDependencies = new List<SimulatorModelDependency>
+            {
+                new SimulatorModelDependency
+                {
+                    Fields = new List<SimulatorModelDependencyFields>
+                    {
+                        new SimulatorModelDependencyFields
+                        {
+                            Name = "address"
+                        }
+                    },
+                }
+            };
+
             var services = new ServiceCollection();
             services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
             services.AddSingleton(mockedLogger.Object);
@@ -112,7 +127,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(mockedSimulatorClient.Object);
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
-            services.AddSingleton(SeedData.SimulatorCreate);
+            services.AddSingleton(simulatorDefinition);
             services.AddDefaultConfig();
 
             var provider = services.BuildServiceProvider();

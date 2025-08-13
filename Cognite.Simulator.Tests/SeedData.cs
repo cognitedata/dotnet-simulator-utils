@@ -840,7 +840,9 @@ namespace Cognite.Simulator.Tests
             };
         }
 
-        public static SimulatorCreate SimulatorCreate = new SimulatorCreate()
+        public static SimulatorCreate SimulatorCreate = GetSimulatorCreateObj();
+
+        public static SimulatorCreate GetSimulatorCreateObj() => new SimulatorCreate
         {
             ExternalId = TestSimulatorExternalId,
             Name = TestSimulatorExternalId,
