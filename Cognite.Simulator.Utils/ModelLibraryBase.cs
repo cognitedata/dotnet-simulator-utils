@@ -169,16 +169,20 @@ namespace Cognite.Simulator.Utils
             var statesPocos = await _store.GetAllExtractionStates<U>(
                 _config.FilesTable,
                 token).ConfigureAwait(false);
+            var restoredCount = 0;
 
             foreach (var poco in statesPocos)
             {
                 var state = new T();
                 state.Init(poco);
-                _state.TryAdd(state.Id, state);
+                if (_state.TryAdd(state.Id, state))
+                {
+                    restoredCount++;
+                }
             }
 
             _logger.LogDebug("Restored {Restored} extraction state(s) from litedb store {store}",
-                statesPocos.Count(),
+                restoredCount,
                 _config.FilesTable);
         }
 
