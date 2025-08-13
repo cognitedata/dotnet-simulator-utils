@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-020 (2025-08-13)
+
+### Features
+
+* Model file dependencies support [experimental]
+    - The model file can contain dependencies to other model files. Model extraction logic will automatically download these dependencies and store them in the model state.
+    - This is an experimental feature, and future releases will include patches / improvements for it, e.g. deduplication on download.
+* Support for original file extension in model library.
+    - The model file extension is now determined by the file name, rather than the first item in the list of supported file extensions for a given simulator.
+
+### Bug Fixes
+* Improved the robustness of the model library and refactored the code to make it easier to maintain and debug.
+    - Removed the temporary state for model revisions, which simplifies the logic and reduces the risk of errors.
+    - Fixed issues with accessing model revisions by external ID, especially when models are deleted and re-uploaded.
 
 ## Release v1.0.0-beta-019 (2025-06-05)
 
