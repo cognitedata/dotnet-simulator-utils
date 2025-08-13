@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
 
-        private static HttpResponseMessage MockSimulatorModelRevEndpoint(long id = 1000, string version = "v1")
+        private static Func<HttpResponseMessage> MockSimulatorModelRevEndpoint(long id = 1000, string version = "v1", string status = "unknown")
         {
             var externalDependencies = Enumerable.Range(1, 2)
                 .Select(i => $@"{{
@@ -81,14 +81,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ],
                 ""fileId"": {id / 10},
                 ""createdByUserId"": ""n/a"",
-                ""status"": ""unknown"",
+                ""status"": ""{status}"",
                 ""dataSetId"": 123,
                 ""versionNumber"": 1,
                 ""logId"": 1234567890,
                 ""createdTime"": 1234567890000,
                 ""lastUpdatedTime"": 1234567890000
             }}";
-            return OkItemsResponse(item);
+            return () => OkItemsResponse(item);
         }
 
         private (
@@ -127,6 +127,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         /// <summary>
         /// This test verifies that the ModelLibrary can handle external dependencies correctly.
         /// It checks that the model revision is fetched, files are downloaded, and model is processed correctly.
+        /// Also verifies that the model state can be restored from the LiteDB store without redundant downloads or processing.
         /// </summary>
         [Fact]
         public async Task TestModelLibraryWithExternalDependencies()
@@ -135,9 +136,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var endpointMockTemplates = new List<SimpleRequestMocker>
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 2),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint(), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, "v1", "success"), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
@@ -190,20 +192,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (2/3): 101. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (3/3): 102. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "Restored 0 extraction state(s) from litedb store ModelLibraryFiles", Times.Exactly(1), true);
 
-            // clear the state, run Init to load from the store to check the deserialization from LiteDB
-            modelInState.DependencyFiles.Clear();
-            Assert.NotNull(modelInState);
-            Assert.Empty(modelInState.DependencyFiles);
-            await lib.Init(CancellationToken.None); // TODO: we should be able to lib._state.Clear() & lib.Init() to restore state completely from LiteDB 
-            // And make sure redundant file download/processing is not happening https://cognitedata.atlassian.net/browse/POFSP-1138
+            // Arrange (2) - with re-initialization
+            lib._state.Clear();
+            Assert.Empty(lib._state);
 
-            Assert.NotNull(modelInState);
-            Assert.Equivalent(expectedDependencyFiles, modelInState.DependencyFiles);
+            // Act (2) - initialize and restore state from LiteDB, to make sure no redundant downloads or processing happen
+            await lib.Init(CancellationToken.None);
+
+            // Assert (2) - verify if the model is the same as before
+            Assert.NotEmpty(lib._state);
+            var modelRestored = lib._state.Values.FirstOrDefault(m => m.ExternalId == "TestModelExternalId-v1");
+            Assert.NotNull(modelRestored);
+
+            Assert.Equal([modelInState.Id, modelInState.ExternalId], [modelRestored.Id, modelRestored.ExternalId]);
+            Assert.Equal(modelInState.ModelExternalId, modelRestored.ModelExternalId);
+            Assert.Equal(modelInState.Downloaded, modelRestored.Downloaded);
+            Assert.Equal(modelInState.ShouldProcess(), modelRestored.ShouldProcess());
+            Assert.Equivalent(expectedDependencyFiles, modelRestored.DependencyFiles);
+
+            VerifyLog(mockedLogger, LogLevel.Error, "Error reading model revision from CDF", Times.Exactly(0), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "Restored 1 extraction state(s) from litedb store ModelLibraryFiles", Times.Exactly(1), true);
         }
 
         /// <summary>
-        /// This test verifies that the ModelLibrary handles single file downloads with external dependencies correctly.
+        /// This test verifies that the ModelLibrary can handle file download failures gracefully.
         /// </summary>
         [Fact]
         public async Task TestModelLibraryWithExternalDependenciesLoadFailure()
@@ -213,7 +229,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -277,9 +293,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(2000, "v2"), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, "v2"), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 5),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 5),
