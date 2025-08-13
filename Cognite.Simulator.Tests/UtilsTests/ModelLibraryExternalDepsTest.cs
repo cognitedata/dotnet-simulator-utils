@@ -216,6 +216,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Error, "Error reading model revision from CDF", Times.Exactly(0), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "Restored 1 extraction state(s) from litedb store ModelLibraryFiles", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Warning, "Failed to fetch model revisions from CDF", Times.Exactly(0), true);
         }
 
         /// <summary>
