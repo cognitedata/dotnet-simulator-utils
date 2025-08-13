@@ -94,28 +94,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         private (
             DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>,
             Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>
-            ) SetupServices(List<SimpleRequestMocker> endpointMockTemplates, [CallerMemberName] string? testCallerName = null)
+            ) SetupRuntime(List<SimpleRequestMocker> endpointMockTemplates, [CallerMemberName] string? testCallerName = null)
         {
-            var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
-            var mockedSimulatorClient = new Mock<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>();
-            mockedSimulatorClient.Setup(client => client.ExtractModelInformation(It.IsAny<DefaultModelFilestate>(), It.IsAny<CancellationToken>()))
-                .Returns((DefaultModelFilestate state, CancellationToken token) =>
+            var simulatorDefinition = SeedData.GetSimulatorCreateObj();
+            simulatorDefinition.ModelDependencies = new List<SimulatorModelDependency>
+            {
+                new SimulatorModelDependency
                 {
-                    state.ParsingInfo.SetSuccess();
-                    return Task.CompletedTask;
-                });
+                    Fields = new List<SimulatorModelDependencyField>
+                    {
+                        new SimulatorModelDependencyField
+                        {
+                            Name = "address"
+                        }
+                    },
+                }
+            };
 
-            var services = new ServiceCollection();
-            services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            services.AddSingleton(mockedLogger.Object);
-            services.AddCogniteTestClient(testCallerName);
-            services.AddSingleton(mockedSimulatorClient.Object);
-            services.AddSingleton<FileStorageClient>();
-            services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
-            services.AddSingleton(SeedData.SimulatorCreate);
-            services.AddDefaultConfig();
-
-            var provider = services.BuildServiceProvider();
+            var (provider, mockedLogger) = BuildModelLibraryTestSetup(endpointMockTemplates, simulatorDefinition, testCallerName);
 
             stateConfig = provider.GetRequiredService<StateStoreConfig>();
             modelLibraryConfig = provider.GetRequiredService<DefaultConfig<AutomationConfig>>().Connector.ModelLibrary;
@@ -146,7 +142,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
 
-            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var (lib, mockedLogger) = SetupRuntime(endpointMockTemplates);
 
             await lib.Init(CancellationToken.None);
             Assert.NotEmpty(lib._state);
@@ -194,6 +190,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "Restored 0 extraction state(s) from litedb store ModelLibraryFiles", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "Using cached model revision", Times.Never(), true);
 
             // Arrange (2) - with re-initialization
             lib._state.Clear();
@@ -244,7 +241,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
 
-            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var (lib, mockedLogger) = SetupRuntime(endpointMockTemplates);
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);
 
@@ -308,7 +305,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
 
-            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var (lib, mockedLogger) = SetupRuntime(endpointMockTemplates);
             var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);
@@ -377,7 +374,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
 
-            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var (lib, mockedLogger) = SetupRuntime(endpointMockTemplates);
             var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
             await lib.Init(CancellationToken.None);
 

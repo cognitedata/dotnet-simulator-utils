@@ -12,6 +12,8 @@ using Cognite.Extractor.StateStorage;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 
+using CogniteSdk.Alpha;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -362,6 +364,38 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 Console.WriteLine($"Error cleaning up: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Creates a service provider that is needed to run ModelLibrary tests. All API endpoints are mocked.
+        /// </summary>
+        public static (
+            IServiceProvider provider,
+            Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>
+            ) BuildModelLibraryTestSetup(List<SimpleRequestMocker> endpointMockTemplates, SimulatorCreate simulatorDefinition, [CallerMemberName] string? testCallerName = null)
+        {
+            var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedSimulatorClient = new Mock<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>();
+            mockedSimulatorClient.Setup(client => client.ExtractModelInformation(It.IsAny<DefaultModelFilestate>(), It.IsAny<CancellationToken>()))
+                .Returns((DefaultModelFilestate state, CancellationToken token) =>
+                {
+                    state.ParsingInfo.SetSuccess();
+                    return Task.CompletedTask;
+                });
+
+            var services = new ServiceCollection();
+            services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
+            services.AddSingleton(mockedLogger.Object);
+            services.AddCogniteTestClient(testCallerName);
+            services.AddSingleton(mockedSimulatorClient.Object);
+            services.AddSingleton<FileStorageClient>();
+            services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
+            services.AddSingleton(simulatorDefinition);
+            services.AddDefaultConfig();
+
+            var provider = services.BuildServiceProvider();
+
+            return (provider, mockedLogger);
         }
     }
 }
