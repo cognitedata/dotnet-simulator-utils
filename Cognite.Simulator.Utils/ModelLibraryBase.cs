@@ -88,6 +88,7 @@ namespace Cognite.Simulator.Utils
         // Internal objects
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
+        private readonly IFileSystem _fileSystem = new FileSystem();
 
 
         /// <summary>
@@ -565,28 +566,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Returns a map of File IDs to local file paths for all model files stored locally.
-        /// This includes main model files and dependency files.
-        /// </summary>
-        private Dictionary<long, string> GetLocalFilesCache()
-        {
-            // get all files in the model folder and its subfolders (but not in subfolders of subfolders)
-            HashSet<string> filesPathsInSubfolders = [.. Directory.EnumerateDirectories(_modelFolder).SelectMany(Directory.EnumerateFiles)];
-
-            var mainModelFiles = _state
-                .Where(s => !string.IsNullOrEmpty(s.Value.FilePath) && filesPathsInSubfolders.Contains(s.Value.FilePath))
-                .ToDictionarySafe(s => s.Value.CdfId, s => s.Value.FilePath);
-
-            var dependencyFiles = _state
-                .SelectMany(s => s.Value.DependencyFiles)
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && filesPathsInSubfolders.Contains(f.FilePath))
-                .ToDictionarySafe(f => f.Id, f => f.FilePath);
-
-            return mainModelFiles.Union(dependencyFiles)
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        }
-
-        /// <summary>
         /// Downloads all files associated with a model state and stores them locally.
         /// Updates the model state with the file paths of the downloaded files.
         /// </summary>
@@ -601,7 +580,8 @@ namespace Cognite.Simulator.Utils
             }
             modelState.DownloadAttempts++;
 
-            var (idsToDownload, existingLocalFiles) = modelState.DeduplicateDownloadFileIds(GetLocalFilesCache());
+            var localFilesCache = StateUtils.GetLocalFilesCache(_fileSystem, _state, _modelFolder);
+            var (idsToDownload, existingLocalFiles) = modelState.DeduplicateDownloadFileIds(localFilesCache);
 
             _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
                 idsToDownload.Count,
