@@ -587,7 +587,7 @@ namespace Cognite.Simulator.Utils
                 modelState.DownloadAttempts);
 
             var files = await _cdfFiles
-                .RetrieveAsync(fileIds, ignoreUnknownIds: true)
+                .RetrieveBatchAsync(fileIds)
                 .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
 
             var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
