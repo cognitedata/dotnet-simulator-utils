@@ -571,17 +571,15 @@ namespace Cognite.Simulator.Utils
         private Dictionary<long, string> GetLocalFilesCache()
         {
             // get all files in the model folder and its subfolders (but not in subfolders of subfolders)
-            var filesPathsInSubfolders = Directory.EnumerateDirectories(_modelFolder)
-                .SelectMany(Directory.EnumerateFiles)
-                .ToDictionary(filePath => filePath, _ => true);
+            HashSet<string> filesPathsInSubfolders = [.. Directory.EnumerateDirectories(_modelFolder).SelectMany(Directory.EnumerateFiles)];
 
             var mainModelFiles = _state
-                .Where(s => !string.IsNullOrEmpty(s.Value.FilePath) && filesPathsInSubfolders.ContainsKey(s.Value.FilePath))
+                .Where(s => !string.IsNullOrEmpty(s.Value.FilePath) && filesPathsInSubfolders.Contains(s.Value.FilePath))
                 .ToDictionarySafe(s => s.Value.CdfId, s => s.Value.FilePath);
 
             var dependencyFiles = _state
                 .SelectMany(s => s.Value.DependencyFiles)
-                .Where(f => !string.IsNullOrEmpty(f.FilePath) && filesPathsInSubfolders.ContainsKey(f.FilePath))
+                .Where(f => !string.IsNullOrEmpty(f.FilePath) && filesPathsInSubfolders.Contains(f.FilePath))
                 .ToDictionarySafe(f => f.Id, f => f.FilePath);
 
             return mainModelFiles.Union(dependencyFiles)
@@ -618,11 +616,10 @@ namespace Cognite.Simulator.Utils
 
             foreach (var localFile in existingLocalFiles)
             {
-                _logger.LogDebug("File {FileId} already exists locally: {FilePath}. Model revision external ID: {ExternalId}.",
+                _logger.LogDebug("File {FileId} already exists locally. Model revision external ID: {ExternalId}.",
                     localFile.Key,
-                    localFile.Value,
                     modelState.ExternalId);
-                modelState.SetFilePath(localFile.Key, localFile.Value, FilesExtensions.GetFileExtension(localFile.Value));
+                modelState.SetFilePath(localFile.Key, localFile.Value);
             }
 
             if (idsToDownload.Count == 0)

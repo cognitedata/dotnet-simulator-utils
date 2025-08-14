@@ -267,6 +267,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         /// <summary>
         /// This test verifies that the ModelLibrary can handle external dependencies with deduplicated downloads.
         /// It checks that the model revisions are fetched, duplicate files are downloaded only once, and model is processed correctly.
+        /// If a file is missing on the disk, it should be redownloaded even if the Path exists in the state.
         /// </summary>
         [Fact]
         public async Task TestModelLibraryWithExternalDependenciesDeduplicatedDownload()
@@ -280,17 +281,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(2000, "v2"), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 2),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 4),
-                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 4),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 5),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 5),
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
 
             var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);
 
             // Act
             var v1 = await lib.GetModelRevision("TestModelExternalId-v1");
+            File.Delete(Path.Combine(filesDirectory, "102", "102.xml")); // simulate missing file on disk
             var v2 = await lib.GetModelRevision("TestModelExternalId-v2");
 
             // Assert
@@ -299,7 +302,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.True(v1.Downloaded);
             Assert.True(v2.Downloaded);
 
-            var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
             Assert.True(File.Exists(Path.Combine(filesDirectory, "100", "100.csv")));
             Assert.True(File.Exists(Path.Combine(filesDirectory, "101", "101.xml")));
             Assert.True(File.Exists(Path.Combine(filesDirectory, "102", "102.xml")));
@@ -328,7 +330,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 101. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File 101 already exists locally", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Debug, "File 102 already exists locally", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 102 already exists locally", Times.Exactly(0), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v2", Times.Exactly(1), true); // redownloaded because it was missing on the disk
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 200. Model revision: TestModelExternalId-v2", Times.Exactly(1), true);
         }
     }
