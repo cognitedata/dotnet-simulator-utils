@@ -97,5 +97,38 @@ namespace Cognite.Simulator.Utils
                 Directory.Delete(path, true);
             }
         }
+
+        /// <summary>
+        /// Returns a map of File IDs to local file paths for all files in given state.
+        /// This includes main model files and dependency files.
+        /// </summary>
+        /// <param name="fileSystem">File system abstraction to use for file operations</param>
+        /// <param name="state">State containing file states</param>
+        /// <param name="rootPath">Root path where folders are located</param>
+        public static Dictionary<long, string> GetLocalFilesCache<TFileState>(
+            IFileSystem fileSystem,
+            IDictionary<string, TFileState> state,
+            string rootPath
+        ) where TFileState : FileState
+        {
+            if (fileSystem == null)
+            {
+                throw new ArgumentNullException(nameof(fileSystem));
+            }
+
+            var localFilePaths = fileSystem.GetFilesInSubfolders(rootPath);
+
+            var mainModelFiles = state
+                .Where(s => !string.IsNullOrEmpty(s.Value.FilePath) && localFilePaths.Contains(s.Value.FilePath))
+                .ToDictionarySafe(s => s.Value.CdfId, s => s.Value.FilePath);
+
+            var dependencyFiles = state
+                .SelectMany(s => s.Value.DependencyFiles)
+                .Where(f => !string.IsNullOrEmpty(f.FilePath) && localFilePaths.Contains(f.FilePath))
+                .ToDictionarySafe(f => f.Id, f => f.FilePath);
+
+            return mainModelFiles.Union(dependencyFiles)
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
     }
 }
