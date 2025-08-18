@@ -15,14 +15,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Default implementation of a model state
     /// </summary>
-    public class DefaultModelFileStatePoco : ModelStateBasePoco
-    {
-        /// <summary>
-        /// Gets a value indicating whether the information has been extracted.
-        /// </summary>
-        [StateStoreProperty("info-extracted")]
-        public bool InformationExtracted { get; internal set; }
-    }
+    public class DefaultModelFileStatePoco : ModelStateBasePoco { }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultModelFilestate"/> class.
