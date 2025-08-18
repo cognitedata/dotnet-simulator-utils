@@ -348,6 +348,17 @@ namespace Cognite.Simulator.Utils
             Id = fileDependency.File.Id;
             Arguments = fileDependency.Arguments;
         }
+
+        /// <summary>
+        /// Indicates if the dependency file has been downloaded and the file exists on the disk.
+        /// </summary>
+        public bool Downloaded
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+            }
+        }
     }
 
     /// <summary>

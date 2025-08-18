@@ -50,14 +50,31 @@ namespace Cognite.Simulator.Utils
 
         /// <summary>
         /// Indicates if the model file has been downloaded and the file exists on the disk.
-        /// Also checks if all dependency files have their paths assigned (without checking the file existence).
+        /// Also checks if all dependency files have their paths assigned.
         /// </summary>
         public bool Downloaded
         {
             get
             {
-                var dependenciesDownloaded = DependencyFiles.All(file => !string.IsNullOrEmpty(file.FilePath)); // too expensive to check file existence here
+                var dependenciesDownloaded = DependencyFiles.All(file => file.Downloaded);
                 return !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath) && dependenciesDownloaded;
+            }
+        }
+
+        /// <summary>
+        /// Sets the file path for the main file or a dependency file.
+        /// </summary>
+        public void SetFilePath(long fileId, string filePath, string fileExtension = null)
+        {
+            if (fileId == CdfId)
+            {
+                FilePath = filePath;
+                IsInDirectory = true;
+                FileExtension = fileExtension ?? FilesExtensions.GetFileExtension(filePath);
+            }
+            else
+            {
+                UpdateDependencyFilePath(fileId, filePath);
             }
         }
 
@@ -65,20 +82,40 @@ namespace Cognite.Simulator.Utils
         /// Gets all file IDs that are yet to be downloaded.
         /// This includes the main file ID and any dependency files.
         /// </summary>
-        /// <returns>List of file IDs pending download</returns>
-        /// <exception cref="ArgumentException">Thrown if CdfId is not set</exception>
-        public List<long> GetPendingDownloadFileIds()
+        /// <returns>List of file IDs pending download, and a dictionary of already downloaded files with their paths</returns>
+        /// <exception cref="InvalidOperationException">Thrown if CdfId is not set</exception>
+        public (List<long>, Dictionary<long, string>) DeduplicateDownloadFileIds(Dictionary<long, string> currentFilesCache)
         {
             if (CdfId == 0)
             {
-                throw new ArgumentException(nameof(CdfId), "Model state must have a valid CDF ID.");
+                throw new InvalidOperationException("Model state must have a valid File ID.");
             }
 
-            var fileIds = new List<long> { CdfId };
+            if (currentFilesCache == null)
+            {
+                throw new ArgumentNullException(nameof(currentFilesCache));
+            }
 
-            fileIds.AddRange(DependencyFiles.Select(file => file.Id)); // TODO: this should only return the IDs of the files that are not downloaded yet https://cognitedata.atlassian.net/browse/POFSP-1137
+            var expectedFileIds = new[] { CdfId }.Concat(DependencyFiles.Select(file => file.Id));
+            var fileIdsToDownload = new List<long>();
+            var alreadyDownloadedFiles = new Dictionary<long, string>();
 
-            return fileIds;
+            foreach (var expectedFile in expectedFileIds)
+            {
+                if (currentFilesCache.TryGetValue(expectedFile, out var filePath))
+                {
+                    alreadyDownloadedFiles[expectedFile] = filePath;
+                }
+                else
+                {
+                    fileIdsToDownload.Add(expectedFile);
+                }
+            }
+
+            return (
+                fileIdsToDownload,
+                alreadyDownloadedFiles
+            );
         }
 
         /// <summary>

@@ -88,6 +88,7 @@ namespace Cognite.Simulator.Utils
         // Internal objects
         private readonly BaseExtractionState _libState;
         private string _modelFolder;
+        private readonly IFileSystem _fileSystem = new FileSystem();
 
 
         /// <summary>
@@ -579,31 +580,46 @@ namespace Cognite.Simulator.Utils
             }
             modelState.DownloadAttempts++;
 
-            var fileIds = modelState.GetPendingDownloadFileIds();
+            var localFilesCache = StateUtils.GetLocalFilesCache(_fileSystem, _state, _modelFolder);
+            var (idsToDownload, existingLocalFiles) = modelState.DeduplicateDownloadFileIds(localFilesCache);
 
             _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
-                fileIds.Count,
+                idsToDownload.Count,
                 modelState.ExternalId,
                 modelState.DownloadAttempts);
 
             var files = await _cdfFiles
-                .RetrieveAsync(fileIds, ignoreUnknownIds: true)
+                .RetrieveAsync(idsToDownload, ignoreUnknownIds: true)
                 .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
 
             var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
 
-            bool allFilesDownloaded = true;
+            foreach (var localFile in existingLocalFiles)
+            {
+                _logger.LogDebug("File {FileId} already exists locally. Model revision external ID: {ExternalId}.",
+                    localFile.Key,
+                    modelState.ExternalId);
+                modelState.SetFilePath(localFile.Key, localFile.Value);
+            }
 
-            for (int fileIndex = 0; fileIndex < fileIds.Count; fileIndex++)
+            if (idsToDownload.Count == 0)
+            {
+                _logger.LogInformation("No new files to download for model revision external ID: {ExternalId}.",
+                    modelState.ExternalId);
+                return true;
+            }
+
+            var allFilesDownloaded = true;
+
+            for (int fileIndex = 0; fileIndex < idsToDownload.Count; fileIndex++)
             {
                 var downloaded = false;
-                var fileId = fileIds[fileIndex];
-                var isMainFile = fileId == modelState.CdfId;
+                var fileId = idsToDownload[fileIndex];
                 if (filesMap.TryGetValue(fileId, out var file))
                 {
                     _logger.LogInformation("Downloading file ({FileNumber}/{FilesTotal}): {Id}. Model revision external ID: {ExternalId}.",
                         fileIndex + 1,
-                        fileIds.Count,
+                        idsToDownload.Count,
                         fileId,
                         modelState.ExternalId);
                     var fileExtension = file.GetExtension();
@@ -611,16 +627,7 @@ namespace Cognite.Simulator.Utils
                     downloaded = !string.IsNullOrEmpty(filePath);
                     if (downloaded)
                     {
-                        if (isMainFile)
-                        {
-                            modelState.IsInDirectory = true;
-                            modelState.FilePath = filePath;
-                            modelState.FileExtension = fileExtension;
-                        }
-                        else
-                        {
-                            modelState.UpdateDependencyFilePath(fileId, filePath);
-                        }
+                        modelState.SetFilePath(fileId, filePath, fileExtension);
                     }
                 }
                 else

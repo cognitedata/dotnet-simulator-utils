@@ -45,7 +45,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
             new { id = 100, name = "test_model.csv", mimeType = "text/csv" },
             new { id = 101, name = "test_model_dep1.xml", mimeType = "text/xml" },
-            new { id = 102, name = "test_model_dep2.xml", mimeType = "text/xml" }
+            new { id = 102, name = "test_model_dep2.xml", mimeType = "text/xml" },
+            new { id = 200, name = "test_model2.csv", mimeType = "text/csv" }
             };
 
             var items = string.Join(",\n", fileInfos.Select(f => $@"{{
@@ -60,7 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
 
-        private static HttpResponseMessage MockSimulatorModelRevEndpoint()
+        private static HttpResponseMessage MockSimulatorModelRevEndpoint(long id = 1000, string version = "v1")
         {
             var externalDependencies = Enumerable.Range(1, 2)
                 .Select(i => $@"{{
@@ -69,8 +70,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }}").ToList();
 
             var item = $@"{{
-                ""id"": 1234567890,
-                ""externalId"": ""TestModelExternalId-v1"",
+                ""id"": {id},
+                ""externalId"": ""TestModelExternalId-{version}"",
                 ""name"": ""Test Model Revision"",
                 ""description"": ""Test model revision description"",
                 ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
@@ -78,7 +79,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""externalDependencies"": [
                     {string.Join(",", externalDependencies)}
                 ],
-                ""fileId"": 100,
+                ""fileId"": {id / 10},
                 ""createdByUserId"": ""n/a"",
                 ""status"": ""unknown"",
                 ""dataSetId"": 123,
@@ -134,9 +135,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var endpointMockTemplates = new List<SimpleRequestMocker>
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
@@ -212,7 +213,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -261,6 +262,77 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 101. Model revision: TestModelExternalId-v1", Times.Never(), true);
+        }
+
+        /// <summary>
+        /// This test verifies that the ModelLibrary can handle external dependencies with deduplicated downloads.
+        /// It checks that the model revisions are fetched, duplicate files are downloaded only once, and model is processed correctly.
+        /// If a file is missing on the disk, it should be redownloaded even if the Path exists in the state.
+        /// </summary>
+        [Fact]
+        public async Task TestModelLibraryWithExternalDependenciesDeduplicatedDownload()
+        {
+            // Arrange
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(2000, "v2"), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 2),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 5),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 5),
+                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
+            };
+
+            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
+            await lib.Init(CancellationToken.None);
+            Assert.Empty(lib._state);
+
+            // Act
+            var v1 = await lib.GetModelRevision("TestModelExternalId-v1");
+            File.Delete(Path.Combine(filesDirectory, "102", "102.xml")); // simulate missing file on disk
+            var v2 = await lib.GetModelRevision("TestModelExternalId-v2");
+
+            // Assert
+            Assert.Equal("TestModelExternalId-v1", v1.ExternalId);
+            Assert.Equal("TestModelExternalId-v2", v2.ExternalId);
+            Assert.True(v1.Downloaded);
+            Assert.True(v2.Downloaded);
+
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "100", "100.csv")));
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "101", "101.xml")));
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "102", "102.xml")));
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "200", "200.csv")));
+
+            Assert.Equal(2, v1.DependencyFiles.Count);
+
+            var expectedDependencyFiles = Enumerable.Range(1, 2)
+                .Select(i => new DependencyFile
+                {
+                    Id = 100 + i,
+                    FilePath = Path.Combine(filesDirectory, $"{100 + i}", $"{100 + i}.xml"),
+                    Arguments = new() { { "address", "test.address." + i } }
+                })
+                .ToArray();
+            Assert.Equivalent(expectedDependencyFiles, v1.DependencyFiles);
+            Assert.Equivalent(expectedDependencyFiles, v2.DependencyFiles);
+
+            foreach (var mocker in endpointMockTemplates)
+            {
+                mocker.AssertCallCount();
+            }
+
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading 3 file(s) for model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 101. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 101 already exists locally", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 102 already exists locally", Times.Exactly(0), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v2", Times.Exactly(1), true); // redownloaded because it was missing on the disk
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 200. Model revision: TestModelExternalId-v2", Times.Exactly(1), true);
         }
     }
 }
