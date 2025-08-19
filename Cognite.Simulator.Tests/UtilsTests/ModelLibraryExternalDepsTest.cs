@@ -137,9 +137,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint(), 2),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, "v1", "success"), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1), // return "unknown" status on first call, this triggers model processing
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 1), // should happen only once since the state is restored from LiteDB on the second call to /revisions/byids
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, "v1", "success"), 2), // return "success" status on second call, so we skip the processing, only used for restoring state
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
