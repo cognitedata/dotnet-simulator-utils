@@ -606,17 +606,6 @@ namespace Cognite.Simulator.Utils
             var localFilesCache = StateUtils.GetLocalFilesCache(_fileSystem, _state, _modelFolder);
             var (idsToDownload, existingLocalFiles) = modelState.DeduplicateDownloadFileIds(localFilesCache);
 
-            _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
-                idsToDownload.Count,
-                modelState.ExternalId,
-                modelState.DownloadAttempts);
-
-            var files = await _cdfFiles
-                .RetrieveAsync(idsToDownload, ignoreUnknownIds: true)
-                .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
-
-            var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
-
             foreach (var localFile in existingLocalFiles)
             {
                 _logger.LogDebug("File {FileId} already exists locally. Model revision external ID: {ExternalId}.",
@@ -631,6 +620,17 @@ namespace Cognite.Simulator.Utils
                     modelState.ExternalId);
                 return true;
             }
+
+            _logger.LogInformation("Downloading {Count} file(s) for model revision external ID: {ExternalId}. Attempt: {DownloadAttempts}",
+                idsToDownload.Count,
+                modelState.ExternalId,
+                modelState.DownloadAttempts);
+
+            var files = await _cdfFiles
+                .RetrieveAsync(idsToDownload, ignoreUnknownIds: true)
+                .ConfigureAwait(false); // TODO: make batch version to support more than 1k https://cognitedata.atlassian.net/browse/POFSP-1139
+
+            var filesMap = files.ToDictionarySafe(file => file.Id, file => file);
 
             var allFilesDownloaded = true;
 

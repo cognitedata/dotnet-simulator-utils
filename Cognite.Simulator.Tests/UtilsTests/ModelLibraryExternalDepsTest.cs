@@ -61,7 +61,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
 
-        private static Func<HttpResponseMessage> MockSimulatorModelRevEndpoint(long id = 1000, string version = "v1", string status = "unknown")
+        private static Func<HttpResponseMessage> MockSimulatorModelRevEndpoint(long id = 1000, long fileId = 100, string version = "v1", string status = "unknown")
         {
             var externalDependencies = Enumerable.Range(1, 2)
                 .Select(i => $@"{{
@@ -79,7 +79,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""externalDependencies"": [
                     {string.Join(",", externalDependencies)}
                 ],
-                ""fileId"": {id / 10},
+                ""fileId"": {fileId},
                 ""createdByUserId"": ""n/a"",
                 ""status"": ""{status}"",
                 ""dataSetId"": 123,
@@ -139,7 +139,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockSimulatorModelRevEndpoint(), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1), // return "unknown" status on first call, this triggers model processing
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 1), // should happen only once since the state is restored from LiteDB on the second call to /revisions/byids
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, "v1", "success"), 2), // return "success" status on second call, so we skip the processing, only used for restoring state
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, 100, "v1", "success"), 2), // return "success" status on second call, so we skip the processing, only used for restoring state
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
@@ -300,7 +300,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, "v2"), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, 200, "v2"), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 5),
@@ -355,6 +355,59 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Debug, "File 102 already exists locally", Times.Exactly(0), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v2", Times.Exactly(1), true); // redownloaded because it was missing on the disk
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 200. Model revision: TestModelExternalId-v2", Times.Exactly(1), true);
+        }
+
+        /// <summary>
+        /// This verifies that the ModelLibrary can handle a model revision with external dependencies without downloading any files.
+        /// This happens if all files are already downloaded and exist on the disk due to be part of some other model revision.
+        /// </summary>
+        [Fact]
+        public async Task TestModelLibraryWithExternalDependenciesWithZeroDownload()
+        {
+            // Arrange
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, 100, "v1", "success"), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, 100, "v2", "success"), 1), // one more revision with the same files
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
+                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
+            };
+
+            var (lib, mockedLogger) = SetupServices(endpointMockTemplates);
+            var filesDirectory = Path.GetFullPath(modelLibraryConfig?.FilesDirectory ?? string.Empty);
+            await lib.Init(CancellationToken.None);
+
+            // Act
+            var v1 = await lib.GetModelRevision("TestModelExternalId-v1");
+            var v2 = await lib.GetModelRevision("TestModelExternalId-v2");
+
+            // Assert
+            Assert.Equal(v1.Downloaded, v2.Downloaded);
+
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "100", "100.csv")));
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "101", "101.xml")));
+            Assert.True(File.Exists(Path.Combine(filesDirectory, "102", "102.xml")));
+
+            Assert.Equal(2, v1.DependencyFiles.Count);
+            Assert.Equivalent(v1.DependencyFiles, v2.DependencyFiles);
+
+            foreach (var mocker in endpointMockTemplates)
+            {
+                mocker.AssertCallCount();
+            }
+
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading 3 file(s) for model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 101. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 102. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 100 already exists locally", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 101 already exists locally", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Debug, "File 102 already exists locally", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "No new files to download for model revision external ID: TestModelExternalId-v2", Times.Exactly(1), true);
         }
     }
 }
