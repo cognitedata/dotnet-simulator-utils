@@ -1,19 +1,8 @@
-
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 
-using Cognite.Extractor.Common;
-using Cognite.Simulator.Tests.DataProcessingTests;
-using Cognite.Simulator.Utils;
-
-using CogniteSdk;
 using CogniteSdk.Alpha;
-
-using Com.Cognite.V1.Timeseries.Proto;
 
 namespace Cognite.Simulator.Tests
 {
