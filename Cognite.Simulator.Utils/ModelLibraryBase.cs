@@ -38,7 +38,7 @@ namespace Cognite.Simulator.Utils
     /// <typeparam name="V">Type of the model parsing information object</typeparam>
     public abstract class ModelLibraryBase<A, T, U, V> : IModelProvider<A, T>, IDisposable
         where A : AutomationConfig
-        where T : ModelStateBase
+        where T : ModelStateBase, new()
         where U : ModelStateBasePoco
         where V : ModelParsingInfo, new()
     {
@@ -159,6 +159,34 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// The default IExtractionStateStore.RestoreExtractionState() only restores the items that exist in the state.
+        /// In our case we want to restore the items on startup before even calling the remote API.
+        /// This method reads all extraction states from the state store and adds them to the local state to resolve the issue.
+        /// </summary>
+        /// <param name="token">Cancellation token</param>
+        private async Task RestoreExtractionState(CancellationToken token)
+        {
+            var statesPocos = await _store.GetAllExtractionStates<U>(
+                _config.FilesTable,
+                token).ConfigureAwait(false);
+            var restoredCount = 0;
+
+            foreach (var poco in statesPocos)
+            {
+                var state = new T();
+                state.Init(poco);
+                if (_state.TryAdd(state.Id, state))
+                {
+                    restoredCount++;
+                }
+            }
+
+            _logger.LogDebug("Restored {Restored} extraction state(s) from litedb store {store}",
+                restoredCount,
+                _config.FilesTable);
+        }
+
+        /// <summary>
         /// Initializes the local model library from the state store (sqlite database)
         /// </summary>
         /// <param name="token">Cancellation token</param>
@@ -176,16 +204,11 @@ namespace Cognite.Simulator.Utils
                     true,
                     token).ConfigureAwait(false);
 
+
+                await RestoreExtractionState(token).ConfigureAwait(false);
+
                 await FindModelRevisions(false, token).ConfigureAwait(false);
 
-                await _store.RestoreExtractionState<U, T>(
-                    _state,
-                    _config.FilesTable,
-                    (state, poco) =>
-                    {
-                        state.Init(poco);
-                    },
-                    token).ConfigureAwait(false);
                 if (_store is LiteDBStateStore ldbStore)
                 {
                     HashSet<string> idsToKeep = new HashSet<string>(_state.Select(s => s.Value.Id));

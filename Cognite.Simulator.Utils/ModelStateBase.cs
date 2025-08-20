@@ -143,16 +143,6 @@ namespace Cognite.Simulator.Utils
             throw new InvalidOperationException($"Dependency file with ID {fileId} not found in the model state.");
         }
 
-
-        /// <summary>
-        /// Model data associated with this state
-        /// </summary>
-        public SimulatorModelInfo Model => new SimulatorModelInfo()
-        {
-            ExternalId = ModelExternalId,
-            Simulator = Source
-        };
-
         /// <summary>
         /// Initialize this model state using a data object from the state store
         /// </summary>

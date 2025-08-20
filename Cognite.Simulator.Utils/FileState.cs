@@ -268,6 +268,7 @@ namespace Cognite.Simulator.Utils
             {
                 throw new ArgumentNullException(nameof(poco));
             }
+            Id = poco.Id;
             _source = poco.Source;
             _dataSetId = poco.DataSetId;
             _filePath = poco.FilePath;
@@ -276,6 +277,7 @@ namespace Cognite.Simulator.Utils
             _updatedTime = poco.UpdatedTime;
             _isInDirectory = poco.IsInDirectory;
             _externalId = poco.ExternalId;
+            _modelExternalId = poco.ModelExternalId;
             _logId = poco.LogId;
             _fileExtension = poco.FileExtension;
             _dependencyFiles = poco.DependencyFiles;
@@ -300,6 +302,7 @@ namespace Cognite.Simulator.Utils
                 CdfId = CdfId,
                 UpdatedTime = UpdatedTime,
                 IsInDirectory = IsInDirectory,
+                ModelExternalId = ModelExternalId,
                 ExternalId = ExternalId,
                 LogId = LogId,
                 FileExtension = FileExtension,
