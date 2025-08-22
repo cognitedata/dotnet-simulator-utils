@@ -491,10 +491,10 @@ namespace Cognite.Simulator.Utils
             var canUseCachedRevisions = !(_simulatorDefinition.ModelDependencies?.Any() == true);
             if (canUseCachedRevisions)
             {
+                var options = new MemoryCacheEntryOptions().SetAbsoluteExpiration(_modelRevisionListCacheExpiration);
                 foreach (var revision in modelRevisions)
                 {
-                    cache.Set(revision.ExternalId, revision, new MemoryCacheEntryOptions()
-                        .SetAbsoluteExpiration(_modelRevisionListCacheExpiration));
+                    cache.Set(revision.ExternalId, revision, options);
                 }
             }
 
