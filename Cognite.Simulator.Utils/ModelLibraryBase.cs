@@ -445,14 +445,14 @@ namespace Cognite.Simulator.Utils
         private async Task PersistModelInformation(T modelState, CancellationToken token)
         {
             if (modelState.ParsingInfo != null &&
-            (modelState.ParsingInfo.Flowsheet != null ||
+            (modelState.ParsingInfo.Flowsheets != null ||
             modelState.ParsingInfo.RevisionDataInfo != null))
             {
                 try
                 {
                     await _cdfSimulatorResources.UpdateSimulatorModelRevisionData(
                         modelState.ExternalId,
-                        modelState.ParsingInfo.Flowsheet,
+                        modelState.ParsingInfo.Flowsheets,
                         modelState.ParsingInfo.RevisionDataInfo,
                         token
                     ).ConfigureAwait(false);

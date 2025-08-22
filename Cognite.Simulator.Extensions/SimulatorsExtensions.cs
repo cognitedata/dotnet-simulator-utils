@@ -120,18 +120,18 @@ namespace Cognite.Simulator.Extensions
         }
 
         /// <summary>
-        /// Updates the simulation model revision data (general information, flowsheet) in CDF.
+        /// Updates the simulation model revision data (general information, flowsheets) in CDF.
         /// </summary>
         /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
         /// <param name="modelRevisionExternalId">The externalId of the simulator model revision.</param>
-        /// <param name="flowsheet">Flowsheet.</param>
+        /// <param name="flowsheets">Flowsheets.</param>
         /// <param name="info">Model revision information.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>The updated SimulatorModelRevisionData instance.</returns>
         public static async Task<SimulatorModelRevisionData> UpdateSimulatorModelRevisionData(
             this SimulatorsResource cdfSimulators,
             string modelRevisionExternalId,
-            SimulatorModelRevisionDataFlowsheet flowsheet = null,
+            IEnumerable<SimulatorModelRevisionDataFlowsheet> flowsheets = null,
             Dictionary<string, string> info = null,
             CancellationToken token = default
         )
@@ -141,7 +141,7 @@ namespace Cognite.Simulator.Extensions
                 ModelRevisionExternalId = modelRevisionExternalId,
                 Update = new SimulatorModelRevisionDataUpdate
                 {
-                    Flowsheet = new Update<SimulatorModelRevisionDataFlowsheet>(flowsheet),
+                    Flowsheets = new Update<IEnumerable<SimulatorModelRevisionDataFlowsheet>>(flowsheets),
                     Info = new Update<Dictionary<string, string>>(info)
                 }
             };
