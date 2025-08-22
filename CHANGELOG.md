@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-021 (2025-08-20)
+
+### Features
+
+* **Improved Model Library Performance**: State is now restored from local cache on startup, avoiding redundant model processing
+* **File Download Deduplication**: Models sharing the same files no longer re-download duplicates, significantly improving performance for multi-file models
+
+### Other changes
+
+* Removed unused properties from model state for cleaner codebase
+
+
 ## Release v1.0.0-beta-020 (2025-08-13)
 
 ### Features
