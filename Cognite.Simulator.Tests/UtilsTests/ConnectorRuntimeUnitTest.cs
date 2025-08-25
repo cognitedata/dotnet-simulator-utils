@@ -70,7 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Check the logs, it should first succeed on the startup, then fail and restart
             VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
-            VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Information, "Simulator definition upserted to remote", Times.Once(), true);
             VerifyLog(mockedLogger, LogLevel.Error, "Request to CDF failed with code 410", Times.Once(), true);
             VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 10 seconds", Times.AtLeastOnce());
         }
