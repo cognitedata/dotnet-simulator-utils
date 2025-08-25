@@ -485,12 +485,14 @@ namespace Cognite.Simulator.Utils
         /// Dependencies field is not being returned by the list endpoint, so we need to call get-by-id instead of using cache.
         /// </summary>
         /// <param name="modelRevisions">List of model revisions to cache</param>
+        /// <returns>Memory cache with model revisions. Null if caching is not possible</returns>
         private MemoryCache CreateMemoryCache(List<SimulatorModelRevision> modelRevisions)
         {
-            var cache = new MemoryCache(new MemoryCacheOptions());
+            MemoryCache cache = null;
             var canUseCachedRevisions = !(_simulatorDefinition.ModelDependencies?.Any() == true);
             if (canUseCachedRevisions)
             {
+                cache = new MemoryCache(new MemoryCacheOptions());
                 var options = new MemoryCacheEntryOptions().SetAbsoluteExpiration(_modelRevisionListCacheExpiration);
                 foreach (var revision in modelRevisions)
                 {
