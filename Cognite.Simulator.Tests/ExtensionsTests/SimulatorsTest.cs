@@ -24,7 +24,7 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
 
             using var provider = services.BuildServiceProvider();
             var cdf = provider.GetRequiredService<Client>();
-            var simulator = SeedData.SimulatorCreate;
+            var simulator = SeedData.GetSimulatorCreate(SeedData.TestSimulatorExternalId);
 
             simulator.ModelDependencies = [
                 new SimulatorModelDependency()
