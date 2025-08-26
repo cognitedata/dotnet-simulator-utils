@@ -96,7 +96,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>
             ) SetupRuntime(List<SimpleRequestMocker> endpointMockTemplates, [CallerMemberName] string? testCallerName = null)
         {
-            var simulatorDefinition = SeedData.GetSimulatorCreateObj();
+            var simulatorDefinition = SeedData.GetSimulatorCreate(SeedData.TestSimulatorExternalId);
             simulatorDefinition.ModelDependencies = new List<SimulatorModelDependency>
             {
                 new SimulatorModelDependency
