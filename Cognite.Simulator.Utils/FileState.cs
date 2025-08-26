@@ -5,6 +5,8 @@ using Cognite.Extractor.StateStorage;
 
 using CogniteSdk.Alpha;
 
+using LiteDB;
+
 namespace Cognite.Simulator.Utils
 {
     /// <summary>
@@ -355,6 +357,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Indicates if the dependency file has been downloaded and the file exists on the disk.
         /// </summary>
+        [BsonIgnore]
         public bool Downloaded
         {
             get
