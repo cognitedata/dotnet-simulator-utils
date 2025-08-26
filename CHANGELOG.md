@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-* **Model dependencies**: Fix the issue where the connector didn't update the `ModelDependencies` property of the connector on startup.
+* **Model dependencies**: Fixed the issue where the connector didn't update the `ModelDependencies` property of the connector on startup.
+* Fixed the issue where "Downloaded" property of the model dependencies was persisted into StateStore.
 
 ## Release v1.0.0-beta-021 (2025-08-20)
 
