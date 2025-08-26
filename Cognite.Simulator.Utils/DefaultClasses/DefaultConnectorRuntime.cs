@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -10,6 +8,7 @@ using System.Threading.Tasks;
 using Cognite.Extractor.Common;
 using Cognite.Extractor.StateStorage;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 
@@ -104,73 +103,6 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         }
     }
 
-
-    /// <summary>
-    /// Prepares the simulator object for update
-    /// </summary>
-    /// <param name="existingSimulatorDefinition"></param>
-    /// <param name="newSimulatorDefinition"></param>
-    /// <param name="logger"></param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
-    public static SimulatorUpdateItem PrepareUpdateSimulatorObject(Simulator existingSimulatorDefinition,
-    SimulatorCreate newSimulatorDefinition, ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger)
-    {
-        if (existingSimulatorDefinition == null)
-        {
-            throw new ArgumentNullException(nameof(existingSimulatorDefinition), "Simulator definition from remote is null");
-        }
-
-        if (newSimulatorDefinition == null)
-        {
-            throw new ArgumentNullException(nameof(newSimulatorDefinition), "New simulator definition is null");
-        }
-
-        var update = new SimulatorUpdate
-        {
-            FileExtensionTypes = new Update<IEnumerable<string>> { Set = newSimulatorDefinition.FileExtensionTypes },
-            ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = newSimulatorDefinition.ModelTypes },
-            StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = newSimulatorDefinition.StepFields },
-        };
-
-        // Optional fields
-        if (newSimulatorDefinition.UnitQuantities != null)
-        {
-            update.UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = newSimulatorDefinition.UnitQuantities };
-        }
-
-        // Create and return the update item if there are changes
-        return new SimulatorUpdateItem(existingSimulatorDefinition.Id) { Update = update };
-    }
-
-    private static async Task GetOrCreateSimulator(Client cdfClient, DefaultConfig<TAutomationConfig> config,
-    ILogger<DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelStateBasePoco>> logger, CancellationToken token)
-    {
-        var definition = SimulatorDefinition;
-        var existingSimulators = await cdfClient.Alpha.Simulators.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
-        var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == definition.ExternalId);
-        if (definition == null && existingSimulator == null)
-        {
-            throw new InvalidOperationException("Simulator definition not found in either the remote API or locally.");
-        }
-        if (definition != null)
-        {
-            logger.LogDebug("Simulator definition found locally");
-            if (existingSimulator == null)
-            {
-                logger.LogDebug("Simulator definition not found on CDF, will create one remotely");
-                var res = await cdfClient.Alpha.Simulators.CreateAsync(new List<SimulatorCreate> { definition }, token).ConfigureAwait(false);
-            }
-            else
-            {
-                var updateItem = PrepareUpdateSimulatorObject(existingSimulator, definition, logger);
-                logger.LogDebug("Updating simulator definition");
-                var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
-                await cdfClient.Alpha.Simulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);
-            }
-        }
-    }
-
     /// <summary>
     /// Runs the connector.
     /// </summary>
@@ -231,7 +163,8 @@ public class DefaultConnectorRuntime<TAutomationConfig, TModelState, TModelState
         await destination.TestCogniteConfig(token).ConfigureAwait(false);
         logger.LogInformation("Connector can reach CDF!");
 
-        await GetOrCreateSimulator(cdfClient, config, logger, token).ConfigureAwait(false);
+        await cdfClient.Alpha.Simulators.UpsertAsync(SimulatorDefinition, token).ConfigureAwait(false);
+        logger.LogInformation("Simulator definition upserted to remote.");
 
         while (!token.IsCancellationRequested)
         {
