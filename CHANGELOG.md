@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-022 (2025-08-26)
+
+### Bug Fixes
+
+* **Model dependencies**: Fix the issue where the connector didn't update the `ModelDependencies` property of the connector on startup.
+
 ## Release v1.0.0-beta-021 (2025-08-20)
 
 ### Features
