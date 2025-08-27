@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
-using Cognite.Extractor.Common;
+using Cognite.Extensions;
 
 using CogniteSdk.Resources;
 
@@ -17,49 +16,38 @@ namespace Cognite.Simulator.Extensions;
 /// </summary>
 public static class FilesExtensions
 {
-    private const int THROTTLE_SIZE = 5;
-    private const int CHUNK_SIZE = 1000;
-
     /// <summary>
-    /// Retrieves file medatadata by their IDs in chunks, ignores unknown IDs.
-    /// Each batch can contain up to 1000 file IDs and is be processed in parallel (up to 5 batches at a time).
+    /// Retrieves files metadata and their download URIs by their IDs.
+    /// Ignores unknown IDs.
     /// </summary>
-    /// <param name="cdfFiles">The FilesResource instance.</param>
-    /// <param name="internalIds">The list of internal IDs of the files to retrieve.</param>
-    /// <param name="token">The cancellation token.</param>
-    public static async Task<List<CogniteSdk.File>> RetrieveBatchAsync(
-        this FilesResource cdfFiles,
-        IList<long> internalIds,
-        CancellationToken token = default
-    )
+    public static async Task<List<DownloadableFile>> RetrieveDownloadableFiles(this FilesResource cdfFiles, IEnumerable<long> fileIds)
     {
-        var result = new List<CogniteSdk.File>();
-        object mutex = new object();
-
-        if (internalIds == null || internalIds.Count == 0)
+        if (fileIds == null || !fileIds.Any())
         {
-            return result;
+            return new() { };
         }
 
-        var fileIdsByChunks = internalIds
-            .ChunkBy(CHUNK_SIZE);
+        var files = await cdfFiles
+            .RetrieveAsync(fileIds)
+            .ConfigureAwait(false);
 
-        var generators = fileIdsByChunks
-            .Select<IEnumerable<long>, Func<Task>>(
-            (chunk, _) => async () =>
-            {
-                var found = await cdfFiles
-                    .RetrieveAsync(chunk, true, token)
-                    .ConfigureAwait(false);
-                lock (mutex)
-                {
-                    result.AddRange(found);
-                }
-            });
+        if (!files.Any())
+        {
+            return new() { };
+        }
 
-        await generators.RunThrottled(THROTTLE_SIZE, token).ConfigureAwait(false);
+        var downloadUrisRes = await cdfFiles
+            .DownloadAsync(files.Select(f => f.Id))
+            .ConfigureAwait(false);
 
-        return result;
+        var downloadUrisMap = downloadUrisRes
+            .ToDictionarySafe(res => res.Id, res => res.DownloadUrl);
+
+        return files.Select(file => new DownloadableFile
+        {
+            Entity = file,
+            DownloadUrl = downloadUrisMap.TryGetValue(file.Id, out var url) ? url : null
+        }).ToList();
     }
 
     /// <summary>
@@ -94,5 +82,22 @@ public static class FilesExtensions
         }
 
         return extension.TrimStart('.').ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Represents a Cognite file with an associated download URL.
+    /// </summary>
+    public class DownloadableFile
+    {
+        /// <summary>
+        /// Url from which file can be downloaded.
+        /// </summary>
+
+        public Uri DownloadUrl { get; set; }
+
+        /// <summary>
+        /// File metadata.
+        /// </summary>
+        public CogniteSdk.File Entity { get; set; }
     }
 }

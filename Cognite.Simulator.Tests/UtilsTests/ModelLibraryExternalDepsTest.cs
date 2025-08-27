@@ -141,7 +141,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 1), // should happen only once since the state is restored from LiteDB on the second call to /revisions/byids
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, 100, "v1", "success"), 2), // return "success" status on second call, so we skip the processing, only used for restoring state
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint([100, 101, 102]), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
@@ -188,9 +188,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             VerifyLog(mockedLogger, LogLevel.Debug, "Model revision not found locally, adding to the local state: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Downloading 3 file(s) for model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (1/3): 100. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (2/3): 101. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file (3/3): 102. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 100. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 101. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Downloading file: 102. Model revision external ID: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "File downloaded: 100. Model revision: TestModelExternalId-v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Debug, "Restored 0 extraction state(s) from litedb store ModelLibraryFiles", Times.Exactly(1), true);
@@ -237,7 +237,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint([100, 101, 102]), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), GoneResponse, 1), // one file download fails
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -303,7 +303,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, 200, "v2"), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint(), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 2),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 5),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint([100, 101, 102, 200]), 2),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 5),
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };
@@ -372,7 +372,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(1000, 100, "v1", "success"), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint(2000, 100, "v2", "success"), 1), // one more revision with the same files
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 3),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint([100, 101, 102]), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 3),
                 new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100)) // doesn't matter for the test
             };

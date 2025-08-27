@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
@@ -305,13 +306,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
+        public static Func<HttpResponseMessage> MockFilesDownloadLinkEndpoint(IEnumerable<long> fileIds)
         {
-            var item = $@"{{
-                ""id"": 100,
-                ""downloadUrl"": ""https://fusion.cognite.com/files/download"",
-            }}";
-            return OkItemsResponse(item);
+            return () =>
+            {
+                var items = string.Join(",", fileIds.Select(id => $@"{{ ""id"": {id}, ""downloadUrl"": ""https://fusion.cognite.com/files/download/{id}"" }}"));
+                return OkItemsResponse(items);
+            };
         }
 
         public static HttpResponseMessage MockFilesByIdsEndpoint()
