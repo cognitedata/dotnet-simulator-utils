@@ -384,8 +384,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 lib.PaginationLimit = 1;
                 await lib.Init(source.Token);
 
-                Assert.Contains(revision.Id.ToString(), lib.RoutineRevisions);
-                Assert.Contains(revision2.Id.ToString(), lib.RoutineRevisions);
+                Assert.Contains(revision.Id, lib.RoutineRevisions);
+                Assert.Contains(revision2.Id, lib.RoutineRevisions);
                 Assert.Equal(2, lib.RoutineRevisions.Count);
 
                 // Start the library update loop that download and parses the files, stop after 5 secs
