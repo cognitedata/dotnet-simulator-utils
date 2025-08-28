@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,13 +36,12 @@ public static class FilesExtensions
         CancellationToken token = default
     )
     {
-        var result = new List<CogniteSdk.File>();
-        object mutex = new object();
-
         if (internalIds == null || internalIds.Count == 0)
         {
-            return result;
+            return [];
         }
+
+        var result = new ConcurrentBag<CogniteSdk.File>();
 
         var fileIdsByChunks = internalIds
             .ChunkBy(chunkSize);
@@ -53,15 +53,15 @@ public static class FilesExtensions
                 var found = await cdfFiles
                     .RetrieveAsync(chunk, true, token)
                     .ConfigureAwait(false);
-                lock (mutex)
+                foreach (var file in found)
                 {
-                    result.AddRange(found);
+                    result.Add(file);
                 }
             });
 
         await generators.RunThrottled(THROTTLE_SIZE, token).ConfigureAwait(false);
 
-        return result;
+        return result.ToList();
     }
 
     /// <summary>
