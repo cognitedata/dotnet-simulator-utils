@@ -19,6 +19,7 @@ using CogniteSdk.Alpha;
 using CogniteSdk.Resources;
 using CogniteSdk.Resources.Alpha;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 using Serilog.Context;
@@ -84,6 +85,7 @@ namespace Cognite.Simulator.Utils
         /// callers will receive the result of the ongoing task rather than starting a new one.
         /// </remarks>
         private readonly ModelLibraryTaskHolder<string, T> _revisionsTasks = new();
+        private static readonly TimeSpan _modelRevisionListCacheExpiration = TimeSpan.FromMinutes(1);
 
         // Internal objects
         private readonly BaseExtractionState _libState;
@@ -221,9 +223,19 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Used when an operation (model parsing, simulation, etc.) needs to be performed on the model.
         /// This method will try to read the model revision from CDF and return it.
+        /// If the model revision was recently cached, it will return the cached version from the memory cache.
         /// </summary>
-        private async Task<SimulatorModelRevision> TryReadRemoteModelRevision(string modelRevisionExternalId, CancellationToken token)
+        /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="cachedRevisions">Preloaded model revisions. This can be used to avoid fetching the model revision from CDF if it is already available.</param>
+        /// <param name="token">Cancellation token</param>
+        private async Task<SimulatorModelRevision> TryReadRemoteModelRevision(string modelRevisionExternalId, IMemoryCache cachedRevisions, CancellationToken token)
         {
+            if (cachedRevisions?.TryGetValue<SimulatorModelRevision>(modelRevisionExternalId, out var cachedRevision) == true)
+            {
+                _logger.LogDebug("Using cached model revision for {ModelRevisionExternalId}", modelRevisionExternalId);
+                return cachedRevision;
+            }
+
             try
             {
                 var modelRevisionRes = await _cdfSimulatorResources.RetrieveSimulatorModelRevisionsAsync(
@@ -245,10 +257,11 @@ namespace Cognite.Simulator.Utils
         ///     - If the model revision is already in the local state and has not been changed, it will return the existing state.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="cachedRevisions">Preloaded model revisions. This can be used to avoid fetching the model revision from CDF if it is already available.</param>
         /// <param name="token">Cancellation token</param>
-        private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, CancellationToken token = default)
+        private async Task<T> GetOrAddModelRevisionImpl(string modelRevisionExternalId, IMemoryCache cachedRevisions = null, CancellationToken token = default)
         {
-            var modelRevision = await TryReadRemoteModelRevision(modelRevisionExternalId, token).ConfigureAwait(false);
+            var modelRevision = await TryReadRemoteModelRevision(modelRevisionExternalId, cachedRevisions, token).ConfigureAwait(false);
 
             if (modelRevision == null)
             {
@@ -290,7 +303,7 @@ namespace Cognite.Simulator.Utils
         /// <inheritdoc/>
         public Task<T> GetModelRevision(string modelRevisionExternalId, CancellationToken token = default)
         {
-            return GetOrAddModelRevision(modelRevisionExternalId, token);
+            return GetOrAddModelRevision(modelRevisionExternalId, null, token);
         }
 
         /// <summary>
@@ -298,10 +311,11 @@ namespace Cognite.Simulator.Utils
         /// Internally, it uses a <see cref="ModelLibraryTaskHolder{TKey,TValue}"/> to ensure that only one thread processes a given model revision at a time.
         /// </summary>
         /// <param name="modelRevisionExternalId">Model revision External ID</param>
+        /// <param name="cachedRevisions">Preloaded model revisions. This can be used to avoid fetching the model revision from CDF if it is already available.</param>
         /// <param name="token">Cancellation token</param>
-        private Task<T> GetOrAddModelRevision(string modelRevisionExternalId, CancellationToken token = default)
+        private Task<T> GetOrAddModelRevision(string modelRevisionExternalId, IMemoryCache cachedRevisions = null, CancellationToken token = default)
         {
-            return _revisionsTasks.ExecuteAsync(modelRevisionExternalId, (cancellationToken) => GetOrAddModelRevisionImpl(modelRevisionExternalId, cancellationToken), token);
+            return _revisionsTasks.ExecuteAsync(modelRevisionExternalId, (cancellationToken) => GetOrAddModelRevisionImpl(modelRevisionExternalId, cachedRevisions, cancellationToken), token);
         }
 
         /// <inheritdoc/>
@@ -465,6 +479,31 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
+        /// Creates a new temporary memory cache to store model revisions.
+        /// We can use this cache to avoid fetching the same model revisions multiple times.
+        /// This only works if the model revisions do not have dependencies.
+        /// Dependencies field is not being returned by the list endpoint, so we need to call get-by-id instead of using cache.
+        /// </summary>
+        /// <param name="modelRevisions">List of model revisions to cache</param>
+        /// <returns>Memory cache with model revisions. Null if caching is not possible</returns>
+        private MemoryCache CreateMemoryCache(List<SimulatorModelRevision> modelRevisions)
+        {
+            MemoryCache cache = null;
+            var canUseCachedRevisions = !(_simulatorDefinition.ModelDependencies?.Any() == true);
+            if (canUseCachedRevisions)
+            {
+                cache = new MemoryCache(new MemoryCacheOptions());
+                var options = new MemoryCacheEntryOptions().SetAbsoluteExpiration(_modelRevisionListCacheExpiration);
+                foreach (var revision in modelRevisions)
+                {
+                    cache.Set(revision.ExternalId, revision, options);
+                }
+            }
+
+            return cache;
+        }
+
+        /// <summary>
         /// This method should open the model versions in the simulator, extract the required information and
         /// ingest it to CDF. 
         /// </summary>
@@ -541,9 +580,11 @@ namespace Cognite.Simulator.Utils
                     .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
                     .ToList();
 
+                using var cachedRevisions = CreateMemoryCache(modelRevisionsRes);
+
                 foreach (var revision in modelRevisionsRes)
                 {
-                    var state = await GetOrAddModelRevision(revision.ExternalId, token).ConfigureAwait(false);
+                    var state = await GetOrAddModelRevision(revision.ExternalId, cachedRevisions, token).ConfigureAwait(false);
                     if (state != null && state.Downloaded)
                     {
                         _libState.UpdateDestinationRange(
