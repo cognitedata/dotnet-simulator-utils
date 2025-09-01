@@ -23,7 +23,7 @@ public static class FilesExtensions
 
     /// <summary>
     /// Retrieves file medatadata by their IDs in chunks, ignores unknown IDs.
-    /// Each batch can contain up to 1000 file IDs and is be processed in parallel (up to 5 batches at a time).
+    /// Each batch can contain up to 1000 file IDs and is processed in parallel to others (up to 5 batches at a time).
     /// </summary>
     /// <param name="cdfFiles">The FilesResource instance.</param>
     /// <param name="internalIds">The list of internal IDs of the files to retrieve.</param>
@@ -51,7 +51,7 @@ public static class FilesExtensions
             (chunk, _) => async () =>
             {
                 var found = await cdfFiles
-                    .RetrieveAsync(chunk, true, token)
+                    .RetrieveAsync(chunk, ignoreUnknownIds: true, token)
                     .ConfigureAwait(false);
                 foreach (var file in found)
                 {
