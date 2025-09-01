@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
-        public ConcurrentDictionary<string, V> RoutineRevisions { get; }
+        public ConcurrentDictionary<long, V> RoutineRevisions { get; }
 
         private readonly ILogger _logger;
         private readonly RoutineLibraryConfig _config;
@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
             _config = config;
 
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            RoutineRevisions = new ConcurrentDictionary<string, V>();
+            RoutineRevisions = new ConcurrentDictionary<long, V>();
             LibState = new BaseExtractionState("RoutineLibraryState");
             _simulatorDefinition = simulatorDefinition;
         }
@@ -109,7 +109,7 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Looks for the routine revision in the memory with the given external id
+        /// Looks for the routine revision in the memory with the given external ID. If not found, tries to fetch it from CDF.
         /// </summary>
         public async Task<V> GetRoutineRevision(
             string routineRevisionExternalId
@@ -162,7 +162,7 @@ namespace Cognite.Simulator.Utils
                 _logger.LogWarning("Removing {Model} - {Routine} routine revision, not found in CDF",
                     config.ModelExternalId,
                     config.ExternalId);
-                RoutineRevisions.TryRemove(config.Id.ToString(), out _);
+                RoutineRevisions.TryRemove(config.Id, out _);
             }
             return exists;
         }
@@ -213,7 +213,7 @@ namespace Cognite.Simulator.Utils
 
             V newRevision = LocalConfigurationFromRoutine(routineRev);
 
-            var result = RoutineRevisions.AddOrUpdate(routineRev.Id.ToString(), newRevision, (key, oldValue) =>
+            var result = RoutineRevisions.AddOrUpdate(routineRev.Id, newRevision, (key, oldValue) =>
             {
                 if (newRevision.CreatedTime < oldValue.CreatedTime)
                 {
@@ -322,7 +322,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Dictionary of simulation routines. The key is the routine revision id
         /// </summary>
-        ConcurrentDictionary<string, V> RoutineRevisions { get; }
+        ConcurrentDictionary<long, V> RoutineRevisions { get; }
 
         /// <summary>
         /// Initializes the library
