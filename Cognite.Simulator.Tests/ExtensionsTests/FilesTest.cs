@@ -1,9 +1,13 @@
 using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cognite.Simulator.Extensions;
 
 using CogniteSdk;
 
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -78,6 +82,27 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => file.GetExtension());
             Assert.Contains("File name does not contain a valid extension", exception.Message);
+        }
+
+        [Fact]
+        public async Task TestRetrieveBatchAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddCogniteTestClient();
+
+            using var provider = services.BuildServiceProvider();
+            var cdf = provider.GetRequiredService<Client>();
+
+            var filesListRes = await cdf.Files.ListAsync(new FileQuery() { Limit = 20 }, token: CancellationToken.None);
+
+            Assert.True(filesListRes.Items.Count() > 1);
+
+            var filesRes = await cdf.Files.RetrieveBatchAsync(
+                filesListRes.Items.Select(f => f.Id).ToList(),
+                1 // 1 to force multiple batches
+            );
+
+            Assert.Equivalent(filesListRes.Items, filesRes);
         }
     }
 }
