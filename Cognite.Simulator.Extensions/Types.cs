@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+
+using CogniteSdk.Alpha;
 
 namespace Cognite.Simulator.Extensions
 {
@@ -25,6 +27,11 @@ namespace Cognite.Simulator.Extensions
     public class SimulatorRoutineRevisionInfo
     {
         /// <summary>
+        /// The unique identifier of the routine revision.
+        /// </summary>
+        public long Id { get; set; }
+
+        /// <summary>
         /// Routine revision external id
         /// </summary>
         public string ExternalId { get; set; }
@@ -35,9 +42,47 @@ namespace Cognite.Simulator.Extensions
         public string RoutineExternalId { get; set; }
 
         /// <summary>
+        /// The external id of the simulator integration.
+        /// </summary>
+        public string SimulatorIntegrationExternalId { get; set; }
+
+        /// <summary>
+        /// Schedule configuration.
+        /// </summary>
+        public SimulatorRoutineRevisionSchedule Schedule { get; set; }
+
+        /// <summary>
         /// Simulator model associated with this routine
         /// </summary>
         public SimulatorModelInfo Model { get; set; }
+
+        /// <summary>
+        /// Creation time in milliseconds since epoch
+        /// </summary>
+        public long CreatedTime { get; set; }
+
+        /// <summary>
+        /// Creates a SimulatorRoutineRevisionInfo from a SimulatorRoutineRevision instance
+        /// </summary>
+        public SimulatorRoutineRevisionInfo(SimulatorRoutineRevision revision)
+        {
+            if (revision == null)
+            {
+                throw new ArgumentNullException(nameof(revision));
+            }
+
+            Id = revision.Id;
+            ExternalId = revision.ExternalId;
+            RoutineExternalId = revision.RoutineExternalId;
+            SimulatorIntegrationExternalId = revision.SimulatorIntegrationExternalId;
+            Schedule = revision.Configuration?.Schedule;
+            Model = new SimulatorModelInfo
+            {
+                ExternalId = revision.ModelExternalId,
+                Simulator = revision.SimulatorExternalId
+            };
+            CreatedTime = revision.CreatedTime;
+        }
 
         /// <summary>
         /// Routine external id with special characters replaced

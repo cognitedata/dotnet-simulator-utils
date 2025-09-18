@@ -121,16 +121,7 @@ namespace Cognite.Simulator.Utils
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
             Dictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
-            var routineRevisionInfo = new SimulatorRoutineRevisionInfo()
-            {
-                ExternalId = routineRevision.ExternalId,
-                Model = new SimulatorModelInfo
-                {
-                    ExternalId = modelState.ModelExternalId,
-                    Simulator = routineRevision.SimulatorExternalId,
-                },
-                RoutineExternalId = routineRevision.RoutineExternalId,
-            };
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo(routineRevision);
 
             var configObj = routineRevision.Configuration;
 
