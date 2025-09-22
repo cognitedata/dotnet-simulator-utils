@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cognite.Simulator.Extensions;
 
 using CogniteSdk;
+using CogniteSdk.Alpha;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,17 +27,16 @@ namespace Cognite.Simulator.Tests.ExtensionsTests
             var cdf = provider.GetRequiredService<Client>();
             var timeSeries = cdf.TimeSeries;
 
-            var model = new SimulatorModelInfo
-            {
-                ExternalId = "Connector_Test_Model",
-                Simulator = "TestSimulator"
-            };
-            var routineRevisionInfo = new SimulatorRoutineRevisionInfo
-            {
-                Model = model,
-                ExternalId = "TestCalc - 1",
-                RoutineExternalId = "TestCalc",
-            };
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo(
+                new SimulatorRoutineRevision
+                {
+                    Id = 123,
+                    ExternalId = "TestCalc - 1",
+                    SimulatorExternalId = "TestSimulator",
+                    ModelExternalId = "Connector_Test_Model",
+                    RoutineExternalId = "TestCalc",
+                }
+            );
 
             var inA = new SimulationInput
             {
