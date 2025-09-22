@@ -29,37 +29,37 @@ namespace Cognite.Simulator.Extensions
         /// <summary>
         /// The unique identifier of the routine revision.
         /// </summary>
-        public long Id { get; set; }
+        public long Id { get; private set; }
 
         /// <summary>
         /// Routine revision external id
         /// </summary>
-        public string ExternalId { get; set; }
+        public string ExternalId { get; private set; }
 
         /// <summary>
         /// Routine external id
         /// </summary>
-        public string RoutineExternalId { get; set; }
+        public string RoutineExternalId { get; private set; }
 
         /// <summary>
         /// The external id of the simulator integration.
         /// </summary>
-        public string SimulatorIntegrationExternalId { get; set; }
+        public string SimulatorIntegrationExternalId { get; private set; }
 
         /// <summary>
         /// Schedule configuration.
         /// </summary>
-        public SimulatorRoutineRevisionSchedule Schedule { get; set; }
+        public SimulatorRoutineRevisionSchedule Schedule { get; private set; }
 
         /// <summary>
         /// Simulator model associated with this routine
         /// </summary>
-        public SimulatorModelInfo Model { get; set; }
+        public SimulatorModelInfo Model { get; private set; }
 
         /// <summary>
         /// Creation time in milliseconds since epoch
         /// </summary>
-        public long CreatedTime { get; set; }
+        public long CreatedTime { get; private set; }
 
         /// <summary>
         /// Creates a SimulatorRoutineRevisionInfo from a SimulatorRoutineRevision instance
