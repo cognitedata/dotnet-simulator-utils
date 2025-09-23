@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Other changes
 
-* Use long IDs directly instead of string keys for routine revision item references
+* **Routine Library**: Refactored routine revision item references to use long IDs directly instead of string keys.
 
 ## Release v1.0.0-beta-022 (2025-08-26)
 
