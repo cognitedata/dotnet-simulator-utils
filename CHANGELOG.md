@@ -6,9 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
-* **Connector Startup Improvement**: Add a 1-minute memory cache to avoid redundant API calls when checking if locally stored model revisions are up-to-date during connector startup, preventing rate limiting issues.  
-* **Model Library**: Concurrent chunking support for retrieving metadata of 1000+ model files
-* **Routine Library**: Store only essential routine fields in memory and fetch full data on-demand to prevent OOM issues
+* **Connector Startup Improvement**: Added 1-minute memory caching to prevent redundant API calls when validating locally stored model revisions during connector startup, eliminating rate limiting issues.  
+* **Model Library**: Introduced concurrent chunking support for retrieving metadata from 1000+ model files.
+* **Routine Library**: Optimized memory usage by storing only essential routine fields in memory and fetching complete data on-demand to prevent out-of-memory issues.
 
 ### Other changes
 
