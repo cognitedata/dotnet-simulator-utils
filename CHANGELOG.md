@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-023 (2025-09-23)
+
+### Features
+
+* **Connector Startup Improvement**: Add a 1-minute memory cache to avoid redundant API calls when checking if locally stored model revisions are up-to-date during connector startup, preventing rate limiting issues.  
+* **Model Library**: Concurrent chunking support for retrieving metadata of 1000+ model files
+* **Routine Library**: Store only essential routine fields in memory and fetch full data on-demand to prevent OOM issues
+
+### Other changes
+
+* Use long IDs directly instead of string keys for routine revision item references
+
 ## Release v1.0.0-beta-022 (2025-08-26)
 
 ### Bug Fixes
