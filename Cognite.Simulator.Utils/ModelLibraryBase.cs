@@ -304,8 +304,6 @@ namespace Cognite.Simulator.Utils
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
             }
 
-            modelState.DownloadAttempts = 0;
-
             return modelState;
         }
 
@@ -709,6 +707,10 @@ namespace Cognite.Simulator.Utils
                         fileId, modelState.ExternalId);
                 }
                 allFilesDownloaded &= downloaded;
+                if (allFilesDownloaded)
+                {
+                    modelState.DownloadAttempts = 0;
+                }
             }
 
             return allFilesDownloaded;

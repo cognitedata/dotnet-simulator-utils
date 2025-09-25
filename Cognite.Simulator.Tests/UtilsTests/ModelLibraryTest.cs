@@ -207,7 +207,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     Assert.False(string.IsNullOrEmpty(modelInState.FilePath));
                     Assert.True(System.IO.File.Exists(modelInState.FilePath));
                     Assert.Equal("out", modelInState.FileExtension);
-                    Assert.Equal(1, modelInState.DownloadAttempts);
+                    Assert.Equal(0, modelInState.DownloadAttempts);
 
                     Assert.False(modelInState.IsExtracted); // this is only true if the file was parsed locally
                     Assert.False(modelInState.CanRead);
