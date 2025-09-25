@@ -287,6 +287,13 @@ namespace Cognite.Simulator.Utils
 
             var downloaded = modelState.Downloaded;
 
+            _logger.LogDebug("Model revision {ModelRevisionExternalId} local state: Downloaded={Downloaded}, CanRead={CanRead}, ShouldProcess={ShouldProcess()}, DownloadAttempts={DownloadAttempts}",
+                modelRevisionExternalId,
+                modelState.Downloaded,
+                modelState.CanRead,
+                modelState.ShouldProcess(),
+                modelState.DownloadAttempts);
+
             if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
             {
                 downloaded = await DownloadAllModelFilesAsync(modelState).ConfigureAwait(false);
@@ -296,6 +303,8 @@ namespace Cognite.Simulator.Utils
             {
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
             }
+
+            modelState.DownloadAttempts = 0;
 
             return modelState;
         }
