@@ -286,14 +286,6 @@ namespace Cognite.Simulator.Utils
             UpdateModelParsingInfo(modelState, modelRevision);
 
             var downloaded = modelState.Downloaded;
-
-            _logger.LogDebug("Model revision {ModelRevisionExternalId} local state: Downloaded={Downloaded}, CanRead={CanRead}, ShouldProcess={ShouldProcess()}, DownloadAttempts={DownloadAttempts}",
-                modelRevisionExternalId,
-                modelState.Downloaded,
-                modelState.CanRead,
-                modelState.ShouldProcess(),
-                modelState.DownloadAttempts);
-
             if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
             {
                 downloaded = await DownloadAllModelFilesAsync(modelState).ConfigureAwait(false);
