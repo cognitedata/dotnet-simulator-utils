@@ -110,7 +110,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal("TestModelExternalId-v1", modelInState.ExternalId);
             Assert.Equal("TestModelExternalId", modelInState.ModelExternalId);
             Assert.Equal(1234567890000, modelInState.CreatedTime);
-            Assert.Equal(1, modelInState.DownloadAttempts);
+            Assert.Equal(0, modelInState.DownloadAttempts);
             Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
             Assert.True(modelInState.CanRead);
             Assert.False(modelInState.ParsingInfo.Error);

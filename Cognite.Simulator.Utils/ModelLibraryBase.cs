@@ -286,7 +286,6 @@ namespace Cognite.Simulator.Utils
             UpdateModelParsingInfo(modelState, modelRevision);
 
             var downloaded = modelState.Downloaded;
-
             if (!downloaded && modelState.DownloadAttempts < _config.MaxDownloadAttempts)
             {
                 downloaded = await DownloadAllModelFilesAsync(modelState).ConfigureAwait(false);
@@ -700,6 +699,11 @@ namespace Cognite.Simulator.Utils
                         fileId, modelState.ExternalId);
                 }
                 allFilesDownloaded &= downloaded;
+            }
+
+            if (allFilesDownloaded)
+            {
+                modelState.DownloadAttempts = 0;
             }
 
             return allFilesDownloaded;

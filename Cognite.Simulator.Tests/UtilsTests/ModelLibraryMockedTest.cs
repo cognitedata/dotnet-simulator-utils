@@ -81,7 +81,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Assert
             Assert.NotNull(modelInState);
             Assert.Equal("TestModelExternalId-v1", modelInState.ExternalId);
-            Assert.Equal(1, modelInState.DownloadAttempts);
+            Assert.Equal(0, modelInState.DownloadAttempts);
             Assert.True(modelInState.ParsingInfo.Parsed);
             Assert.EndsWith(Path.Combine("100", "100.csv"), modelInState.FilePath);
             Assert.Equal("csv", modelInState.FileExtension);
