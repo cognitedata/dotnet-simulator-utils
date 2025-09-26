@@ -707,10 +707,11 @@ namespace Cognite.Simulator.Utils
                         fileId, modelState.ExternalId);
                 }
                 allFilesDownloaded &= downloaded;
-                if (allFilesDownloaded)
-                {
-                    modelState.DownloadAttempts = 0;
-                }
+            }
+
+            if (allFilesDownloaded)
+            {
+                modelState.DownloadAttempts = 0;
             }
 
             return allFilesDownloaded;
