@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-024 (2025-09-26)
+
+### Bug Fixes
+
+* **Model Library**: Reset download attempt counter after successful model revision download. 
+
 ## Release v1.0.0-beta-023 (2025-09-23)
 
 ### Features
