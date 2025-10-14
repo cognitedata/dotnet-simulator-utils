@@ -2,6 +2,7 @@
 **/obj
 .DS_Store
 .vscode/*
+!Sample.BasicComConnector/.vscode/
 /.vs/*
 **/buildoutput/
 *.runsettings
@@ -10,3 +11,5 @@
 .envrc
 .env
 config.yml
+*.txt
+*.db
