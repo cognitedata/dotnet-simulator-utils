@@ -9,6 +9,7 @@ public class NewSimRoutine : RoutineImplementationBase
     private dynamic? _placeitComObject;
     private readonly Dictionary<string, object> _simulationParameters = new();
     private readonly ILogger _logger;
+    private object[,]? _cachedResultArray; // Cache the 2D result array
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
@@ -143,10 +144,10 @@ public class NewSimRoutine : RoutineImplementationBase
         // Get the reference ID to determine what output to retrieve
         var referenceId = outputConfig.ReferenceId ?? "";
 
-        // Check if this is a PlaceiT simulation result request
-        if (referenceId == "placeit-result")
+        // Check if this is one of the PlaceiT simulation result outputs
+        if (referenceId == "time_days" || referenceId == "concentration_mg_L" || referenceId == "volume_m3")
         {
-            return GetPlaceiTSimulationResult(outputConfig, arguments, _token);
+            return GetPlaceiTArrayOutput(referenceId, outputConfig, _token);
         }
         else
         {
@@ -154,61 +155,96 @@ public class NewSimRoutine : RoutineImplementationBase
         }
     }
 
-    private SimulatorValueItem GetPlaceiTSimulationResult(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken token)
+    private SimulatorValueItem GetPlaceiTArrayOutput(string referenceId, SimulatorRoutineRevisionOutput outputConfig, CancellationToken token)
     {
-        // Ensure we have all required parameters
-        ValidateSimulationParameters();
+        // If we haven't run the simulation yet, run it and cache the results
+        if (_cachedResultArray == null)
+        {
+            // Ensure we have all required parameters
+            ValidateSimulationParameters();
 
-        // Call the PlaceiT COM function
-        dynamic result = CallPlaceiTCOMEntryPoint(token);
+            // Call the PlaceiT COM function
+            dynamic result = CallPlaceiTCOMEntryPoint(token);
 
-        SimulatorValue value;
-        if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
-        {
-            // If result is a single double value
-            var doubleResult = Convert.ToDouble(result);
-            value = new SimulatorValue.Double(doubleResult);
-        }
-        else if (outputConfig.ValueType == SimulatorValueType.STRING)
-        {
-            // If result is a string representation
-            var stringResult = result?.ToString() ?? "";
-            value = new SimulatorValue.String(stringResult);
-        }
-        else if (outputConfig.ValueType == SimulatorValueType.DOUBLE_ARRAY)
-        {
-            // If result is an array of doubles (variant array from COM)
-            double[] doubleArray;
-            if (result is Array array)
+            // Parse PlaceiT result structure: result[0] = error code, result[1] = 2D array
+            if (result is object[] wrapper && wrapper.Length == 2)
             {
-                doubleArray = new double[array.Length];
-                for (int i = 0; i < array.Length; i++)
+                int errorCode = Convert.ToInt32(wrapper[0]);
+                _logger.LogInformation($"PlaceiT simulation completed with error code: {errorCode}");
+                
+                if (errorCode != 0)
                 {
-                    doubleArray[i] = Convert.ToDouble(array.GetValue(i));
+                    throw new InvalidOperationException($"PlaceiT simulation failed with error code {errorCode}");
+                }
+                
+                if (wrapper[1] is object[,] array2D)
+                {
+                    // Success - cache the 2D array
+                    _cachedResultArray = array2D;
+                    int resultRows = array2D.GetLength(0);
+                    _logger.LogInformation($"PlaceiT simulation successful. Result contains {resultRows} data points");
+                    _logger.LogDebug($"First point - Time: {array2D[0, 0]} days, Conc: {array2D[0, 1]} mg/L, Vol: {array2D[0, 2]} m³");
+                    if (resultRows > 1)
+                    {
+                        int lastIdx = resultRows - 1;
+                        _logger.LogDebug($"Last point - Time: {array2D[lastIdx, 0]} days, Conc: {array2D[lastIdx, 1]} mg/L, Vol: {array2D[lastIdx, 2]} m³");
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unexpected result format: result[1] is not a 2D array");
                 }
             }
             else
             {
-                // Single value as array
-                doubleArray = new double[] { Convert.ToDouble(result) };
+                throw new InvalidOperationException($"Unexpected result structure: {result?.GetType().Name ?? "null"}");
             }
-            value = new SimulatorValue.DoubleArray(doubleArray);
         }
-        else
+
+        // Extract the requested column from the cached result array
+        int rows = _cachedResultArray.GetLength(0);
+        double[] outputArray = new double[rows];
+        int columnIndex;
+        string unit;
+
+        switch (referenceId)
         {
-            throw new NotImplementedException($"Output value type '{outputConfig.ValueType}' not implemented for PlaceiT simulation");
+            case "time_days":
+                columnIndex = 0;
+                unit = "days";
+                break;
+            case "concentration_mg_L":
+                columnIndex = 1;
+                unit = "mg/L";
+                break;
+            case "volume_m3":
+                columnIndex = 2;
+                unit = "m³";
+                break;
+            default:
+                throw new ArgumentException($"Unknown output reference ID: {referenceId}");
         }
+
+        // Extract column data
+        for (int i = 0; i < rows; i++)
+        {
+            outputArray[i] = Convert.ToDouble(_cachedResultArray[i, columnIndex]);
+        }
+
+        _logger.LogInformation($"Returning {referenceId}: {rows} values ({unit})");
 
         var simulationObjectRef = new Dictionary<string, string> {
             { "stepType", "placeit-simulation" },
-            { "functionName", "PlaceiTCOMEntryPoint" }
+            { "functionName", "PlaceiTCOMEntryPoint" },
+            { "column", columnIndex.ToString() },
+            { "unit", unit }
         };
 
         return new SimulatorValueItem
         {
-            ValueType = outputConfig.ValueType,
-            Value = value,
-            ReferenceId = outputConfig.ReferenceId,
+            ValueType = SimulatorValueType.DOUBLE_ARRAY,
+            Value = new SimulatorValue.DoubleArray(outputArray),
+            ReferenceId = referenceId,
             SimulatorObjectReference = simulationObjectRef,
             TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
         };
