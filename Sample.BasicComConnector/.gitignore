@@ -1,2 +1,5 @@
 .vscode/
 files/
+
+# Environment variables (contains secrets)
+.env
