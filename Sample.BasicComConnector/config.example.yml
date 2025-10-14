@@ -1,8 +1,8 @@
 version: 1
 
 logger:
-    console:
-        level: "debug"
+  console:
+    level: "debug"
 
 cognite:
     project: ${COGNITE_PROJECT}
@@ -21,7 +21,8 @@ cognite:
         #   - https://api.cognitedata.com/.default
         scopes:
           - ${COGNITE_SCOPE}
- 
+
 connector:
   name-prefix: "new-sim-connector@"
   data-set-id: ${COGNITE_DATA_SET_ID}
+  add-machine-name-suffix: true
