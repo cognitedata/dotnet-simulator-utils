@@ -6,10 +6,15 @@
     <LangVersion>12.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Enable COM interop support for modern .NET -->
+    <EnableComHosting>true</EnableComHosting>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-beta-024" />
+    <!-- Microsoft Office Interop for Excel COM - modern .NET approach -->
+    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
+    <!-- System.Text.Json is included as transitive dependency from Cognite packages -->
   </ItemGroup>
 
 </Project>

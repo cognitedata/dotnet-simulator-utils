@@ -37,5 +37,5 @@ Write-Host "  CDF_PROJECT: $env:CDF_PROJECT" -ForegroundColor Gray
 Write-Host "  IDP_TENANT_ID: $env:IDP_TENANT_ID" -ForegroundColor Gray
 Write-Host "  IDP_CLIENT_ID: $env:IDP_CLIENT_ID" -ForegroundColor Gray
 Write-Host "  IDP_SCOPE: $env:IDP_SCOPE" -ForegroundColor Gray
-Write-Host "  SIMULATOR_DATASET_ID: $env:SIMULATOR_DATASET_ID" -ForegroundColor Gray
+Write-Host "  SIMULATOR_DATA_SET_ID: $env:SIMULATOR_DATA_SET_ID" -ForegroundColor Gray
 Write-Host "  IDP_CLIENT_SECRET: [HIDDEN]" -ForegroundColor Gray
