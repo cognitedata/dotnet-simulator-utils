@@ -12,7 +12,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     private readonly string _version = "N/A";
     private readonly ILogger logger;
-    private readonly List<string> _extractedDirectories = new();
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config?.Automation)
@@ -38,28 +37,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     protected override void PreShutdown()
     {
-        CleanupExtractedDirectories();
         Server.Quit();
-    }
-
-    private void CleanupExtractedDirectories()
-    {
-        foreach (var directory in _extractedDirectories.ToList())
-        {
-            try
-            {
-                if (Directory.Exists(directory))
-                {
-                    Directory.Delete(directory, recursive: true);
-                    logger.LogDebug($"Cleaned up extracted directory: {directory}");
-                }
-                _extractedDirectories.Remove(directory);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, $"Failed to cleanup extracted directory: {directory}");
-            }
-        }
     }
 
 
@@ -69,7 +47,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return workbooks.Open(path);
     }
 
-    private string ExtractZipAndFindExcelFile(string zipFilePath)
+    private (string excelFilePath, string extractedDirectory) ExtractZipAndFindExcelFile(string zipFilePath)
     {
         try
         {
@@ -81,9 +59,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             
             // Extract the zip file
             ZipFile.ExtractToDirectory(zipFilePath, tempDir);
-            
-            // Track this directory for cleanup
-            _extractedDirectories.Add(tempDir);
             
             // Validate and log the extracted package contents
             ValidatePackageContents(tempDir);
@@ -101,14 +76,14 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             if (excelFiles.Length == 1)
             {
                 logger.LogInformation($"Found PlaceiT Excel simulator: {Path.GetFileName(excelFiles[0])}");
-                return excelFiles[0];
+                return (excelFiles[0], tempDir);
             }
             
             // This shouldn't happen based on the expected package structure, but handle it gracefully
             logger.LogWarning($"Unexpected: Multiple Excel files found in package. Using first one: {Path.GetFileName(excelFiles[0])}");
             logger.LogWarning($"All Excel files: {string.Join(", ", excelFiles.Select(Path.GetFileName))}");
             
-            return excelFiles[0];
+            return (excelFiles[0], tempDir);
         }
         catch (Exception ex)
         {
@@ -170,12 +145,13 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     {
         ArgumentNullException.ThrowIfNull(state);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
+        string? extractedDirectory = null;
         try
         {
             Initialize();
             
             // Extract zip file and find the main Excel file
-            string excelFilePath = ExtractZipAndFindExcelFile(state.FilePath);
+            (string excelFilePath, extractedDirectory) = ExtractZipAndFindExcelFile(state.FilePath);
             
             dynamic workbook = OpenBook(excelFilePath);
             if (workbook != null)
@@ -185,22 +161,32 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
                 
                 workbook.Close(false);
                 
-                if (placeitAvailable)
+                if (!placeitAvailable)
                 {
-                    state.ParsingInfo.SetSuccess();
-                    logger.LogInformation($"PlaceiT COM functionality detected in extracted workbook from: {state.FilePath}");
+                    throw new InvalidOperationException($"PlaceiT COM functionality not detected in workbook: {state.FilePath}. Ensure the .xlsm file contains the PlaceiTCOMEntryPoint macro.");
                 }
-                else
-                {
-                    state.ParsingInfo.SetSuccess(); // Still consider it successful, but log a warning
-                    logger.LogWarning($"PlaceiT COM functionality not detected in extracted workbook from: {state.FilePath}. Simulation may fail.");
-                }
+                
+                logger.LogInformation($"PlaceiT COM functionality detected in extracted workbook from: {state.FilePath}");
                 return;
             }
-            state.ParsingInfo.SetFailure();
+            throw new FileNotFoundException($"No Excel file found in ZIP package: {state.FilePath}");
         }
         finally
         {
+            // Clean up extracted directory after validation
+            if (extractedDirectory != null && Directory.Exists(extractedDirectory))
+            {
+                try
+                {
+                    Directory.Delete(extractedDirectory, recursive: true);
+                    logger.LogDebug($"Cleaned up extracted directory: {extractedDirectory}");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, $"Failed to cleanup extracted directory: {extractedDirectory}");
+                }
+            }
+            
             Shutdown();
             semaphore.Release();
         }
@@ -283,12 +269,13 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         ArgumentNullException.ThrowIfNull(modelState);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
         dynamic? workbook = null;
+        string? extractedDirectory = null;
         try
         {
             Initialize();
             
             // Extract zip file and find the main Excel file
-            string excelFilePath = ExtractZipAndFindExcelFile(modelState.FilePath);
+            (string excelFilePath, extractedDirectory) = ExtractZipAndFindExcelFile(modelState.FilePath);
             
             workbook = OpenBook(excelFilePath);
 
@@ -299,8 +286,30 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         {
             if (workbook != null)
             {
-                workbook.Close(false);
+                try
+                {
+                    workbook.Close(false);
+                }
+                catch (System.Runtime.InteropServices.COMException ex)
+                {
+                    logger.LogWarning(ex, "Error closing workbook (simulation may have completed successfully)");
+                }
+                
+                // Clean up extracted directory after closing workbook
+                if (extractedDirectory != null && Directory.Exists(extractedDirectory))
+                {
+                    try
+                    {
+                        Directory.Delete(extractedDirectory, recursive: true);
+                        logger.LogDebug($"Cleaned up extracted directory: {extractedDirectory}");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, $"Failed to cleanup extracted directory: {extractedDirectory}");
+                    }
+                }
             }
+            
             Shutdown();
             semaphore.Release();
         }

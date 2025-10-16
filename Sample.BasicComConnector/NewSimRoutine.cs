@@ -6,7 +6,6 @@ using System.Text.Json;
 public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
-    private dynamic? _placeitComObject;
     private readonly Dictionary<string, object> _simulationParameters = new();
     private readonly ILogger _logger;
     private object[,]? _cachedResultArray; // Cache the 2D result array
@@ -73,62 +72,6 @@ public class NewSimRoutine : RoutineImplementationBase
         _logger.LogDebug($"Set PlaceiT parameter '{parameterName}' = {JsonSerializer.Serialize(parameterValue)}");
     }
 
-    private void HandleComControlInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments)
-    {
-        var action = (input.Value as SimulatorValue.String)?.Value ?? "";
-        
-        switch (action)
-        {
-            case "Initialize":
-                InitializePlaceiTComObject();
-                break;
-            case "Release":
-                ReleasePlaceiTComObject();
-                break;
-            case "Reset":
-                ResetSimulation();
-                break;
-            default:
-                throw new NotImplementedException($"COM control action '{action}' not implemented");
-        }
-    }
-
-    private void InitializePlaceiTComObject()
-    {
-        try
-        {
-            if (_placeitComObject == null)
-            {
-                // PlaceiT is implemented as VBA functions in the workbook
-                // The PlaceiTCOMEntryPoint function can be called directly on the workbook
-                _placeitComObject = _workbook;
-                _logger.LogInformation("PlaceiT COM object initialized (using workbook)");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize PlaceiT COM object");
-            throw new InvalidOperationException("Could not initialize PlaceiT COM object", ex);
-        }
-    }
-
-    private void ReleasePlaceiTComObject()
-    {
-        if (_placeitComObject != null)
-        {
-            try
-            {
-                // Release COM object references
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(_placeitComObject);
-                _placeitComObject = null;
-                _logger.LogInformation("PlaceiT COM object released");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error releasing PlaceiT COM object");
-            }
-        }
-    }
 
     private void ResetSimulation()
     {
@@ -252,13 +195,6 @@ public class NewSimRoutine : RoutineImplementationBase
 
     private dynamic CallPlaceiTCOMEntryPoint(CancellationToken token)
     {
-        // Auto-initialize PlaceiT COM object if not already initialized
-        if (_placeitComObject == null)
-        {
-            _logger.LogInformation("Auto-initializing PlaceiT COM object");
-            InitializePlaceiTComObject();
-        }
-
         try
         {
             _logger.LogInformation("Calling PlaceiTCOMEntryPoint function");
@@ -364,16 +300,6 @@ public class NewSimRoutine : RoutineImplementationBase
 
         switch (command)
         {
-            case "Initialize":
-                {
-                    InitializePlaceiTComObject();
-                    break;
-                }
-            case "Release":
-                {
-                    ReleasePlaceiTComObject();
-                    break;
-                }
             case "Reset":
                 {
                     ResetSimulation();
