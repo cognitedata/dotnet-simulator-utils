@@ -53,12 +53,21 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         // Hide Excel window - run in background
         Server.Visible = false;
         Server.DisplayAlerts = false; // Suppress alerts/prompts
+        Server.ScreenUpdating = false; // Prevent screen flashing
+        Server.Interactive = false; // Prevent user interaction
+        Server.EnableEvents = false; // Disable events that might show Excel
     }
 
     public dynamic OpenBook(string path)
     {
         dynamic workbooks = Server.Workbooks;
-        return workbooks.Open(path);
+        // Open workbook with parameters to keep Excel hidden and suppress dialogs
+        // Parameters: Filename, UpdateLinks (0=don't update), ReadOnly (false), Format, Password, 
+        // WriteResPassword, IgnoreReadOnlyRecommended (true), Origin, Delimiter, Editable, 
+        // Notify, Converter, AddToMru (false=don't add to recent files), Local, CorruptLoad
+        return workbooks.Open(path, 0, false, Type.Missing, Type.Missing, 
+                             Type.Missing, true, Type.Missing, Type.Missing, 
+                             Type.Missing, Type.Missing, Type.Missing, false);
     }
 
     private (string excelFilePath, string extractedDirectory) ExtractZipAndFindExcelFile(string zipFilePath)
