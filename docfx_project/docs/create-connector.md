@@ -31,6 +31,7 @@ logger:
 
 cognite:
     project: ${COGNITE_PROJECT}
+    host: ${COGNITE_HOST}
     # This is for Microsoft Entra as an IdP. To use a different provider:
     # set implementation: Basic, and use token-url instead of tenant.
     # See the example config for the full list of options.
@@ -46,15 +47,11 @@ cognite:
         #   - https://api.cognitedata.com/.default
         scopes:
           - ${COGNITE_SCOPE}
-
-
-simulator:
-  name: "NewSim"
-  # Data set ID to keep all the simulator resources
-  data-set-id: ${COGNITE_DATA_SET_ID}
     
 connector:
   name-prefix: "new-sim-connector@"
+  # Data set ID to keep all the simulator resources
+  data-set-id: ${COGNITE_DATA_SET_ID}
 ```
 
 This file contains the configuration required to connect to the CDF project, define the target data set ID, and set the connector name.
