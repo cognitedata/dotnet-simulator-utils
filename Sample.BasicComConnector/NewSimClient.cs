@@ -21,6 +21,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         try
         {
             Initialize();
+            ConfigureExcelVisibility();
             _version = Server.Version;
         }
         finally
@@ -37,9 +38,22 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 
     protected override void PreShutdown()
     {
-        Server.Quit();
+        try
+        {
+            Server.Quit();
+        }
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            logger.LogWarning(ex, "Error quitting Excel server during shutdown (cleanup may still succeed)");
+        }
     }
 
+    private void ConfigureExcelVisibility()
+    {
+        // Hide Excel window - run in background
+        Server.Visible = false;
+        Server.DisplayAlerts = false; // Suppress alerts/prompts
+    }
 
     public dynamic OpenBook(string path)
     {
@@ -149,6 +163,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         try
         {
             Initialize();
+            ConfigureExcelVisibility();
             
             // Extract zip file and find the main Excel file
             (string excelFilePath, extractedDirectory) = ExtractZipAndFindExcelFile(state.FilePath);
@@ -273,6 +288,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         try
         {
             Initialize();
+            ConfigureExcelVisibility();
             
             // Extract zip file and find the main Excel file
             (string excelFilePath, extractedDirectory) = ExtractZipAndFindExcelFile(modelState.FilePath);
