@@ -14,7 +14,16 @@
     <PackageReference Include="Cognite.Simulator.Utils" Version="1.0.0-beta-024" />
     <!-- Microsoft Office Interop for Excel COM - modern .NET approach -->
     <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
+    <!-- Windows Service support -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <!-- System.Text.Json is included as transitive dependency from Cognite packages -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copy config.example.yml to output directory for reference -->
+    <None Include="config.example.yml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Copy config.yml if it exists (but don't fail if it doesn't) -->
+    <None Include="config.yml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('config.yml')" />
   </ItemGroup>
 
 </Project>

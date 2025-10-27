@@ -65,9 +65,75 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         // Parameters: Filename, UpdateLinks (0=don't update), ReadOnly (false), Format, Password, 
         // WriteResPassword, IgnoreReadOnlyRecommended (true), Origin, Delimiter, Editable, 
         // Notify, Converter, AddToMru (false=don't add to recent files), Local, CorruptLoad
-        return workbooks.Open(path, 0, false, Type.Missing, Type.Missing, 
+        dynamic workbook = workbooks.Open(path, 0, false, Type.Missing, Type.Missing, 
                              Type.Missing, true, Type.Missing, Type.Missing, 
                              Type.Missing, Type.Missing, Type.Missing, false);
+        
+        // CRITICAL: Aggressively suppress ALL Excel alerts and error dialogs
+        // This must be done on the workbook's Application object after opening
+        dynamic app = workbook.Application;
+        app.DisplayAlerts = false;           // Suppress all alert dialogs
+        app.AlertBeforeOverwriting = false;  // No overwrite warnings
+        app.Interactive = false;              // Block user interaction
+        app.AskToUpdateLinks = false;        // No link update prompts
+        
+        // Prevent Excel from showing any error dialogs from VBA
+        // xlAutomatic = -4105, xlManual = -4135
+        app.Calculation = -4135; // Set to manual to prevent auto-calc errors during setup
+        
+        return workbook;
+    }
+
+    private void CleanupExtractedDirectory(string extractedDirectory)
+    {
+        // Retry cleanup with delays to allow COM objects to fully release file handles
+        // Excel and PlaceiT DLLs can take several seconds to release file locks after errors
+        const int maxRetries = 5;
+        const int delayMs = 500; // Increased from 100ms to 500ms
+
+        // Always force garbage collection first to release COM objects
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect(); // Second collection to clean up objects that were finalized
+        
+        // Give Excel and DLLs a moment to release file handles
+        Thread.Sleep(200);
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                // Additional garbage collection on retry attempts
+                if (attempt > 1)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    Thread.Sleep(delayMs * attempt); // Progressive delay: 500ms, 1s, 1.5s, 2s, 2.5s
+                }
+
+                Directory.Delete(extractedDirectory, recursive: true);
+                logger.LogDebug($"Cleaned up extracted directory: {extractedDirectory}");
+                return; // Success
+            }
+            catch (IOException ex) when (attempt < maxRetries)
+            {
+                // File still locked, will retry
+                logger.LogDebug($"Cleanup attempt {attempt}/{maxRetries} failed, retrying... ({ex.Message})");
+            }
+            catch (UnauthorizedAccessException ex) when (attempt < maxRetries)
+            {
+                // File still in use, will retry
+                logger.LogDebug($"Cleanup attempt {attempt}/{maxRetries} failed, retrying... ({ex.Message})");
+            }
+            catch (Exception ex)
+            {
+                // Final attempt failed or unexpected error
+                logger.LogWarning(ex, $"Failed to cleanup extracted directory after {attempt} attempts: {extractedDirectory}");
+                return;
+            }
+        }
+
+        logger.LogWarning($"Failed to cleanup extracted directory after {maxRetries} attempts: {extractedDirectory}");
     }
 
     private (string excelFilePath, string extractedDirectory) ExtractZipAndFindExcelFile(string zipFilePath)
@@ -197,21 +263,15 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         }
         finally
         {
-            // Clean up extracted directory after validation
+            // Shutdown COM objects first to release file locks
+            Shutdown();
+            
+            // Clean up extracted directory after COM objects are released
             if (extractedDirectory != null && Directory.Exists(extractedDirectory))
             {
-                try
-                {
-                    Directory.Delete(extractedDirectory, recursive: true);
-                    logger.LogDebug($"Cleaned up extracted directory: {extractedDirectory}");
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, $"Failed to cleanup extracted directory: {extractedDirectory}");
-                }
+                CleanupExtractedDirectory(extractedDirectory);
             }
             
-            Shutdown();
             semaphore.Release();
         }
     }
@@ -314,28 +374,29 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
                 try
                 {
                     workbook.Close(false);
+                    // Explicitly release COM object
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+                    workbook = null;
                 }
                 catch (System.Runtime.InteropServices.COMException ex)
                 {
                     logger.LogWarning(ex, "Error closing workbook (simulation may have completed successfully)");
                 }
-                
-                // Clean up extracted directory after closing workbook
-                if (extractedDirectory != null && Directory.Exists(extractedDirectory))
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        Directory.Delete(extractedDirectory, recursive: true);
-                        logger.LogDebug($"Cleaned up extracted directory: {extractedDirectory}");
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, $"Failed to cleanup extracted directory: {extractedDirectory}");
-                    }
+                    logger.LogWarning(ex, "Error releasing workbook COM object");
                 }
             }
             
+            // Shutdown COM objects first to release file locks
             Shutdown();
+            
+            // Clean up extracted directory after COM objects are released
+            if (extractedDirectory != null && Directory.Exists(extractedDirectory))
+            {
+                CleanupExtractedDirectory(extractedDirectory);
+            }
+            
             semaphore.Release();
         }
     }

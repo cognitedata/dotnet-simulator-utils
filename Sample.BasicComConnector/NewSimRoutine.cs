@@ -113,12 +113,27 @@ public class NewSimRoutine : RoutineImplementationBase
             if (result is object[] wrapper && wrapper.Length == 2)
             {
                 int errorCode = Convert.ToInt32(wrapper[0]);
-                _logger.LogInformation($"PlaceiT simulation completed with error code: {errorCode}");
                 
                 if (errorCode != 0)
                 {
-                    throw new InvalidOperationException($"PlaceiT simulation failed with error code {errorCode}");
+                    // Simulation failed - log details for troubleshooting
+                    _logger.LogError($"PlaceiT simulation failed with error code {errorCode}");
+                    _logger.LogError("This error typically indicates issues like:");
+                    _logger.LogError("  - Gridding error: Invalid mesh or grid configuration");
+                    _logger.LogError("  - Rounding error: Timestep too large for numerical stability");
+                    _logger.LogError("  - Convergence failure: Parameters causing non-convergence");
+                    _logger.LogError("Input parameters:");
+                    _logger.LogError($"  timestep = {_simulationParameters.GetValueOrDefault("timestep")}");
+                    _logger.LogError($"  productionTime = {_simulationParameters.GetValueOrDefault("productionTime")}");
+                    _logger.LogError($"  productionRate = {_simulationParameters.GetValueOrDefault("productionRate")}");
+                    _logger.LogError($"  porosity = {_simulationParameters.GetValueOrDefault("porosity")}");
+                    _logger.LogError($"  zonePressure = {_simulationParameters.GetValueOrDefault("zonePressure")}");
+                    _logger.LogError($"  zoneLength = {_simulationParameters.GetValueOrDefault("zoneLength")}");
+                    
+                    throw new InvalidOperationException($"PlaceiT simulation failed with error code {errorCode}. Check logs for parameter details.");
                 }
+                
+                _logger.LogInformation($"PlaceiT simulation completed successfully (error code: {errorCode})");
                 
                 if (wrapper[1] is object[,] array2D)
                 {
@@ -226,29 +241,62 @@ public class NewSimRoutine : RoutineImplementationBase
             _logger.LogDebug($"Adsorption: option={adsorptionCapOption}, value={adsorptionCapValue}");
             _logger.LogDebug($"Enabled stages: [{string.Join(",", enabledStages)}]");
 
-            // Call the VBA function using Application.Run
-            // VBA functions in Excel must be invoked this way
-            dynamic result = _workbook.Application.Run(
-                "PlaceiTCOMEntryPoint",
-                porosity,
-                zonePressure,
-                zoneLength,
-                isothermOption,
-                isothermValues,
-                adsorptionCapOption,
-                adsorptionCapValue,
-                enabledStages,
-                stagesVol,
-                stagesConc,
-                injectionRate,
-                timestep,
-                productionTime,
-                productionRate,
-                medRange
-            );
+            // CRITICAL: Aggressively suppress ALL Excel/VBA alerts and error dialogs
+            // This prevents pop-ups (gridding errors, rounding errors, etc.) from blocking execution
+            // Excel will auto-dismiss the alerts, allowing VBA to return error codes instead of hanging
+            var application = _workbook.Application;
+            application.DisplayAlerts = false;           // Suppress all alerts
+            application.Interactive = false;              // Block user interaction completely
+            application.EnableEvents = false;             // Disable all Excel events
+            application.ScreenUpdating = false;          // Prevent screen updates
+            
+            // Disable all error checking that might show dialogs
+            try { application.ErrorCheckingOptions.BackgroundChecking = false; } catch { /* Ignore if not available */ }
+            
+            // Additional settings to suppress dialogs
+            try { application.AlertBeforeOverwriting = false; } catch { /* Ignore if not available */ }
+            try { application.AskToUpdateLinks = false; } catch { /* Ignore if not available */ }
+            try { application.FeatureInstall = 0; } catch { /* 0 = msoFeatureInstallNone */ }
+            
+            _logger.LogDebug("Suppressed all Excel alerts and error dialogs");
+            
+            // Start dialog suppressor to auto-dismiss any error pop-ups from VBA/DLLs
+            // This is necessary because PlaceiT VBA code cannot be modified and may show MsgBox dialogs
+            using (var dialogSuppressor = new DialogSuppressor(_logger))
+            {
+                dialogSuppressor.Start();
+                
+                try
+                {
+                    // Call the VBA function using Application.Run
+                    // VBA functions in Excel must be invoked this way
+                    dynamic result = application.Run(
+                        "PlaceiTCOMEntryPoint",
+                        porosity,
+                        zonePressure,
+                        zoneLength,
+                        isothermOption,
+                        isothermValues,
+                        adsorptionCapOption,
+                        adsorptionCapValue,
+                        enabledStages,
+                        stagesVol,
+                        stagesConc,
+                        injectionRate,
+                        timestep,
+                        productionTime,
+                        productionRate,
+                        medRange
+                    );
 
-            _logger.LogInformation("PlaceiTCOMEntryPoint function completed successfully");
-            return result;
+                    _logger.LogInformation("PlaceiTCOMEntryPoint function completed successfully");
+                    return result;
+                }
+                finally
+                {
+                    dialogSuppressor.Stop();
+                }
+            }
         }
         catch (Exception ex)
         {
