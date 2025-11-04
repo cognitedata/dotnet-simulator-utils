@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 using Cognite.Extensions;
@@ -24,11 +26,9 @@ namespace Cognite.Simulator.Tests
 
     internal static class CdfTestClient
     {
-        private static int _configIdx;
-        private static string? _statePath;
-
-        public static IServiceCollection AddCogniteTestClient(this IServiceCollection services)
+        public static IServiceCollection AddCogniteTestClient(this IServiceCollection services, [CallerMemberName] string? testCallerName = null)
         {
+
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
             var tenant = Environment.GetEnvironmentVariable("AZURE_TENANT");
@@ -38,9 +38,6 @@ namespace Cognite.Simulator.Tests
             {
                 throw new NullReferenceException("Environment variables needed by tests cannot be read");
             }
-
-            var index = Interlocked.Increment(ref _configIdx);
-            _statePath = $"test-state-{index}";
 
             var authConfig = new AuthenticatorConfig
             {
@@ -70,10 +67,14 @@ namespace Cognite.Simulator.Tests
                 }
             };
 
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 4);
+            var testNameStr = testCallerName != null ? $"-{testCallerName}" : "";
+            var statePath = $"test-state{testNameStr}-{uniqueId}";
+
             var stateStoreConfig = new StateStoreConfig
             {
                 Database = StateStoreConfig.StorageType.LiteDb,
-                Location = _statePath
+                Location = statePath
             };
 
             // Configure logging

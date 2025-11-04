@@ -27,7 +27,7 @@ namespace Cognite.Simulator.Utils
         where V : SimulatorRoutineRevision
     {
         /// <inheritdoc/>
-        public ConcurrentDictionary<string, V> RoutineRevisions { get; }
+        public ConcurrentDictionary<long, SimulatorRoutineRevisionInfo> RoutineRevisions { get; }
 
         private readonly ILogger _logger;
         private readonly RoutineLibraryConfig _config;
@@ -68,7 +68,7 @@ namespace Cognite.Simulator.Utils
             _config = config;
 
             CdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
-            RoutineRevisions = new ConcurrentDictionary<string, V>();
+            RoutineRevisions = new ConcurrentDictionary<long, SimulatorRoutineRevisionInfo>();
             LibState = new BaseExtractionState("RoutineLibraryState");
             _simulatorDefinition = simulatorDefinition;
         }
@@ -83,13 +83,15 @@ namespace Cognite.Simulator.Utils
             await ReadRoutineRevisions(true, token).ConfigureAwait(false);
         }
 
+
         /// <summary>
-        /// Fetch routine revisions from CDF and store them in memory and state store
-        /// This method is used to populate the local routine library with the latest routine revisions "on demand", i.e. right upon simulation run
+        /// Fetches full routine revision information from CDF, given its external ID.
         /// </summary>
-        private async Task<V> TryReadRemoteRoutineRevision(string routineRevisionExternalId)
+        public async Task<V> GetRoutineRevision(
+            string routineRevisionExternalId
+        )
         {
-            _logger.LogInformation("Local routine revision {Id} not found, attempting to fetch from remote", routineRevisionExternalId);
+            _logger.LogDebug("Fetching routine revision {Id} from remote", routineRevisionExternalId);
             try
             {
                 var routineRevisionRes = await CdfSimulatorResources.RetrieveSimulatorRoutineRevisionsAsync(
@@ -98,7 +100,7 @@ namespace Cognite.Simulator.Utils
                 var routineRevision = routineRevisionRes.FirstOrDefault();
                 if (routineRevision != null)
                 {
-                    return ReadAndSaveRoutineRevision(routineRevision);
+                    return LocalConfigurationFromRoutine(routineRevision);
                 }
             }
             catch (CogniteException e)
@@ -109,24 +111,6 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Looks for the routine revision in the memory with the given external id
-        /// </summary>
-        public async Task<V> GetRoutineRevision(
-            string routineRevisionExternalId
-        )
-        {
-            var revisions = RoutineRevisions.Values.Where(c => c.ExternalId == routineRevisionExternalId).OrderByDescending(c => c.CreatedTime);
-            if (revisions.Any())
-            {
-                return revisions.First();
-            }
-
-            V calcConfig = await TryReadRemoteRoutineRevision(routineRevisionExternalId).ConfigureAwait(false);
-
-            return calcConfig;
-        }
-
-        /// <summary>
         /// Verifies that the routine revision exists in CDF.
         /// In case it does not, should remove from memory.
         /// <param name="config">Configuration object</param>
@@ -134,7 +118,7 @@ namespace Cognite.Simulator.Utils
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
         /// </summary>
         public async Task<bool> VerifyInMemoryCache(
-            V config,
+            SimulatorRoutineRevisionInfo config,
             CancellationToken token)
         {
             if (config == null)
@@ -160,9 +144,9 @@ namespace Cognite.Simulator.Utils
             if (!exists)
             {
                 _logger.LogWarning("Removing {Model} - {Routine} routine revision, not found in CDF",
-                    config.ModelExternalId,
+                    config.Model.ExternalId,
                     config.ExternalId);
-                RoutineRevisions.TryRemove(config.Id.ToString(), out _);
+                RoutineRevisions.TryRemove(config.Id, out _);
             }
             return exists;
         }
@@ -208,12 +192,11 @@ namespace Cognite.Simulator.Utils
             return (V)routineRevision;
         }
 
-        private V ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev)
+        private void ReadAndSaveRoutineRevision(SimulatorRoutineRevision routineRev)
         {
+            var newRevision = new SimulatorRoutineRevisionInfo(routineRev);
 
-            V newRevision = LocalConfigurationFromRoutine(routineRev);
-
-            var result = RoutineRevisions.AddOrUpdate(routineRev.Id.ToString(), newRevision, (key, oldValue) =>
+            RoutineRevisions.AddOrUpdate(routineRev.Id, newRevision, (key, oldValue) =>
             {
                 if (newRevision.CreatedTime < oldValue.CreatedTime)
                 {
@@ -221,8 +204,6 @@ namespace Cognite.Simulator.Utils
                 }
                 return newRevision;
             });
-
-            return result;
         }
 
         private async Task ReadRoutineRevisions(bool init, CancellationToken token)
@@ -255,7 +236,6 @@ namespace Cognite.Simulator.Utils
                         CreatedTime = new CogniteSdk.TimeRange() { Min = createdAfter + 1 },
                     },
                     Limit = PaginationLimit,
-                    IncludeAllFields = true
                 },
                 CdfSimulatorResources.ListSimulatorRoutineRevisionsAsync,
                 token);
@@ -320,9 +300,10 @@ namespace Cognite.Simulator.Utils
     public interface IRoutineProvider<V>
     {
         /// <summary>
-        /// Dictionary of simulation routines. The key is the routine revision id
+        /// Dictionary of routine revisions info. The key is the routine revision ID.
+        /// This only includes some basic information about the routine revision, and not larger fields such as script, configuration inputs or outputs.
         /// </summary>
-        ConcurrentDictionary<string, V> RoutineRevisions { get; }
+        ConcurrentDictionary<long, SimulatorRoutineRevisionInfo> RoutineRevisions { get; }
 
         /// <summary>
         /// Initializes the library
@@ -346,9 +327,9 @@ namespace Cognite.Simulator.Utils
         /// Verify that the routine revision exists in CDF.
         /// In case it does not, should remove from memory.
         /// </summary>
-        /// <param name="config">Configuration object</param>
+        /// <param name="routineRevision">Routine revision info object</param>
         /// <param name="token">Cancellation token</param>
         /// <returns><c>true</c> in case the configuration exists in CDF, <c>false</c> otherwise</returns>
-        Task<bool> VerifyInMemoryCache(V config, CancellationToken token);
+        Task<bool> VerifyInMemoryCache(SimulatorRoutineRevisionInfo routineRevision, CancellationToken token);
     }
 }

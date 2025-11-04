@@ -119,5 +119,92 @@ namespace Cognite.Simulator.Extensions
             return res.FirstOrDefault();
         }
 
+        /// <summary>
+        /// Updates the simulation model revision data (general information, flowsheets) in CDF.
+        /// </summary>
+        /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
+        /// <param name="modelRevisionExternalId">The externalId of the simulator model revision.</param>
+        /// <param name="flowsheets">Flowsheets.</param>
+        /// <param name="info">Model revision information.</param>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>The updated SimulatorModelRevisionData instance.</returns>
+        public static async Task<SimulatorModelRevisionData> UpdateSimulatorModelRevisionData(
+            this SimulatorsResource cdfSimulators,
+            string modelRevisionExternalId,
+            IEnumerable<SimulatorModelRevisionDataFlowsheet> flowsheets = null,
+            Dictionary<string, string> info = null,
+            CancellationToken token = default
+        )
+        {
+            var modelRevisionData = new SimulatorModelRevisionDataUpdateItem
+            {
+                ModelRevisionExternalId = modelRevisionExternalId,
+                Update = new SimulatorModelRevisionDataUpdate
+                {
+                    Flowsheets = new Update<IEnumerable<SimulatorModelRevisionDataFlowsheet>>(flowsheets),
+                    Info = new Update<Dictionary<string, string>>(info)
+                }
+            };
+
+            var res = await cdfSimulators.UpdateSimulatorModelRevisionDataAsync(
+                new List<SimulatorModelRevisionDataUpdateItem> { modelRevisionData },
+                token).ConfigureAwait(false);
+
+            return res.Items.FirstOrDefault();
+        }
+
+        private static SimulatorUpdateItem PrepareSimulatorUpdateItem(CogniteSdk.Alpha.Simulator existingSimulator, SimulatorCreate simulatorToUpsert)
+        {
+            var update = new SimulatorUpdate
+            {
+                FileExtensionTypes = new Update<IEnumerable<string>> { Set = simulatorToUpsert.FileExtensionTypes },
+                ModelTypes = new Update<IEnumerable<SimulatorModelType>> { Set = simulatorToUpsert.ModelTypes },
+                StepFields = new Update<IEnumerable<SimulatorStepField>> { Set = simulatorToUpsert.StepFields },
+            };
+
+            // Optional fields
+            if (simulatorToUpsert.UnitQuantities != null)
+            {
+                update.UnitQuantities = new Update<IEnumerable<SimulatorUnitQuantity>> { Set = simulatorToUpsert.UnitQuantities };
+            }
+
+            if (simulatorToUpsert.ModelDependencies != null)
+            {
+                update.ModelDependencies = new Update<IEnumerable<SimulatorModelDependency>> { Set = simulatorToUpsert.ModelDependencies };
+            }
+
+            return new SimulatorUpdateItem(existingSimulator.Id) { Update = update };
+        }
+
+        /// <summary>
+        /// Upserts a simulator in CDF based on the provided definition. If a simulator with the same externalId exists, it will be updated; otherwise, a new simulator will be created.
+        /// </summary>
+        /// <param name="cdfSimulators">The SimulatorsResource instance.</param>
+        /// <param name="simulatorToUpsert">The simulator definition to upsert.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>The upserted simulator.</returns>
+        public static async Task<CogniteSdk.Alpha.Simulator> UpsertAsync(this SimulatorsResource cdfSimulators, SimulatorCreate simulatorToUpsert, CancellationToken token = default)
+        {
+            if (simulatorToUpsert == null)
+            {
+                throw new ArgumentNullException(nameof(simulatorToUpsert));
+            }
+
+            var existingSimulators = await cdfSimulators.ListAsync(new SimulatorQuery(), token).ConfigureAwait(false);
+            var existingSimulator = existingSimulators.Items.FirstOrDefault(s => s.ExternalId == simulatorToUpsert.ExternalId);
+
+            if (existingSimulator == null)
+            {
+                var res = await cdfSimulators.CreateAsync(new List<SimulatorCreate> { simulatorToUpsert }, token).ConfigureAwait(false);
+                return res.FirstOrDefault();
+            }
+            else
+            {
+                var updateItem = PrepareSimulatorUpdateItem(existingSimulator, simulatorToUpsert);
+                var simulatorsToUpdate = new List<SimulatorUpdateItem> { updateItem };
+                var res = await cdfSimulators.UpdateAsync(simulatorsToUpdate, token).ConfigureAwait(false);
+                return res.FirstOrDefault();
+            }
+        }
     }
 }

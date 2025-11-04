@@ -2,6 +2,79 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-024 (2025-09-26)
+
+### Bug Fixes
+
+* **Model Library**: Reset download attempt counter after successful model revision download. 
+
+## Release v1.0.0-beta-023 (2025-09-23)
+
+### Features
+
+* **Connector Startup Improvement**: Added 1-minute memory caching to prevent redundant API calls when validating locally stored model revisions during connector startup, eliminating rate limiting issues.  
+* **Model Library**: Introduced concurrent chunking support for retrieving metadata from 1000+ model files.
+* **Routine Library**: Optimized memory usage by storing only essential routine fields in memory and fetching complete data on-demand to prevent out-of-memory issues.
+
+### Other changes
+
+* **Routine Library**: Refactored routine revision item references to use long IDs directly instead of string keys.
+
+## Release v1.0.0-beta-022 (2025-08-26)
+
+### Bug Fixes
+
+* **Model dependencies**: Fixed the issue where the connector didn't update the `ModelDependencies` property of the connector on startup.
+* Fixed the issue where "Downloaded" property of the model dependencies was persisted into StateStore.
+
+## Release v1.0.0-beta-021 (2025-08-20)
+
+### Features
+
+* **Improved Model Library Performance**: State is now restored from local cache on startup, avoiding redundant model processing
+* **File Download Deduplication**: Models sharing the same files no longer re-download duplicates, significantly improving performance for multi-file models
+
+### Other changes
+
+* Removed unused properties from model state for cleaner codebase
+
+
+## Release v1.0.0-beta-020 (2025-08-13)
+
+### Features
+
+* Model file dependencies support [experimental]
+    - The model file can contain dependencies to other model files. Model extraction logic will automatically download these dependencies and store them in the model state.
+    - This is an experimental feature, and future releases will include patches / improvements for it, e.g. deduplication on download.
+* Support for original file extension in model library.
+    - The model file extension is now determined by the file name, rather than the first item in the list of supported file extensions for a given simulator.
+
+### Bug Fixes
+* Improved the robustness of the model library and refactored the code to make it easier to maintain and debug.
+    - Removed the temporary state for model revisions, which simplifies the logic and reduces the risk of errors.
+    - Fixed issues with accessing model revisions by external ID, especially when models are deleted and re-uploaded.
+
+## Release v1.0.0-beta-019 (2025-06-05)
+
+### Bug fixes
+
+* Multiple fixes for model revision data support (previous release)
+    - Fixed JSON conversion for `SimulatorModelRevisionDataConnectionType`
+    - Fixed `SimulatorModelRevisionDataGraphicalObject`: changed properties with `float32` types to `double`.
+    - [Breaking] Renamed `SimulatorValueUnitQuantity` to `SimulatorValueUnitReference`
+
+## Release v1.0.0-beta-018 (2025-05-12)
+
+### Features
+
+* Add support for storing model revision data in SimInt API.
+
+## Release v1.0.0-beta-017 (2025-04-28)
+
+### Features
+
+* Support model revision file size up to 32GB (previously 8GB). This is theoretical limit, as the actual limit is determined by the available memory, disk space and the performance of the system. Stricter limits will be introduced on the API level.
+
 ## Release v1.0.0-beta-016 (2025-03-04)
 
 ### Bug Fixes

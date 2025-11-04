@@ -1,11 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cognite.Extractor.StateStorage;
+using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
+
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Moq;
@@ -17,20 +26,46 @@ namespace Cognite.Simulator.Tests.UtilsTests
 {
     public static class TestUtilities
     {
-        public static (Mock<IHttpClientFactory> factory, Mock<HttpMessageHandler> handler) GetMockedHttpClientFactory(
+        /// <summary>
+        /// Creates a mocked IHttpClientFactory that provides a new HttpClient instance with a fresh mock handler for each invocation.
+        /// This approach ensures isolation between tests by preventing shared state in HTTP handlers.
+        /// </summary>
+        public static Mock<IHttpClientFactory> GetMockedHttpClientFactory(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
         {
-            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-            mockHttpMessageHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync",
-                                                  ItExpr.IsAny<HttpRequestMessage>(),
-                                                  ItExpr.IsAny<CancellationToken>())
-                .Returns<HttpRequestMessage, CancellationToken>(mockSendAsync);
-
-            var client = new HttpClient(mockHttpMessageHandler.Object);
             var mockFactory = new Mock<IHttpClientFactory>();
-            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
-            return (mockFactory, mockHttpMessageHandler);
+            mockFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(
+                () =>
+                {
+                    var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+                    mockHttpMessageHandler.Protected()
+                        .Setup<Task<HttpResponseMessage>>("SendAsync",
+                                                          ItExpr.IsAny<HttpRequestMessage>(),
+                                                          ItExpr.IsAny<CancellationToken>())
+                        .Returns(mockSendAsync);
+                    return new HttpClient(mockHttpMessageHandler.Object);
+                });
+
+
+            return mockFactory;
+        }
+
+        public static void AddMockedHttpClientFactory(
+            this ServiceCollection services,
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> mockSendAsync)
+        {
+            var mockFactory = GetMockedHttpClientFactory(mockSendAsync);
+
+            services.AddSingleton(mockFactory.Object);
+        }
+
+        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null)
+        {
+            var config = new DefaultConfig<AutomationConfig>();
+            config.GenerateDefaults();
+            var filesDirectory = testCallerName != null ? $"./files-{testCallerName}" : $"./files";
+            config.Connector.ModelLibrary.FilesDirectory = filesDirectory;
+            services.AddSingleton(config);
         }
 
         public static void VerifyLog<TLogger>(Mock<ILogger<TLogger>> logger, LogLevel level, string expectedMessage, Times times, bool isContainsCheck = false)
@@ -83,8 +118,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             File.WriteAllText(filePath, yamlContent);
         }
 
-        public static HttpResponseMessage GoneResponse =
-            CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
+        public static HttpResponseMessage GoneResponse() => CreateResponse(HttpStatusCode.Gone, "{\"error\": {\"code\": 410,\"message\": \"Gone\"}}");
 
         /// <summary>
         /// Mocks the requests to the endpoints with the given templates.
@@ -127,6 +161,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             private int _callCount = 0;
             private readonly int? _maxCalls = null;
             private Times _expectedCalls = Times.AtLeastOnce();
+            private readonly string _uriMatcherExpression;
 
             /// <summary>
             /// Creates a new SimpleRequestMocker.
@@ -134,9 +169,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             /// <param name="uriMatcher">Function to match the URI of the request.</param>
             /// <param name="responseFunc">Function to generate the response.</param>
             /// <param name="maxCalls">Maximum number of times this mocker can be called. If null, there is no limit.</param>
-            public SimpleRequestMocker(Func<string, bool> uriMatcher, Func<HttpResponseMessage> responseFunc, int? maxCalls = null)
+            public SimpleRequestMocker(Expression<Func<string, bool>> uriMatcher, Func<HttpResponseMessage> responseFunc, int? maxCalls = null)
             {
-                _uriMatcher = uriMatcher;
+                _uriMatcher = uriMatcher.Compile();
+                _uriMatcherExpression = uriMatcher.ToString();
                 _responseFunc = responseFunc;
                 _maxCalls = maxCalls;
             }
@@ -165,7 +201,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             public void AssertCallCount()
             {
-                Assert.True(_expectedCalls.Validate(_callCount), $"Unexpected number of calls to endpoint. Expected {_expectedCalls} but was {_callCount}.");
+                Assert.True(_expectedCalls.Validate(_callCount), $"Unexpected number of calls to endpoint. Expected {_expectedCalls} but was {_callCount}. Uri: {_uriMatcherExpression}");
             }
 
             public HttpResponseMessage GetResponse()
@@ -250,6 +286,55 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockSimulatorModelRevEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId-v1"",
+                ""name"": ""Test Model Revision"",
+                ""description"": ""Test model revision description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""TestModelExternalId"",
+                ""fileId"": 100,
+                ""createdByUserId"": ""n/a"",
+                ""status"": ""unknown"",
+                ""dataSetId"": 123,
+                ""versionNumber"": 1,
+                ""logId"": 1234567890,
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": 1234567890000
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 100,
+                ""downloadUrl"": ""https://fusion.cognite.com/files/download"",
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesByIdsEndpoint()
+        {
+            var item = $@"{{
+                ""id"": 100,
+                ""name"": ""test_model.csv"",
+                ""mimeType"": ""text/csv"",
+                ""dataSetId"": 123,
+                ""uploaded"": true,
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockFilesDownloadEndpoint(long size)
+        {
+            var response = new HttpResponseMessage() { Content = new ByteArrayContent([1]) };
+            response.Content.Headers.Add("Content-Length", size.ToString());
+            return response;
+        }
+
         public static HttpResponseMessage OkItemsResponse(string item)
         {
             return CreateResponse(HttpStatusCode.OK, $"{{\"items\":[{item}]}}");
@@ -258,6 +343,59 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content)
         {
             return new HttpResponseMessage(statusCode) { Content = new StringContent(content) };
+        }
+
+        public static void CleanUpFiles(ModelLibraryConfig? modelLibraryConfig, StateStoreConfig? stateConfig)
+        {
+            var filesDirectory = modelLibraryConfig?.FilesDirectory ?? "./files";
+            try
+            {
+                if (Directory.Exists(filesDirectory))
+                {
+                    Directory.Delete(filesDirectory, true);
+                }
+                if (stateConfig != null)
+                {
+                    StateUtils.DeleteLocalFile(stateConfig.Location);
+                    StateUtils.DeleteLocalFile(stateConfig.Location + "-log");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning up: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Creates a service provider that is needed to run ModelLibrary tests. All API endpoints are mocked.
+        /// </summary>
+        public static (
+            IServiceProvider provider,
+            Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>
+            ) BuildModelLibraryTestSetup(List<SimpleRequestMocker> endpointMockTemplates, SimulatorCreate simulatorDefinition, [CallerMemberName] string? testCallerName = null)
+        {
+            var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedSimulatorClient = new Mock<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>();
+            mockedSimulatorClient.Setup(client => client.ExtractModelInformation(It.IsAny<DefaultModelFilestate>(), It.IsAny<CancellationToken>()))
+                .Returns((DefaultModelFilestate state, CancellationToken token) =>
+                {
+                    state.ParsingInfo.SetSuccess();
+                    return Task.CompletedTask;
+                });
+
+            var services = new ServiceCollection();
+            services.AddMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
+            services.AddSingleton(mockedLogger.Object);
+            services.AddCogniteTestClient(testCallerName);
+            services.AddSingleton(mockedSimulatorClient.Object);
+            services.AddSingleton<FileStorageClient>();
+            services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
+            services.AddSingleton(simulatorDefinition);
+            services.AddDefaultConfig();
+
+            var provider = services.BuildServiceProvider();
+
+            return (provider, mockedLogger);
         }
     }
 }

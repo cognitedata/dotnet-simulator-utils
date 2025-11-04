@@ -35,13 +35,13 @@ namespace Cognite.Simulator.Utils
         /// <param name="cdf">Simulators resource</param>
         /// <param name="logId">Log id to push</param>
         /// <param name="checkForSeverityOverride">True to check for severity override</param>
-        public static async Task<PropertyEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
+        public static async Task<ILogEventEnricher[]> GetLogEnrichers(SimulatorsResource cdf, long? logId, bool checkForSeverityOverride = false)
         {
             if (cdf == null)
             {
                 throw new ArgumentNullException(nameof(cdf));
             }
-            var enrichers = new List<PropertyEnricher>() {
+            var enrichers = new List<ILogEventEnricher>() {
                 new PropertyEnricher("LogId", logId)
             };
 
@@ -67,7 +67,7 @@ namespace Cognite.Simulator.Utils
 
         // Enricher that creates a property with UTC timestamp.
         // See: https://github.com/serilog/serilog/issues/1024#issuecomment-338518695
-        class UtcTimestampEnricher : ILogEventEnricher
+        sealed class UtcTimestampEnricher : ILogEventEnricher
         {
             public void Enrich(LogEvent logEvent, ILogEventPropertyFactory lepf)
             {

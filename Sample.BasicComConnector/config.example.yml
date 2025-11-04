@@ -6,6 +6,7 @@ logger:
 
 cognite:
     project: ${COGNITE_PROJECT}
+    host: ${COGNITE_HOST}
     # This is for Microsoft Entra as an IdP. To use a different provider:
     # Set implementation: Basic, and use token-url instead of tenant.
     # See the example config for the full list of options.

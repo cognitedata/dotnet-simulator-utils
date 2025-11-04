@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cognite.Extractor.Common;
 using Cognite.Extractor.Utils;
+using Cognite.Simulator.Extensions;
 using Cognite.Simulator.Utils.Automation;
 
 using CogniteSdk.Alpha;
@@ -46,8 +47,7 @@ namespace Cognite.Simulator.Utils
     /// <summary>
     /// Represents a scheduled job for simulation.
     /// </summary>
-    /// <typeparam name="V">Type of the simulator routine revision</typeparam>
-    public class ScheduledJob<V> where V : SimulatorRoutineRevision
+    public class ScheduledJob
     {
         /// <summary>
         /// The schedule for the job.
@@ -75,9 +75,9 @@ namespace Cognite.Simulator.Utils
         public long CreatedTime { get; set; }
 
         /// <summary>
-        /// Routine revision.
+        /// Routine revision info.
         /// </summary>
-        public V RoutineRevision { get; set; }
+        public SimulatorRoutineRevisionInfo RoutineRevision { get; set; }
     }
     /// <summary>
     /// This class implements a basic simulation scheduler. It runs a loop on a configurable interval.
@@ -128,7 +128,7 @@ namespace Cognite.Simulator.Utils
         public async Task Run(CancellationToken token)
         {
             var interval = TimeSpan.FromSeconds(_config.SchedulerUpdateInterval);
-            Dictionary<string, ScheduledJob<V>> scheduledJobs = new Dictionary<string, ScheduledJob<V>>();
+            Dictionary<string, ScheduledJob> scheduledJobs = new Dictionary<string, ScheduledJob>();
             var tolerance = TimeSpan.FromSeconds(_config.SchedulerTolerance);
 
             var connectorExternalId = _config.GetConnectorName();
@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Utils
                     foreach (var routineRev in routineRevisions)
                     {
                         // Check if the configuration has a schedule for this connector.
-                        if (connectorExternalId != routineRev.SimulatorIntegrationExternalId || routineRev.Configuration.Schedule == null)
+                        if (connectorExternalId != routineRev.SimulatorIntegrationExternalId || routineRev.Schedule == null)
                         {
                             continue;
                         }
@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Utils
                         {
                             if (routineRev.CreatedTime > job.CreatedTime && job.TokenSource != null && !job.TokenSource.Token.IsCancellationRequested)
                             {
-                                _logger.LogDebug($"Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.");
+                                _logger.LogDebug("Cancelling job for RoutineRevision : {routineRev.ExternalId} due to new configuration detected.", routineRev.ExternalId);
                                 job.TokenSource.Cancel();
                                 scheduledJobs.Remove(routineRev.RoutineExternalId);
                             }
@@ -166,24 +166,24 @@ namespace Cognite.Simulator.Utils
                         {
                             try
                             {
-                                if (routineRev.Configuration.Schedule.Enabled == false)
+                                if (routineRev.Schedule.Enabled == false)
                                 {
                                     continue;
                                 }
-                                var schedule = CrontabSchedule.Parse(routineRev.Configuration.Schedule.CronExpression);
-                                var newJob = new ScheduledJob<V>
+                                var schedule = CrontabSchedule.Parse(routineRev.Schedule.CronExpression);
+                                var newJob = new ScheduledJob
                                 {
                                     Schedule = schedule,
                                     TokenSource = new CancellationTokenSource(),
                                     CreatedTime = routineRev.CreatedTime,
                                     RoutineRevision = routineRev,
                                 };
-                                _logger.LogDebug("Created new job for schedule: {0} with id {1}", routineRev.Configuration.Schedule.CronExpression, routineRev.ExternalId);
+                                _logger.LogDebug("Created new job for schedule: {cronExpression} with id {routineExtId}", routineRev.Schedule.CronExpression, routineRev.ExternalId);
                                 scheduledJobs.Add(routineRev.RoutineExternalId, newJob);
                             }
                             catch (Exception e)
                             {
-                                _logger.LogError($"Exception while scheduling job for RoutineRevision : {job.RoutineRevision.ExternalId} Error: {e.Message}. Skipping.");
+                                _logger.LogError("Exception while scheduling job for RoutineRevision : {jobRoutineRevisionExternalId} Error: {errorMessage}. Skipping.", job.RoutineRevision.ExternalId, e.Message);
                             }
                         }
                     }
@@ -238,7 +238,7 @@ namespace Cognite.Simulator.Utils
         /// </summary>
         /// <param name="job">The scheduled job to run.</param>
         /// <param name="mainToken">The cancellation token.</param>
-        private async Task RunJob(ScheduledJob<V> job, CancellationToken mainToken)
+        private async Task RunJob(ScheduledJob job, CancellationToken mainToken)
         {
             if (job == null)
             {
@@ -255,11 +255,11 @@ namespace Cognite.Simulator.Utils
                     try
                     {
                         await _timeManager.Delay(delay, job.TokenSource.Token).ConfigureAwait(false);
-                        _logger.LogDebug($"Job executed at: {DateTime.UtcNow} for routine revision: {routineRev.ExternalId}");
+                        _logger.LogDebug("Job executed at: {DateTime.UtcNow} for routine revision: {routineRevExternalId}", DateTime.UtcNow, routineRev.ExternalId);
                     }
                     catch (TaskCanceledException)
                     {
-                        _logger.LogDebug($"Job cancelled for routine revision: {routineRev.ExternalId} breaking out of loop");
+                        _logger.LogDebug("Job cancelled for routine revision: {routineRevExternalId} breaking out of loop", routineRev.ExternalId);
                         break;
                     }
                     bool revisionExists = await _configLib
@@ -267,7 +267,7 @@ namespace Cognite.Simulator.Utils
                         .ConfigureAwait(false);
                     if (!revisionExists)
                     {
-                        _logger.LogDebug($"Job not found for routine: {routineRev.RoutineExternalId} breaking out of loop");
+                        _logger.LogDebug("Job not found for routine: {routineRevRoutineExternalId} breaking out of loop", routineRev.RoutineExternalId);
                         break;
                     }
 

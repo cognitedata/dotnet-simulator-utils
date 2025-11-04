@@ -120,17 +120,8 @@ namespace Cognite.Simulator.Utils
 
             var outputTsToCreate = new List<SimulationOutput>();
             var inputTsToCreate = new List<SimulationInput>();
-            IDictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
-            var routineRevisionInfo = new SimulatorRoutineRevisionInfo()
-            {
-                ExternalId = routineRevision.ExternalId,
-                Model = new SimulatorModelInfo
-                {
-                    ExternalId = modelState.ModelExternalId,
-                    Simulator = routineRevision.SimulatorExternalId,
-                },
-                RoutineExternalId = routineRevision.RoutineExternalId,
-            };
+            Dictionary<Identity, IEnumerable<Datapoint>> dpsToCreate = new Dictionary<Identity, IEnumerable<Datapoint>>();
+            var routineRevisionInfo = new SimulatorRoutineRevisionInfo(routineRevision);
 
             var configObj = routineRevision.Configuration;
 
@@ -218,7 +209,7 @@ namespace Cognite.Simulator.Utils
             _logger.LogDebug("Saving simulation results as time series");
             foreach (var output in configObj.Outputs.Where(o => !string.IsNullOrEmpty(o.SaveTimeseriesExternalId)))
             {
-                if (results.ContainsKey(output.ReferenceId))
+                if (results.TryGetValue(output.ReferenceId, out SimulatorValueItem valueItem))
                 {
                     var outputTs = new SimulationOutput
                     {
@@ -230,8 +221,6 @@ namespace Cognite.Simulator.Utils
                     };
 
                     outputTsToCreate.Add(outputTs);
-
-                    var valueItem = results[output.ReferenceId];
                     if (valueItem.Value.Type == SimulatorValueType.DOUBLE)
                     {
                         var value = (valueItem.Value as SimulatorValue.Double).Value;

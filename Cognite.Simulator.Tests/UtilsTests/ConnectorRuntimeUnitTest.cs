@@ -33,7 +33,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations"), MockSimulatorsIntegrationsEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list"), MockSimulatorRoutineRevEndpoint, 1),
-            new SimpleRequestMocker(uri => true, () => GoneResponse)
+            new SimpleRequestMocker(uri => true, GoneResponse)
         };
 
         // We need to mock the HttpClientFactory to return the mocked responses
@@ -50,8 +50,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
-            var mocks = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
-            var mockFactory = mocks.factory;
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(endpointMockTemplates));
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
             {
@@ -71,7 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             // Check the logs, it should first succeed on the startup, then fail and restart
             VerifyLog(mockedLogger, LogLevel.Information, "Starting the connector...", Times.Once());
             VerifyLog(mockedLogger, LogLevel.Information, "Connector can reach CDF!", Times.Once());
-            VerifyLog(mockedLogger, LogLevel.Debug, "Updating simulator definition", Times.Once());
+            VerifyLog(mockedLogger, LogLevel.Information, "Simulator definition upserted to remote", Times.Once(), true);
             VerifyLog(mockedLogger, LogLevel.Error, "Request to CDF failed with code 410", Times.Once(), true);
             VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 10 seconds", Times.AtLeastOnce());
         }
