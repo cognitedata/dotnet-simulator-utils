@@ -564,6 +564,7 @@ namespace Cognite.Simulator.Utils
                         {
                             Filter = new SimulatorModelRevisionFilter()
                             {
+                                SimulatorExternalIds = [_simulatorDefinition.ExternalId],
                                 LastUpdatedTime = new CogniteSdk.TimeRange() { Min = updatedAfter + 1 },
                             },
                             Sort = new List<SimulatorSortItem>() {
@@ -575,9 +576,7 @@ namespace Cognite.Simulator.Utils
                         }, token
                     ).ConfigureAwait(false);
 
-                var modelRevisionsRes = modelRevisionsAllRes.Items
-                    .Where(r => _simulatorDefinition.ExternalId == r.SimulatorExternalId)
-                    .ToList();
+                var modelRevisionsRes = modelRevisionsAllRes.Items.ToList();
 
                 using var cachedRevisions = CreateMemoryCache(modelRevisionsRes);
 
