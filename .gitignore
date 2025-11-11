@@ -10,3 +10,7 @@
 .envrc
 .env
 config.yml
+
+# Exclude compiled executables
+*.exe
+Sample.BasicComConnector/deploy/*.exe
