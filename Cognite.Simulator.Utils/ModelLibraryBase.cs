@@ -353,7 +353,6 @@ namespace Cognite.Simulator.Utils
                         {
                             Filter = new SimulatorModelRevisionFilter()
                             {
-                                SimulatorExternalIds = [_simulatorDefinition.ExternalId],
                                 ModelExternalIds = new List<string> { state.ModelExternalId }
                             }
                         }, token).ConfigureAwait(false);

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-025 (2025-11-11)
+
+### Performance Improvement
+
+* **Model Library**: Filter model revisions by `SimulatorExternalIds` in API queries instead of client-side filtering to reduce data transfer and improve performance.
+
 ## Release v1.0.0-beta-024 (2025-09-26)
 
 ### Bug Fixes
