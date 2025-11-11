@@ -1,0 +1,33 @@
+version: 1
+
+logger:
+    console:
+        level: "debug"
+
+cognite:
+    project: ${CDF_PROJECT}
+    # CRITICAL: Must match your CDF cluster (e.g., westeurope-1, europe-west1-1, etc.)
+    host: ${CDF_HOST}
+    # Using Basic authentication with explicit token-url ensures scopes are read correctly
+    idp-authentication:
+        # CRITICAL: Use 'Basic' implementation to avoid scope resolution issues
+        implementation: Basic
+        # Application ID (client ID from Azure AD app registration)
+        client-id: ${IDP_CLIENT_ID}
+        # Client secret from Azure AD app registration
+        secret: ${IDP_CLIENT_SECRET}
+        # Token URL - full OAuth2 token endpoint
+        # Format: https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token
+        token-url: ${IDP_TOKEN_URL}
+        # CRITICAL: Scopes MUST match your CDF cluster host URL
+        # Example: https://westeurope-1.cognitedata.com/.default
+        # DO NOT use https://api.cognitedata.com/.default (will cause errors)
+        scopes:
+          - ${IDP_SCOPE}
+ 
+connector:
+  name-prefix: "scaled-solutions-placeit@"
+  data-set-id: ${SIMULATOR_DATASET_ID}
+  # Maximum age (in seconds) for simulation runs before timing out
+  # Default is 3600 (1 hour). Increase if simulations take longer.
+  simulation-run-tolerance: 21600  # 6 hours
