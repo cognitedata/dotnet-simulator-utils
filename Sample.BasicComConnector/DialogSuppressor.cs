@@ -97,13 +97,17 @@ public class DialogSuppressor : IDisposable
                 // Look for common dialog window classes and titles
                 CloseDialogIfFound("#32770", null); // Standard Windows dialog class
                 CloseDialogIfFound(null, "Microsoft Excel"); // Excel dialogs
-                CloseDialogIfFound(null, "PlaceiT"); // PlaceiT-specific dialogs
-                
+                // DO NOT auto-dismiss PlaceiT dialogs - they may be license activation dialogs
+                // CloseDialogIfFound(null, "PlaceiT"); // PlaceiT-specific dialogs
+
                 // Check for common error dialog patterns
                 CloseDialogByTitlePattern("Error");
                 CloseDialogByTitlePattern("Warning");
                 CloseDialogByTitlePattern("gridding");
                 CloseDialogByTitlePattern("rounding");
+
+                // CRITICAL: DO NOT dismiss Product Activation dialogs
+                // These are license activation dialogs that must complete properly
                 
                 // Sleep briefly to avoid consuming too much CPU
                 Thread.Sleep(100); // Check every 100ms
@@ -118,19 +122,30 @@ public class DialogSuppressor : IDisposable
     private void CloseDialogIfFound(string? className, string? windowTitle)
     {
         IntPtr hwnd = FindWindow(className, windowTitle);
-        
+
         if (hwnd != IntPtr.Zero && IsWindowVisible(hwnd))
         {
             // Get the window text for logging
             StringBuilder windowText = new StringBuilder(256);
             GetWindowText(hwnd, windowText, 256);
-            
-            if (!string.IsNullOrWhiteSpace(windowText.ToString()))
+            string dialogTitle = windowText.ToString();
+
+            if (!string.IsNullOrWhiteSpace(dialogTitle))
             {
-                _logger.LogWarning($"Auto-dismissing dialog: '{windowText}'");
-                
+                // CRITICAL: DO NOT dismiss license activation dialogs
+                // These must complete properly for PlaceiT to work
+                if (dialogTitle.Contains("Product Activation", StringComparison.OrdinalIgnoreCase) ||
+                    dialogTitle.Contains("License", StringComparison.OrdinalIgnoreCase) ||
+                    dialogTitle.Contains("Activation", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation($"Found license dialog '{dialogTitle}' - allowing it to complete naturally");
+                    return; // Do NOT dismiss license dialogs
+                }
+
+                _logger.LogWarning($"Auto-dismissing dialog: '{dialogTitle}'");
+
                 // Try to find and click OK button first (preferred)
-                if (ClickButtonInDialog(hwnd, "OK") || 
+                if (ClickButtonInDialog(hwnd, "OK") ||
                     ClickButtonInDialog(hwnd, "&OK") ||
                     ClickButtonInDialog(hwnd, "Yes") ||
                     ClickButtonInDialog(hwnd, "&Yes"))
@@ -138,7 +153,7 @@ public class DialogSuppressor : IDisposable
                     _logger.LogDebug("Clicked OK/Yes button on dialog");
                     return;
                 }
-                
+
                 // If no button found, send WM_CLOSE
                 SendMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
                 _logger.LogDebug("Sent WM_CLOSE to dialog");
