@@ -1,3 +1,31 @@
+# COM Connection Deep Dive
+This guide explores COM automation in detail, showing you how to work effectively with Excel and other COM-based simulators using the SDK's `AutomationClient` helper class.
+
+## Prerequisites
+
+Set the `COM` program ID so the connector knows which program to connect to.
+You should have completed:
+- [Prerequisites & Setup](prerequisites.md) - Development environment ready
+- [Create Your First Connector](create-connector.md) - Basic connector working
+
+
+### Why COM for Simulators?
+
+Many industrial simulators use COM because:
+- **Established standard** - Been around since the 1990s
+- **Language-independent** - Works from VBA, Python, C#, etc.
+- **No network required** - In-process or local-only communication
+- **Mature tooling** - Well-supported by Windows
+
+### Simulators Using COM
+
+Common COM-based simulators include:
+- **Microsoft Excel** - Office automation
+- **KBC Petro-SIM** - Process simulation
+- **AspenTech HYSYS** - Process simulation
+- **Honeywell UniSim Design** - Process simulation
+- **SLB Symmetry** - Process simulation
+
 # Implement COM connection
 
 To run simulations using the Cognite simulator integration, connect to a simulator using the `COM` interface.
