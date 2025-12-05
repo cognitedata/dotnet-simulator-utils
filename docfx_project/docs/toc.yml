@@ -1,5 +1,8 @@
-- name: Create a new connector
-  href: create-connector.md
+- name: Understanding Simulator Integration
+  href: understanding-integration.md
+- name: Prerequisites & Setup
+  href: prerequisites.md
+- name: Create Your First Connector
 - name: COM connection
   href: com-connection.md
 - name: Model parsing
