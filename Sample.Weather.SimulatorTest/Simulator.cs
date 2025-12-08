@@ -3,6 +3,7 @@ using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
 
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 using static SampleConnectorNamespace.SampleConnector;
 
@@ -115,6 +116,8 @@ public class WeatherSimulatorClient :
 
 internal class WeatherRoutine : RoutineImplementationBase
 {
+    Dictionary<string, string> _inputData = new Dictionary<string, string>();
+    
     public WeatherRoutine(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
     }
@@ -131,7 +134,8 @@ internal class WeatherRoutine : RoutineImplementationBase
             TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
             ReferenceId = outputConfig.ReferenceId,
             ValueType = outputConfig.ValueType,
-            Value = SimulatorValue.Create("1.0"),
+            // Value = SimulatorValue.Create(_inputData["humidity"]),
+            Value = SimulatorValue.Create(_inputData["temperature"]),
         };
         return resultItem;
     }
@@ -139,10 +143,44 @@ internal class WeatherRoutine : RoutineImplementationBase
     public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling run command");
+        double output = getWeatherHumidityAsync(arguments, token).Result;
+        // _inputData.Add("humidity", output.ToString());
+        _inputData.Add("temperature", output.ToString());
     }
+    public async Task<double> getWeatherHumidityAsync(Dictionary<string, string> arguments, CancellationToken token)
+    {
+        using (var httpClient = new HttpClient())
+        {
+            var response = await httpClient.GetAsync($"https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Response: {json}");
+                var jsonDocument = JsonDocument.Parse(json);
+                if (jsonDocument.RootElement.TryGetProperty("hourly", out var hourly))
+                {
+                    // if (hourly.TryGetProperty("relative_humidity_2m", out var humidityArray))
+                    // {
+                    //     return humidityArray[0].GetDouble();
+                    // }
 
+                    if (hourly.TryGetProperty("temperature_2m", out var temperatureArray))
+                    {
+                        return temperatureArray[0].GetDouble();
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"API Error: {response.StatusCode}");
+            }
+        }
+        return 0.0;
+    }
     public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
     {
         Console.WriteLine("Handling inputs");
+        var valueStr = arguments["location"];
+        _inputData.Add("location", valueStr);
     }
 }
