@@ -8,12 +8,6 @@ You should have completed:
 - [Prerequisites & Setup](prerequisites.md) - Development environment ready
 - [Create Your First Connector](create-connector.md) - Basic connector working
 
-**What you'll learn:**
-- How COM automation works with late binding
-- Using the `AutomationClient` base class
-- Thread safety and locking for COM
-- Discovery techniques for COM APIs
-
 ## Understanding COM Automation
 
 **COM (Component Object Model)** is a Microsoft technology that allows applications to expose their functionality to other programs.
@@ -67,39 +61,6 @@ public abstract class AutomationClient
 }
 ```
 
-### Basic Usage Pattern
-
-```csharp
-public class NewSimClient : AutomationClient, ISimulatorClient<...>
-{
-    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-
-    public NewSimClient(
-        ILogger<NewSimClient> logger,
-        DefaultConfig<NewSimAutomationConfig> config)
-        : base(logger, config.Automation)
-    {
-        // Acquire semaphore for thread safety
-        semaphore.Wait();
-        try
-        {
-            // Connect to COM server
-            Initialize();
-
-            // Use Server to access COM object
-            var version = Server.Version;
-
-            // Disconnect
-            Shutdown();
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    }
-}
-```
-
 ## Configuration: AutomationConfig
 
 Create a configuration class that specifies how to connect to the COM server.
@@ -111,31 +72,10 @@ using Cognite.Simulator.Utils.Automation;
 
 public class NewSimAutomationConfig : AutomationConfig
 {
+    // any extra config options could be defined here
     public NewSimAutomationConfig()
     {
         ProgramId = "Excel.Application";
-    }
-}
-```
-
-### Advanced Configuration Options
-
-```csharp
-public class SimulatorAutomationConfig : AutomationConfig
-{
-    public SimulatorAutomationConfig()
-    {
-        // COM Program ID
-        ProgramId = "YourSimulator.Application";
-
-        // Connection timeout (milliseconds)
-        ConnectionTimeout = 60000;  // 60 seconds
-
-        // Retry attempts for COM calls
-        RetryAttempts = 3;
-
-        // Delay between retries (milliseconds)
-        RetryDelay = 1000;  // 1 second
     }
 }
 ```
@@ -153,19 +93,6 @@ Initialize();
 // Server is 'dynamic' - no compile-time checking
 dynamic workbooks = Server.Workbooks;
 int count = workbooks.Count;
-
-// Open a workbook
-dynamic workbook = workbooks.Open(@"C:\model.xlsx");
-
-// Access worksheet
-dynamic worksheet = workbook.ActiveSheet;
-
-// Access cells (1-based indexing)
-dynamic cell = worksheet.Cells[1, 1];
-cell.Value = 42.5;
-
-// Read value back
-double value = (double)cell.Value;
 
 // Close workbook
 workbook.Close(false);  // false = don't save changes
@@ -192,23 +119,6 @@ if (rawValue != null)
 }
 ```
 
-### Method Parameters
-
-COM methods often have many optional parameters. In C#, you can use named arguments:
-
-```csharp
-// Excel Workbooks.Open has many optional parameters
-dynamic workbook = workbooks.Open(
-    Filename: @"C:\model.xlsx",
-    ReadOnly: false,
-    Password: Type.Missing,  // Optional parameter omitted
-    WriteResPassword: Type.Missing
-);
-
-// Or just pass required parameters
-dynamic workbook = workbooks.Open(@"C:\model.xlsx");
-```
-
 ## Thread Safety and Locking
 
 **Critical:** COM objects are **not thread-safe**. You must ensure only one thread accesses the COM server at a time.
@@ -216,10 +126,6 @@ dynamic workbook = workbooks.Open(@"C:\model.xlsx");
 ### Using Semaphores
 
 ```csharp
-public class ExcelClient : AutomationClient, ISimulatorClient<...>
-{
-    // One permit = only one thread at a time
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public async Task SomeOperation(CancellationToken token)
     {
@@ -240,7 +146,7 @@ public class ExcelClient : AutomationClient, ISimulatorClient<...>
             _semaphore.Release();
         }
     }
-}
+
 ```
 
 **Don't use `lock` statement:** The `lock` keyword doesn't support async and can cause deadlocks with COM.
