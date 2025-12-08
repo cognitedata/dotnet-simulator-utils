@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-  - .NET LTS version
-  - You require a Cognite Data Fusion (CDF) project.
+You should have completed:
+- [Prerequisites & Setup](prerequisites.md) - Development environment ready
 
 ## Step 1: Create a new simulator connector project
 
