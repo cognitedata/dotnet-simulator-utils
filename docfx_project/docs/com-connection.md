@@ -1,6 +1,6 @@
 # COM Connection Deep Dive
 
-This guide explores COM automation in detail, showing you how to work effectively with Excel and other COM-based simulators using the SDK's `AutomationClient` helper class.
+This guide explores COM automation, showing how to work with Excel and other COM-based simulators using the SDK's `AutomationClient` helper class.
 
 ## Prerequisites
 
@@ -10,31 +10,11 @@ You should have completed:
 
 ## Understanding COM Automation
 
-**COM (Component Object Model)** is a Microsoft technology that allows applications to expose their functionality to other programs.
-
-### Why COM for Simulators?
-
-Many industrial simulators use COM because:
-- **Established standard** - Been around since the 1990s
-- **Language-independent** - Works from VBA, Python, C#, etc.
-- **No network required** - In-process or local-only communication
-- **Mature tooling** - Well-supported by Windows
-
-### Simulators Using COM
-
-Common COM-based simulators include:
-- **Microsoft Excel** - Office automation
-- **KBC Petro-SIM** - Process simulation
-- **AspenTech HYSYS** - Process simulation
-- **Honeywell UniSim Design** - Process simulation
-- **SLB Symmetry** - Process simulation
-- **DWSIM** - Open-source process simulator
-
-For a production example, see the [DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet) which uses these same patterns.
+**COM (Component Object Model)** is a Microsoft technology for inter-process communication. Many industrial simulators use it because it is a language-independent, established standard. Common examples include KBC Petro-SIM, Aspen HYSYS, and DWSIM. For a production example, see the [DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet).
 
 ## The AutomationClient Base Class
 
-The SDK provides `AutomationClient` as a base class that handles common COM automation tasks.
+The SDK provides `AutomationClient` as a base class for common COM automation tasks.
 
 ### What AutomationClient Provides
 
@@ -47,10 +27,8 @@ public abstract class AutomationClient
     // Configuration (Program ID, timeouts, etc.)
     protected AutomationConfig Config { get; }
 
-    // Initialize COM connection
+    // Initialize/Shutdown COM connection
     protected void Initialize();
-
-    // Shutdown COM connection
     protected void Shutdown();
 
     // Hook for cleanup before shutdown
@@ -63,7 +41,7 @@ public abstract class AutomationClient
 
 ## Configuration: AutomationConfig
 
-Create a configuration class that specifies how to connect to the COM server.
+Create a configuration class to specify the COM server connection details.
 
 ### Basic Configuration
 
@@ -82,7 +60,7 @@ public class NewSimAutomationConfig : AutomationConfig
 
 ## Late Binding with Dynamic
 
-The `Server` property in `AutomationClient` is `dynamic`, meaning method and property names are resolved at runtime.
+The `Server` property in `AutomationClient` is `dynamic`, so method and property names are resolved at runtime.
 
 ### Accessing Properties and Methods
 
@@ -103,7 +81,7 @@ Shutdown();
 
 ### Type Conversions
 
-When reading from `dynamic`, explicit casting is required:
+Explicit casting is required when reading from `dynamic` objects.
 
 ```csharp
 // Reading values
@@ -121,7 +99,7 @@ if (rawValue != null)
 
 ## Thread Safety and Locking
 
-**Critical:** COM objects are **not thread-safe**. You must ensure only one thread accesses the COM server at a time.
+**Critical:** COM objects are not thread-safe. You must ensure only one thread accesses the COM server at a time.
 
 ### Using Semaphores
 
@@ -153,7 +131,7 @@ if (rawValue != null)
 
 ## Discovery: Learning the COM API
 
-Since late binding lacks IntelliSense, use **Vendor Documentation** (manuals, SDKs, sample scripts) as your primary source for methods and properties. Alternatively, if the library is registered, use **Visual Studio's Object Browser** (Ctrl+Alt+J) to inspect available types. These tools bridge the gap when dynamic exploration isn't possible.
+Since late binding lacks IntelliSense, use vendor documentation or Visual Studio's Object Browser (Ctrl+Alt+J) to discover methods and properties.
 
 ## Lifecycle Management
 

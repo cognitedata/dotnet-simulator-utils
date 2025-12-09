@@ -149,18 +149,11 @@ static class SimulatorDefinition
 }
 ```
 
-**What this defines:**
-
-- **FileExtensionTypes**: Excel file types (`.xlsx`)
-- **ModelTypes**: Types of models (here, just "Spreadsheet")
-- **StepFields**: How to address cells (sheet name + cell reference) and run commands
-- **UnitQuantities**: Units the simulator can handle (here, just "Unitless" for simplicity)
-
-This contract is registered with CDF when your connector starts, allowing CDF to understand your simulator's capabilities.
+This contract defines file types, model types, how to address cells, and supported units. It is registered with CDF on connector startup.
 
 ## Step 4: Create COM Configuration
 
-Create `NewSimAutomationConfig.cs`. This tells the SDK how to connect to Excel via COM.
+Create `NewSimAutomationConfig.cs` to configure the COM connection to Excel.
 
 ```csharp
 using Cognite.Simulator.Utils.Automation;
@@ -174,13 +167,11 @@ public class NewSimAutomationConfig : AutomationConfig
 }
 ```
 
-**About COM Program IDs:**
-- `Excel.Application` is the registered COM identifier for Excel
-- Other simulators have different Program IDs (e.g., `DWSIM.Automation` for DWSIM)
+The `ProgramId` is the registered COM identifier for the application.
 
 ## Step 5: Implement the Simulator Client
 
-Create `NewSimClient.cs`. This implements the `ISimulatorClient` interface, which the SDK uses to interact with your simulator.
+Create `NewSimClient.cs`, which implements the `ISimulatorClient` interface for simulator interaction.
 
 ```csharp
 using Cognite.Simulator.Utils;
@@ -286,18 +277,9 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
 }
 ```
 
-**Key patterns to notice:**
-
-1. **Inheritance**: `NewSimClient : AutomationClient` provides COM automation helpers
-2. **Semaphore**: Ensures only one thread accesses Excel at a time (COM requirement)
-3. **Initialize/Shutdown**: Lifecycle management for COM connection
-4. **`Server` property**: `dynamic` object representing Excel (from `AutomationClient`)
-5. **OpenBook helper**: Encapsulates workbook opening logic
-6. **ArgumentNullException.ThrowIfNull**: Validates parameters
-
 ## Step 6: Configure Dependency Injection
 
-Create `ConnectorRuntime.cs`. This sets up the SDK runtime and dependency injection.
+Create `ConnectorRuntime.cs` to set up the SDK runtime and dependency injection.
 
 ```csharp
 using Cognite.Simulator.Utils;
@@ -327,17 +309,11 @@ public static class ConnectorRuntime
 }
 ```
 
-**What this does:**
-
-- **ConfigureServices**: Registers `NewSimClient` for dependency injection
-- **ConnectorName**: Sets the connector name to "NewSim" (used in CDF)
-- **SimulatorDefinition**: Provides the contract we defined earlier
-- **RunStandalone**: Starts the connector runtime
-
+This class registers the `NewSimClient`, sets the connector name, provides the simulator definition, and starts the runtime.
 
 ## Step 7: Create Program Entry Point
 
-Replace the contents of `Program.cs`:
+Replace the contents of `Program.cs` with the following:
 
 ```csharp
 public class Program
@@ -355,62 +331,26 @@ public class Program
 }
 ```
 
-**Key points:**
-- **Main method**: Entry point that starts the connector runtime
-- **Synchronous wait**: `.Wait()` blocks until the connector is shut down
-- **Return code**: Returns 0 on success (convention for process exit codes)
-
 ## Step 8: Build and Run
 
-Build the project:
+Build and run the project:
 
 ```bash
 dotnet build
-```
-
-If successful, you should see:
-```
-Build succeeded.
-```
-
-Run the connector:
-
-```bash
 dotnet run
 ```
 
 ## Step 9: Verify in CDF
 
-Open Cognite Data Fusion in your browser and navigate to **Simulators**,
-
-You should see:
-
-1. **Your connector listed** with a green "Connected" status
-2. **Simulator name**: "Excel"
-3. **Version information**: Your Excel version
-4. **Last heartbeat**: Should be recent (within last minute)
+Open Cognite Data Fusion and navigate to **Simulators**. You should see your connector listed with a "Connected" status, the name "Excel", and the simulator version.
 
 ![Connector in CDF](../images/screenshot-heartbeat.png)
 
-**If you don't see your connector:**
-- Check CDF credentials in `config.yml`
-- Check logs for authentication errors
-- Ensure Data Set ID exists and is accessible
+If you don't see your connector, check your `config.yml` credentials and logs for errors.
 
 ## Understanding What Happens at Runtime
 
-When you run `dotnet run`, here's what happens:
-
-1. **Configuration loaded** from `config.yml`
-2. **COM connection established** to Excel (via `NewSimAutomationConfig`)
-3. **Excel version retrieved** (in `NewSimClient` constructor)
-4. **CDF authentication** using credentials from config
-5. **Simulator definition registered** with CDF API
-6. **Connector registered** as a **simulator integration** with external ID "new-sim-connector@YOUR-HOSTNAME"
-7. **Heartbeat loop starts** (every 30 seconds by default) to report connector health
-8. **Polling begins** for simulator jobs (models to parse, simulations to run)
-
-The connector runs continuously as an outbound HTTPS client, waiting for work from CDF.
+When you run the connector, it loads the configuration, establishes a COM connection to Excel, authenticates with CDF, registers the simulator definition, starts a heartbeat loop to report its health, and begins polling for jobs
 
 Learn more about [how connectors register and maintain heartbeat](https://docs.cognite.com/cdf/integration/guides/simulators/connectors/).
 
