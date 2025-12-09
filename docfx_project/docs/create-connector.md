@@ -344,7 +344,7 @@ dotnet run
 
 Open Cognite Data Fusion and navigate to **Simulators**. You should see your connector listed with a "Connected" status, the name "Excel", and the simulator version.
 
-![Connector in CDF](../images/screenshot-heartbeat.png)
+![Connector in CDF](../images/screenshot-heartbeat.jpg)
 
 If you don't see your connector, check your `config.yml` credentials and logs for errors.
 
