@@ -183,5 +183,6 @@ protected override void PreShutdown()
         _logger.LogWarning(ex, "Error quitting COM server");
     }
 }
+```
 
 **Next:** Continue to [Implement Routines](implement-routine.md) to learn how to execute simulations.
