@@ -442,24 +442,8 @@ Create a simple Excel file (`test-model.xlsx`):
 
 Save it and upload to CDF.
 
-### Create a Routine
+### Create a Routine and Revision
 
-POST to CDF API:
-
-```json
-POST /api/v1/projects/{project}/simulators/routines
-
-{
-  "items": [{
-    "externalId": "simple-calculation",
-    "modelExternalId": "test-model",
-    "simulatorIntegrationExternalId": "new-sim-connector@YOUR-HOSTNAME",
-    "name": "Simple Calculation"
-  }]
-}
-```
-
-### Create a Routine Revision
 
 **CDF** -> **Simulators** -> **Routines** -> **Create Routine**
 
