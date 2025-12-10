@@ -461,106 +461,26 @@ POST /api/v1/projects/{project}/simulators/routines
 
 ### Create a Routine Revision
 
-POST to CDF API:
+**CDF** -> **Simulators** -> **Routines** -> **Create Routine**
 
-```json
-POST /api/v1/projects/{project}/simulators/routines/revisions
+<img src="../images/create-routine.png" alt="Create Routine" width="600"/>
 
-{
-  "items": [{
-    "externalId": "simple-calculation-v1",
-    "routineExternalId": "simple-calculation",
-    "configuration": {
-      "schedule": { "enabled": false },
-      "dataSampling": { "enabled": false },
-      "logicalCheck": [],
-      "steadyStateDetection": [],
-      "inputs": [
-        {
-          "name": "Input Number",
-          "referenceId": "INPUT1",
-          "value": 25.0,
-          "valueType": "DOUBLE"
-        },
-        {
-          "name": "Formula",
-          "referenceId": "FORMULA1",
-          "value": "=A1 * 2",
-          "valueType": "STRING"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Result",
-          "referenceId": "OUTPUT1",
-          "valueType": "DOUBLE"
-        }
-      ]
-    },
-    "script": [
-      {
-        "order": 1,
-        "description": "Set input value",
-        "steps": [
-          {
-            "order": 1,
-            "stepType": "Set",
-            "arguments": {
-              "referenceId": "INPUT1",
-              "sheet": "Sheet1",
-              "cell": "A1"
-            }
-          }
-        ]
-      },
-      {
-        "order": 2,
-        "description": "Set formula",
-        "steps": [
-          {
-            "order": 1,
-            "stepType": "Set",
-            "arguments": {
-              "referenceId": "FORMULA1",
-              "sheet": "Sheet1",
-              "cell": "B1"
-            }
-          }
-        ]
-      },
-      {
-        "order": 3,
-        "description": "Read result",
-        "steps": [
-          {
-            "order": 1,
-            "stepType": "Get",
-            "arguments": {
-              "referenceId": "OUTPUT1",
-              "sheet": "Sheet1",
-              "cell": "B1"
-            }
-          }
-        ]
-      }
-    ]
-  }]
-}
-```
+Setting inputs:
 
-**What this does:**
-1. Sets cell Sheet1!A1 to 25.0
-2. Sets cell Sheet1!B1 to formula "=A1 * 2"
-3. Reads the result from Sheet1!B1 (should be 50.0)
+Set the first input (Sheet: Sheet1, Cell: A1, Value : 25)
+Set the second input (Sheet: Sheet1, Cell: B1, Value: "=A1 * 2")
+Set the output (Sheet: Sheet1, Cell: B1)
+
+<img src="../images/routine-inputs.png" alt="Create Routine" width="300"/>
+
+
+Routine in CDF
+
+<img src="../images/routine-revision-view.png" alt="Routine in CDF" width="600"/>
 
 ### Run the Routine
 
-In CDF UI:
-1. Go to Simulators
-2. Find your routine "Simple Calculation"
-3. Click "Run now"
-4. Wait for completion
-5. View results in "Run browser"
+In the CDF UI, navigate to **Simulators** > **Routines**, find "Simple Calculation", click **Run now**, and view the results in the **Run browser**.
 
 **Expected result:** Output "Result" = 50.0
 
