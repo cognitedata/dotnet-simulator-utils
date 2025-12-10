@@ -45,6 +45,8 @@ Create a configuration class to specify the COM server connection details.
 
 ### Basic Configuration
 
+> The `ProgramId` should be available in the vendor documentation for the simulator. Alternatively, you can find the `ProgramId` for your COM application by looking in the Windows Registry under `HKEY_CLASSES_ROOT`. Look for the name of your application, and the `ProgID` will be listed there. For example, the `ProgID` for Excel is `Excel.Application`.
+
 ```csharp
 using Cognite.Simulator.Utils.Automation;
 
