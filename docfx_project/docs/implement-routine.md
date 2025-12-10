@@ -101,6 +101,8 @@ public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
 
+    private readonly ILogger logger;
+
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
@@ -186,14 +188,14 @@ public override void SetInput(
         var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
         cell.Value = rawValue;
 
-        Logger.LogDebug($"Set {sheetName}!{cellReference} = {rawValue}");
+        _logger.LogDebug($"Set {sheetName}!{cellReference} = {rawValue}");
     }
     else if (input.ValueType == SimulatorValueType.STRING)
     {
         var rawValue = (input.Value as SimulatorValue.String)?.Value;
         cell.Formula = rawValue;
 
-        Logger.LogDebug($"Set {sheetName}!{cellReference} = '{rawValue}'");
+        _logger.LogDebug($"Set {sheetName}!{cellReference} = '{rawValue}'");
     }
     else
     {
@@ -258,13 +260,13 @@ public override SimulatorValueItem GetOutput(
     {
         var rawValue = (double)cell.Value;
         value = new SimulatorValue.Double(rawValue);
-        Logger.LogDebug($"Read {sheetName}!{cellReference} = {rawValue}");
+        _logger.LogDebug($"Read {sheetName}!{cellReference} = {rawValue}");
     }
     else if (outputConfig.ValueType == SimulatorValueType.STRING)
     {
         var rawValue = (string)cell.Text;
         value = new SimulatorValue.String(rawValue);
-        Logger.LogDebug($"Read {sheetName}!{cellReference} = '{rawValue}'");
+        _logger.LogDebug($"Read {sheetName}!{cellReference} = '{rawValue}'");
     }
     else
     {
@@ -306,7 +308,7 @@ var rawValue = cell.Value;
 
 if (rawValue == null)
 {
-    Logger.LogWarning($"Cell [{row},{col}] is empty, using default");
+    _logger.LogWarning($"Cell [{row},{col}] is empty, using default");
     rawValue = 0.0;  // Or throw exception if required
 }
 
@@ -343,13 +345,13 @@ public override void RunCommand(
         case "Pause":
             {
                 _workbook.Application.Calculation = -4135; // xlCalculationManual
-                Logger.LogInformation("Calculation mode set to manual");
+                _logger.LogInformation("Calculation mode set to manual");
                 break;
             }
         case "Calculate":
             {
                 _workbook.Application.Calculate();
-                Logger.LogInformation("Calculation completed");
+                _logger.LogInformation("Calculation completed");
                 break;
             }
         default:
@@ -373,17 +375,17 @@ public override void RunCommand(
     {
         case "Calculate":
             _simulator.Run();
-            Logger.LogInformation("Calculation completed");
+            _logger.LogInformation("Calculation completed");
             break;
 
         case "Solve":
             _simulator.Solve();
-            Logger.LogInformation("Solver completed");
+            _logger.LogInformation("Solver completed");
             break;
 
         case "Reset":
             _simulator.Reset();
-            Logger.LogInformation("Simulator reset");
+            _logger.LogInformation("Simulator reset");
             break;
 
         default:
@@ -542,4 +544,4 @@ public override void SetInput(
 
 ---
 
-**Next:** Continue to [Model Parsing](model-parsing.md) to learn how to extract detailed model information.
+**Next:** Continue to [Testing](testing.md) to learn how to test your connector.
