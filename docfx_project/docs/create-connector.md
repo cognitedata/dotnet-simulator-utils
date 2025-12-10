@@ -261,8 +261,9 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             Initialize();
             workbook = OpenBook(modelState.FilePath);
 
-            var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
-            return routine.PerformSimulation(token);
+            // var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
+            // return routine.PerformSimulation(token);
+            return null;
         }
         finally
         {
