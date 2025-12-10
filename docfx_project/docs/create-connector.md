@@ -31,7 +31,7 @@ logger:
 
 cognite:
     project: ${COGNITE_PROJECT}
-    host: ${COGNITE_HOST}
+    host: ${COGNITE_HOST} # e.g : https://bluefield.cognitedata.com
     # This is for Microsoft Entra as an IdP. To use a different provider:
     # set implementation: Basic, and use token-url instead of tenant.
     # See the example config for the full list of options.
@@ -344,7 +344,7 @@ dotnet run
 
 Open Cognite Data Fusion and navigate to **Simulators**. You should see your connector listed with a "Connected" status, the name "Excel", and the simulator version.
 
-![Connector in CDF](../images/screenshot-heartbeat.jpg)
+![Connector in CDF](../images/screenshot-heartbeat.png)
 
 If you don't see your connector, check your `config.yml` credentials and logs for errors.
 
