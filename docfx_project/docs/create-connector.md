@@ -343,7 +343,7 @@ dotnet run
 
 ## Step 9: Verify in CDF
 
-Open Cognite Data Fusion and navigate to **Simulators**. You should see your connector listed with a "Connected" status, the name "Excel", and the simulator version.
+Open Cognite Data Fusion and navigate to **Simulators**. Click on the **Integrations** tab. You should be able to see your connector here with a `@<hostname>` suffix. 
 
 ![Connector in CDF](../images/screenshot-heartbeat.png)
 
