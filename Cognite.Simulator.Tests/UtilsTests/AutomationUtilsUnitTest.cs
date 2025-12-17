@@ -77,5 +77,22 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(_mockLogger, LogLevel.Error, "Could not find automation server using the id", Times.Once(), true);
             Assert.NotNull(exception.InnerException);
         }
+
+        [Fact]
+        public void SimulatorConnectionException_AllConstructors_WorkCorrectly()
+        {
+            var defaultException = new SimulatorConnectionException();
+            Assert.NotNull(defaultException);
+            Assert.Null(defaultException.InnerException);
+
+            var messageException = new SimulatorConnectionException("Test error");
+            Assert.Equal("Test error", messageException.Message);
+            Assert.Null(messageException.InnerException);
+
+            var innerEx = new InvalidOperationException("Inner error");
+            var fullException = new SimulatorConnectionException("Outer error", innerEx);
+            Assert.Equal("Outer error", fullException.Message);
+            Assert.Same(innerEx, fullException.InnerException);
+        }
     }
 }
