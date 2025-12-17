@@ -78,32 +78,35 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.NotNull(exception.InnerException);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void Initialize_WhenAlreadyConnected_SkipsReconnection()
         {
+            var mockServer = new object();
             var mockClient = CreateMockClient();
-            var isConnected = false;
 
-            // Mock Initialize with Callback to simulate the real behavior
-            mockClient.Setup(c => c.Initialize())
-                .Callback(() =>
-                {
-                    if (isConnected)
-                    {
-                        return; // Already connected, skip reconnection
-                    }
-                    _mockLogger.Object.LogDebug("Connecting to automation server");
-                    isConnected = true;
-                    _mockLogger.Object.LogDebug("Connected to simulator instance");
-                });
+            mockClient
+                .Protected()
+                .Setup<Type>("GetServerType", ItExpr.IsAny<string>())
+                .Returns(typeof(object));
 
-            // First call - connects
-            mockClient.Object.Initialize();
-            VerifyLog(_mockLogger, LogLevel.Debug, "Connecting to automation server", Times.Once(), true);
+            mockClient
+                .Protected()
+                .Setup<dynamic>("CreateServerInstance", ItExpr.IsAny<Type>())
+                .Returns(mockServer);
 
-            // Second call - should skip reconnection
-            mockClient.Object.Initialize();
-            VerifyLog(_mockLogger, LogLevel.Debug, "Connecting to automation server", Times.Once(), true); // Still only once
+            var client = mockClient.Object;
+
+            // Act
+            client.Initialize();
+            client.Initialize();
+            client.Initialize();
+
+            // Assert
+            mockClient
+               .Protected()
+               .Verify<dynamic>("CreateServerInstance", Times.Once(), ItExpr.IsAny<Type>());
+
+            VerifyLog(_mockLogger, LogLevel.Debug, "Connected to simulator instance", Times.Once(), true);
         }
 
         [Fact]
