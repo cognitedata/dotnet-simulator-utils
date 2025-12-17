@@ -92,6 +92,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(_mockedLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
         }
 
+        [WindowsOnlyFact]
+        public void ShouldLogReleasedComObjectOnShutdown()
+        {
+            var client = CreateClient();
+            client.SetServerInitialized();
+
+            client.Shutdown();
+
+            VerifyLog(_mockedLogger, LogLevel.Debug, "Released COM Object", Times.Once(), true);
+            VerifyLog(_mockedLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
+        }
+
         [Fact]
         public void ShouldSkipInitializationWhenAlreadyConnected()
         {
@@ -119,6 +131,30 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 var client = CreateClient();
 
                 Assert.Throws<NullReferenceException>(() => client.Initialize());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowWhenNotInDevelopmentOnNonWindows()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+
+            var originalEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            try
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "production");
+
+                var client = CreateClient();
+
+                var exception = Assert.Throws<SimulatorConnectionException>(() => client.Initialize());
+                Assert.Equal("Simulator integration only available on Windows", exception.Message);
             }
             finally
             {
