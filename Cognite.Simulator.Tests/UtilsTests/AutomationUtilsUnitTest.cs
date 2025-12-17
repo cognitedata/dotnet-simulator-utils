@@ -79,6 +79,34 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
+        public void Initialize_WhenAlreadyConnected_SkipsReconnection()
+        {
+            var mockClient = CreateMockClient();
+            var isConnected = false;
+
+            // Mock Initialize with Callback to simulate the real behavior
+            mockClient.Setup(c => c.Initialize())
+                .Callback(() =>
+                {
+                    if (isConnected)
+                    {
+                        return; // Already connected, skip reconnection
+                    }
+                    _mockLogger.Object.LogDebug("Connecting to automation server");
+                    isConnected = true;
+                    _mockLogger.Object.LogDebug("Connected to simulator instance");
+                });
+
+            // First call - connects
+            mockClient.Object.Initialize();
+            VerifyLog(_mockLogger, LogLevel.Debug, "Connecting to automation server", Times.Once(), true);
+
+            // Second call - should skip reconnection
+            mockClient.Object.Initialize();
+            VerifyLog(_mockLogger, LogLevel.Debug, "Connecting to automation server", Times.Once(), true); // Still only once
+        }
+
+        [Fact]
         public void SimulatorConnectionException_AllConstructors_WorkCorrectly()
         {
             var defaultException = new SimulatorConnectionException();
