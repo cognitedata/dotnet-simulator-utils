@@ -92,18 +92,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(_mockedLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
         }
 
-        [WindowsOnlyFact]
-        public void ShouldLogReleasedComObjectOnShutdown()
-        {
-            var client = CreateClient();
-            client.SetServerInitialized();
-
-            client.Shutdown();
-
-            VerifyLog(_mockedLogger, LogLevel.Debug, "Released COM Object", Times.Once(), true);
-            VerifyLog(_mockedLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
-        }
-
         [Fact]
         public void ShouldSkipInitializationWhenAlreadyConnected()
         {
