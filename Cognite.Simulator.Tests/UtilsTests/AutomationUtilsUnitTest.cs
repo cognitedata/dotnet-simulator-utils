@@ -25,9 +25,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _config = new AutomationConfig { ProgramId = "Test.Program" };
         }
 
-        private Mock<AutomationClient> CreateMockClient(bool preShutdownThrows = false)
+        private Mock<AutomationClient> CreateMockClient(bool preShutdownThrows = false, string programId = "Test.Program")
         {
-            var mock = new Mock<AutomationClient>(_mockLogger.Object, _config) { CallBase = true };
+            AutomationConfig config = new AutomationConfig { ProgramId = programId };
+            var mock = new Mock<AutomationClient>(_mockLogger.Object, config) { CallBase = true };
 
             if (preShutdownThrows)
             {
@@ -51,17 +52,25 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(_mockLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
         }
 
-        [WindowsOnlyFact]
-        public void Initialize_WhenAlreadyConnected_SkipsReconnection()
+        [Fact]
+        public void Initialize_WhenCalledMultipleTimes_DoesNotThrow()
         {
-            var mockClient = CreateMockClient();
+            var originalEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            try
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "development");
+                var mockClient = CreateMockClient();
 
-            mockClient.Object.Initialize();
-            _mockLogger.Invocations.Clear();
+                mockClient.Object.Initialize();
+                var exception = Record.Exception(() => mockClient.Object.Initialize());
 
-            mockClient.Object.Initialize();
-
-            VerifyLog(_mockLogger, LogLevel.Debug, "Connecting to automation server", Times.Never(), true);
+                Assert.Null(exception);
+                VerifyLog(_mockLogger, LogLevel.Debug, "Connected to simulator instance", Times.AtLeastOnce(), true);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
+            }
         }
 
         [Fact]
@@ -76,6 +85,18 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal("PreShutdown failed", exception.Message);
             mockClient.Protected().Verify("PreShutdown", Times.Once());
             VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Never(), true);
+        }
+
+        [WindowsOnlyFact]
+        public void Initialize_WhenServerTypeNotFound_ThrowsAndLogsError()
+        {
+            var mockClient = CreateMockClient(programId: "NonExistent.Application.12345");
+
+            var exception = Assert.Throws<SimulatorConnectionException>(() => mockClient.Object.Initialize());
+
+            Assert.Equal("Cannot connect to automation server", exception.Message);
+            VerifyLog(_mockLogger, LogLevel.Error, "Could not find automation server using the id", Times.Once(), true);
+            Assert.NotNull(exception.InnerException);
         }
     }
 }
