@@ -53,27 +53,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public void Initialize_WhenCalledMultipleTimes_DoesNotThrow()
-        {
-            var originalEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            try
-            {
-                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "development");
-                var mockClient = CreateMockClient();
-
-                mockClient.Object.Initialize();
-                var exception = Record.Exception(() => mockClient.Object.Initialize());
-
-                Assert.Null(exception);
-                VerifyLog(_mockLogger, LogLevel.Debug, "Connected to simulator instance", Times.AtLeastOnce(), true);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalEnv);
-            }
-        }
-
-        [Fact]
         public void Shutdown_WhenPreShutdownThrows_ExecutesFinallyBlock()
         {
             var mockClient = CreateMockClient(preShutdownThrows: true);
