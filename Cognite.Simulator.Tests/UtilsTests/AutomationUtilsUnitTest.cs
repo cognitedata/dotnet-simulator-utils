@@ -96,12 +96,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var client = mockClient.Object;
 
-            // Act
             client.Initialize();
             client.Initialize();
             client.Initialize();
 
-            // Assert
             mockClient
                .Protected()
                .Verify<dynamic>("CreateServerInstance", Times.Once(), ItExpr.IsAny<Type>());
