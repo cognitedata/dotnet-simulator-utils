@@ -94,9 +94,11 @@ public class NewSimRoutine : RoutineImplementationBase
 
     private readonly ILogger logger;
 
+    private const int XlCalculationManual = -4135;
+
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
-        _workbook = workbook;
+        _workbook = workbook;   
     }
 
     public override void SetInput(
@@ -279,7 +281,7 @@ var rawValue = cell.Value;
 
 if (rawValue == null)
 {
-    _logger.LogWarning($"Cell [{row},{col}] is empty, using default");
+    _logger.LogWarning($"Cell {sheetName}!{cellReference} is empty, using default");
     rawValue = 0.0;  // Or throw exception if required
 }
 
@@ -305,7 +307,7 @@ public override void RunCommand(
     {
         case "Pause":
             {
-                _workbook.Application.Calculation = -4135; // xlCalculationManual
+                _workbook.Application.Calculation = XlCalculationManual;
                 _logger.LogInformation("Calculation mode set to manual");
                 break;
             }

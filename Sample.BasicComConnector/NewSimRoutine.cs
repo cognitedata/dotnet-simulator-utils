@@ -8,6 +8,7 @@ public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
     private readonly ILogger _logger;
+    private const int XlCalculationManual = -4135;
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
@@ -102,7 +103,7 @@ public class NewSimRoutine : RoutineImplementationBase
         {
             case "Pause":
                 {
-                    _workbook.Application.Calculation = -4135; // xlCalculationManual
+                    _workbook.Application.Calculation = XlCalculationManual;
                     _logger.LogInformation("Calculation mode set to manual");
                     break;
                 }
