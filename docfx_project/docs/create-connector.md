@@ -182,14 +182,18 @@ using Microsoft.Extensions.Logging;
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-    private readonly string _version = "N/A";
+    private string _version = "N/A";
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config?.Automation)
+            : base(logger, config.Automation)
     {
         this.logger = logger;
-        semaphore.Wait();
+    }
+
+    public async Task TestConnection(CancellationToken _token)
+    {
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
         try
         {
             Initialize();
@@ -200,11 +204,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             Shutdown();
             semaphore.Release();
         }
-    }
-
-    public Task TestConnection(CancellationToken _token)
-    {
-        return Task.CompletedTask;
     }
 
     protected override void PreShutdown()
@@ -343,7 +342,7 @@ dotnet run
 
 ## Step 9: Verify in CDF
 
-Open Cognite Data Fusion and navigate to **Simulators**. You should see your connector listed with a "Connected" status, the name "Excel", and the simulator version.
+Open Cognite Data Fusion and navigate to **Simulators**. Click on the **Integrations** tab. You should be able to see your connector here with a `@<hostname>` suffix. 
 
 ![Connector in CDF](../images/screenshot-heartbeat.png)
 
