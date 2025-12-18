@@ -186,9 +186,13 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config?.Automation)
+            : base(logger, config.Automation)
     {
         this.logger = logger;
+    }
+
+    public Task TestConnection(CancellationToken _token)
+    {
         semaphore.Wait();
         try
         {
@@ -200,10 +204,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             Shutdown();
             semaphore.Release();
         }
-    }
-
-    public Task TestConnection(CancellationToken _token)
-    {
         return Task.CompletedTask;
     }
 
