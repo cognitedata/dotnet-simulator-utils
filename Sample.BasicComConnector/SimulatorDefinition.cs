@@ -8,7 +8,7 @@ static class SimulatorDefinition
         {
             ExternalId = "Excel",
             Name = "Excel",
-            FileExtensionTypes = new List<string> { "xlsx" },
+            FileExtensionTypes = new List<string> { "xlsx", "xlsm" },
             ModelTypes = new List<SimulatorModelType> {
                     new SimulatorModelType {
                         Name = "Spreadsheet",
