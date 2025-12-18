@@ -48,16 +48,7 @@ Routine Revision
         └── Step 2: Get Efficiency ← Sheet1, Cell B2
 ```
 
-The SDK handles:
-- Reading routine configuration from CDF
-- Providing input values
-- Orchestrating script execution
-- Storing output values back to CDF
-
-You implement:
-- How to set each input in the simulator
-- How to read each output from the simulator
-- How to run commands in the simulator
+The SDK handles reading configuration, providing inputs, orchestrating execution, and storing outputs. You implement how to set inputs, read outputs, and run commands in the simulator.
 
 ## The Three-Method Pattern
 
@@ -399,7 +390,7 @@ public override void RunCommand(
 Now wire the routine into the `NewSimClient`:
 
 ```csharp
-public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
+public async Task<Dictionary<string, SimulatorValueItem>?> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
 {
     ArgumentNullException.ThrowIfNull(modelState);
     await semaphore.WaitAsync(token).ConfigureAwait(false);

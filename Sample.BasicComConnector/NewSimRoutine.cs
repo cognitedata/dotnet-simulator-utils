@@ -7,76 +7,115 @@ using Microsoft.Extensions.Logging;
 public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
+    private readonly ILogger _logger;
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
+        _logger = logger;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(arguments);
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
 
-        dynamic worksheet = _workbook.ActiveSheet;
+        var sheetName = arguments["sheet"];
+        var cellReference = arguments["cell"];
+        dynamic worksheet = _workbook.Worksheets(sheetName);
+        dynamic cell = worksheet.Range(cellReference);
 
         if (input.ValueType == SimulatorValueType.DOUBLE)
         {
             var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
-            worksheet.Cells[row, col].Value = rawValue;
+            cell.Value = rawValue;
+            _logger.LogDebug($"Set {sheetName}!{cellReference} = {rawValue}");
         }
         else if (input.ValueType == SimulatorValueType.STRING)
         {
             var rawValue = (input.Value as SimulatorValue.String)?.Value;
-            worksheet.Cells[row, col].Formula = rawValue;
+            cell.Formula = rawValue;
+            _logger.LogDebug($"Set {sheetName}!{cellReference} = '{rawValue}'");
         }
         else
         {
-            throw new NotImplementedException($"{input.ValueType} not implemented");
+            throw new NotImplementedException($"{input.ValueType} not supported");
         }
 
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
-        input.SimulatorObjectReference = simulationObjectRef;
+        // Store reference for later use
+        var simulatorObjectRef = new Dictionary<string, string> { { "sheet", sheetName }, { "cell", cellReference } };
+        input.SimulatorObjectReference = simulatorObjectRef;
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken _token)
+    public override SimulatorValueItem GetOutput(
+    SimulatorRoutineRevisionOutput outputConfig,
+    Dictionary<string, string> arguments,
+    CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(outputConfig);
         ArgumentNullException.ThrowIfNull(arguments);
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
 
-        dynamic worksheet = _workbook.ActiveSheet;
-        var cell = worksheet.Cells[row, col];
+        var sheetName = arguments["sheet"];
+        var cellReference = arguments["cell"];
 
-        if (outputConfig.ValueType != SimulatorValueType.DOUBLE)
+        dynamic worksheet = _workbook.Worksheets(sheetName);
+        dynamic cell = worksheet.Range(cellReference);
+
+        SimulatorValue value;
+
+        if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
         {
-            throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
+            var rawValue = (double)cell.Value;
+            value = new SimulatorValue.Double(rawValue);
+            _logger.LogDebug($"Read {sheetName}!{cellReference} = {rawValue}");
+        }
+        else if (outputConfig.ValueType == SimulatorValueType.STRING)
+        {
+            var rawValue = (string)cell.Text;
+            value = new SimulatorValue.String(rawValue);
+            _logger.LogDebug($"Read {sheetName}!{cellReference} = '{rawValue}'");
+        }
+        else
+        {
+            throw new NotImplementedException($"{outputConfig.ValueType} not supported");
         }
 
-        var rawValue = (double)cell.Value;
-        SimulatorValue value = new SimulatorValue.Double(rawValue);
+        var simulatorObjectRef = new Dictionary<string, string> { { "sheet", sheetName }, { "cell", cellReference } };
 
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
-
+        // Return the output item
         return new SimulatorValueItem
         {
-            ValueType = SimulatorValueType.DOUBLE,
+            ValueType = outputConfig.ValueType,
             Value = value,
             ReferenceId = outputConfig.ReferenceId,
-            SimulatorObjectReference = simulationObjectRef,
+            SimulatorObjectReference = simulatorObjectRef,
             TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
         };
     }
 
     public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
     {
-        // No implementation needed for this simulator
+        ArgumentNullException.ThrowIfNull(arguments);
+        var command = arguments["command"];
+
+        switch (command)
+        {
+            case "Pause":
+                {
+                    _workbook.Application.Calculation = -4135; // xlCalculationManual
+                    _logger.LogInformation("Calculation mode set to manual");
+                    break;
+                }
+            case "Calculate":
+                {
+                    _workbook.Application.Calculate();
+                    _logger.LogInformation("Calculation completed");
+                    break;
+                }
+            default:
+                {
+                    throw new NotImplementedException($"Unsupported command: '{command}'");
+                }
+        }
     }
 }
