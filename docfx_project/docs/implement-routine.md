@@ -127,11 +127,7 @@ public class NewSimRoutine : RoutineImplementationBase
 }
 ```
 
-**Key points:**
-- Inherits from `RoutineImplementationBase`
-- Receives the `workbook` (Excel COM object) in constructor
-- Base class handles script orchestration
-- We implement the three methods
+This class inherits from `RoutineImplementationBase`, receives the `workbook` (Excel COM object) in the constructor, relies on the base class for script orchestration, and implements the three required methods.
 
 ## Step 2: Implement SetInput
 
@@ -146,12 +142,6 @@ public override void SetInput(
     Dictionary<string, string> arguments,       // Where to set it
     CancellationToken token)                    // Cancellation support
 ```
-
-**Parameters:**
-- **inputConfig** - Metadata (name, reference ID, value type)
-- **input** - The actual value to set
-- **arguments** - Step-specific arguments (e.g., `row`, `col`)
-- **token** - Cancellation token
 
 ### Implementation
 
@@ -203,12 +193,7 @@ public override void SetInput(
 }
 ```
 
-**Key concepts:**
-
-1. **Arguments** - Come from the routine script step, tell you WHERE to set the value
-2. **Value extraction** - Cast `SimulatorValue` to concrete type (`Double`, `String`)
-3. **Type handling** - Different value types may need different setter methods
-4. **SimulatorObjectReference** - Store variable identifier
+Key concepts: arguments from the script step specify WHERE to set the value, value extraction casts `SimulatorValue` to concrete types (`Double`, `String`), type handling uses different setter methods for different value types, and `SimulatorObjectReference` stores the variable identifier.
 
 ## Step 3: Implement GetOutput
 
@@ -283,12 +268,7 @@ public override SimulatorValueItem GetOutput(
 }
 ```
 
-**Key concepts:**
-
-1. **Read from arguments** - Arguments tell you WHERE to read
-2. **Type conversion** - Cast from COM `dynamic` to expected type
-3. **Create SimulatorValueItem** - Wrap value in SDK type
-4. **Preserve metadata** - Include reference ID and timeseries mapping
+Key concepts: arguments specify WHERE to read, type conversion casts from COM `dynamic` to expected type, `SimulatorValueItem` wraps the value in SDK type, and metadata preservation includes reference ID and timeseries mapping.
 
 ### Handling Null/Missing Values
 
@@ -309,17 +289,7 @@ value = new SimulatorValue.Double(doubleValue);
 
 ## Step 4: Implement RunCommand
 
-The `RunCommand` method executes simulator-specific operations.
-
-### Understanding RunCommand
-
-**When to use:**
-- Triggering calculations
-- Running solvers
-- Saving/loading state
-- Any action that doesn't involve setting/getting values
-
-**For Excel:** Usually not needed (formulas calculate automatically).
+The `RunCommand` method executes simulator-specific operations like triggering calculations, running solvers, saving/loading state, or any action that doesn't involve setting/getting values (for Excel, usually not needed as formulas calculate automatically).
 
 ### Implementation
 
@@ -368,12 +338,6 @@ public override void RunCommand(
             _simulator.Run();
             _logger.LogInformation("Calculation completed");
             break;
-
-        case "Solve":
-            _simulator.Solve();
-            _logger.LogInformation("Solver completed");
-            break;
-
         case "Reset":
             _simulator.Reset();
             _logger.LogInformation("Simulator reset");
@@ -415,11 +379,7 @@ public async Task<Dictionary<string, SimulatorValueItem>?> RunSimulation(Default
 }
 ```
 
-**What `PerformSimulation` does:**
-1. Iterates through script steps in order
-2. Calls your `SetInput`, `GetOutput`, or `RunCommand` based on step type
-3. Handles cancellation
-4. Returns dictionary of output values
+`PerformSimulation` iterates through script steps in order, calling your `SetInput`, `GetOutput`, or `RunCommand` methods based on step type, handling cancellation, and returning a dictionary of output values.
 
 ## Step 6: Test with CDF
 
