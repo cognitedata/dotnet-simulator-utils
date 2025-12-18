@@ -182,7 +182,7 @@ using Microsoft.Extensions.Logging;
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-    private readonly string _version = "N/A";
+    private string _version = "N/A";
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
@@ -191,9 +191,9 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         this.logger = logger;
     }
 
-    public Task TestConnection(CancellationToken _token)
+    public async Task TestConnection(CancellationToken _token)
     {
-        semaphore.Wait();
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
         try
         {
             Initialize();
@@ -204,7 +204,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             Shutdown();
             semaphore.Release();
         }
-        return Task.CompletedTask;
     }
 
     protected override void PreShutdown()
