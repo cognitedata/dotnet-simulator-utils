@@ -419,7 +419,11 @@ Routine in CDF
 
 In the CDF UI, navigate to **Simulators** > **Routines**, find "Simple Calculation", click **Run now**, and view the results in the **Run browser**.
 
+<img src="../images/routine-run.png" alt="Routine in CDF" width="600"/>
+
 **Expected result:** Output "Result" = 50.0
+
+<img src="../images/routine-output.png" alt="Routine output" width="600"/>
 
 ## Understanding Arguments
 
