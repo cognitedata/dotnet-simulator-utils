@@ -76,7 +76,7 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return _version;
     }
 
-    public async Task<Dictionary<string, SimulatorValueItem>?> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
+    public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(modelState);
         await semaphore.WaitAsync(token).ConfigureAwait(false);

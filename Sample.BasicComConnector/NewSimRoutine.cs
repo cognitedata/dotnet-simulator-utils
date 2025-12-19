@@ -16,7 +16,7 @@ public class NewSimRoutine : RoutineImplementationBase
         _logger = logger;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken token)
+    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -51,7 +51,7 @@ public class NewSimRoutine : RoutineImplementationBase
     public override SimulatorValueItem GetOutput(
     SimulatorRoutineRevisionOutput outputConfig,
     Dictionary<string, string> arguments,
-    CancellationToken token)
+    CancellationToken _token)
     {
         ArgumentNullException.ThrowIfNull(outputConfig);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -66,15 +66,22 @@ public class NewSimRoutine : RoutineImplementationBase
 
         if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
         {
-            var rawValue = (double)cell.Value;
-            value = new SimulatorValue.Double(rawValue);
-            _logger.LogDebug($"Read {sheetName}!{cellReference} = {rawValue}");
+            var rawValue = cell.Value;
+
+            if (rawValue == null)
+            {
+                _logger.LogWarning($"Cell {sheetName}!{cellReference} is empty, using default");
+                rawValue = 0.0;
+            }
+            var doubleValue = Convert.ToDouble(rawValue);
+            value = new SimulatorValue.Double(doubleValue);
+            _logger.LogDebug($"Read {sheetName}!{cellReference} = {doubleValue}");
         }
         else if (outputConfig.ValueType == SimulatorValueType.STRING)
         {
-            var rawValue = (string)cell.Text;
-            value = new SimulatorValue.String(rawValue);
-            _logger.LogDebug($"Read {sheetName}!{cellReference} = '{rawValue}'");
+            var stringValue = (string)cell.Text;
+            value = new SimulatorValue.String(stringValue);
+            _logger.LogDebug($"Read {sheetName}!{cellReference} = '{stringValue}'");
         }
         else
         {
