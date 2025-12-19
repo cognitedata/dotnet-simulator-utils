@@ -57,6 +57,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal("PreShutdown failed", exception.Message);
             mockClient.Protected().Verify("PreShutdown", Times.Once());
             VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Never(), true);
+            VerifyLog(_mockLogger, LogLevel.Debug, "Automation server instance removed", Times.Never(), true);
         }
 
         [WindowsOnlyFact]
@@ -69,6 +70,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.Equal("Cannot connect to automation server", exception.Message);
             VerifyLog(_mockLogger, LogLevel.Error, "Could not find automation server using the id", Times.Once(), true);
             Assert.NotNull(exception.InnerException);
+            Assert.Equal("Cannot connect to get automation server type", exception.InnerException.Message);
         }
 
         [WindowsOnlyFact]
