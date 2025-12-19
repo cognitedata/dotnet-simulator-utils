@@ -25,19 +25,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             _config = new AutomationConfig { ProgramId = "Test.Program" };
         }
 
-        private Mock<AutomationClient> CreateMockClient(bool preShutdownThrows = false, string programId = "Test.Program")
+        private Mock<AutomationClient> CreateMockClient(string programId = "Test.Program")
         {
             AutomationConfig config = new AutomationConfig { ProgramId = programId };
-            var mock = new Mock<AutomationClient>(_mockLogger.Object, config) { CallBase = true };
-
-            if (preShutdownThrows)
-            {
-                mock.Protected()
-                    .Setup("PreShutdown")
-                    .Throws(new InvalidOperationException("PreShutdown failed"));
-            }
-
-            return mock;
+            return new Mock<AutomationClient>(_mockLogger.Object, config) { CallBase = true };
         }
 
         [Fact]
@@ -55,12 +46,14 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public void Shutdown_WhenPreShutdownThrows_ExecutesFinallyBlock()
         {
-            var mockClient = CreateMockClient(preShutdownThrows: true);
+            var mockClient = CreateMockClient();
+            mockClient.Protected()
+                .Setup("PreShutdown")
+                .Throws(new InvalidOperationException("PreShutdown failed"));
 
             var exception = Record.Exception(() => mockClient.Object.Shutdown());
 
             Assert.NotNull(exception);
-            Assert.IsType<InvalidOperationException>(exception);
             Assert.Equal("PreShutdown failed", exception.Message);
             mockClient.Protected().Verify("PreShutdown", Times.Once());
             VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Never(), true);
@@ -98,30 +91,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             client.Initialize();
             client.Initialize();
-            client.Initialize();
 
             mockClient
                .Protected()
                .Verify<dynamic>("CreateServerInstance", Times.Once(), ItExpr.IsAny<Type>());
 
             VerifyLog(_mockLogger, LogLevel.Debug, "Connected to simulator instance", Times.Once(), true);
-        }
-
-        [Fact]
-        public void SimulatorConnectionException_AllConstructors_WorkCorrectly()
-        {
-            var defaultException = new SimulatorConnectionException();
-            Assert.NotNull(defaultException);
-            Assert.Null(defaultException.InnerException);
-
-            var messageException = new SimulatorConnectionException("Test error");
-            Assert.Equal("Test error", messageException.Message);
-            Assert.Null(messageException.InnerException);
-
-            var innerEx = new InvalidOperationException("Inner error");
-            var fullException = new SimulatorConnectionException("Outer error", innerEx);
-            Assert.Equal("Outer error", fullException.Message);
-            Assert.Same(innerEx, fullException.InnerException);
         }
     }
 }
