@@ -143,7 +143,6 @@ public class PythonSimulatorClient : ISimulatorClient<DefaultModelFilestate, Sim
         var startInfo = new ProcessStartInfo
         {
             FileName = _config.PythonExecutable,
-            Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
