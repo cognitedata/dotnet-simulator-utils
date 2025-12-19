@@ -22,17 +22,17 @@ public async Task ExtractModelInformation(
     DefaultModelFilestate state,
     CancellationToken token)
 {
-    await _semaphore.WaitAsync(token).ConfigureAwait(false);
+    await semaphore.WaitAsync(token).ConfigureAwait(false);
     dynamic? workbook = null;
 
     try
     {
         Initialize();
 
-        _logger.LogInformation($"Validating model: {state.FilePath}");
+        logger.LogInformation($"Validating model: {state.FilePath}");
 
         // Just try to open the file
-        workbook = OpenWorkbook(state.FilePath);
+        workbook = OpenBook(state.FilePath);
 
         if (workbook == null)
         {
@@ -42,11 +42,11 @@ public async Task ExtractModelInformation(
 
         // File is valid - report success with no extracted data
         state.ParsingInfo.SetSuccess();
-        _logger.LogInformation("Model validation successful");
+        logger.LogInformation("Model validation successful");
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Error validating model");
+        logger.LogError(ex, "Error validating model");
         state.ParsingInfo.SetFailure(ex.Message);
     }
     finally
@@ -59,11 +59,11 @@ public async Task ExtractModelInformation(
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error closing workbook");
+                logger.LogWarning(ex, "Error closing workbook");
             }
         }
         Shutdown();
-        _semaphore.Release();
+        semaphore.Release();
     }
 }
 ```
