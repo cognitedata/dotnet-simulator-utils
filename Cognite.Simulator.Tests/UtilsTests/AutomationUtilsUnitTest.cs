@@ -76,7 +76,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             mockClient
                 .Protected()
-                .Setup("ReleaseComObject", ItExpr.IsAny<object>());
+                .Setup("ReleaseComObject")
+                .Callback(() => {});
 
             mockClient.Protected()
                 .Setup("PreShutdown")
@@ -89,7 +90,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.NotNull(exception);
             Assert.Equal("PreShutdown failed", exception.Message);
             mockClient.Protected().Verify("PreShutdown", Times.Once());
-            mockClient.Protected().Verify("ReleaseComObject", Times.Once(), ItExpr.IsAny<object>());
+            mockClient.Protected().Verify("ReleaseComObject", Times.Once());
             VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Once(), true);
         }
 
