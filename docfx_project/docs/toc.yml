@@ -1,10 +1,16 @@
-- name: Create a new connector
+- name: Understanding Simulator Integration
+  href: understanding-integration.md
+- name: Prerequisites & Setup
+  href: prerequisites.md
+- name: Create Your First Connector
   href: create-connector.md
-- name: COM connection
+- name: COM Connection Deep Dive
   href: com-connection.md
-- name: Model parsing
+- name: Implement Model Parsing
   href: model-parsing.md
-- name: Implement a routine
+- name: Implement Routines
   href: implement-routine.md
-- name: Testing and extras
-  href: testing-and-extras.md
+- name: Building and Running
+  href: building-and-running.md
+- name: Testing Your Connector
+  href: testing.md
