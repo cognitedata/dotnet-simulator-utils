@@ -17,12 +17,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
     public class AutomationUtilsUnitTest
     {
         private readonly Mock<ILogger<AutomationClient>> _mockLogger;
-        private readonly AutomationConfig _config;
 
         public AutomationUtilsUnitTest()
         {
             _mockLogger = new Mock<ILogger<AutomationClient>>();
-            _config = new AutomationConfig { ProgramId = "Test.Program" };
         }
 
         private Mock<AutomationClient> CreateMockClient(string programId = "Test.Program")
@@ -31,7 +29,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return new Mock<AutomationClient>(_mockLogger.Object, config) { CallBase = true };
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void Shutdown_WhenServerIsNull_CallsPreShutdownButSkipsComRelease()
         {
             var mockClient = CreateMockClient();
@@ -43,7 +41,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(_mockLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void Shutdown_WhenPreShutdownThrows_AndServerIsNull_SkipsComRelease()
         {
             var mockClient = CreateMockClient();
