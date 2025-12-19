@@ -21,7 +21,7 @@ Then follow the guide in order:
 5. **[Implement Model Parsing](./docs/model-parsing.md)** - Extract and process model information
 6. **[Implement Routines](./docs/implement-routine.md)** - Handle inputs, outputs, and commands
 7. **[Building and Running](./docs/building-and-running.md)** - Build, run, and debug your connector
-8. **[Testing Your Connector](./docs/testing.md)** - Test strategies and best practices
+8. **[Testing Your Connector](./docs/testing-and-extras.md)** - Test strategies and best practices
 
 ## Real-World Examples
 
