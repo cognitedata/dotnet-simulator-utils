@@ -77,7 +77,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             mockClient
                 .Protected()
                 .Setup("ReleaseComObject")
-                .Callback(() => {});
+                .Callback(() => { });
 
             mockClient.Protected()
                 .Setup("PreShutdown")
