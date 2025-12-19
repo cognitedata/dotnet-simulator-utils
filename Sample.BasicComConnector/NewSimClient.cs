@@ -43,29 +43,54 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return workbooks.Open(path);
     }
 
-    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken token)
+    public async Task ExtractModelInformation(
+        DefaultModelFilestate state,
+        CancellationToken token)
     {
-        ArgumentNullException.ThrowIfNull(state);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
+        dynamic? workbook = null;
+
         try
         {
             Initialize();
-            dynamic workbook = OpenBook(state.FilePath);
-            if (workbook != null)
+
+            logger.LogInformation($"Validating model: {state.FilePath}");
+
+            // Just try to open the file
+            workbook = OpenBook(state.FilePath);
+
+            if (workbook == null)
             {
-                workbook.Close(false);
-                state.ParsingInfo.SetSuccess();
+                state.ParsingInfo.SetFailure("Failed to open model file");
                 return;
             }
-            state.ParsingInfo.SetFailure();
+
+            // File is valid - report success with no extracted data
+            state.ParsingInfo.SetSuccess();
+            logger.LogInformation("Model validation successful");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error validating model");
+            state.ParsingInfo.SetFailure(ex.Message);
         }
         finally
         {
+            if (workbook != null)
+            {
+                try
+                {
+                    workbook.Close(false);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Error closing workbook");
+                }
+            }
             Shutdown();
             semaphore.Release();
         }
     }
-
     public string GetConnectorVersion(CancellationToken _token)
     {
         return "N/A";
