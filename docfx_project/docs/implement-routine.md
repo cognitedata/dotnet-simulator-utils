@@ -98,7 +98,7 @@ public class NewSimRoutine : RoutineImplementationBase
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
-        _workbook = workbook;   
+        _workbook = workbook;
     }
 
     public override void SetInput(
@@ -236,9 +236,16 @@ public override SimulatorValueItem GetOutput(
 
     if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
     {
-        var rawValue = (double)cell.Value;
-        value = new SimulatorValue.Double(rawValue);
-        _logger.LogDebug($"Read {sheetName}!{cellReference} = {rawValue}");
+        var rawValue = cell.Value;
+
+        if (rawValue == null)
+        {
+            _logger.LogWarning($"Cell {sheetName}!{cellReference} is empty, using default");
+            rawValue = 0.0;
+        }
+        var doubleValue = Convert.ToDouble(rawValue);
+        value = new SimulatorValue.Double(doubleValue);
+        _logger.LogDebug($"Read {sheetName}!{cellReference} = {doubleValue}");
     }
     else if (outputConfig.ValueType == SimulatorValueType.STRING)
     {
@@ -321,32 +328,6 @@ public override void RunCommand(
             {
                 throw new NotImplementedException($"Unsupported command: '{command}'");
             }
-    }
-}
-```
-
-**Example for simulators that need explicit run:**
-
-```csharp
-public override void RunCommand(
-    Dictionary<string, string> arguments,
-    CancellationToken token)
-{
-    var command = arguments["command"];
-
-    switch (command)
-    {
-        case "Calculate":
-            _simulator.Run();
-            _logger.LogInformation("Calculation completed");
-            break;
-        case "Reset":
-            _simulator.Reset();
-            _logger.LogInformation("Simulator reset");
-            break;
-
-        default:
-            throw new ArgumentException($"Unknown command: {command}");
     }
 }
 ```
