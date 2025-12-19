@@ -44,7 +44,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [Fact]
-        public void Shutdown_WhenPreShutdownThrows_ExecutesFinallyBlock()
+        public void Shutdown_WhenPreShutdownThrows_AndServerIsNull_SkipsComRelease()
         {
             var mockClient = CreateMockClient();
             mockClient.Protected()
@@ -58,6 +58,41 @@ namespace Cognite.Simulator.Tests.UtilsTests
             mockClient.Protected().Verify("PreShutdown", Times.Once());
             VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Never(), true);
             VerifyLog(_mockLogger, LogLevel.Debug, "Automation server instance removed", Times.Never(), true);
+        }
+
+        [WindowsOnlyFact]
+        public void Shutdown_WhenPreShutdownThrows_AndServerIsNotNull_ReleasesComObject()
+        {
+            var mockServer = new object();
+            var mockClient = CreateMockClient();
+
+            mockClient
+                .Protected()
+                .Setup<Type>("GetServerType", ItExpr.IsAny<string>())
+                .Returns(typeof(object));
+
+            mockClient
+                .Protected()
+                .Setup<dynamic>("CreateServerInstance", ItExpr.IsAny<Type>())
+                .Returns(mockServer);
+
+            mockClient
+                .Protected()
+                .Setup("ReleaseComObject", ItExpr.IsAny<object>());
+
+            mockClient.Protected()
+                .Setup("PreShutdown")
+                .Throws(new InvalidOperationException("PreShutdown failed"));
+
+            mockClient.Object.Initialize();
+
+            var exception = Record.Exception(() => mockClient.Object.Shutdown());
+
+            Assert.NotNull(exception);
+            Assert.Equal("PreShutdown failed", exception.Message);
+            mockClient.Protected().Verify("PreShutdown", Times.Once());
+            mockClient.Protected().Verify("ReleaseComObject", Times.Once(), ItExpr.IsAny<object>());
+            VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Once(), true);
         }
 
         [WindowsOnlyFact]

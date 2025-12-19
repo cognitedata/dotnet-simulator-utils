@@ -78,12 +78,21 @@ namespace Cognite.Simulator.Utils.Automation
             {
                 if (Server != null)
                 {
-                    Marshal.ReleaseComObject(Server);
+                    ReleaseComObject(Server);
                     _logger.LogDebug("Released COM Object");
                     Server = null;
                 }
             }
             _logger.LogDebug("Automation server instance removed");
+        }
+
+        /// <summary>
+        /// Releases the COM object.
+        /// </summary>
+        /// <param name="server">The COM server object to release</param>
+        protected virtual void ReleaseComObject(dynamic server)
+        {
+            Marshal.ReleaseComObject(server);
         }
 
         /// <summary>
