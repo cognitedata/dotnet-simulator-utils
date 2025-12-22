@@ -1,0 +1,40 @@
+version: 1
+
+logger:
+    console:
+        level: "debug"
+
+cognite:
+    project: ${COGNITE_PROJECT}
+    host: ${COGNITE_HOST}
+    idp-authentication:
+        tenant: ${COGNITE_TENANT_ID}
+        client-id: ${COGNITE_CLIENT_ID}
+        secret: ${COGNITE_CLIENT_SECRET}
+        # scopes:
+        #   - https://api.cognitedata.com/.default
+        scopes:
+          - ${COGNITE_SCOPE}
+    
+connector:
+  name-prefix: "python-sim-connector@"
+  data-set-id: ${COGNITE_DATA_SET_ID}
+
+# Python-specific configuration
+automation:
+  # On Linux/macOS: "python3"
+  # On Windows: "python" or "C:\\Python312\\python.exe"
+  python-executable: "python3"
+  
+  # Directory containing Python simulation scripts
+  scripts-directory: "./scripts"
+  
+  # Timeout for Python script execution in milliseconds (5 minutes)
+  execution-timeout: 300000
+  
+  # Working directory for Python script execution
+  working-directory: "./"
+  
+  # Additional environment variables to pass to Python process
+  environment-variables:
+    PYTHONUNBUFFERED: "1"
