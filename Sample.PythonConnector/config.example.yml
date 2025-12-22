@@ -21,20 +21,34 @@ connector:
   data-set-id: ${COGNITE_DATA_SET_ID}
 
 # Python-specific configuration
+# Users only need to modify files in the ./python directory
 automation:
-  # On Linux/macOS: "python3"
-  # On Windows: "python" or "C:\\Python312\\python.exe"
-  python-executable: "python3"
+  # Path to Python DLL (optional, pythonnet will auto-detect if not specified)
+  # On Windows: "python311.dll" or "C:\\Python311\\python311.dll"
+  # On Linux: "libpython3.11.so" or "/usr/lib/x86_64-linux-gnu/libpython3.11.so"
+  # On macOS: "libpython3.11.dylib" or "/usr/local/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib"
+  # python-dll: ""
   
-  # Directory containing Python simulation scripts
-  scripts-directory: "./scripts"
+  # Python home directory (optional, for setting PYTHONHOME)
+  # python-home: ""
   
-  # Timeout for Python script execution in milliseconds (5 minutes)
+  # Directory containing Python simulation scripts (definition.py, client.py, routine.py)
+  # Users should only need to modify files in this directory
+  python-directory: "./python"
+  
+  # Path to definition.py (relative to python-directory or absolute)
+  definition-py-path: "definition.py"
+  
+  # Path to client.py (relative to python-directory or absolute)
+  client-py-path: "client.py"
+  
+  # Path to routine.py (relative to python-directory or absolute)
+  routine-py-path: "routine.py"
+  
+  # Timeout for Python operations in milliseconds (5 minutes)
   execution-timeout: 300000
   
-  # Working directory for Python script execution
-  working-directory: "./"
-  
-  # Additional environment variables to pass to Python process
-  environment-variables:
-    PYTHONUNBUFFERED: "1"
+  # Additional Python paths to add to sys.path (optional)
+  # python-paths:
+  #   - "/path/to/additional/modules"
+

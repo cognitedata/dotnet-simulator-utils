@@ -12,4 +12,8 @@
     <ProjectReference Include="..\Cognite.Simulator.Utils\Cognite.Simulator.Utils.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="pythonnet" Version="3.0.4" />
+  </ItemGroup>
+
 </Project>

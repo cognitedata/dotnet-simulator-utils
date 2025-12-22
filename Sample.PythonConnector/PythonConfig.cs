@@ -2,33 +2,30 @@ using Cognite.Simulator.Utils.Automation;
 
 namespace Sample.PythonConnector;
 
-/// <summary>
-/// Configuration for Python-based simulator
-/// </summary>
 public class PythonConfig : AutomationConfig
 {
-    /// <summary>
-    /// Path to the Python executable (e.g., "python", "python3", or full path)
-    /// </summary>
-    public string PythonExecutable { get; set; } = "python3";
+    public string? PythonDLL { get; set; }
+    public string? PythonHome { get; set; }
+    public string PythonDirectory { get; set; } = "./python";
+    public string DefinitionPyPath { get; set; } = "definition.py";
+    public string ClientPyPath { get; set; } = "client.py";
+    public string RoutinePyPath { get; set; } = "routine.py";
+    public List<string> PythonPaths { get; set; } = new();
 
-    /// <summary>
-    /// Directory containing Python simulation scripts
-    /// </summary>
-    public string ScriptsDirectory { get; set; } = "./scripts";
+    public void Validate()
+    {
+        if (!Directory.Exists(PythonDirectory))
+            throw new InvalidOperationException($"Python directory not found: {PythonDirectory}");
 
-    /// <summary>
-    /// Timeout for Python script execution in milliseconds
-    /// </summary>
-    public int ExecutionTimeout { get; set; } = 300000; // 5 minutes
+        ValidateFileExists(ClientPyPath, "Client module");
+        ValidateFileExists(RoutinePyPath, "Routine module");
+        ValidateFileExists(DefinitionPyPath, "Definition module");
+    }
 
-    /// <summary>
-    /// Working directory for Python script execution
-    /// </summary>
-    public string WorkingDirectory { get; set; } = "./";
-
-    /// <summary>
-    /// Additional environment variables to pass to Python process
-    /// </summary>
-    public Dictionary<string, string> EnvironmentVariables { get; set; } = new();
+    private void ValidateFileExists(string relativePath, string description)
+    {
+        var fullPath = Path.Combine(PythonDirectory, relativePath);
+        if (!File.Exists(fullPath))
+            throw new InvalidOperationException($"{description} not found: {fullPath}");
+    }
 }

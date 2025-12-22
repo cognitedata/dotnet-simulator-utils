@@ -20,7 +20,7 @@ public static class ConnectorRuntime
     static void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, 
-            PythonSimulatorClient>();
+            PythonBridgeClient>();
     }
 
     public static async Task RunStandalone()
