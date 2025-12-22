@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cognite.ExtractorUtils" Version="1.35.0" />
+    <PackageReference Include="Cognite.ExtractorUtils" Version="1.39.0" />
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.11" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\ExtractorUtils\ExtractorUtils.csproj" /> -->
