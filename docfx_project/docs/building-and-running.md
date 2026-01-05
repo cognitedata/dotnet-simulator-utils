@@ -17,7 +17,7 @@ Your connector is a console application with a simple entry point in [Program.cs
 
 ### What Gets Built
 
-When you run `dotnet build`, the compiler compiles all `.cs` files, resolves NuGet dependencies, and produces an executable with a `.dll` (your code) and `.exe` (launcher) in `bin/Debug/net8.0/` or `bin/Release/net8.0/`.
+When you run `dotnet build`, the compiler compiles all `.cs` files, resolves NuGet dependencies, and produces an executable with a `.dll` (your code) and `.exe` (launcher) in `bin/Debug/<target-framework>/` or `bin/Release/<target-framework>/`.
 
 ## Building & Running Your Connector
 
@@ -55,7 +55,7 @@ dotnet publish -r win-x64 -c Release \
   /p:EnableCompressionInSingleFile=true
 ```
 
-This produces a single file binary with everything needed to run in the `bin/Release/net8.0/win-x64/publish/`
+This produces a single file binary with everything needed to run in the `bin/Release/<target-framework>/win-x64/publish/`
 
 ## Running as a Windows Service
 

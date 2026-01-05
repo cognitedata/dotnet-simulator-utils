@@ -70,11 +70,11 @@ public async Task ExtractModelInformation(
 
 ## Optional: Extract Flowsheets
 
-If you want to provide more value, you can optionally extract **flowsheet** information from the model. This creates a browsable structure in CDF that users can reference when creating routines.
+If your model contains a flowsheet, you can optionally extract **flowsheet** information from the model. This creates a browsable structure in CDF that users can reference when creating routines.
 
 ### Flowsheet Structure
 
-The API supports extracting:
+The API supports saving:
 
 - **Flowsheets** - Hierarchical structure of simulator objects
   - **Nodes** - Objects in the flowsheet (streams, unit operations, etc.)
@@ -89,6 +89,7 @@ Extract flowsheets when:
 - You want to enable validation of routine references
 - The simulator API makes extraction straightforward
 
+<!-- TODO: Uncomment when DWSIM connector implements flowsheet extraction
 ## Example: Flowsheet Extraction
 
 For a complete example of flowsheet extraction, see the **[DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet)** which extracts:
@@ -101,6 +102,7 @@ The DWSIM implementation shows how to:
 2. Map them to the flowsheet structure
 3. Extract relevant properties
 4. Build the node/edge relationships
+-->
 
 ## Optional: Extract Info
 
@@ -132,7 +134,9 @@ Use `info` for:
 
 For the Excel connector tutorial, our basic implementation simply validates that the workbook can be opened. This is sufficient for most use cases.
 
+<!-- TODO: Uncomment when DWSIM connector implements flowsheet extraction
 For more advanced scenarios, consult the [DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet) source code to see how to extract comprehensive flowsheet information.
+-->
 
 ---
 

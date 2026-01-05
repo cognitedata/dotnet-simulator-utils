@@ -4,17 +4,17 @@ _layout: landing
 
 # .NET Simulator Utils for Cognite Data Fusion
 
-The **.NET Simulator Utils** SDK simplifies creating simulator connectors that integrate industrial simulators with Cognite Data Fusion (CDF).
+The **.NET Simulator Utils** simplify creating simulator connectors that integrate industrial simulators with Cognite Data Fusion (CDF).
 
 For an overview of CDF's simulator capabilities, see [Simulators in CDF](https://docs.cognite.com/cdf/integration/guides/simulators/).
 
 ## Documentation
 
-New to the SDK? **[Start here: Understanding Simulator Integration](./docs/understanding-integration.md)**
+New to Simulator Utils? **[Start here: Understanding Simulator Integration](./docs/understanding-integration.md)**
 
 Then follow the guide in order:
 
-1. **[Understanding Simulator Integration](./docs/understanding-integration.md)** - Integration approaches, patterns, SDK architecture, and platform compatibility
+1. **[Understanding Simulator Integration](./docs/understanding-integration.md)** - Integration approaches, patterns, utilities architecture, and platform compatibility
 2. **[Prerequisites & Setup](./docs/prerequisites.md)** - Set up your development environment
 3. **[Create Your First Connector](./docs/create-connector.md)** - Build a minimal working connector
 4. **[COM Connection Deep Dive](./docs/com-connection.md)** - Master COM automation patterns
