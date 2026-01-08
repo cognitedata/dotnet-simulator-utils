@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <PackageReference Include="Cognite.ExtractorUtils" Version="1.39.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.1" />
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\ExtractorUtils\ExtractorUtils.csproj" /> -->
