@@ -4,12 +4,19 @@ public class Program
 {
     public static int Main(string[] args)
     {
-        RunStandalone();
-        return 0;
-    }
-
-    private static void RunStandalone()
-    {
-        ConnectorRuntime.RunStandalone().Wait();
+        try
+        {
+            ConnectorRuntime.RunStandalone().Wait();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Fatal error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            }
+            return 1;
+        }
     }
 }

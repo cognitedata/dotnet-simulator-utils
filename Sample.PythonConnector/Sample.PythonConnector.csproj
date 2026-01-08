@@ -16,4 +16,11 @@
     <PackageReference Include="pythonnet" Version="3.0.4" />
   </ItemGroup>
 
+  <!-- Embed Python files as resources at build time -->
+  <ItemGroup>
+    <EmbeddedResource Include="python\*.py">
+      <LogicalName>%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

@@ -1,66 +1,105 @@
 """
-Example Python client implementation for Cognite Simulator Utils
+MuJoCo Client Implementation for Cognite Simulator Integration
 
-This module is dynamically imported by PythonBridgeClient.cs
-Users should implement a class called SimulatorClient with the following methods:
-- test_connection(): Test if the simulator is accessible
-- get_connector_version(): Return the connector version string
-- get_simulator_version(): Return the simulator version string
-- open_model(file_path): Open and validate a model file
+This module provides the client interface for MuJoCo physics simulation.
+It handles:
+- Connection testing (verifying MuJoCo is installed)
+- Version reporting
+- Model file loading and validation (MJCF XML and URDF files)
+
+This is dynamically imported by PythonBridgeClient.cs
 """
+# type: ignore
+# MuJoCo types are resolved at runtime
 
 import sys
 import os
+from typing import Any, Dict, Optional
+
+# Lazy-load mujoco to avoid stack overflow when imported via pythonnet
+# MuJoCo is a large native library that can exhaust .NET's default stack
+_mujoco = None  # type: ignore
+
+
+def _get_mujoco():
+    """Lazy-load MuJoCo when first needed"""
+    global _mujoco
+    if _mujoco is None:
+        try:
+            import mujoco
+
+            _mujoco = mujoco
+        except ImportError:
+            pass
+    return _mujoco
 
 
 class SimulatorClient:
     """
-    Client for interacting with the Python-based simulator
+    Client for interacting with MuJoCo physics simulator
     """
 
-    def __init__(self):
-        """Initialize the simulator client"""
-        self.model_path = None
-        print("SimulatorClient initialized", file=sys.stderr)
+    def __init__(self) -> None:
+        """Initialize the MuJoCo simulator client"""
+        self.model: Any = None
+        self.model_path: Optional[str] = None
+        # Don't load MuJoCo during construction - defer to first use
+        # This avoids stack overflow when running via pythonnet
 
-    def test_connection(self):
+    def test_connection(self) -> None:
         """
-        Test if the simulator is accessible
+        Test if MuJoCo is accessible and working
 
         Raises:
-            Exception: If the connection test fails
+            Exception: If MuJoCo is not available or connection test fails
         """
-        # Example: Check if Python is working
-        try:
-            python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            print(
-                f"Python connection test successful. Version: {python_version}",
-                file=sys.stderr,
-            )
-        except Exception as e:
-            raise Exception(f"Connection test failed: {e}")
+        mujoco = _get_mujoco()
+        if mujoco is None:
+            raise Exception("MuJoCo is not installed. Install with: pip install mujoco")
 
-    def get_connector_version(self):
+        try:
+            # Test MuJoCo by creating a minimal model
+            test_xml = """
+            <mujoco>
+                <worldbody>
+                    <body name="test_body">
+                        <geom type="sphere" size="0.1"/>
+                    </body>
+                </worldbody>
+            </mujoco>
+            """
+            test_model = mujoco.MjModel.from_xml_string(test_xml)
+            test_data = mujoco.MjData(test_model)
+
+            # Run one simulation step to verify everything works
+            mujoco.mj_step(test_model, test_data)
+        except Exception as e:
+            raise Exception(f"MuJoCo connection test failed: {e}")
+
+    def get_connector_version(self) -> str:
         """
         Get the connector version
 
         Returns:
             str: Connector version string
         """
-        return "1.0.0"
+        return "1.0.0-mujoco"
 
-    def get_simulator_version(self):
+    def get_simulator_version(self) -> str:
         """
-        Get the simulator version
+        Get the MuJoCo simulator version
 
         Returns:
-            str: Simulator version string (e.g., Python version)
+            str: MuJoCo version string
         """
-        return f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        mujoco = _get_mujoco()
+        if mujoco is None:
+            return "MuJoCo not installed"
+        return f"MuJoCo {mujoco.__version__}"
 
-    def open_model(self, file_path):
+    def open_model(self, file_path: str) -> Dict[str, Any]:
         """
-        Open and validate a model file
+        Open and validate a MuJoCo model file (MJCF XML or URDF)
 
         Args:
             file_path (str): Path to the model file
@@ -68,27 +107,70 @@ class SimulatorClient:
         Returns:
             dict: Result with 'success' (bool) and optional 'error' (str)
         """
-        print(f"Opening model: {file_path}", file=sys.stderr)
+        print(f"Opening MuJoCo model: {file_path}", file=sys.stderr)
+
+        mujoco = _get_mujoco()
+        if mujoco is None:
+            return {"success": False, "error": "MuJoCo is not installed"}
 
         # Check if file exists
         if not os.path.exists(file_path):
             return {"success": False, "error": f"Model file not found: {file_path}"}
 
-        # Validate the file (example: check if it's a .py file)
-        if file_path.endswith(".py"):
-            try:
-                # Try to compile the Python file to check syntax
-                with open(file_path, "r") as f:
-                    code = f.read()
-                compile(code, file_path, "exec")
+        # Check file extension
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in [".xml", ".mjcf", ".urdf"]:
+            return {
+                "success": False,
+                "error": f"Unsupported file type: {ext}. Supported types: .xml, .mjcf, .urdf",
+            }
 
-                self.model_path = file_path
-                print(f"Model validated successfully: {file_path}", file=sys.stderr)
-                return {"success": True}
-            except SyntaxError as e:
-                return {"success": False, "error": f"Syntax error in model file: {e}"}
-        else:
-            # For non-Python files, just check if they exist
+        try:
+            # Load the model (MJCF and URDF both use from_xml_path)
+            self.model = mujoco.MjModel.from_xml_path(file_path)
             self.model_path = file_path
-            print(f"Model file accepted: {file_path}", file=sys.stderr)
+
+            # Extract model info for logging
+            n_bodies = self.model.nbody
+            n_joints = self.model.njnt
+            n_actuators = self.model.nu
+            n_sensors = self.model.nsensor
+            timestep = self.model.opt.timestep
+
+            print(f"Model loaded successfully:", file=sys.stderr)
+            print(f"  - Bodies: {n_bodies}", file=sys.stderr)
+            print(f"  - Joints: {n_joints}", file=sys.stderr)
+            print(f"  - Actuators: {n_actuators}", file=sys.stderr)
+            print(f"  - Sensors: {n_sensors}", file=sys.stderr)
+            print(f"  - Timestep: {timestep}s", file=sys.stderr)
+
             return {"success": True}
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Failed to load model: {error_msg}", file=sys.stderr)
+            return {
+                "success": False,
+                "error": f"Failed to load MuJoCo model: {error_msg}",
+            }
+
+    def get_model_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Get information about the currently loaded model
+
+        Returns:
+            dict: Model information or None if no model is loaded
+        """
+        if self.model is None:
+            return None
+
+        return {
+            "path": self.model_path,
+            "n_bodies": self.model.nbody,
+            "n_joints": self.model.njnt,
+            "n_actuators": self.model.nu,
+            "n_sensors": self.model.nsensor,
+            "n_geoms": self.model.ngeom,
+            "timestep": self.model.opt.timestep,
+            "gravity": list(self.model.opt.gravity),
+        }

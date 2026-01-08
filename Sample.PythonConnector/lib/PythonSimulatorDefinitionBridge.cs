@@ -2,20 +2,26 @@ using CogniteSdk.Alpha;
 using Python.Runtime;
 using Microsoft.Extensions.Logging;
 
-namespace Sample.PythonConnector;
+namespace Sample.PythonConnector.Lib;
 
-static class SimulatorDefinition
+static class PythonSimulatorDefinitionBridge
 {
     public static SimulatorCreate Get()
     {
         try
         {
+            var loader = EmbeddedPythonLoader.GetInstance();
+            
+            loader.ExtractPythonFiles();
+            loader.InitializePython();
+            
             return LoadFromPython();
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                "Failed to load simulator definition from Python. Ensure definition.py exists and contains get_simulator_definition() function.", 
+                "Failed to load simulator definition from embedded Python. " +
+                "Ensure definition.py is embedded and contains get_simulator_definition() function.", 
                 ex);
         }
     }

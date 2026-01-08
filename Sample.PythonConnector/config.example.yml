@@ -17,11 +17,17 @@ cognite:
           - ${COGNITE_SCOPE}
     
 connector:
-  name-prefix: "python-sim-connector@"
+  name-prefix: "mujoco-connector@"
   data-set-id: ${COGNITE_DATA_SET_ID}
 
-# Python-specific configuration
-# Users only need to modify files in the ./python directory
+# MuJoCo Connector Configuration
+# =================================
+# This connector integrates MuJoCo physics simulator with Cognite Data Fusion.
+# Python files (definition.py, client.py, routine.py) are embedded in the executable
+# at build time - no external Python files needed on the target machine.
+#
+# Supported model file types: .xml (MJCF), .mjcf, .urdf
+#
 automation:
   # Path to Python DLL (optional, pythonnet will auto-detect if not specified)
   # On Windows: "python311.dll" or "C:\\Python311\\python311.dll"
@@ -32,23 +38,10 @@ automation:
   # Python home directory (optional, for setting PYTHONHOME)
   # python-home: ""
   
-  # Directory containing Python simulation scripts (definition.py, client.py, routine.py)
-  # Users should only need to modify files in this directory
-  python-directory: "./python"
-  
-  # Path to definition.py (relative to python-directory or absolute)
-  definition-py-path: "definition.py"
-  
-  # Path to client.py (relative to python-directory or absolute)
-  client-py-path: "client.py"
-  
-  # Path to routine.py (relative to python-directory or absolute)
-  routine-py-path: "routine.py"
-  
   # Timeout for Python operations in milliseconds (5 minutes)
   execution-timeout: 300000
   
   # Additional Python paths to add to sys.path (optional)
+  # NOTE: MuJoCo must be installed in the Python environment: pip install mujoco
   # python-paths:
   #   - "/path/to/additional/modules"
-

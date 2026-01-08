@@ -3,7 +3,7 @@ using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 
-namespace Sample.PythonConnector;
+namespace Sample.PythonConnector.Lib;
 
 public class PythonBridgeClient : PythonBridgeBase, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, IDisposable
 {
@@ -23,7 +23,6 @@ public class PythonBridgeClient : PythonBridgeBase, ISimulatorClient<DefaultMode
         _config = config.Automation ?? throw new ArgumentException("Automation configuration is required", nameof(config));
         
         _config.Validate();
-        
         InitializePythonEngine(_config, Logger);
         LoadClientModule();
     }
@@ -43,7 +42,7 @@ public class PythonBridgeClient : PythonBridgeBase, ISimulatorClient<DefaultMode
         await Task.Run(() => 
         {
             token.ThrowIfCancellationRequested();
-            RunPython(() => _clientInstance.test_connection(), "connection test");
+            RunPythonWithLargeStack(() => _clientInstance.test_connection(), "connection test");
         }, token).ConfigureAwait(false);
     }
 
@@ -70,7 +69,7 @@ public class PythonBridgeClient : PythonBridgeBase, ISimulatorClient<DefaultMode
 
         try
         {
-            return RunPython(() => _clientInstance.get_simulator_version().ToString(), "get simulator version");
+            return RunPythonWithLargeStack(() => _clientInstance.get_simulator_version().ToString(), "get simulator version");
         }
         catch (SimulatorConnectionException ex)
         {
@@ -89,16 +88,17 @@ public class PythonBridgeClient : PythonBridgeBase, ISimulatorClient<DefaultMode
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            RunPython(() =>
+            RunPythonWithLargeStack(() =>
             {
                 dynamic result = _clientInstance.open_model(state.FilePath);
-                if (result.success)
+                bool success = (bool)result["success"];
+                if (success)
                 {
                     state.ParsingInfo.SetSuccess();
                 }
                 else
                 {
-                    string error = result.error?.ToString() ?? "Unknown error";
+                    string error = result["error"]?.ToString() ?? "Unknown error";
                     state.ParsingInfo.SetFailure(error);
                 }
             }, "open model");

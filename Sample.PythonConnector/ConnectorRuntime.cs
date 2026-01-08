@@ -2,6 +2,7 @@ using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
+using Sample.PythonConnector.Lib;
 
 namespace Sample.PythonConnector;
 
@@ -12,9 +13,9 @@ public static class ConnectorRuntime
         DefaultConnectorRuntime<PythonConfig, DefaultModelFilestate, DefaultModelFileStatePoco>
             .ConfigureServices = ConfigureServices;
         DefaultConnectorRuntime<PythonConfig, DefaultModelFilestate, DefaultModelFileStatePoco>
-            .ConnectorName = "PythonSim";
+            .ConnectorName = "MuJoCo";
         DefaultConnectorRuntime<PythonConfig, DefaultModelFilestate, DefaultModelFileStatePoco>
-            .SimulatorDefinition = SimulatorDefinition.Get();
+            .SimulatorDefinition = PythonSimulatorDefinitionBridge.Get();
     }
 
     static void ConfigureServices(IServiceCollection services)

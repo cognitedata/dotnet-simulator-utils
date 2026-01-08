@@ -4,14 +4,11 @@ using Cognite.Simulator.Utils.Automation;
 using Microsoft.Extensions.Logging;
 using Python.Runtime;
 
-namespace Sample.PythonConnector;
+namespace Sample.PythonConnector.Lib;
 
 public abstract class PythonBridgeBase
 {
     protected ILogger Logger { get; }
-    
-    private static volatile bool _pythonInitialized;
-    private static readonly object _initLock = new();
 
     protected PythonBridgeBase(ILogger logger)
     {
@@ -19,49 +16,33 @@ public abstract class PythonBridgeBase
         Logger = logger;
     }
 
+    /// <summary>
+    /// Ensures Python engine is initialized and configured with paths.
+    /// </summary>
     protected static void InitializePythonEngine(PythonConfig config, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(logger);
 
-        if (_pythonInitialized) return;
+        var loader = EmbeddedPythonLoader.GetInstance(logger);
+        
+        if (loader.IsPythonInitialized) return;
 
-        lock (_initLock)
+        try
         {
-            if (_pythonInitialized) return;
-
-            try
-            {
-                if (!string.IsNullOrEmpty(config.PythonDLL))
-                    Runtime.PythonDLL = config.PythonDLL;
-
-                if (!string.IsNullOrEmpty(config.PythonHome))
-                    PythonEngine.PythonHome = config.PythonHome;
-
-                PythonEngine.Initialize();
-                
-                using (Py.GIL())
-                {
-                    dynamic sys = Py.Import("sys");
-                    var paths = new[] { Path.GetFullPath(config.PythonDirectory) }
-                        .Concat(config.PythonPaths.Select(Path.GetFullPath));
-                    
-                    foreach (var path in paths.Where(p => !((IEnumerable<dynamic>)sys.path).Any(sp => sp.ToString() == p)))
-                    {
-                        sys.path.append(path);
-                    }
-
-                    string version = sys.version.ToString();
-                    logger.LogInformation("Python engine initialized. Version: {Version}", version);
-                }
-
-                _pythonInitialized = true;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to initialize Python engine");
-                throw new SimulatorConnectionException("Failed to initialize Python engine", ex);
-            }
+            loader.InitializePython(
+                config.PythonDLL,
+                config.PythonHome,
+                config.ValidatedPythonPaths
+            );
+            
+            logger.LogInformation("Python engine initialized with config. Directory: {Directory}", 
+                config.PythonDirectory);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to initialize Python engine");
+            throw new SimulatorConnectionException("Failed to initialize Python engine", ex);
         }
     }
 
@@ -77,7 +58,8 @@ public abstract class PythonBridgeBase
                 string moduleName = Path.GetFileNameWithoutExtension(modulePath);
                 dynamic module = Py.Import(moduleName);
                 dynamic pyClass = module.GetAttr(className);
-                return arg == null ? pyClass() : pyClass(arg);
+                var result = arg == null ? pyClass() : pyClass(arg);
+                return result;
             }
         }
         catch (PythonException ex)
@@ -129,6 +111,54 @@ public abstract class PythonBridgeBase
                     throw new SimulatorConnectionException($"{operationName} failed: {ex.Message}", ex);
             }
         }
+    }
+
+    /// <summary>
+    /// Runs a Python call on a dedicated thread with a large stack size.
+    /// This is required for importing native libraries like MuJoCo that can
+    /// exhaust the default ThreadPool stack size (1MB on macOS/Linux).
+    /// </summary>
+    protected T RunPythonWithLargeStack<T>(Func<T> pythonCall, string operationName, bool isSimulation = false)
+    {
+        ArgumentNullException.ThrowIfNull(pythonCall);
+        ArgumentNullException.ThrowIfNull(operationName);
+
+        T result = default!;
+        Exception? caughtException = null;
+
+        const int stackSize = 8 * 1024 * 1024;
+        
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                result = RunPython(pythonCall, operationName, isSimulation);
+            }
+            catch (Exception ex)
+            {
+                caughtException = ex;
+            }
+        }, stackSize);
+
+        thread.Start();
+        thread.Join();
+
+        if (caughtException != null)
+        {
+            throw caughtException;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Runs a Python call on a dedicated thread with a large stack size.
+    /// This is required for importing native libraries like MuJoCo that can
+    /// exhaust the default ThreadPool stack size (1MB on macOS/Linux).
+    /// </summary>
+    protected void RunPythonWithLargeStack(Action pythonCall, string operationName, bool isSimulation = false)
+    {
+        RunPythonWithLargeStack<object?>(() => { pythonCall(); return null; }, operationName, isSimulation);
     }
 
     protected static PyDict ToPyDict(Dictionary<string, string> dict)

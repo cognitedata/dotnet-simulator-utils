@@ -2,7 +2,7 @@ using Cognite.Simulator.Utils;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.Logging;
 
-namespace Sample.PythonConnector;
+namespace Sample.PythonConnector.Lib;
 
 public class PythonBridgeRoutine : PythonBridgeBase
 {
