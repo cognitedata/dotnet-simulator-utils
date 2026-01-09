@@ -1,143 +1,139 @@
-# Implement model parsing
+# Implement Model Parsing
 
-To run simulations using the Cognite simulator integration, open the model file and extract the necessary information from it.
+This guide explains how to implement the `ExtractModelInformation` method to validate simulator model files and optionally extract metadata.
 
-In the below example, you use an empty Excel sheet as a model file.
+## What is Model Parsing?
 
-### Implement COM call to open the Excel file:
+Model parsing is the process of validating/parsing if the file associated with a given simulator model revision is valid. Besides checking if the file is valid, you can also extract useful information from a model file, such as the flowsheet structure (nodes, edges, thermodynamics) and arbitrary metadata (info).
 
-Copy the below method to the `NewSimClient` class.
+### Minimum Requirements
+
+At a minimum, your `ExtractModelInformation` implementation must:
+
+1. **Validate the file exists and can be opened**
+2. **Set success or failure status**
+
+## Basic Implementation
+
+Here's a minimal implementation that just validates the file:
 
 ```csharp
-public dynamic OpenBook(string path)
+public async Task ExtractModelInformation(
+    DefaultModelFilestate state,
+    CancellationToken token)
 {
-    dynamic workbooks = Server.Workbooks;
-    return workbooks.Open(path);
-}
-```
+    await _semaphore.WaitAsync(token).ConfigureAwait(false);
+    dynamic? workbook = null;
 
-### Implement the ExtractModelInformation method
-
-The `ExtractModelInformation` method extracts the model information from the simulator.
-In the example below, we'll open the Excel `.xlsx` file.
-
-If the file is opened successfully, set the parsing information to `success`; otherwise, set it to `failure`.
-
-In the `NewSimClient` class:
-
-```csharp
-public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
+    try
     {
-        await semaphore.WaitAsync(_token).ConfigureAwait(false);
-        try
+        Initialize();
+
+        _logger.LogInformation($"Validating model: {state.FilePath}");
+
+        // Just try to open the file
+        workbook = OpenWorkbook(state.FilePath);
+
+        if (workbook == null)
         {
-            Initialize();
-            dynamic workbook = OpenBook(state.FilePath);
-            if (workbook != null)
+            state.ParsingInfo.SetFailure("Failed to open model file");
+            return;
+        }
+
+        // File is valid - report success with no extracted data
+        state.ParsingInfo.SetSuccess();
+        _logger.LogInformation("Model validation successful");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error validating model");
+        state.ParsingInfo.SetFailure(ex.Message);
+    }
+    finally
+    {
+        if (workbook != null)
+        {
+            try
             {
                 workbook.Close(false);
-                state.ParsingInfo.SetSuccess();
-                return;
             }
-            state.ParsingInfo.SetFailure();
-        }
-        finally
-        {
-            Shutdown();
-            semaphore.Release();
-        }
-    }
-```
-Note: Make sure to close the workbook after opening it.
-
-The boolean parameter in `workbook.Close(false)` ensures that workbook changes aren't saved.
-If we fail to close the file, it won't be possible to run multiple simulations with the same model.
-
-Updated `NewSimClient` class:
-
-```csharp
-using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
-
-public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
-{
-    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-    private readonly string _version = "N/A";
-    private readonly ILogger logger;
-
-    public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config.Automation)
-    {
-        this.logger = logger;
-        semaphore.Wait();
-        try
-        {
-            Initialize();
-            _version = Server.Version;
-        }
-        finally
-        {
-            Shutdown();
-            semaphore.Release();
-        }
-    }
-
-    public dynamic OpenBook(string path)
-    {
-        dynamic workbooks = Server.Workbooks;
-        return workbooks.Open(path);
-    }
-
-    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
-    {
-        await semaphore.WaitAsync(_token).ConfigureAwait(false);
-        try
-        {
-            Initialize();
-            dynamic workbook = OpenBook(state.FilePath);
-            if (workbook != null)
+            catch (Exception ex)
             {
-                workbook.Close(false);
-                state.ParsingInfo.SetSuccess();
-                return;
+                _logger.LogWarning(ex, "Error closing workbook");
             }
-            state.ParsingInfo.SetFailure();
         }
-        finally
-        {
-            Shutdown();
-            semaphore.Release();
-        }
-    }
-
-    public string GetConnectorVersion()
-    {
-        return "N/A";
-    }
-
-    public string GetSimulatorVersion()
-    {
-        return _version;
-    }
-
-    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision simulationConfiguration, Dictionary<string, SimulatorValueItem> inputData)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override void PreShutdown()
-    {
-        Server.Quit();
+        Shutdown();
+        _semaphore.Release();
     }
 }
 ```
 
-Now, use CDF to upload an empty Excel file and monitor its status.
+## Optional: Extract Flowsheets
 
-To upload the file, see below:
-![Model upload](../images/model-upload.png)
+If you want to provide more value, you can optionally extract **flowsheet** information from the model. This creates a browsable structure in CDF that users can reference when creating routines.
 
-You have parsed the model.
-![Model parsing](../images/model-parsing.png)
+### Flowsheet Structure
+
+The API supports extracting:
+
+- **Flowsheets** - Hierarchical structure of simulator objects
+  - **Nodes** - Objects in the flowsheet (streams, unit operations, etc.)
+  - **Edges** - Connections between nodes
+  - **Thermodynamics** - Thermodynamic package information
+
+### When to Extract Flowsheets
+
+Extract flowsheets when:
+- Your simulator has a clear object model (streams, units, operations)
+- Users would benefit from browsing model structure in CDF
+- You want to enable validation of routine references
+- The simulator API makes extraction straightforward
+
+## Example: Flowsheet Extraction
+
+For a complete example of flowsheet extraction, see the **[DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet)** which extracts:
+- Nodes with properties and graphical information
+- Connections between nodes
+- Thermodynamic package information
+
+The DWSIM implementation shows how to:
+1. Iterate through simulator objects
+2. Map them to the flowsheet structure
+3. Extract relevant properties
+4. Build the node/edge relationships
+
+## Optional: Extract Info
+
+You can also optionally extract arbitrary metadata about the model using the `info` field. This is a key-value structure that can hold any JSON-serializable data.
+
+### Info Structure
+
+```csharp
+var info = new Dictionary<string, string>
+{
+    ["ModelVersion"] = "2.1",
+    ["CreatedDate"] = "2024-01-15",
+    ["Author"] = "John Doe",
+    ["Description"] = "Distillation column model",
+    ["CustomField"] = "Custom value"
+};
+```
+
+### When to Use Info
+
+Use `info` for:
+- Model metadata that doesn't fit the flowsheet structure
+- Version information
+- Author/creation details
+- Custom simulator-specific data
+- Any JSON-serializable information
+
+## Summary
+
+For the Excel connector tutorial, our basic implementation simply validates that the workbook can be opened. This is sufficient for most use cases.
+
+For more advanced scenarios, consult the [DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet) source code to see how to extract comprehensive flowsheet information.
+
+---
+
+**Next:** Continue to [Implement Routines](implement-routine.md) to add simulation execution capabilities.

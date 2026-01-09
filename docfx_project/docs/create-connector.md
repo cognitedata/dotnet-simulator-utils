@@ -1,26 +1,50 @@
-# Create your first simulator connector
+# Create your first connector
+
+In this tutorial, you'll build a working Excel-based simulator connector from scratch. By the end, you'll have a connector that:
+
+- Connects to Excel via COM automation
+- Reports its version and heartbeat to CDF
+- Opens and validates Excel workbooks
+
+## What you'll build
+
+We'll create an Excel connector that demonstrates the core SDK patterns. The final structure will match the [Sample.BasicComConnector](../../Sample.BasicComConnector):
+
+```
+Sample.BasicComConnector/
+├── Program.cs                    # Entry point
+├── ConnectorRuntime.cs           # Dependency injection setup
+├── SimulatorDefinition.cs        # Contract with CDF
+├── NewSimAutomationConfig.cs     # Configuration
+├── NewSimClient.cs               # Simulator client implementation
+├── NewSimRoutine.cs              # Routine implementation (added later)
+└── config.yml                    # Connector configuration
+```
 
 ## Prerequisites
 
-  - .NET LTS version
-  - You require a Cognite Data Fusion (CDF) project.
+Before starting, make sure you've completed the [Prerequisites & Setup](prerequisites.md) guide:
 
-## Create a new simulator connector project
+## Step 1: Create a new simulator connector project
 
-Download the Cognite Simulator Utils from [NuGet](https://www.nuget.org/packages/Cognite.Simulator.Utils/).
+Create a new console application:
 
-To create a console application and add the latest version of the library, open the terminal and run the commands below:
+```bash
+dotnet new console -o Sample.BasicComConnector
+cd Sample.BasicComConnector
+```
 
-```sh
-dotnet new console -o NewSimConnector
-cd NewSimConnector
+Add the Simulator Utils package:
+
+```bash
 dotnet add package Cognite.Simulator.Utils --prerelease
 ```
-> Note: The `--prerelease` flag is required to install the latest version of the library (alpha).
 
-### Create a configuration file
+> **Note:** The `--prerelease` flag is required while the package is in beta.
 
-To create a `config.yml` file containing the simulator configuration, use the YAML code below:
+## Step 2: Create a configuration file
+
+Create a `config.yml` file in your project root. This file contains CDF connection settings and connector configuration.
 
 ```yaml
 version: 1
@@ -47,114 +71,203 @@ cognite:
         #   - https://api.cognitedata.com/.default
         scopes:
           - ${COGNITE_SCOPE}
-    
+
 connector:
   name-prefix: "new-sim-connector@"
   # Data set ID to keep all the simulator resources
   data-set-id: ${COGNITE_DATA_SET_ID}
 ```
 
-This file contains the configuration required to connect to the CDF project, define the target data set ID, and set the connector name.
+## Step 3: Define the Simulator contract
 
-Make sure you populate the environment variables with the correct values. You can also hardcode the values in the configuration file for the development environment.
-
-### Create a simulator definition
-
-Now, define a contract between the simulator and CDF. This contract is defined in the API as a `Simulator` object.
-
-Create a new file called `SimulatorDefinition.cs` and copy the code into it. You can adjust the values later.
+Create `SimulatorDefinition.cs`. This defines the contract between your simulator and CDF.
 
 ```csharp
 using CogniteSdk.Alpha;
 
-static class SimulatorDefinition {
-    public static SimulatorCreate Get() {
-        return new SimulatorCreate()
+static class SimulatorDefinition
+{
+    public static SimulatorCreate Get()
+    {
+        return new SimulatorCreate
+        {
+            ExternalId = "Excel",
+            Name = "Excel",
+            FileExtensionTypes = new List<string> { "xlsx", "xlsm" },
+            ModelTypes = new List<SimulatorModelType>
             {
-                ExternalId = "NewSim",
-                Name = "NewSim",
-                FileExtensionTypes = new List<string> { "xlsx" },
-                ModelTypes = new List<SimulatorModelType> {
-                    new SimulatorModelType {
-                        Name = "Steady State",
-                        Key = "SteadyState",
-                    }
-                },
-                StepFields = new List<SimulatorStepField> {
-                    new SimulatorStepField {
-                        StepType = "get/set",
-                        Fields = new List<SimulatorStepFieldParam> {
-                            new SimulatorStepFieldParam {
-                                Name = "row",
-                                Label = "Row",
-                                Info = "Row number of the cell in the table",
-                            },
-                            new SimulatorStepFieldParam {
-                                Name = "col",
-                                Label = "Column",
-                                Info = "Column number of the cell in the table",
-                            },
+                new SimulatorModelType
+                {
+                    Name = "Spreadsheet",
+                    Key = "Spreadsheet",
+                }
+            },
+            StepFields = new List<SimulatorStepField>
+            {
+                // Define fields for Set/Get operations
+                new SimulatorStepField
+                {
+                    StepType = "get/set",
+                    Fields = new List<SimulatorStepFieldParam>
+                    {
+                        new SimulatorStepFieldParam
+                        {
+                            Name = "sheet",
+                            Label = "Sheet Name",
+                            Info = "Name of the worksheet (e.g., 'Sheet1')",
                         },
-                    },
-                    new SimulatorStepField {
-                        StepType = "command",
-                        Fields = new List<SimulatorStepFieldParam> {
-                            new SimulatorStepFieldParam {
-                                Name = "command",
-                                Label = "Command",
-                                Info = "Enter the command to run",
-                            },
+                        new SimulatorStepFieldParam
+                        {
+                            Name = "cell",
+                            Label = "Cell Reference",
+                            Info = "Excel cell reference (e.g., 'A1', 'B2', 'C3')",
                         },
                     },
                 },
-                UnitQuantities = new List<SimulatorUnitQuantity>() {
-                    new SimulatorUnitQuantity {
-                        Name = "Temperature",
-                        Label = "Temperature",
-                        Units = new List<SimulatorUnitEntry> {
-                            new SimulatorUnitEntry {
-                                Name = "C",
-                                Label = "Celsius",
+                // Define fields for Command operations
+                new SimulatorStepField
+                {
+                    StepType = "command",
+                    Fields = new List<SimulatorStepFieldParam>
+                    {
+                        new SimulatorStepFieldParam
+                        {
+                            Name = "command",
+                            Label = "Command",
+                            Info = "Select a command",
+                            Options = new List<SimulatorStepFieldOption>
+                            {
+                                new SimulatorStepFieldOption
+                                {
+                                    Label = "Pause Calculations",
+                                    Value = "Pause",
+                                },
+                                new SimulatorStepFieldOption
+                                {
+                                    Label = "Perform Calculation",
+                                    Value = "Calculate",
+                                }
                             },
                         },
                     },
                 },
-            };
+            },
+            UnitQuantities = new List<SimulatorUnitQuantity>
+            {
+                new SimulatorUnitQuantity
+                {
+                    Name = "Unitless",
+                    Label = "Unitless",
+                    Units = new List<SimulatorUnitEntry>
+                    {
+                        new SimulatorUnitEntry { Name = "", Label = "" },
+                    },
+                },
+            },
+        };
     }
 }
 ```
 
-`UnitQuantities`, `ModelTypes`, and `StepFields` define the simulator units, models, and fields that the simulator can handle.
+**What this defines:**
 
-`StepFields` defines how to access simulator object fields, send values into the simulator, and read the simulation results.
+- **FileExtensionTypes**: Excel file types (`.xlsx`)
+- **ModelTypes**: Types of models (here, just "Spreadsheet")
+- **StepFields**: How to address cells (sheet name + cell reference) and run commands
+- **UnitQuantities**: Units the simulator can handle (here, just "Unitless" for simplicity)
 
-Steps can be of type `get`, `set`, or `command`.
+This contract is registered with CDF when your connector starts, allowing CDF to understand your simulator's capabilities.
 
-`UnitQuantities` defines the measurement units that the simulator can handle.
+## Step 4: Create COM Configuration
 
-`ModelTypes` defines the different types of models that the simulator can handle.
+Create `NewSimAutomationConfig.cs`. This tells the SDK how to connect to Excel via COM.
 
-Now, we've used placeholders for the fields. Fill in the actual values when you use them.
+```csharp
+using Cognite.Simulator.Utils.Automation;
 
-### Implement a simulator client
+public class NewSimAutomationConfig : AutomationConfig
+{
+    public NewSimAutomationConfig()
+    {
+        ProgramId = "Excel.Application";
+    }
+}
+```
 
-Create a class that implements `ISimulatorClient`.
+**About COM Program IDs:**
+- `Excel.Application` is the registered COM identifier for Excel
+- Other simulators have different Program IDs (e.g., `DWSIM.Automation` for DWSIM)
 
-`NewSimClient.cs`:
+## Step 5: Implement the Simulator Client
+
+Create `NewSimClient.cs`. This implements the `ISimulatorClient` interface, which the SDK uses to interact with your simulator.
+
 ```csharp
 using Cognite.Simulator.Utils;
+using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
+using Microsoft.Extensions.Logging;
 
-public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
+public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
-    public Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+    private readonly string _version = "N/A";
+    private readonly ILogger logger;
+
+    public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
+            : base(logger, config?.Automation)
     {
-        throw new NotImplementedException();
+        this.logger = logger;
+        semaphore.Wait();
+        try
+        {
+            Initialize();
+            _version = Server.Version;
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
+        }
     }
-    
+
     public Task TestConnection(CancellationToken _token)
     {
         return Task.CompletedTask;
+    }
+
+    protected override void PreShutdown()
+    {
+        Server.Quit();
+    }
+
+    public dynamic OpenBook(string path)
+    {
+        dynamic workbooks = Server.Workbooks;
+        return workbooks.Open(path);
+    }
+
+    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            Initialize();
+            dynamic workbook = OpenBook(state.FilePath);
+            if (workbook != null)
+            {
+                workbook.Close(false);
+                state.ParsingInfo.SetSuccess();
+                return;
+            }
+            state.ParsingInfo.SetFailure();
+        }
+        finally
+        {
+            Shutdown();
+            semaphore.Release();
+        }
     }
 
     public string GetConnectorVersion(CancellationToken _token)
@@ -164,54 +277,86 @@ public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRou
 
     public string GetSimulatorVersion(CancellationToken _token)
     {
-        return "N/A";
+        return _version;
     }
 
-    public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision simulationConfiguration, Dictionary<string, SimulatorValueItem> inputData, CancellationToken _token)
+    public async Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(modelState);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
+        dynamic? workbook = null;
+        try
+        {
+            Initialize();
+            workbook = OpenBook(modelState.FilePath);
+
+            var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
+            return routine.PerformSimulation(token);
+        }
+        finally
+        {
+            if (workbook != null)
+            {
+                workbook.Close(false);
+            }
+            Shutdown();
+            semaphore.Release();
+        }
     }
 }
 ```
-<!--We will implement the methods in the `NewSimClient` class later.-->
 
-#### Create a ConnectorRuntime class
+**Key patterns to notice:**
 
-Configure the services via `Dependency Injection` and boilerplate code to run the connector.
+1. **Inheritance**: `NewSimClient : AutomationClient` provides COM automation helpers
+2. **Semaphore**: Ensures only one thread accesses Excel at a time (COM requirement)
+3. **Initialize/Shutdown**: Lifecycle management for COM connection
+4. **`Server` property**: `dynamic` object representing Excel (from `AutomationClient`)
+5. **OpenBook helper**: Encapsulates workbook opening logic
+6. **ArgumentNullException.ThrowIfNull**: Validates parameters
 
-Create a class using `DefaultConnectorRuntime` helper class.
+## Step 6: Configure Dependency Injection
 
-`ConnectorRuntime.cs`:
+Create `ConnectorRuntime.cs`. This sets up the SDK runtime and dependency injection.
+
 ```csharp
 using Cognite.Simulator.Utils;
 using Cognite.Simulator.Utils.Automation;
 using CogniteSdk.Alpha;
 using Microsoft.Extensions.DependencyInjection;
 
-public static class ConnectorRuntime {
-
-    public static void Init() {
-        DefaultConnectorRuntime<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = ConfigureServices;
-        DefaultConnectorRuntime<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "NewSim";
-        DefaultConnectorRuntime<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SimulatorDefinition.Get();
+public static class ConnectorRuntime
+{
+    public static void Init()
+    {
+        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = ConfigureServices;
+        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "NewSim";
+        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SimulatorDefinition.Get();
     }
 
     static void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, NewSimClient>();
     }
-    
-    public static async Task RunStandalone() {
+
+    public static async Task RunStandalone()
+    {
         Init();
-        await DefaultConnectorRuntime<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.RunStandalone().ConfigureAwait(false);
+        await DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.RunStandalone().ConfigureAwait(false);
     }
 }
 ```
 
-#### Program entry point
+**What this does:**
 
-The final step is to run the connector in the `Main` method of the console application.
-Replace the contents of the `Program.cs` file with the code below:
+- **ConfigureServices**: Registers `NewSimClient` for dependency injection
+- **ConnectorName**: Sets the connector name to "NewSim" (used in CDF)
+- **SimulatorDefinition**: Provides the contract we defined earlier
+- **RunStandalone**: Starts the connector runtime
+
+## Step 7: Create Program Entry Point
+
+Replace the contents of `Program.cs`:
 
 ```csharp
 public class Program
@@ -229,7 +374,73 @@ public class Program
 }
 ```
 
-Once you run the application, you'll see the connector in CDF.
-<!--Change this line The connector can't do much yet, but it reports its "heartbeat" to the Cognite Data Fusion platform.-->
+**Key points:**
+- **Main method**: Entry point that starts the connector runtime
+- **Synchronous wait**: `.Wait()` blocks until the connector is shut down
+- **Return code**: Returns 0 on success (convention for process exit codes)
 
-![Heartbeat in Fusion](../images/screenshot-heartbeat.png)
+## Step 8: Build and Run
+
+Build the project:
+
+```bash
+dotnet build
+```
+
+If successful, you should see:
+```
+Build succeeded.
+```
+
+Run the connector:
+
+```bash
+dotnet run
+```
+
+## Step 9: Verify in CDF
+
+Open Cognite Data Fusion in your browser and navigate to **Simulators**,
+
+You should see:
+
+1. **Your connector listed** with a green "Connected" status
+2. **Simulator name**: "Excel"
+3. **Version information**: Your Excel version
+4. **Last heartbeat**: Should be recent (within last minute)
+
+![Connector in CDF](../images/screenshot-heartbeat.png)
+
+**If you don't see your connector:**
+- Check CDF credentials in `config.yml`
+- Check logs for authentication errors
+- Ensure Data Set ID exists and is accessible
+
+## Understanding What Happens at Runtime
+
+When you run `dotnet run`, here's what happens:
+
+1. **Configuration loaded** from `config.yml`
+2. **COM connection established** to Excel (via `NewSimAutomationConfig`)
+3. **Excel version retrieved** (in `NewSimClient` constructor)
+4. **CDF authentication** using credentials from config
+5. **Simulator definition registered** with CDF API
+6. **Connector registered** as a **simulator integration** with external ID "new-sim-connector@YOUR-HOSTNAME"
+7. **Heartbeat loop starts** (every 30 seconds by default) to report connector health
+8. **Polling begins** for simulator jobs (models to parse, simulations to run)
+
+The connector runs continuously as an outbound HTTPS client, waiting for work from CDF.
+
+Learn more about [how connectors register and maintain heartbeat](https://docs.cognite.com/cdf/integration/guides/simulators/connectors/).
+
+## Next Steps
+
+Your connector foundation is complete! Continue with the tutorial:
+
+1. **[COM Connection Deep Dive](com-connection.md)** - Master COM automation patterns and best practices
+2. **[Model Parsing](model-parsing.md)** - Extract detailed model information from your simulator
+3. **[Implement Routines](implement-routine.md)** - Add simulation execution capabilities
+
+---
+
+**Ready to continue?** Head to [COM Connection Deep Dive](com-connection.md) to learn more about working with Excel via COM automation.
