@@ -78,12 +78,20 @@ namespace Cognite.Simulator.Utils.Automation
             {
                 if (Server != null)
                 {
-                    Marshal.ReleaseComObject(Server);
+                    ReleaseComObject();
                     _logger.LogDebug("Released COM Object");
                     Server = null;
                 }
             }
             _logger.LogDebug("Automation server instance removed");
+        }
+
+        /// <summary>
+        /// Releases the COM object.
+        /// </summary>
+        protected virtual void ReleaseComObject()
+        {
+            Marshal.ReleaseComObject(Server);
         }
 
         /// <summary>
@@ -96,19 +104,13 @@ namespace Cognite.Simulator.Utils.Automation
         {
             try
             {
-                var serverType = Type.GetTypeFromProgID(_config.ProgramId);
+                var serverType = GetServerType(_config.ProgramId);
                 if (serverType == null)
                 {
                     _logger.LogError("Could not find automation server using the id: {ProgId}", _config.ProgramId);
                     throw new SimulatorConnectionException("Cannot connect to get automation server type");
                 }
-                dynamic server = Activator.CreateInstance(serverType);
-                if (server == null)
-                {
-                    _logger.LogError("Could not activate automation server instance");
-                    throw new SimulatorConnectionException("Unable to create automation server instance");
-                }
-                return server;
+                return CreateServerInstance(serverType);
             }
             catch (Exception e)
             {
@@ -116,6 +118,33 @@ namespace Cognite.Simulator.Utils.Automation
                 throw new SimulatorConnectionException("Cannot connect to automation server", e);
             }
 
+        }
+
+        /// <summary>
+        /// Gets the Type for the automation server from its program ID
+        /// </summary>
+        /// <param name="programId">The program ID of the automation server</param>
+        /// <returns>The Type of the automation server, or null if not found</returns>
+        protected virtual Type GetServerType(string programId)
+        {
+            return Type.GetTypeFromProgID(programId);
+        }
+
+        /// <summary>
+        /// Creates a new instance of the automation server
+        /// </summary>
+        /// <param name="serverType">Type of the automation server</param>
+        /// <returns>Instance of the automation server</returns>
+        /// <exception cref="SimulatorConnectionException">Thrown if the instance cannot be created</exception>
+        protected virtual dynamic CreateServerInstance(Type serverType)
+        {
+            dynamic server = Activator.CreateInstance(serverType);
+            if (server == null)
+            {
+                _logger.LogError("Could not activate automation server instance");
+                throw new SimulatorConnectionException("Unable to create automation server instance");
+            }
+            return server;
         }
     }
 
