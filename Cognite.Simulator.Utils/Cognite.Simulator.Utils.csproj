@@ -27,12 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cognite.ExtractorUtils" Version="1.35.0" />
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="9.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.6" />
+    <PackageReference Include="Cognite.ExtractorUtils" Version="1.39.0" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="9.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.11" />
     <!-- <ProjectReference Include="..\..\dotnet-extractor-utils\ExtractorUtils\ExtractorUtils.csproj" /> -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Management" Version="9.0.2" />
+    <PackageReference Include="System.Management" Version="9.0.11" />
   </ItemGroup>
 
   <ItemGroup>
