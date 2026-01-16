@@ -92,13 +92,14 @@ public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
 
-    private readonly ILogger logger;
+    private readonly ILogger _logger;
 
     private const int XlCalculationManual = -4135;
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
+        _logger = logger;
     }
 
     public override void SetInput(
@@ -107,7 +108,6 @@ public class NewSimRoutine : RoutineImplementationBase
         Dictionary<string, string> arguments,
         CancellationToken token)
     {
-        // TODO: Implement
         throw new NotImplementedException();
     }
 
@@ -116,7 +116,6 @@ public class NewSimRoutine : RoutineImplementationBase
         Dictionary<string, string> arguments,
         CancellationToken token)
     {
-        // TODO: Implement
         throw new NotImplementedException();
     }
 
@@ -124,7 +123,6 @@ public class NewSimRoutine : RoutineImplementationBase
         Dictionary<string, string> arguments,
         CancellationToken token)
     {
-        // TODO: Implement
     }
 }
 ```
