@@ -1,0 +1,15 @@
+# Local configuration with credentials - do not commit
+config.yml
+
+# State database
+state.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+bin
+obj
+
+publish/
+files/
