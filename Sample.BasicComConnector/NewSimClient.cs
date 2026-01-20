@@ -8,15 +8,18 @@ using Microsoft.Extensions.Logging;
 public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
 {
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-
-    private readonly string _version = "N/A";
+    private string _version = "N/A";
     private readonly ILogger logger;
 
     public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
             : base(logger, config?.Automation)
     {
         this.logger = logger;
-        semaphore.Wait();
+    }
+
+    public async Task TestConnection(CancellationToken _token)
+    {
+        await semaphore.WaitAsync(_token).ConfigureAwait(false);
         try
         {
             Initialize();
@@ -27,11 +30,6 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
             Shutdown();
             semaphore.Release();
         }
-    }
-
-    public Task TestConnection(CancellationToken _token)
-    {
-        return Task.CompletedTask;
     }
 
     protected override void PreShutdown()
@@ -45,29 +43,54 @@ public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFiles
         return workbooks.Open(path);
     }
 
-    public async Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken token)
+    public async Task ExtractModelInformation(
+        DefaultModelFilestate state,
+        CancellationToken token)
     {
-        ArgumentNullException.ThrowIfNull(state);
         await semaphore.WaitAsync(token).ConfigureAwait(false);
+        dynamic? workbook = null;
+
         try
         {
             Initialize();
-            dynamic workbook = OpenBook(state.FilePath);
-            if (workbook != null)
+
+            logger.LogInformation($"Validating model: {state.FilePath}");
+
+            // Just try to open the file
+            workbook = OpenBook(state.FilePath);
+
+            if (workbook == null)
             {
-                workbook.Close(false);
-                state.ParsingInfo.SetSuccess();
+                state.ParsingInfo.SetFailure("Failed to open model file");
                 return;
             }
-            state.ParsingInfo.SetFailure();
+
+            // File is valid - report success with no extracted data
+            state.ParsingInfo.SetSuccess();
+            logger.LogInformation("Model validation successful");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error validating model");
+            state.ParsingInfo.SetFailure(ex.Message);
         }
         finally
         {
+            if (workbook != null)
+            {
+                try
+                {
+                    workbook.Close(false);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Error closing workbook");
+                }
+            }
             Shutdown();
             semaphore.Release();
         }
     }
-
     public string GetConnectorVersion(CancellationToken _token)
     {
         return "N/A";

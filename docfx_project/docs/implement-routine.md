@@ -1,237 +1,483 @@
-# Implement RoutineImplementationBase
+# Implement Simulation Routines
 
-A routine is an entity that contains the input and output parameter configuration required for simulation.
-It also contains a list of instructions for the connector to pass into the simulation model.
+This guide shows you how to implement the **routine execution** functionality that allows your connector to run simulations based on instructions from CDF.
 
-In this tutorial, you'll use the COM interface to connect the connector to a simulator.
+For detailed information about simulation routines in CDF, see the [Simulation Routines documentation](https://docs.cognite.com/cdf/integration/guides/simulators/simulator_routines).
 
-Create a class that inherits from `RoutineImplementationBase`.
+## Prerequisites
 
-`NewSimRoutine.cs`:
+You should have completed:
+- [Create Your First Connector](create-connector.md) - Basic connector working
+- [COM Connection Deep Dive](com-connection.md) - Understanding COM automation
+
+**What you'll learn:**
+- What routines and routine revisions are
+- The three-method pattern (SetInput, GetOutput, RunCommand)
+- Implementing `RoutineImplementationBase`
+- Mapping CDF instructions to simulator operations
+
+## Understanding Simulator Routines
+
+A **simulator routine** is a folder that organizes different versions of simulator instructions. Each routine defines:
+
+1. **Inputs** - Values to set in the simulator before running
+2. **Outputs** - Values to read from the simulator after running
+3. **Script** - Step-by-step instructions for the simulation
+
+### Routine Revisions
+
+Each **routine revision** is an immutable configuration that defines:
+- **Inputs** - Constant values (STRING, DOUBLE, arrays) or time series references
+- **Outputs** - Values to read and optionally save to time series
+- **Script** - Ordered list of stages and steps for execution
+
+### Routine Revision Structure
+
+```
+Routine Revision
+├── Inputs (e.g., Temperature = 25°C, Pressure = 2 bar)
+├── Outputs (e.g., FlowRate, Efficiency)
+└── Script (ordered stages with steps)
+    ├── Stage 1: Set inputs
+    │   ├── Step 1: Set Temperature → Sheet1, Cell A1
+    │   └── Step 2: Set Pressure → Sheet1, Cell A2
+    ├── Stage 2: Run calculation
+    │   └── Step 1: Command: Calculate
+    └── Stage 3: Get outputs
+        ├── Step 1: Get FlowRate ← Sheet1, Cell B1
+        └── Step 2: Get Efficiency ← Sheet1, Cell B2
+```
+
+The SDK handles reading configuration, providing inputs, orchestrating execution, and storing outputs. You implement how to set inputs, read outputs, and run commands in the simulator.
+
+## The Three-Method Pattern
+
+All routine implementations follow the same pattern, regardless of integration type:
+
 ```csharp
-using Cognite.Simulator.Utils;
+public abstract class RoutineImplementationBase
+{
+    // Set an input value in the simulator
+    public abstract void SetInput(
+        SimulatorRoutineRevisionInput inputConfig,
+        SimulatorValueItem input,
+        Dictionary<string, string> arguments,
+        CancellationToken token);
+
+    // Get an output value from the simulator
+    public abstract SimulatorValueItem GetOutput(
+        SimulatorRoutineRevisionOutput outputConfig,
+        Dictionary<string, string> arguments,
+        CancellationToken token);
+
+    // Run a command in the simulator
+    public abstract void RunCommand(
+        Dictionary<string, string> arguments,
+        CancellationToken token);
+}
+```
+
+**This pattern is universal** - whether you're using COM, TCP, REST, or any other integration method.
+
+## Step 1: Create the Routine Class
+
+Create `NewSimRoutine.cs`:
+
+```csharp
+using Microsoft.Extensions.Logging;
 using CogniteSdk.Alpha;
+using Cognite.Simulator.Utils;
 
 public class NewSimRoutine : RoutineImplementationBase
 {
     private readonly dynamic _workbook;
 
+    private readonly ILogger _logger;
+
+    private const int XlCalculationManual = -4135;
 
     public NewSimRoutine(dynamic workbook, SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
     {
         _workbook = workbook;
+        _logger = logger;
     }
 
-    public override void SetInput(SimulatorRoutineRevisionInput inputConfig, SimulatorValueItem input, Dictionary<string, string> arguments, CancellationToken _token)
+    public override void SetInput(
+        SimulatorRoutineRevisionInput inputConfig,
+        SimulatorValueItem input,
+        Dictionary<string, string> arguments,
+        CancellationToken token)
     {
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
-
-        dynamic worksheet = _workbook.ActiveSheet;
-
-        if (input.ValueType == SimulatorValueType.DOUBLE)
-        {
-            var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
-            worksheet.Cells[row, col].Value = rawValue;
-        } else if (input.ValueType == SimulatorValueType.STRING)
-        {
-            var rawValue = (input.Value as SimulatorValue.String)?.Value;
-            worksheet.Cells[row, col].Formula = rawValue;
-        } else {
-            throw new NotImplementedException($"{input.ValueType} not implemented");
-        }
-
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
-        input.SimulatorObjectReference = simulationObjectRef;
+        throw new NotImplementedException();
     }
 
-    public override SimulatorValueItem GetOutput(SimulatorRoutineRevisionOutput outputConfig, Dictionary<string, string> arguments, CancellationToken _token)
+    public override SimulatorValueItem GetOutput(
+        SimulatorRoutineRevisionOutput outputConfig,
+        Dictionary<string, string> arguments,
+        CancellationToken token)
     {
-        var rowStr = arguments["row"];
-        var colStr = arguments["col"];
-        var row = int.Parse(rowStr);
-        var col = int.Parse(colStr);
-
-        dynamic worksheet = _workbook.ActiveSheet;
-        var cell = worksheet.Cells[row, col];
-
-        if (outputConfig.ValueType != SimulatorValueType.DOUBLE)
-        {
-            throw new NotImplementedException($"{outputConfig.ValueType} value type not implemented");
-        }
-
-        var rawValue = (double) cell.Value;
-        SimulatorValue value = new SimulatorValue.Double(rawValue);
-
-        var simulationObjectRef = new Dictionary<string, string> { { "row", rowStr }, { "col", colStr } };
-
-        return new SimulatorValueItem
-        {
-            ValueType = SimulatorValueType.DOUBLE,
-            Value = value,
-            ReferenceId = outputConfig.ReferenceId,
-            SimulatorObjectReference = simulationObjectRef,
-            TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
-        };
+        throw new NotImplementedException();
     }
 
-    public override void RunCommand(Dictionary<string, string> arguments, CancellationToken _token)
+    public override void RunCommand(
+        Dictionary<string, string> arguments,
+        CancellationToken token)
     {
-        // No implementation is required for this simulator.
     }
 }
 ```
-The newly created class will perform the simulation.
 
-- The `SetInput` method sets the input values for the simulation. 
-- The `GetOutput` method gets the output values from the simulation. 
-- The `RunCommand` method runs commands in the simulation. You don't need this method for the simulator because the results are calculated right away on the worksheet.
+This class inherits from `RoutineImplementationBase`, receives the `workbook` (Excel COM object) in the constructor, relies on the base class for script orchestration, and implements the three required methods.
 
-#### Implement `RunSimulation` method in `NewSimClient`
+## Step 2: Implement SetInput
 
-Call the `PerformSimulation` method in the `NewSimRoutine` class. The `PerformSimulation` method will run through the instructions in the routine revision and return the results of the simulation.
-Use a semaphore to ensure only one connection to the simulator is made at a time.
+The `SetInput` method writes values to the simulator.
+
+### Understanding SetInput Parameters
 
 ```csharp
-public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
+public override void SetInput(
+    SimulatorRoutineRevisionInput inputConfig,  // Configuration from CDF
+    SimulatorValueItem input,                   // Value to set
+    Dictionary<string, string> arguments,       // Where to set it
+    CancellationToken token)                    // Cancellation support
+```
+
+### Implementation
+
+```csharp
+public override void SetInput(
+    SimulatorRoutineRevisionInput inputConfig,
+    SimulatorValueItem input,
+    Dictionary<string, string> arguments,
+    CancellationToken token)
+{
+    ArgumentNullException.ThrowIfNull(input);
+    ArgumentNullException.ThrowIfNull(arguments);
+
+    // Extract sheet and cell reference from arguments
+    var sheetName = arguments["sheet"];
+    var cellReference = arguments["cell"];
+
+    // Get the worksheet by name
+    dynamic worksheet = _workbook.Worksheets(sheetName);
+    dynamic cell = worksheet.Range(cellReference);
+
+    // Set value based on type
+    if (input.ValueType == SimulatorValueType.DOUBLE)
     {
-        await semaphore.WaitAsync().ConfigureAwait(false);
-        dynamic? workbook = null;
-        try
-        {
-            Initialize();
-            workbook = OpenBook(modelState.FilePath);
+        var rawValue = (input.Value as SimulatorValue.Double)?.Value ?? 0;
+        cell.Value = rawValue;
 
-            var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
-            return routine.PerformSimulation(token);
-        }
-        finally
-        {
-            if (workbook != null)
-            {
-                workbook.Close(false);
-            }
-            Shutdown();
-            semaphore.Release();
-        }
+        _logger.LogDebug($"Set {sheetName}!{cellReference} = {rawValue}");
     }
-```
+    else if (input.ValueType == SimulatorValueType.STRING)
+    {
+        var rawValue = (input.Value as SimulatorValue.String)?.Value;
+        cell.Formula = rawValue;
 
-Now, call the API and create a new routine and a routine revision. When done, you're ready for the first simulation.
+        _logger.LogDebug($"Set {sheetName}!{cellReference} = '{rawValue}'");
+    }
+    else
+    {
+        throw new NotImplementedException($"{input.ValueType} not supported");
+    }
 
-Routine:
-
-```json
-POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines
-{
-  "items": [{
-        "externalId": "simple-computations",
-        "modelExternalId": "empty_book",
-        "simulatorIntegrationExternalId": "new-test-connector@computer",
-        "name": "Simple computations"
-    }]
+    // Store reference for later use
+    var simulatorObjectRef = new Dictionary<string, string>
+    {
+        { "sheet", sheetName },
+        { "cell", cellReference }
+    };
+    input.SimulatorObjectReference = simulatorObjectRef;
 }
 ```
 
-In the following example, create a routine revision for the routine that you've already created.
+Key concepts: arguments from the script step specify WHERE to set the value, value extraction casts `SimulatorValue` to concrete types (`Double`, `String`), type handling uses different setter methods for different value types, and `SimulatorObjectReference` stores the variable identifier.
 
-The script contains the instructions for the simulation. In this case, set the value of the cell `A1` to `10` and the value of the cell `B1` to the formula `=A1 * 2`, which should result in `20`.
+## Step 3: Implement GetOutput
 
-Routine revision:
+The `GetOutput` method reads values from the simulator.
 
-```json
-POST {{baseUrl}}/api/v1/projects/{{project}}/simulators/routines/revisions
+### Understanding GetOutput Parameters
 
+```csharp
+public override SimulatorValueItem GetOutput(
+    SimulatorRoutineRevisionOutput outputConfig,  // Configuration from CDF
+    Dictionary<string, string> arguments,         // Where to read from
+    CancellationToken token)                      // Cancellation support
+```
+
+**Returns:** `SimulatorValueItem` containing the value read from the simulator.
+
+### Implementation
+
+```csharp
+public override SimulatorValueItem GetOutput(
+    SimulatorRoutineRevisionOutput outputConfig,
+    Dictionary<string, string> arguments,
+    CancellationToken token)
 {
-    "items": [{
-        "externalId": "simple-computations-1",
-        "routineExternalId": "simple-computations",
-        "configuration": {
-            "schedule": {
-                "enabled": false
-            },
-            "dataSampling": {
-                "enabled": false
-            },
-            "logicalCheck": [],
-            "steadyStateDetection": [],
-            "inputs": [
-                {
-                    "name": "Number",
-                    "referenceId": "I1",
-                    "value": 10.0,
-                    "valueType": "DOUBLE"
-                },
-                {
-                    "name": "Formula",
-                    "referenceId": "F1",
-                    "value": "=A1 * 2",
-                    "valueType": "STRING"
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "Formula Result",
-                    "referenceId": "FR1",
-                    "valueType": "DOUBLE"
-                }
-            ]
-        },
-        "script": [
+    ArgumentNullException.ThrowIfNull(outputConfig);
+    ArgumentNullException.ThrowIfNull(arguments);
+
+    // Extract sheet and cell reference
+    var sheetName = arguments["sheet"];
+    var cellReference = arguments["cell"];
+
+    // Get the worksheet by name
+    dynamic worksheet = _workbook.Worksheets(sheetName);
+    dynamic cell = worksheet.Range(cellReference);
+
+    // Read value based on expected type
+    SimulatorValue value;
+
+    if (outputConfig.ValueType == SimulatorValueType.DOUBLE)
+    {
+        var rawValue = cell.Value;
+
+        if (rawValue == null)
+        {
+            _logger.LogWarning($"Cell {sheetName}!{cellReference} is empty, using default");
+            rawValue = 0.0;
+        }
+        var doubleValue = Convert.ToDouble(rawValue);
+        value = new SimulatorValue.Double(doubleValue);
+        _logger.LogDebug($"Read {sheetName}!{cellReference} = {doubleValue}");
+    }
+    else if (outputConfig.ValueType == SimulatorValueType.STRING)
+    {
+        var rawValue = (string)cell.Text;
+        value = new SimulatorValue.String(rawValue);
+        _logger.LogDebug($"Read {sheetName}!{cellReference} = '{rawValue}'");
+    }
+    else
+    {
+        throw new NotImplementedException($"{outputConfig.ValueType} not supported");
+    }
+
+    // Create reference for where we read from
+    var simulatorObjectRef = new Dictionary<string, string>
+    {
+        { "sheet", sheetName },
+        { "cell", cellReference }
+    };
+
+    // Return the output item
+    return new SimulatorValueItem
+    {
+        ValueType = outputConfig.ValueType,
+        Value = value,
+        ReferenceId = outputConfig.ReferenceId,
+        SimulatorObjectReference = simulatorObjectRef,
+        TimeseriesExternalId = outputConfig.SaveTimeseriesExternalId,
+    };
+}
+```
+
+Key concepts: arguments specify WHERE to read, type conversion casts from COM `dynamic` to expected type, `SimulatorValueItem` wraps the value in SDK type, and metadata preservation includes reference ID and timeseries mapping.
+
+### Handling Null/Missing Values
+
+Excel cells can be empty. Handle gracefully:
+
+```csharp
+var rawValue = cell.Value;
+
+if (rawValue == null)
+{
+    _logger.LogWarning($"Cell {sheetName}!{cellReference} is empty, using default");
+    rawValue = 0.0;  // Or throw exception if required
+}
+
+var doubleValue = Convert.ToDouble(rawValue);
+value = new SimulatorValue.Double(doubleValue);
+```
+
+## Step 4: Implement RunCommand
+
+The `RunCommand` method executes simulator-specific operations like triggering calculations, running solvers, saving/loading state, or any action that doesn't involve setting/getting values (for Excel, usually not needed as formulas calculate automatically).
+
+### Implementation
+
+```csharp
+public override void RunCommand(
+    Dictionary<string, string> arguments,
+    CancellationToken token)
+{
+    ArgumentNullException.ThrowIfNull(arguments);
+    var command = arguments["command"];
+
+    switch (command)
+    {
+        case "Pause":
             {
-                "order": 1,
-                "description": "Set Inputs",
-                "steps": [
-                    {
-                        "order": 1,
-                        "stepType": "Set",
-                        "arguments": {
-                            "referenceId": "I1",
-                            "row": "1",
-                            "col": "1"
-                        }
-                    },
-                    {
-                        "order": 2,
-                        "stepType": "Set",
-                        "arguments": {
-                            "referenceId": "F1",
-                            "row": "1",
-                            "col": "2"
-                        }
-                    }
-                ]
-            },
-            {
-                "order": 3,
-                "description": "Set outputs",
-                "steps": [
-                    {
-                        "order": 1,
-                        "stepType": "Get",
-                        "arguments": {
-                            "referenceId": "FR1",
-                            "row": "1",
-                            "col": "2"
-                        }
-                    }
-                ]
+                _workbook.Application.Calculation = XlCalculationManual;
+                _logger.LogInformation("Calculation mode set to manual");
+                break;
             }
-        ]
-    }]
+        case "Calculate":
+            {
+                _workbook.Application.Calculate();
+                _logger.LogInformation("Calculation completed");
+                break;
+            }
+        default:
+            {
+                throw new NotImplementedException($"Unsupported command: '{command}'");
+            }
+    }
 }
 ```
 
-Now, run the simulation and view the results. Select the routine and then select `Run now`.
+## Step 5: Update NewSimClient.RunSimulation
 
-![Running simulation](../images/running-simulation.png)
+Now wire the routine into the `NewSimClient`:
 
-When the simulation is completed, you can view the details in the `Run browser` tab.
+```csharp
+public async Task<Dictionary<string, SimulatorValueItem>?> RunSimulation(DefaultModelFilestate modelState, SimulatorRoutineRevision routineRev, Dictionary<string, SimulatorValueItem> inputData, CancellationToken token)
+{
+    ArgumentNullException.ThrowIfNull(modelState);
+    await semaphore.WaitAsync(token).ConfigureAwait(false);
+    dynamic? workbook = null;
+    try
+    {
+        Initialize();
+        workbook = OpenBook(modelState.FilePath);
 
-![Simulation details](../images/simulation-details.png)
+        var routine = new NewSimRoutine(workbook, routineRev, inputData, logger);
+        return routine.PerformSimulation(token);
+    }
+    finally
+    {
+        if (workbook != null)
+        {
+            workbook.Close(false);
+        }
+        Shutdown();
+        semaphore.Release();
+    }
+}
+```
 
-Select `View data` to view the simulation results.
+`PerformSimulation` iterates through script steps in order, calling your `SetInput`, `GetOutput`, or `RunCommand` methods based on step type, handling cancellation, and returning a dictionary of output values.
 
-![Simulation results](../images/simulation-data.png)
+## Step 6: Test with CDF
+
+Now create a routine in CDF and test it.
+
+### Create an Excel Test Model
+
+Create a simple Excel file (`test-model.xlsx`):
+
+| A | B |
+|---|---|
+| 10 | =A1 * 2 |
+
+Save it and upload to CDF.
+
+### Create a Routine and Revision
+
+
+**CDF** -> **Simulators** -> **Routines** -> **Create Routine**
+
+<img src="../images/create-routine.png" alt="Create Routine" width="600"/>
+
+Setting inputs:
+
+Set the first input (Sheet: Sheet1, Cell: A1, Value : 25)
+Set the second input (Sheet: Sheet1, Cell: B1, Value: "=A1 * 2")
+Set the output (Sheet: Sheet1, Cell: B1)
+
+<img src="../images/routine-inputs.png" alt="Create Routine" width="300"/>
+
+
+Routine in CDF
+
+<img src="../images/routine-revision-view.png" alt="Routine in CDF" width="600"/>
+
+### Run the Routine
+
+In the CDF UI, navigate to **Simulators** > **Routines**, find "Simple Calculation", click **Run now**, and view the results in the **Run browser**.
+
+<img src="../images/routine-run.png" alt="Routine in CDF" width="600"/>
+
+**Expected result:** Output "Result" = 50.0
+
+<img src="../images/routine-output.png" alt="Routine output" width="600"/>
+
+## Understanding Arguments
+
+Arguments connect the routine script to your implementation.
+
+### Defining Arguments in SimulatorDefinition
+
+Remember in `SimulatorDefinition.cs`:
+
+```csharp
+StepFields = new List<SimulatorStepField>
+{
+    new SimulatorStepField
+    {
+        StepType = "get/set",
+        Fields = new List<SimulatorStepFieldParam>
+        {
+            new SimulatorStepFieldParam
+            {
+                Name = "sheet",
+                Label = "Sheet Name",
+                Info = "Name of the worksheet (e.g., 'Sheet1')",
+            },
+            new SimulatorStepFieldParam
+            {
+                Name = "cell",
+                Label = "Cell Reference",
+                Info = "Excel cell reference (e.g., 'A1', 'B2', 'C3')",
+            },
+        },
+    },
+}
+```
+
+This defines what arguments the CDF API will ask for when creating routine steps.
+
+### Using Arguments in Script
+
+When a user creates a step in CDF, they provide values for these arguments:
+
+```json
+{
+  "stepType": "Set",
+  "arguments": {
+    "referenceId": "INPUT1",
+    "sheet": "Sheet1",
+    "cell": "A5"
+  }
+}
+```
+
+### Accessing Arguments in Code
+
+```csharp
+public override void SetInput(
+    SimulatorRoutineRevisionInput inputConfig,
+    SimulatorValueItem input,
+    Dictionary<string, string> arguments,
+    CancellationToken token)
+{
+    // Arguments dictionary contains script-provided values
+    var sheetName = arguments["sheet"];    // "Sheet1"
+    var cellReference = arguments["cell"]; // "A5"
+
+    // Use them to locate where to set the value
+    dynamic worksheet = _workbook.Worksheets(sheetName);
+    dynamic cell = worksheet.Range(cellReference);
+    cell.Value = (input.Value as SimulatorValue.Double)?.Value;
+}
+```
+
+> **Important:** Argument names in `SimulatorDefinition` must exactly match keys used in your code.
+
+---
+
+**Next:** Continue to [Testing](testing.md) to learn how to test your connector.

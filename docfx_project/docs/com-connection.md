@@ -1,18 +1,58 @@
-# Implement COM connection
+# COM Connection Deep Dive
 
-To run simulations using the Cognite simulator integration, connect to a simulator using the `COM` interface.
-In the example, we use Excel as a `simulator` and fetch its version number.
+This guide explores COM automation, showing how to work with Excel and other COM-based simulators using the SDK's `AutomationClient` helper class.
 
-## Create a class that inherits from AutomationConfig
+## Prerequisites
 
-Set the `COM` program ID so the connector knows which program to connect to.
+You should have completed:
+- [Prerequisites & Setup](prerequisites.md) - Development environment ready
+- [Create Your First Connector](create-connector.md) - Basic connector working
 
-`NewSimAutomationConfig.cs`:
+## Understanding COM Automation
+
+**COM (Component Object Model)** is a Microsoft technology for inter-process communication. Many industrial simulators use it because it is a language-independent, established standard. Common examples include KBC Petro-SIM, Aspen HYSYS, and DWSIM. For a production example, see the [DWSIM Connector](https://github.com/cognitedata/dwsim-connector-dotnet).
+
+## The AutomationClient Base Class
+
+The SDK provides `AutomationClient` as a base class for common COM automation tasks.
+
+### What AutomationClient Provides
+
+```csharp
+public abstract class AutomationClient
+{
+    // The COM server instance (dynamic)
+    protected dynamic Server { get; }
+
+    // Configuration (Program ID, timeouts, etc.)
+    protected AutomationConfig Config { get; }
+
+    // Initialize/Shutdown COM connection
+    protected void Initialize();
+    protected void Shutdown();
+
+    // Hook for cleanup before shutdown
+    protected virtual void PreShutdown();
+
+    // Locking mechanism for thread safety
+    protected object Lock { get; }
+}
+```
+
+## Configuration: AutomationConfig
+
+Create a configuration class to specify the COM server connection details.
+
+### Basic Configuration
+
+> The `ProgramId` should be available in the vendor documentation for the simulator. Alternatively, you can find the `ProgramId` for your COM application by looking in the Windows Registry under `HKEY_CLASSES_ROOT`. Look for the name of your application, and the `ProgID` will be listed there. For example, the `ProgID` for Excel is `Excel.Application`.
+
 ```csharp
 using Cognite.Simulator.Utils.Automation;
 
 public class NewSimAutomationConfig : AutomationConfig
 {
+    // any extra config options could be defined here
     public NewSimAutomationConfig()
     {
         ProgramId = "Excel.Application";
@@ -20,101 +60,131 @@ public class NewSimAutomationConfig : AutomationConfig
 }
 ```
 
-Adjust the `ConnectorRuntime` class to use the `NewSimAutomationConfig` class. Replace every instance of `AutomationConfig` with `NewSimAutomationConfig`.
+## Late Binding with Dynamic
+
+The `Server` property in `AutomationClient` is `dynamic`, so method and property names are resolved at runtime.
+
+### Accessing Properties and Methods
 
 ```csharp
-using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.DependencyInjection;
+// Initialize connection
+Initialize();
 
-public static class ConnectorRuntime {
+// Server is 'dynamic' - no compile-time checking
+dynamic workbooks = Server.Workbooks;
+int count = workbooks.Count;
 
-    public static void Init() {
-        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = ConfigureServices;
-        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "NewSim";
-        DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SimulatorDefinition.Get();
-    }
-    static void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, NewSimClient>();
-    }
-    
-    public static async Task RunStandalone() {
-        Init();
-        await DefaultConnectorRuntime<NewSimAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.RunStandalone().ConfigureAwait(false);
-    }
+// Close workbook
+workbook.Close(false);  // false = don't save changes
+
+// Shutdown connection
+Shutdown();
+```
+
+### Type Conversions
+
+Explicit casting is required when reading from `dynamic` objects.
+
+```csharp
+// Reading values
+double doubleValue = (double)cell.Value;
+string stringValue = (string)cell.Text;
+int intValue = (int)cell.Value;
+
+// Be careful with null/missing values
+object rawValue = cell.Value;
+if (rawValue != null)
+{
+    double value = Convert.ToDouble(rawValue);
 }
 ```
 
-### Extend the NewSimClient class to inherit from the AutomationClient class
+## Thread Safety and Locking
 
-To access the `COM` object, extend the `NewSimClient` class to inherit from the `AutomationClient` class. 
-Add `using Cognite.Simulator.Utils.Automation;` namespace to `NewSimClient` class and extend the class to inherit from `AutomationClient`. Then, add a new constructor that calls the base constructor with the AutomationConfig type.
+**Critical:** COM objects are not thread-safe. You must ensure only one thread accesses the COM server at a time.
 
-Replace the lines in the `NewSimClient` class:
-
-```csharp
-using Cognite.Simulator.Utils;
-using CogniteSdk.Alpha;
-
-public class NewSimClient : ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
-{
-// rest of the class
-```
-
-with the lines below:
+### Using Semaphores
 
 ```csharp
-using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
 
-public class NewSimClient : AutomationClient, ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
-{
-    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-    private readonly string _version = "N/A";
-    private readonly ILogger logger;
-
-    public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
-            : base(logger, config.Automation)
+    public async Task SomeOperation(CancellationToken token)
     {
-        this.logger = logger;
-        semaphore.Wait();
+        // Acquire lock
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             Initialize();
-            _version = Server.Version;
+
+            // Safe to use Server here
+            var result = Server.SomeMethod();
+
+            Shutdown();
         }
         finally
         {
-            Shutdown();
-            semaphore.Release();
+            // Always release, even if exception thrown
+            _semaphore.Release();
         }
     }
-    // rest of the class
+
 ```
 
-In the constructor, initialize the `COM` connection and get the Excel application's version number. The field `_version` stores the version number. When you connect to the simulator, use a semaphore to avoid using multiple threads to access the `COM` object at the same time.
+**Don't use `lock` statement:** The `lock` keyword doesn't support async and can cause deadlocks with COM.
 
-Also, add a method that closes the Excel application when the `COM` connection is closed.
+## Discovery: Learning the COM API
+
+Since late binding lacks IntelliSense, use vendor documentation or Visual Studio's Object Browser (Ctrl+Alt+J) to discover methods and properties.
+
+## Lifecycle Management
 
 ```csharp
+// Initialize
+public NewSimClient(ILogger<NewSimClient> logger, DefaultConfig<NewSimAutomationConfig> config)
+    : base(logger, config.Automation)
+{
+    semaphore.Wait();
+    try
+    {
+        Initialize();
+        _version = Server.Version;
+        Shutdown();
+    }
+    finally
+    {
+        semaphore.Release();
+    }
+}
+
+// Operation
+public async Task SomeOperation(CancellationToken token)
+{
+    await semaphore.WaitAsync(token).ConfigureAwait(false);
+    try
+    {
+        Initialize();
+        dynamic result = Server.DoSomething();
+        Shutdown();
+        return result;
+    }
+    finally
+    {
+        semaphore.Release();
+    }
+}
+
+// Cleanup
 protected override void PreShutdown()
 {
-    Server.Quit();
+    try
+    {
+        Server.Quit();
+        _logger.LogInformation("COM server quit successfully");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Error quitting COM server");
+    }
 }
 ```
 
-Update the `GetSimulatorVersion` method to return the version number.
-
-```csharp
-public string GetSimulatorVersion(CancellationToken token)
-{
-    return _version;
-}
-```
-When you run the connector, you'll see the version number in [CDF](https://fusion.cognite.com/).
-
-![Simulator version](../images/simulator-version.png)
+**Next:** Continue to [Model Parsing](model-parsing.md) to learn how to extract model information.
