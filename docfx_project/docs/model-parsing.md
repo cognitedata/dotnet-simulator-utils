@@ -108,19 +108,6 @@ The DWSIM implementation shows how to:
 
 You can also optionally extract arbitrary metadata about the model using the `info` field. This is a key-value structure that can hold any JSON-serializable data.
 
-### Info Structure
-
-```csharp
-var info = new Dictionary<string, string>
-{
-    ["ModelVersion"] = "2.1",
-    ["CreatedDate"] = "2024-01-15",
-    ["Author"] = "John Doe",
-    ["Description"] = "Distillation column model",
-    ["CustomField"] = "Custom value"
-};
-```
-
 ### When to Use Info
 
 Use `info` for:
