@@ -41,6 +41,11 @@ Verify the PR includes:
 - Abstract benefits without concrete metrics ("faster", "cleaner", "more efficient" - compared to what?)
 - Excessive bullet points listing every minor change (the diff already shows this)
 - No explanation of *why* (just *what*)
+- Unused imports, variables, or functions included "just in case"
+- Suspiciously "textbook" implementations that ignore project conventions
+- Overly defensive code for example null checks and try/catch blocks everywhere, even where unnecessary
+- Tests: Mocked everything, no actual integration with real components
+- Test descriptions that don't match what's being tested
 
 
 **Recommend:**
