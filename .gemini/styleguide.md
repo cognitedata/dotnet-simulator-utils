@@ -36,7 +36,12 @@ Verify the PR includes:
 **AI Slop Detection:**
 - Generic/vague language without specifics ("improved code quality", "refactored for better maintainability")
 - Overly long descriptions (>500 words) that obscure key points
-- Outdated context that doesn't match the actual code changes in the PR
+- Hedging phrases that add no value ("This change aims to...", "This PR attempts to...")
+- Filler sentences restating the obvious ("This file contains the implementation of...")
+- Abstract benefits without concrete metrics ("faster", "cleaner", "more efficient" - compared to what?)
+- Excessive bullet points listing every minor change (the diff already shows this)
+- No explanation of *why* (just *what*)
+
 
 **Recommend:**
 - Concise, specific descriptions with file references
