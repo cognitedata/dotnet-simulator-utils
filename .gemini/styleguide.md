@@ -26,7 +26,7 @@
 
 Verify the PR includes:
 
-1. **Jira ticket in title** - Required format: `[CDF-####] feat: Add feature` or `[CDF-####] fix: Fix issue` (Not required for small fixes, version bumps, etc)
+1. **Jira ticket in title** - Required format: `[POFSP-####] feat: Add feature` or `[POFSP-####] fix: Fix issue` (Not required for small fixes, version bumps, etc)
 2. **What changed** - Specific description of modifications with file references
 3. **Why changed** - Problem being solved or feature being added
 4. **How tested** - Testing approach (unit, integration, smoke tests)
