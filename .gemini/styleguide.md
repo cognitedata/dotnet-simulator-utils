@@ -58,11 +58,11 @@ Verify the PR includes:
 
 ### Size Limit
 
-**Rule**: PRs must be under **500 lines** (excluding generated code, whitespace-only changes, and deleted lines).
+**Prefer**: Under **300 lines** of code changes.
+**Hard limit**: **500 lines** (excluding generated code, whitespace-only changes, and deleted lines).
 
-**Ideal size**: Under 250 lines of code changes.
 **Why**: Large PRs are harder to review, receive less thorough review, and permit more defects into production.
-When a PR approaches 500 lines, suggest ways to split it into a logical sequence of changes.
+When a PR approaches 300 lines, consider splitting. At 500 lines, require splitting into a logical sequence of changes.
 **We prefer small PRs that do ONE thing.**
 
 **Example recommendation:**
@@ -260,7 +260,7 @@ _logger.LogInformation("Started executing simulation run {ID}", runItem.Run.Id.T
 **Correct Usage:**
 - Use `async`/`await` for all I/O operations
 - Suffix async methods with `Async`
-- Use `ConfigureAwait(false)` in library code
+- Use `ConfigureAwait(false)` in library code (`Cognite.Simulator.Utils`, `Cognite.Simulator.Extensions`, `Cognite.DataProcessing`) to avoid deadlocks and improve performance
 - Handle cancellation with `CancellationToken` parameters
 
 **Don't Ignore Async Warnings:**
