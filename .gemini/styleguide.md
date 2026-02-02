@@ -143,7 +143,7 @@ _logger.LogInformation("Message");
 
 ## Critical Review Points
 
-### 🚨 External Service Rate Limiting (CRITICAL)
+### External Service Rate Limiting (CRITICAL)
 
 **Rule**: ALL calls to CDF APIs or external services MUST use exponential backoff.
 
