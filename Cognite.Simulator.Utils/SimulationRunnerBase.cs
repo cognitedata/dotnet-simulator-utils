@@ -213,7 +213,7 @@ namespace Cognite.Simulator.Utils
                                 continue;
                             }
 
-                            await PublishConnectorStatus(ConnectorStatus.RUNNING_SIMULATION, token).ConfigureAwait(false);
+                            await PublishConnectorStatusAsync(ConnectorStatus.RUNNING_SIMULATION, token).ConfigureAwait(false);
 
                             await InitSimulationRun(
                                 runItem,
@@ -247,7 +247,7 @@ namespace Cognite.Simulator.Utils
                             if (!skipped)
                             {
                                 _logger.LogDebug("Simulation run finished for run {Id}", runId);
-                                await PublishConnectorStatus(ConnectorStatus.IDLE, token).ConfigureAwait(false);
+                                await PublishConnectorStatusAsync(ConnectorStatus.IDLE, token).ConfigureAwait(false);
                             }
                         }
                     }
@@ -284,7 +284,7 @@ namespace Cognite.Simulator.Utils
             return (model, routineRev);
         }
 
-        async Task PublishConnectorStatus(ConnectorStatus status, CancellationToken token)
+        async Task PublishConnectorStatusAsync(ConnectorStatus status, CancellationToken token)
         {
             try
             {
