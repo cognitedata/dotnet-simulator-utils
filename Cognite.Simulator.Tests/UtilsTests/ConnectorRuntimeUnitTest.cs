@@ -54,7 +54,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
                 new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
-                
+
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), () =>
                 {
                     var item = $@"{{
@@ -99,7 +99,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     }
                     return CreateResponse(System.Net.HttpStatusCode.OK, "{\"items\":[]}");
                 }, 2),
-                
+
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/callback"), () =>
                 {
                     var item = $@"{{
@@ -110,7 +110,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     }}";
                     return OkItemsResponse(item);
                 }),
-                
+
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list"), MockSimulatorRoutineRevEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), () =>
                 {
@@ -156,7 +156,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             Assert.True(integrationUpdateCallCount >= 2, "Integration update should have been called at least twice");
 
             VerifyLog(mockedLogger, LogLevel.Error, "Network error during IDLE status update", Times.AtLeastOnce(), true);
-            
+
             VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 10 seconds", Times.AtLeastOnce(), true);
         }
 
