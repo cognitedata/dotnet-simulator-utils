@@ -480,4 +480,4 @@ public override void SetInput(
 
 ---
 
-**Next:** Continue to [Testing](testing.md) to learn how to test your connector.
+**Next:** Continue to [Testing](testing-and-extras.md) to learn how to test your connector.
