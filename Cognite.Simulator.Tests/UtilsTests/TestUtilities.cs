@@ -275,42 +275,29 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorIntegrationsListEndpoint(
-            long? id = null,
-            string? externalId = null,
-            string? simulatorExternalId = null,
-            long? dataSetId = null)
+        public static HttpResponseMessage MockSimulatorIntegrationsListEndpoint()
         {
             var item = $@"{{
-                ""id"": {id ?? 999},
-                ""externalId"": ""{externalId ?? SeedData.TestIntegrationExternalId}"",
-                ""simulatorExternalId"": ""{simulatorExternalId ?? SeedData.TestSimulatorExternalId}"",
-                ""dataSetId"": {dataSetId ?? SeedData.TestDataSetId}
+                ""id"": 999,
+                ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""dataSetId"": {SeedData.TestDataSetId}
             }}";
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulationRunsListEndpoint(
-            long? id = null,
-            string status = "ready",
-            string? simulatorExternalId = null,
-            string? integrationExternalId = null,
-            string? routineRevisionExternalId = null,
-            string? modelRevisionExternalId = null,
-            string? routineExternalId = null,
-            string runType = "external")
+        public static HttpResponseMessage MockSimulationRunsListEndpoint()
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var runId = id ?? 12345;
             var item = $@"{{
-                ""id"": {runId},
-                ""status"": ""{status}"",
-                ""simulatorExternalId"": ""{simulatorExternalId ?? SeedData.TestSimulatorExternalId}"",
-                ""simulatorIntegrationExternalId"": ""{integrationExternalId ?? SeedData.TestIntegrationExternalId}"",
-                ""routineRevisionExternalId"": ""{routineRevisionExternalId ?? "test-routine-rev"}"",
-                ""modelRevisionExternalId"": ""{modelRevisionExternalId ?? "test-model-rev"}"",
-                ""routineExternalId"": ""{routineExternalId ?? "test-routine"}"",
-                ""runType"": ""{runType}"",
+                ""id"": 12345,
+                ""status"": ""ready"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""routineRevisionExternalId"": ""test-routine-rev"",
+                ""modelRevisionExternalId"": ""test-model-rev"",
+                ""routineExternalId"": ""test-routine"",
+                ""runType"": ""external"",
                 ""createdTime"": {now},
                 ""lastUpdatedTime"": {now}
             }}";
@@ -333,22 +320,16 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorRoutineRevWithIntegrationEndpoint(
-            long? id = null,
-            string? externalId = null,
-            string? routineExternalId = null,
-            string? simulatorExternalId = null,
-            string? integrationExternalId = null,
-            string? modelExternalId = null)
+        public static HttpResponseMessage MockSimulatorRoutineRevWithIntegrationEndpoint()
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var item = $@"{{
-                ""id"": {id ?? 123},
-                ""externalId"": ""{externalId ?? "test-routine-rev"}"",
-                ""routineExternalId"": ""{routineExternalId ?? "test-routine"}"",
-                ""simulatorExternalId"": ""{simulatorExternalId ?? SeedData.TestSimulatorExternalId}"",
-                ""simulatorIntegrationExternalId"": ""{integrationExternalId ?? SeedData.TestIntegrationExternalId}"",
-                ""modelExternalId"": ""{modelExternalId ?? "test-model"}"",
+                ""id"": 123,
+                ""externalId"": ""test-routine-rev"",
+                ""routineExternalId"": ""test-routine"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""modelExternalId"": ""test-model"",
                 ""name"": ""Test routine revision"",
                 ""dataSetId"": 123,
                 ""createdTime"": {now},
@@ -379,20 +360,15 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorModelRevListEndpoint(
-            long? id = null,
-            string? externalId = null,
-            string? simulatorExternalId = null,
-            string? modelExternalId = null,
-            long? fileId = null)
+        public static HttpResponseMessage MockSimulatorModelRevListEndpoint()
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var item = $@"{{
-                ""id"": {id ?? 100},
-                ""externalId"": ""{externalId ?? "test-model-rev"}"",
-                ""simulatorExternalId"": ""{simulatorExternalId ?? SeedData.TestSimulatorExternalId}"",
-                ""modelExternalId"": ""{modelExternalId ?? "test-model"}"",
-                ""fileId"": {fileId ?? 100},
+                ""id"": 100,
+                ""externalId"": ""test-model-rev"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""test-model"",
+                ""fileId"": 100,
                 ""createdTime"": {now},
                 ""lastUpdatedTime"": {now}
             }}";
