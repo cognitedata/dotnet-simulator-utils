@@ -33,7 +33,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public async Task TestSimulationRunner_CallbackNetworkError_HandledGracefully()
         {
             var runsListCallCount = 0;
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             var networkErrorMocks = new List<SimpleRequestMocker>
             {
@@ -41,43 +40,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
                 new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
-
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), () =>
-                {
-                    var item = $@"{{
-                        ""id"": 999,
-                        ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
-                        ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                        ""dataSetId"": {SeedData.TestDataSetId}
-                    }}";
-                    return OkItemsResponse(item);
-                }),
-
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), () =>
-                {
-                    return MockSimulatorsIntegrationsEndpoint();
-                }),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), () => MockSimulatorIntegrationsListEndpoint()),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
 
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), () =>
                 {
                     runsListCallCount++;
                     if (runsListCallCount == 1)
                     {
-                        var item = $@"{{
-                            ""id"": 12345,
-                            ""status"": ""ready"",
-                            ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                            ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
-                            ""routineRevisionExternalId"": ""test-routine-rev"",
-                            ""modelRevisionExternalId"": ""test-model-rev"",
-                            ""routineExternalId"": ""test-routine"",
-                            ""runType"": ""external"",
-                            ""createdTime"": {now},
-                            ""lastUpdatedTime"": {now}
-                        }}";
-                        return OkItemsResponse(item);
+                        return MockSimulationRunsListEndpoint();
                     }
-                    return OkItemsResponse("");
+                    return MockSimulationRunsListEmptyEndpoint();
                 }),
 
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () =>
@@ -85,44 +58,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     throw new HttpRequestException("Network error during callback update");
                 }),
 
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), () =>
-                {
-                    var item = $@"{{
-                        ""id"": 123,
-                        ""externalId"": ""test-routine-rev"",
-                        ""routineExternalId"": ""test-routine"",
-                        ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                        ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
-                        ""modelExternalId"": ""test-model"",
-                        ""name"": ""Test routine revision"",
-                        ""dataSetId"": 123,
-                        ""createdTime"": {now},
-                        ""lastUpdatedTime"": {now},
-                        ""configuration"": {{}}
-                    }}";
-                    return OkItemsResponse(item);
-                }),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), () =>
-                {
-                    var item = $@"{{
-                        ""id"": 100,
-                        ""externalId"": ""test-model-rev"",
-                        ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                        ""modelExternalId"": ""test-model"",
-                        ""fileId"": 100,
-                        ""createdTime"": {now},
-                        ""lastUpdatedTime"": {now}
-                    }}";
-                    return OkItemsResponse(item);
-                }),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), () => MockSimulatorRoutineRevWithIntegrationEndpoint()),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), () => MockSimulatorModelRevListEndpoint()),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1)),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
             };
-
-            Environment.SetEnvironmentVariable("COGNITE_HOST", "https://bluefile.cognitedata.net");
-            Environment.SetEnvironmentVariable("COGNITE_PROJECT", "testProject");
 
             WriteConfig();
 
