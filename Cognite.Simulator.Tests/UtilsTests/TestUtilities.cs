@@ -290,7 +290,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var item = $@"{{
-                ""id"": 12345,
+                ""id"": {SeedData.TestSimulationRunId},
                 ""status"": ""ready"",
                 ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
                 ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
@@ -464,6 +464,51 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var provider = services.BuildServiceProvider();
 
             return (provider, mockedLogger);
+        }
+    }
+
+    public class EmptySimulatorAutomationClient :
+        AutomationClient,
+        ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
+    {
+        public EmptySimulatorAutomationClient(
+            ILogger<EmptySimulatorAutomationClient> logger,
+            DefaultConfig<DefaultAutomationConfig> config) : base(logger, config.Automation)
+        {
+        }
+
+        public Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
+        {
+            return Task.CompletedTask;
+        }
+
+        public string GetConnectorVersion(CancellationToken _token)
+        {
+            return CommonUtils.GetAssemblyVersion();
+        }
+
+        public string GetSimulatorVersion(CancellationToken _token)
+        {
+            return "2.0.1";
+        }
+
+        public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
+            DefaultModelFilestate modelState,
+            SimulatorRoutineRevision routineRevision,
+            Dictionary<string, SimulatorValueItem> inputData,
+            CancellationToken token
+        )
+        {
+            return Task.FromResult(new Dictionary<string, SimulatorValueItem>());
+        }
+
+        public Task TestConnection(CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected override void PreShutdown()
+        {
         }
     }
 }

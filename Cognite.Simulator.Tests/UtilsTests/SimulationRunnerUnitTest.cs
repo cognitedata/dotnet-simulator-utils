@@ -34,7 +34,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var runsListCallCount = 0;
 
-            var networkErrorMocks = new List<SimpleRequestMocker>
+            var networkMocks = new List<SimpleRequestMocker>
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
@@ -66,6 +66,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
             };
 
+            Environment.SetEnvironmentVariable("COGNITE_HOST", "https://api.cognitedata.com");
+            Environment.SetEnvironmentVariable("COGNITE_PROJECT", "test-project");
+
             WriteConfig();
 
             using var cts = new CancellationTokenSource();
@@ -93,56 +96,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             catch (OperationCanceledException) { }
 
-            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, "Simulation run 12345 failed with error:", Times.AtLeastOnce(), true);
+            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Information, "simulation runs(s) ready to run found in CDF", Times.AtLeastOnce(), true);
+            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, $"Simulation run {SeedData.TestSimulationRunId} failed with error:", Times.AtLeastOnce(), true);
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, "Network error during callback update", Times.AtLeastOnce(), true);
             VerifyLog(mockedConnectorLogger, LogLevel.Information, "Connector started", Times.AtLeast(2), true);
         }
 
-
-        private class EmptySimulatorAutomationClient :
-            AutomationClient,
-            ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
-        {
-            public EmptySimulatorAutomationClient(
-                ILogger<EmptySimulatorAutomationClient> logger,
-                DefaultConfig<DefaultAutomationConfig> config) : base(logger, config.Automation)
-            {
-            }
-
-            public Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
-            {
-                return Task.CompletedTask;
-            }
-
-            public string GetConnectorVersion(CancellationToken _token)
-            {
-                return CommonUtils.GetAssemblyVersion();
-            }
-
-            public string GetSimulatorVersion(CancellationToken _token)
-            {
-                return "2.0.1";
-            }
-
-            public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-                DefaultModelFilestate modelState,
-                SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData,
-                CancellationToken token
-            )
-            {
-                return Task.FromResult(new Dictionary<string, SimulatorValueItem>());
-            }
-
-            public Task TestConnection(CancellationToken token)
-            {
-                return Task.CompletedTask;
-            }
-
-            protected override void PreShutdown()
-            {
-                throw new NotImplementedException();
-            }
-        }
     }
 }

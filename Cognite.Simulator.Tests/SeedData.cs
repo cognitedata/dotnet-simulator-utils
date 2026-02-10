@@ -30,6 +30,7 @@ namespace Cognite.Simulator.Tests
         public static string TestRoutineExternalIdWithTsNoDataSampling = "Test Routine with no data sampling " + Now;
         public static string TestRoutineTsPrefix = "utils-tests-" + Now;
         public static long TestDataSetId = 386820206154952;
+        public static long TestSimulationRunId = 12345;
 
         public static async Task<CogniteSdk.Alpha.Simulator> GetOrCreateSimulator(Client sdk, SimulatorCreate simulator)
         {

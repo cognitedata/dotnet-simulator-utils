@@ -75,52 +75,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedLogger, LogLevel.Warning, "Restarting connector in 10 seconds", Times.AtLeastOnce());
         }
 
-        private class EmptySimulatorAutomationClient :
-            AutomationClient,
-            ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
-        {
-            public EmptySimulatorAutomationClient(
-                ILogger<EmptySimulatorAutomationClient> logger,
-                DefaultConfig<DefaultAutomationConfig> config) : base(logger, config.Automation)
-            {
-            }
-
-            public Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
-            {
-                throw new NotImplementedException();
-            }
-
-            public string GetConnectorVersion(CancellationToken _token)
-            {
-                return CommonUtils.GetAssemblyVersion();
-            }
-
-            public string GetSimulatorVersion(CancellationToken _token)
-            {
-                return "2.0.1";
-            }
-
-            public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
-                DefaultModelFilestate modelState,
-                SimulatorRoutineRevision routineRevision,
-                Dictionary<string, SimulatorValueItem> inputData,
-                CancellationToken token
-            )
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task TestConnection(CancellationToken token)
-            {
-                return Task.CompletedTask;
-            }
-
-            protected override void PreShutdown()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
         internal class CalculatorRoutineAutomation : RoutineImplementationBase
         {
             public CalculatorRoutineAutomation(SimulatorRoutineRevision routineRevision, Dictionary<string, SimulatorValueItem> inputData, ILogger logger) : base(routineRevision, inputData, logger)
