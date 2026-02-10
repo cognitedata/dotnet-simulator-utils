@@ -306,7 +306,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         public static HttpResponseMessage MockSimulationRunsListEmptyEndpoint()
         {
-            return OkItemsResponse("");
+            return CreateResponse(HttpStatusCode.OK, "{\"items\":[]}");
         }
 
         public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()
