@@ -77,7 +77,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var mockedLogger = new Mock<ILogger<DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
             var mockedSimulationRunnerLogger = new Mock<ILogger<DefaultSimulationRunner<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
             var mockedConnectorLogger = new Mock<ILogger<DefaultConnector<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
-            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(networkErrorMocks));
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(networkMocks));
 
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
             {
