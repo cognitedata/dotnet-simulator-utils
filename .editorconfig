@@ -132,3 +132,7 @@ dotnet_diagnostic.CA1000.severity = none
 # Reason: Prioritizing code simplicity and maintainability over micro-optimizations
 # CA1848: Use the LoggerMessage delegates
 dotnet_diagnostic.CA1848.severity = none
+
+# Reason: Prioritizing code simplicity over logging micro-optimizations
+# CA1873: Avoid expensive logging argument evaluation
+dotnet_diagnostic.CA1873.severity = none
