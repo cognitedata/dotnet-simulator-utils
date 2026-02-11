@@ -87,11 +87,19 @@ namespace Cognite.Simulator.Tests.UtilsTests
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
             DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
 
+            Exception? thrownException = null;
             try
             {
                 await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(mockedLogger.Object, cts.Token);
             }
-            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                thrownException = ex;
+            }
+
+            Assert.True(
+                thrownException == null || thrownException is OperationCanceledException,
+                $"Expected OperationCanceledException or no exception, but got: {thrownException?.GetType().Name}: {thrownException?.Message}");
 
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Information, "simulation runs(s) ready to run found in CDF", Times.AtLeastOnce(), true);
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, $"Simulation run {SeedData.TestSimulationRunId} failed with error:", Times.AtLeastOnce(), true);

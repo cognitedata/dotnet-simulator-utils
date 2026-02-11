@@ -322,10 +322,9 @@ namespace Cognite.Simulator.Utils
                     token
                 ).ConfigureAwait(false);
             }
-            catch (Exception e)
+            catch (ResponseException e)
             {
                 _logger.LogWarning("Failed to update simulator integration status: {Message}", e.Message);
-                throw;
             }
         }
 
