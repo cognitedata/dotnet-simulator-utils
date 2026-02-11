@@ -66,9 +66,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
             };
 
-            Environment.SetEnvironmentVariable("COGNITE_HOST", "https://api.cognitedata.com");
-            Environment.SetEnvironmentVariable("COGNITE_PROJECT", "test-project");
-
             WriteConfig();
 
             using var cts = new CancellationTokenSource();
@@ -101,6 +98,5 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, "Network error during callback update", Times.AtLeastOnce(), true);
             VerifyLog(mockedConnectorLogger, LogLevel.Information, "Connector started", Times.AtLeast(2), true);
         }
-
     }
 }
