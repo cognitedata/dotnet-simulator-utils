@@ -325,6 +325,7 @@ namespace Cognite.Simulator.Utils
             catch (Exception e)
             {
                 _logger.LogWarning("Failed to update simulator integration status: {Message}", e.Message);
+                throw;
             }
         }
 
