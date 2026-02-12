@@ -40,7 +40,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
                 new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorIntegrationsListEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
 
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), () =>
@@ -58,8 +58,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     throw new HttpRequestException("Network error during callback update");
                 }),
 
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevWithIntegrationEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevListEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1)),

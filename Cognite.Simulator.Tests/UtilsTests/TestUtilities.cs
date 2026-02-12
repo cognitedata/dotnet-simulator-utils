@@ -268,20 +268,11 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
         {
             var item = $@"{{
-                ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
-                ""name"": ""Test connector integration"",
-                ""dataSetId"": 123
-            }}";
-            return OkItemsResponse(item);
-        }
-
-        public static HttpResponseMessage MockSimulatorIntegrationsListEndpoint()
-        {
-            var item = $@"{{
                 ""id"": 999,
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""dataSetId"": {SeedData.TestDataSetId}
+                ""name"": ""Test connector integration"",
+                ""dataSetId"": 123
             }}";
             return OkItemsResponse(item);
         }
@@ -313,28 +304,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123,
                 ""createdTime"": 1234567890000
-            }}";
-            return OkItemsResponse(item);
-        }
-
-        public static HttpResponseMessage MockSimulatorRoutineRevWithIntegrationEndpoint()
-        {
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var item = $@"{{
-                ""id"": 123,
-                ""externalId"": ""test-routine-rev"",
-                ""routineExternalId"": ""test-routine"",
-                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
-                ""modelExternalId"": ""test-model"",
-                ""name"": ""Test routine revision"",
-                ""dataSetId"": 123,
-                ""createdTime"": {now},
-                ""lastUpdatedTime"": {now},
-                ""configuration"": {{}}
             }}";
             return OkItemsResponse(item);
         }
@@ -356,21 +329,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""logId"": 1234567890,
                 ""createdTime"": 1234567890000,
                 ""lastUpdatedTime"": 1234567890000
-            }}";
-            return OkItemsResponse(item);
-        }
-
-        public static HttpResponseMessage MockSimulatorModelRevListEndpoint()
-        {
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var item = $@"{{
-                ""id"": 100,
-                ""externalId"": ""test-model-rev"",
-                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""modelExternalId"": ""test-model"",
-                ""fileId"": 100,
-                ""createdTime"": {now},
-                ""lastUpdatedTime"": {now}
             }}";
             return OkItemsResponse(item);
         }
