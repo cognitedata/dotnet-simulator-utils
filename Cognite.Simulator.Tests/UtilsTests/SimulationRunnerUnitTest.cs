@@ -4,9 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cognite.Extractor.Logging;
 using Cognite.Simulator.Utils;
-using Cognite.Simulator.Utils.Automation;
 
 using CogniteSdk.Alpha;
 
@@ -32,8 +30,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Fact]
         public async Task TestSimulationRunner_CallbackNetworkError_HandledGracefully()
         {
-            var runsListCallCount = 0;
-
             var networkMocks = new List<SimpleRequestMocker>
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
@@ -43,15 +39,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
 
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), () =>
-                {
-                    runsListCallCount++;
-                    if (runsListCallCount == 1)
-                    {
-                        return MockSimulationRunsListEndpoint();
-                    }
-                    return MockSimulationRunsListEmptyEndpoint();
-                }),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint),
 
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () =>
                 {
