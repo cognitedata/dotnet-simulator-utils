@@ -268,17 +268,43 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage MockSimulatorsIntegrationsEndpoint()
         {
             var item = $@"{{
+                ""id"": 999,
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123
             }}";
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockSimulationRunsListEndpoint()
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var item = $@"{{
+                ""id"": {SeedData.TestSimulationRunId},
+                ""status"": ""ready"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""routineRevisionExternalId"": ""test-routine-rev"",
+                ""modelRevisionExternalId"": ""test-model-rev"",
+                ""routineExternalId"": ""test-routine"",
+                ""runType"": ""external"",
+                ""createdTime"": {now},
+                ""lastUpdatedTime"": {now}
+            }}";
+            return OkItemsResponse(item);
+        }
+
+        public static HttpResponseMessage MockSimulationRunsListEmptyEndpoint()
+        {
+            return CreateResponse(HttpStatusCode.OK, "{\"items\":[]}");
+        }
+
         public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()
         {
             var item = $@"{{
                 ""externalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
                 ""name"": ""Test connector integration"",
                 ""dataSetId"": 123,
                 ""createdTime"": 1234567890000
@@ -396,6 +422,51 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var provider = services.BuildServiceProvider();
 
             return (provider, mockedLogger);
+        }
+    }
+
+    public class EmptySimulatorAutomationClient :
+        AutomationClient,
+        ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>
+    {
+        public EmptySimulatorAutomationClient(
+            ILogger<EmptySimulatorAutomationClient> logger,
+            DefaultConfig<DefaultAutomationConfig> config) : base(logger, config.Automation)
+        {
+        }
+
+        public Task ExtractModelInformation(DefaultModelFilestate state, CancellationToken _token)
+        {
+            return Task.CompletedTask;
+        }
+
+        public string GetConnectorVersion(CancellationToken _token)
+        {
+            return CommonUtils.GetAssemblyVersion();
+        }
+
+        public string GetSimulatorVersion(CancellationToken _token)
+        {
+            return "2.0.1";
+        }
+
+        public Task<Dictionary<string, SimulatorValueItem>> RunSimulation(
+            DefaultModelFilestate modelState,
+            SimulatorRoutineRevision routineRevision,
+            Dictionary<string, SimulatorValueItem> inputData,
+            CancellationToken token
+        )
+        {
+            return Task.FromResult(new Dictionary<string, SimulatorValueItem>());
+        }
+
+        public Task TestConnection(CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected override void PreShutdown()
+        {
         }
     }
 }
