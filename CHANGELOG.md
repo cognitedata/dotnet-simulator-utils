@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-026 (2026-02-13)
+
+### Bug Fixes
+
+* Fixed an issue where network disconnection during simulation run status updates would crash the connector. The connector now catches all exceptions (including `HttpRequestException`) during status callbacks and restarts gracefully instead of terminating.
+
 ## Release v1.0.0-beta-025 (2025-11-11)
 
 ### Other changes
