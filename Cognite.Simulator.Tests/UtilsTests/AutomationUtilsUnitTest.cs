@@ -96,6 +96,38 @@ namespace Cognite.Simulator.Tests.UtilsTests
         }
 
         [WindowsOnlyFact]
+        public void Shutdown_WhenServerIsNotNull_ReleasesComObjectSuccessfully()
+        {
+            var mockServer = new object();
+            var mockClient = CreateMockClient();
+
+            mockClient
+                .Protected()
+                .Setup<Type>("GetServerType", ItExpr.IsAny<string>())
+                .Returns(typeof(object));
+
+            mockClient
+                .Protected()
+                .Setup<dynamic>("CreateServerInstance", ItExpr.IsAny<Type>())
+                .Returns(mockServer);
+
+            mockClient
+                .Protected()
+                .Setup("ReleaseComObject")
+                .Callback(() => { });
+
+            mockClient.Object.Initialize();
+
+            var exception = Record.Exception(() => mockClient.Object.Shutdown());
+
+            Assert.Null(exception);
+            mockClient.Protected().Verify("PreShutdown", Times.Once());
+            mockClient.Protected().Verify("ReleaseComObject", Times.Once());
+            VerifyLog(_mockLogger, LogLevel.Debug, "Released COM Object", Times.Once(), true);
+            VerifyLog(_mockLogger, LogLevel.Debug, "Automation server instance removed", Times.Once(), true);
+        }
+
+        [WindowsOnlyFact]
         public void Shutdown_WhenPreShutdownHangs_TimesOutAndLogsWarning()
         {
             var mockClient = CreateMockClient();
