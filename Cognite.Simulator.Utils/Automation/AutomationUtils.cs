@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +23,8 @@ namespace Cognite.Simulator.Utils.Automation
         protected dynamic Server { get; private set; }
         private readonly ILogger _logger;
         private readonly AutomationConfig _config;
+
+        private const int ShutdownTimeoutSeconds = 10;
 
         /// <summary>
         /// Creates an instance of the client that instantiates a connection
@@ -66,23 +69,49 @@ namespace Cognite.Simulator.Utils.Automation
         }
 
         /// <summary>
-        /// Shuts down the connection with the automation server
+        /// Shuts down the connection with the automation server. Runs PreShutdown and COM release
+        /// with a timeout so that the caller is not blocked if COM hangs.
         /// </summary>
         public virtual void Shutdown()
         {
             try
             {
-                PreShutdown();
-            }
-            finally
-            {
-                if (Server != null)
+                var shutdownTask = Task.Run(() =>
                 {
-                    ReleaseComObject();
-                    _logger.LogDebug("Released COM Object");
-                    Server = null;
+                    try
+                    {
+                        PreShutdown();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Exception during PreShutdown. The COM object will still be released.");
+                    }
+
+                    if (Server != null)
+                    {
+                        try
+                        {
+                            ReleaseComObject();
+                            _logger.LogDebug("Released COM Object");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Exception during ReleaseComObject.");
+                        }
+                        Server = null;
+                    }
+                });
+
+                if (!shutdownTask.Wait(TimeSpan.FromSeconds(ShutdownTimeoutSeconds)))
+                {
+                    _logger.LogWarning("OpenServer shutdown timed out after {Seconds} seconds.", ShutdownTimeoutSeconds);
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Exception during OpenServer shutdown.");
+            }
+
             _logger.LogDebug("Automation server instance removed");
         }
 
