@@ -24,6 +24,8 @@ namespace Cognite.Simulator.Utils.Automation
         private readonly ILogger _logger;
         private readonly AutomationConfig _config;
 
+        private const int ShutdownTimeoutSeconds = 10;
+
         /// <summary>
         /// Creates an instance of the client that instantiates a connection
         /// to the server with the program id in the provided configuration (<paramref name="config"/>)
@@ -79,28 +81,30 @@ namespace Cognite.Simulator.Utils.Automation
                     try
                     {
                         PreShutdown();
-                        if (Server != null)
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Exception during PreShutdown. The COM object will still be released.");
+                    }
+
+                    if (Server != null)
+                    {
+                        try
                         {
                             ReleaseComObject();
                             _logger.LogDebug("Released COM Object");
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Exception during OpenServer shutdown (PreShutdown or ReleaseComObject).");
-                    }
-                    finally
-                    {
-                        if (Server != null)
+                        catch (Exception ex)
                         {
-                            Server = null;
+                            _logger.LogWarning(ex, "Exception during ReleaseComObject.");
                         }
+                        Server = null;
                     }
                 });
 
-                if (!shutdownTask.Wait(TimeSpan.FromSeconds(10)))
+                if (!shutdownTask.Wait(TimeSpan.FromSeconds(ShutdownTimeoutSeconds)))
                 {
-                    _logger.LogWarning("OpenServer shutdown timed out.");
+                    _logger.LogWarning("OpenServer shutdown timed out after {Seconds} seconds.", ShutdownTimeoutSeconds);
                 }
             }
             catch (Exception ex)
