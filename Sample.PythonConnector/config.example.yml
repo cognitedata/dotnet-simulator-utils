@@ -1,0 +1,47 @@
+version: 1
+
+logger:
+    console:
+        level: "debug"
+
+cognite:
+    project: ${COGNITE_PROJECT}
+    host: ${COGNITE_HOST}
+    idp-authentication:
+        tenant: ${COGNITE_TENANT_ID}
+        client-id: ${COGNITE_CLIENT_ID}
+        secret: ${COGNITE_CLIENT_SECRET}
+        # scopes:
+        #   - https://api.cognitedata.com/.default
+        scopes:
+          - ${COGNITE_SCOPE}
+    
+connector:
+  name-prefix: "mujoco-connector@"
+  data-set-id: ${COGNITE_DATA_SET_ID}
+
+# MuJoCo Connector Configuration
+# =================================
+# This connector integrates MuJoCo physics simulator with Cognite Data Fusion.
+# Python files (definition.py, client.py, routine.py) are embedded in the executable
+# at build time - no external Python files needed on the target machine.
+#
+# Supported model file types: .xml (MJCF), .mjcf, .urdf
+#
+automation:
+  # Path to Python DLL (optional, pythonnet will auto-detect if not specified)
+  # On Windows: "python311.dll" or "C:\\Python311\\python311.dll"
+  # On Linux: "libpython3.11.so" or "/usr/lib/x86_64-linux-gnu/libpython3.11.so"
+  # On macOS: "libpython3.11.dylib" or "/usr/local/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib"
+  # python-dll: ""
+  
+  # Python home directory (optional, for setting PYTHONHOME)
+  # python-home: ""
+  
+  # Timeout for Python operations in milliseconds (5 minutes)
+  execution-timeout: 300000
+  
+  # Additional Python paths to add to sys.path (optional)
+  # NOTE: MuJoCo must be installed in the Python environment: pip install mujoco
+  # python-paths:
+  #   - "/path/to/additional/modules"
