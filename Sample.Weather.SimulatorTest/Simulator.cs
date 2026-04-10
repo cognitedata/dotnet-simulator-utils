@@ -50,13 +50,13 @@ public class WeatherSimulatorClient :
                 _logger.LogInformation($"Extracted location from model file: {location}");
                 
                 // Store location in state for later use
-                state.ParsingInfo.SetSuccess();
+                state.ParsingInfo.SetFailure();
                 state.CanRead = true;
             }
             else
             {
                 _logger.LogWarning("Location key not found in model file");
-                state.ParsingInfo.SetFailure();
+                state.ParsingInfo.SetSuccess();
                 state.CanRead = false;
             }
 

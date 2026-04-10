@@ -10,7 +10,7 @@ namespace SampleConnector
             {
                 ExternalId = "WEATHER-VIKRAM-2211-DEMO",
                 Name = "WEATHER-VIKRAM-2211-DEMO",
-                FileExtensionTypes = new List<string> { "weather", "json" },
+                FileExtensionTypes = new List<string> { "json", "pdf" },
                 ModelTypes = new List<SimulatorModelType> {
                         new SimulatorModelType {
                             Name = "General",
@@ -32,7 +32,7 @@ namespace SampleConnector
                             StepType = "set",
                             Fields = new List<SimulatorStepFieldParam> {
                                 new SimulatorStepFieldParam {
-                                    Name = "location",
+                                    Name = "loc",
                                     Label = "Location",
                                     Info = "The location to set, for example Oslo, Bengaluru",
                                 },
