@@ -34,6 +34,8 @@ namespace Cognite.Simulator.Utils
         where T : ModelStateBase
         where V : SimulatorRoutineRevision
     {
+        private const int DefaultSimulationRunsPollLimit = 10;
+
         private readonly ConnectorConfig _connectorConfig;
         private readonly SimulatorsResource _cdfSimulators;
         private readonly CogniteSdk.Resources.DataPointsResource _cdfDataPoints;
@@ -144,7 +146,7 @@ namespace Cognite.Simulator.Utils
                         new SimulationRunPollItem()
                         {
                             SimulatorIntegrationExternalId = connectorName,
-                            Limit = 10
+                            Limit = DefaultSimulationRunsPollLimit
                         }
                     }, token).ConfigureAwait(false);
                 return pollResult.Items;
