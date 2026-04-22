@@ -92,7 +92,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var pipelineId = SeedData.TestExtPipelineId;
             string directory = Directory.GetCurrentDirectory();
             string filePath = Path.Combine(directory, "config.yml");
-            var lbSetting = loadBalancerEnabled ? "true" : "false";
             string yamlContent = $@"
                 version: 1
                 logger:
@@ -112,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     name-prefix: {SeedData.TestIntegrationExternalId}
                     add-machine-name-suffix: false
                     data-set-id: {datasetId}
-                    load-balancer-enabled: {lbSetting}
+                    load-balancer-enabled: {(loadBalancerEnabled ? "true" : "false")}
                     model-library:
                         library-update-interval: 1";
 

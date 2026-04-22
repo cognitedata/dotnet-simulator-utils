@@ -134,6 +134,7 @@ namespace Cognite.Simulator.Utils
         {
             var connectorName = _connectorConfig.GetConnectorName();
 
+            // Poll endpoint is only for ready status. Stale run (running status) always uses list endpoint.
             if (_connectorConfig.LoadBalancerEnabled && status == SimulationRunStatus.ready)
             {
                 _logger.LogDebug("Fetching simulation runs via poll endpoint");
