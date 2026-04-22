@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             );
         }
 
-        public static void WriteConfig()
+        public static void WriteConfig(bool loadBalancerEnabled = false)
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -92,6 +92,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             var pipelineId = SeedData.TestExtPipelineId;
             string directory = Directory.GetCurrentDirectory();
             string filePath = Path.Combine(directory, "config.yml");
+            var lbSetting = loadBalancerEnabled ? "true" : "false";
             string yamlContent = $@"
                 version: 1
                 logger:
@@ -111,6 +112,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     name-prefix: {SeedData.TestIntegrationExternalId}
                     add-machine-name-suffix: false
                     data-set-id: {datasetId}
+                    load-balancer-enabled: {lbSetting}
                     model-library:
                         library-update-interval: 1";
 
@@ -298,6 +300,24 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage MockSimulationRunsListEmptyEndpoint()
         {
             return CreateResponse(HttpStatusCode.OK, "{\"items\":[]}");
+        }
+
+        public static HttpResponseMessage MockSimulationRunsPollEndpoint()
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var item = $@"{{
+                ""id"": {SeedData.TestSimulationRunId},
+                ""status"": ""ready"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
+                ""routineRevisionExternalId"": ""test-routine-rev"",
+                ""modelRevisionExternalId"": ""test-model-rev"",
+                ""routineExternalId"": ""test-routine"",
+                ""runType"": ""external"",
+                ""createdTime"": {now},
+                ""lastUpdatedTime"": {now}
+            }}";
+            return OkItemsResponse(item);
         }
 
         public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()

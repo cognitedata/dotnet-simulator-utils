@@ -95,5 +95,143 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, "Network error during callback update", Times.AtLeastOnce(), true);
             VerifyLog(mockedConnectorLogger, LogLevel.Information, "Connector started", Times.AtLeast(2), true);
         }
+
+        /// <summary>
+        /// Tests that when LoadBalancerEnabled is true, the connector uses the poll endpoint
+        /// instead of the legacy list endpoint with static SimulatorIntegrationExternalId filter.
+        /// </summary>
+        [Fact]
+        public async Task TestSimulationRunner_LoadBalancerEnabled_UsesPollEndpoint()
+        {
+            var networkMocks = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
+                new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsPollEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () => OkItemsResponse($@"{{""id"": {SeedData.TestSimulationRunId}, ""status"": ""running""}}")),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1)),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
+            };
+
+            WriteConfig(loadBalancerEnabled: true);
+
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+
+            var mockedLogger = new Mock<ILogger<DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedSimulationRunnerLogger = new Mock<ILogger<DefaultSimulationRunner<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedConnectorLogger = new Mock<ILogger<DefaultConnector<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(networkMocks));
+
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
+            {
+                services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, EmptySimulatorAutomationClient>();
+                services.AddSingleton(mockFactory.Object);
+                services.AddSingleton(mockedLogger.Object);
+                services.AddSingleton(mockedSimulationRunnerLogger.Object);
+                services.AddSingleton(mockedConnectorLogger.Object);
+            };
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
+
+            Exception? thrownException = null;
+            try
+            {
+                await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(mockedLogger.Object, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                thrownException = ex;
+            }
+
+            Assert.True(
+                thrownException == null || thrownException is OperationCanceledException,
+                $"Expected OperationCanceledException or no exception, but got: {thrownException?.GetType().Name}: {thrownException?.Message}");
+
+            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Debug,
+                "Fetching simulation runs via poll endpoint", Times.AtLeastOnce(), true);
+            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Debug,
+                "Fetching simulation runs via list endpoint with integration filter", Times.Once(), true);
+        }
+
+        /// <summary>
+        /// Tests that when LoadBalancerEnabled is false, the connector uses the legacy list endpoint
+        /// with static SimulatorIntegrationExternalId filtering.
+        /// </summary>
+        [Fact]
+        public async Task TestSimulationRunner_LoadBalancerDisabled_UsesListEndpoint()
+        {
+            var networkMocks = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
+                new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () => OkItemsResponse($@"{{""id"": {SeedData.TestSimulationRunId}, ""status"": ""running""}}")),
+
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1)),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
+            };
+
+            WriteConfig(loadBalancerEnabled: false);
+
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+
+            var mockedLogger = new Mock<ILogger<DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedSimulationRunnerLogger = new Mock<ILogger<DefaultSimulationRunner<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedConnectorLogger = new Mock<ILogger<DefaultConnector<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(networkMocks));
+
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
+            {
+                services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, EmptySimulatorAutomationClient>();
+                services.AddSingleton(mockFactory.Object);
+                services.AddSingleton(mockedLogger.Object);
+                services.AddSingleton(mockedSimulationRunnerLogger.Object);
+                services.AddSingleton(mockedConnectorLogger.Object);
+            };
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
+
+            Exception? thrownException = null;
+            try
+            {
+                await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(mockedLogger.Object, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                thrownException = ex;
+            }
+
+            Assert.True(
+                thrownException == null || thrownException is OperationCanceledException,
+                $"Expected OperationCanceledException or no exception, but got: {thrownException?.GetType().Name}: {thrownException?.Message}");
+
+            VerifyLog(mockedSimulationRunnerLogger, LogLevel.Debug,
+                "Fetching simulation runs via list endpoint with integration filter", Times.Exactly(2), true);
+        }
     }
 }

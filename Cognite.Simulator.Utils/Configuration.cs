@@ -216,6 +216,12 @@ namespace Cognite.Simulator.Utils
         public LicenseCheckConfig LicenseCheck { get; set; } = new LicenseCheckConfig();
 
         /// <summary>
+        /// When true, the connector claims runs via poll endpoint
+        /// instead of the legacy static SimulatorIntegrationExternalId filter.
+        /// </summary>
+        public bool LoadBalancerEnabled { get; set; }
+
+        /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
         /// </summary>
         /// <returns>Connector name</returns>
