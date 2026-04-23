@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     name-prefix: {SeedData.TestIntegrationExternalId}
                     add-machine-name-suffix: false
                     data-set-id: {datasetId}
-                    load-balancer-enabled: {(loadBalancerEnabled ? "true" : "false")}
+                    simulation-run-load-balancer-enabled: {(loadBalancerEnabled ? "true" : "false")}
                     model-library:
                         library-update-interval: 1";
 
@@ -299,24 +299,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static HttpResponseMessage MockSimulationRunsListEmptyEndpoint()
         {
             return CreateResponse(HttpStatusCode.OK, "{\"items\":[]}");
-        }
-
-        public static HttpResponseMessage MockSimulationRunsPollEndpoint()
-        {
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var item = $@"{{
-                ""id"": {SeedData.TestSimulationRunId},
-                ""status"": ""ready"",
-                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""simulatorIntegrationExternalId"": ""{SeedData.TestIntegrationExternalId}"",
-                ""routineRevisionExternalId"": ""test-routine-rev"",
-                ""modelRevisionExternalId"": ""test-model-rev"",
-                ""routineExternalId"": ""test-routine"",
-                ""runType"": ""external"",
-                ""createdTime"": {now},
-                ""lastUpdatedTime"": {now}
-            }}";
-            return OkItemsResponse(item);
         }
 
         public static HttpResponseMessage MockSimulatorRoutineRevEndpoint()

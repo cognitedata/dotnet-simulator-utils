@@ -103,10 +103,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task TestSimulationRunner_FetchEndpointSelection(bool loadBalancerEnabled)
+        public async Task TestSimulationRunner_FetchEndpointSelection(bool simulationRunLoadBalancerEnabled)
         {
-            var networkMocks = BuildNetworkMocksForLoadBalancer(loadBalancerEnabled);
-            WriteConfig(loadBalancerEnabled: loadBalancerEnabled);
+            var networkMocks = BuildNetworkMocksForLoadBalancer(simulationRunLoadBalancerEnabled);
+            WriteConfig(loadBalancerEnabled: simulationRunLoadBalancerEnabled);
 
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(2));
@@ -141,59 +141,46 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 thrownException == null || thrownException is OperationCanceledException,
                 $"Expected OperationCanceledException or no exception, but got: {thrownException?.GetType().Name}: {thrownException?.Message}");
 
-            VerifyLoadBalancerEndpointUsage(mockedSimulationRunnerLogger, loadBalancerEnabled);
+            foreach (var mocker in networkMocks)
+            {
+                mocker.AssertCallCount();
+            }
         }
 
-        private List<SimpleRequestMocker> BuildNetworkMocksForLoadBalancer(bool loadBalancerEnabled)
+        private List<SimpleRequestMocker> BuildNetworkMocksForLoadBalancer(bool simulationRunLoadBalancerEnabled)
         {
             var commonMocks = new List<SimpleRequestMocker>
             {
-                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-                new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint),
+                new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint, 1),
             };
 
-            if (loadBalancerEnabled)
+            if (simulationRunLoadBalancerEnabled)
             {
-                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsPollEndpoint, 1));
-                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsListEndpoint, 1));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint, 1));
             }
             else
             {
                 commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1));
-                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint, 1));
             }
 
             commonMocks.AddRange(new[]
             {
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () => OkItemsResponse($@"{{""id"": {SeedData.TestSimulationRunId}, ""status"": ""running""}}")),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1)),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/logs"), () => OkItemsResponse("{}")),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () => OkItemsResponse($@"{{""id"": {SeedData.TestSimulationRunId}, ""status"": ""running""}}"), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
             });
 
             return commonMocks;
         }
 
-        private void VerifyLoadBalancerEndpointUsage(
-            Mock<ILogger<DefaultSimulationRunner<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>> logger,
-            bool loadBalancerEnabled)
-        {
-            if (loadBalancerEnabled)
-            {
-                VerifyLog(logger, LogLevel.Debug, "Fetching simulation runs via poll endpoint", Times.Exactly(1), true);
-                VerifyLog(logger, LogLevel.Debug, "Fetching simulation runs via list endpoint with integration filter", Times.Exactly(1), true);
-            }
-            else
-            {
-                VerifyLog(logger, LogLevel.Debug, "Fetching simulation runs via list endpoint with integration filter", Times.Exactly(2), true);
-            }
-        }
     }
 }

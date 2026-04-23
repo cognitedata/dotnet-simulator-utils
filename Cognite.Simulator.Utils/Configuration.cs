@@ -219,7 +219,12 @@ namespace Cognite.Simulator.Utils
         /// When true, the connector claims runs via poll endpoint
         /// instead of the legacy static SimulatorIntegrationExternalId filter.
         /// </summary>
-        public bool LoadBalancerEnabled { get; set; }
+        public bool SimulationRunLoadBalancerEnabled { get; set; }
+
+        /// <summary>
+        /// Maximum number of simulation runs to claim per poll request when simulation run load balancer is enabled.
+        /// </summary>
+        public int SimulationRunsPollLimit { get; set; } = 10;
 
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix
