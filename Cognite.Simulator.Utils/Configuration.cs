@@ -224,7 +224,7 @@ namespace Cognite.Simulator.Utils
         /// <summary>
         /// Maximum number of simulation runs to claim per poll request when simulation run load balancer is enabled.
         /// </summary>
-        public int SimulationRunsPollLimit { get; set; } = 10;
+        public int SimulationRunPollLimit { get; set; } = 10;
 
         /// <summary>
         /// Returns the connector name, composed of the configured prefix and suffix

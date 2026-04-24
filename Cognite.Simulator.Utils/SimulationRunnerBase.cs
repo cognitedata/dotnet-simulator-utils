@@ -134,14 +134,13 @@ namespace Cognite.Simulator.Utils
             if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
             {
                 var pollResult = await _cdfSimulators.PollSimulationRunsAsync(
-                    new[]
-                    {
+                    [
                         new SimulationRunPollItem()
                         {
                             SimulatorIntegrationExternalId = connectorName,
-                            Limit = _connectorConfig.SimulationRunsPollLimit
+                            Limit = _connectorConfig.SimulationRunPollLimit
                         }
-                    }, token).ConfigureAwait(false);
+                    ], token).ConfigureAwait(false);
                 return pollResult.Items;
             }
 
