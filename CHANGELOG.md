@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-027 (2026-04-24)
+
+### Features
+
+* Introduce `connector.simulation-run-load-balancer-enabled` configuration option to enable dynamic simulation run assignment across multiple connectors. Configure `connector.simulation-run-poll-limit` to control the batch size for claiming runs (default: 10).
+
 ## Release v1.0.0-beta-026 (2026-02-13)
 
 ### Bug Fixes

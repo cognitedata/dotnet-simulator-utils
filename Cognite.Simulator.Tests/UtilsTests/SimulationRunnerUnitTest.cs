@@ -95,5 +95,92 @@ namespace Cognite.Simulator.Tests.UtilsTests
             VerifyLog(mockedSimulationRunnerLogger, LogLevel.Warning, "Network error during callback update", Times.AtLeastOnce(), true);
             VerifyLog(mockedConnectorLogger, LogLevel.Information, "Connector started", Times.AtLeast(2), true);
         }
+
+        /// <summary>
+        /// Tests simulation runs fetch endpoint selection based on configuration.
+        /// When enabled, uses poll endpoint for ready status; when disabled, uses list endpoint.
+        /// </summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task TestSimulationRunner_FetchEndpointSelection(bool simulationRunLoadBalancerEnabled)
+        {
+            var networkMocks = BuildNetworkMocksForLoadBalancer(simulationRunLoadBalancerEnabled);
+            WriteConfig(loadBalancerEnabled: simulationRunLoadBalancerEnabled);
+
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+
+            var mockedLogger = new Mock<ILogger<DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedSimulationRunnerLogger = new Mock<ILogger<DefaultSimulationRunner<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockedConnectorLogger = new Mock<ILogger<DefaultConnector<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
+            var mockFactory = GetMockedHttpClientFactory(MockRequestsAsync(networkMocks));
+
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConfigureServices = (services) =>
+            {
+                services.AddScoped<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>, EmptySimulatorAutomationClient>();
+                services.AddSingleton(mockFactory.Object);
+                services.AddSingleton(mockedLogger.Object);
+                services.AddSingleton(mockedSimulationRunnerLogger.Object);
+                services.AddSingleton(mockedConnectorLogger.Object);
+            };
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.ConnectorName = "Empty";
+            DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.SimulatorDefinition = SeedData.SimulatorCreate;
+
+            Exception? thrownException = null;
+            try
+            {
+                await DefaultConnectorRuntime<DefaultAutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>.Run(mockedLogger.Object, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                thrownException = ex;
+            }
+
+            Assert.True(
+                thrownException == null || thrownException is OperationCanceledException,
+                $"Expected OperationCanceledException or no exception, but got: {thrownException?.GetType().Name}: {thrownException?.Message}");
+
+            foreach (var mocker in networkMocks)
+            {
+                mocker.AssertCallCount();
+            }
+        }
+
+        private List<SimpleRequestMocker> BuildNetworkMocksForLoadBalancer(bool simulationRunLoadBalancerEnabled)
+        {
+            var commonMocks = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token/inspect"), MockTokenInspectEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/extpipes"), MockExtPipesEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.EndsWith("/simulators/list") || uri.EndsWith("/simulators") || uri.EndsWith("/simulators/update"), MockSimulatorsEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/list"), MockSimulatorsIntegrationsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint, 1),
+            };
+
+            if (simulationRunLoadBalancerEnabled)
+            {
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsListEndpoint, 1));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint, 1));
+            }
+            else
+            {
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint, 1));
+            }
+
+            commonMocks.AddRange(new[]
+            {
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/run/callback"), () => OkItemsResponse($@"{{""id"": {SeedData.TestSimulationRunId}, ""status"": ""running""}}"), 2),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/routines/revisions/list") || uri.Contains("/simulators/routines/revisions/byids"), MockSimulatorRoutineRevEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions"), MockSimulatorModelRevEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
+            });
+
+            return commonMocks;
+        }
+
     }
 }

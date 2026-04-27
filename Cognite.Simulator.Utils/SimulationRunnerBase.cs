@@ -109,14 +109,17 @@ namespace Cognite.Simulator.Utils
 
             var message = statusMessage == null || statusMessage.Length < 255 ? statusMessage : statusMessage.Substring(0, 254);
 
+            var callbackItem = new SimulationRunCallbackItem()
+            {
+                Id = runId,
+                Status = status,
+                StatusMessage = message,
+                SimulationTime = simulationTime,
+                SimulatorIntegrationExternalId = _connectorConfig.SimulationRunLoadBalancerEnabled ? _connectorConfig.GetConnectorName() : null
+            };
+
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
-                new SimulationRunCallbackItem()
-                {
-                    Id = runId,
-                    Status = status,
-                    StatusMessage = message,
-                    SimulationTime = simulationTime
-                }, token).ConfigureAwait(false);
+                callbackItem, token).ConfigureAwait(false);
 
             return res.Items.First();
         }
@@ -126,6 +129,20 @@ namespace Cognite.Simulator.Utils
             CancellationToken token)
         {
             var connectorName = _connectorConfig.GetConnectorName();
+
+            // When simulation run load balancer is enabled, poll is used for ready status and list endpoint for running status.
+            if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
+            {
+                var pollResult = await _cdfSimulators.PollSimulationRunsAsync(
+                    [
+                        new SimulationRunPollItem()
+                        {
+                            SimulatorIntegrationExternalId = connectorName,
+                            Limit = _connectorConfig.SimulationRunPollLimit
+                        }
+                    ], token).ConfigureAwait(false);
+                return pollResult.Items;
+            }
 
             var query = new SimulationRunQuery()
             {
@@ -204,7 +221,8 @@ namespace Cognite.Simulator.Utils
                         {
                             runItem.ValidateReadinessForExecution(_connectorConfig.SimulationRunTolerance);
                             (modelState, routineRev) = await GetModelAndRoutine(runItem).ConfigureAwait(false);
-                            if (routineRev == null || connectorExternalId != routineRev.SimulatorIntegrationExternalId)
+                            if (!_connectorConfig.SimulationRunLoadBalancerEnabled &&
+                                (routineRev == null || connectorExternalId != routineRev.SimulatorIntegrationExternalId))
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
                                 runId,
@@ -276,7 +294,8 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {simEv.Run.RoutineRevisionExternalId}");
             }
 
-            if (_connectorConfig.GetConnectorName() != routineRev.SimulatorIntegrationExternalId)
+            if (!_connectorConfig.SimulationRunLoadBalancerEnabled &&
+                _connectorConfig.GetConnectorName() != routineRev.SimulatorIntegrationExternalId)
             {
                 return (model, null);
             }
