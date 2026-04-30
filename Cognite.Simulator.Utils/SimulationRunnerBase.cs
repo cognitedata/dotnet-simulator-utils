@@ -140,13 +140,13 @@ namespace Cognite.Simulator.Utils
                 }
             };
 
-            // When simulation run load balancer is enabled, for ready status fetch both ready and queued runs
+            var listResult = await _cdfSimulators
+                .ListSimulationRunsAsync(query, token)
+                .ConfigureAwait(false);
+
+            // When simulation run load balancer is enabled, for ready status fetch queued runs up to SimulationRunPollLimit
             if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
             {
-                var listResult = await _cdfSimulators
-                    .ListSimulationRunsAsync(query, token)
-                    .ConfigureAwait(false);
-
                 var readyRuns = listResult.Items.ToList();
 
                 var remainingLimit = _connectorConfig.SimulationRunPollLimit - readyRuns.Count;
@@ -166,11 +166,7 @@ namespace Cognite.Simulator.Utils
                 return readyRuns;
             }
 
-            var runsResult = await _cdfSimulators
-                .ListSimulationRunsAsync(query, token)
-                .ConfigureAwait(false);
-
-            return runsResult.Items;
+            return listResult.Items;
         }
 
         private async Task<IEnumerable<SimulationRunItem>> FindSimulationRuns(
