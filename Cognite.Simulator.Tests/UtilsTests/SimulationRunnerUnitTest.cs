@@ -98,7 +98,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
         /// <summary>
         /// Tests simulation runs fetch endpoint selection based on configuration.
-        /// When enabled, uses poll endpoint for ready status; when disabled, uses list endpoint.
+        /// When enabled, calls /list first for ready status, then /poll for queued status.
+        /// When disabled, uses /list endpoint only.
         /// </summary>
         [Theory]
         [InlineData(true)]
@@ -160,7 +161,8 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             if (simulationRunLoadBalancerEnabled)
             {
-                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsListEndpoint, 1));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1));
+                commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsListEmptyEndpoint, 1));
                 commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEmptyEndpoint, 1));
             }
             else
