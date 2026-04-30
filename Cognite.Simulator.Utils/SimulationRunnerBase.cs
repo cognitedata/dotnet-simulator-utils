@@ -130,20 +130,6 @@ namespace Cognite.Simulator.Utils
         {
             var connectorName = _connectorConfig.GetConnectorName();
 
-            // When simulation run load balancer is enabled, poll is used for ready status and list endpoint for running status.
-            if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
-            {
-                var pollResult = await _cdfSimulators.PollSimulationRunsAsync(
-                    [
-                        new SimulationRunPollItem()
-                        {
-                            SimulatorIntegrationExternalId = connectorName,
-                            Limit = _connectorConfig.SimulationRunPollLimit
-                        }
-                    ], token).ConfigureAwait(false);
-                return pollResult.Items;
-            }
-
             var query = new SimulationRunQuery()
             {
                 Filter = new SimulationRunFilter()
@@ -153,11 +139,34 @@ namespace Cognite.Simulator.Utils
                     SimulatorIntegrationExternalIds = [connectorName],
                 }
             };
-            var runsResult = await _cdfSimulators
+
+            var listResult = await _cdfSimulators
                 .ListSimulationRunsAsync(query, token)
                 .ConfigureAwait(false);
 
-            return runsResult.Items;
+            // When simulation run load balancer is enabled, for ready status fetch queued runs up to SimulationRunPollLimit
+            if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
+            {
+                var readyRuns = listResult.Items.ToList();
+
+                var remainingLimit = _connectorConfig.SimulationRunPollLimit - readyRuns.Count;
+                if (remainingLimit > 0)
+                {
+                    var pollResult = await _cdfSimulators.PollSimulationRunsAsync(
+                        [
+                            new SimulationRunPollItem()
+                            {
+                                SimulatorIntegrationExternalId = connectorName,
+                                Limit = remainingLimit
+                            }
+                        ], token).ConfigureAwait(false);
+                    readyRuns.AddRange(pollResult.Items);
+                }
+
+                return readyRuns;
+            }
+
+            return listResult.Items;
         }
 
         private async Task<IEnumerable<SimulationRunItem>> FindSimulationRuns(

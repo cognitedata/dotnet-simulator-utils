@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-028 (2026-04-30)
+
+### Features
+
+* Improved run fetching strategy when `connector.simulation-run-load-balancer-enabled` is configured by calling `/list` endpoint first to fetch ready runs, then `/poll` with adjusted limit to fetch queued runs.
+
 ## Release v1.0.0-beta-027 (2026-04-24)
 
 ### Features
