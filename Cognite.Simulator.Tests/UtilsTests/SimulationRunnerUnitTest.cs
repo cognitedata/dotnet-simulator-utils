@@ -104,10 +104,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task TestSimulationRunner_FetchEndpointSelection(bool simulationRunLoadBalancerEnabled)
+        public async Task TestSimulationRunner_FetchEndpointSelection(bool simulationRunLoadBalancingEnabled)
         {
-            var networkMocks = BuildNetworkMocksForLoadBalancer(simulationRunLoadBalancerEnabled);
-            WriteConfig(loadBalancerEnabled: simulationRunLoadBalancerEnabled);
+            var networkMocks = BuildNetworkMocksForLoadBalancer(simulationRunLoadBalancingEnabled);
+            WriteConfig(loadBalancingEnabled: simulationRunLoadBalancingEnabled);
 
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(2));
@@ -148,7 +148,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
         }
 
-        private List<SimpleRequestMocker> BuildNetworkMocksForLoadBalancer(bool simulationRunLoadBalancerEnabled)
+        private List<SimpleRequestMocker> BuildNetworkMocksForLoadBalancer(bool simulationRunLoadBalancingEnabled)
         {
             var commonMocks = new List<SimpleRequestMocker>
             {
@@ -159,7 +159,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/integrations/update"), MockSimulatorsIntegrationsEndpoint, 1),
             };
 
-            if (simulationRunLoadBalancerEnabled)
+            if (simulationRunLoadBalancingEnabled)
             {
                 commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/list"), MockSimulationRunsListEndpoint, 1));
                 commonMocks.Add(new SimpleRequestMocker(uri => uri.Contains("/simulators/runs/poll"), MockSimulationRunsListEmptyEndpoint, 1));
