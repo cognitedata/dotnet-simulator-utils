@@ -84,7 +84,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             );
         }
 
-        public static void WriteConfig(bool loadBalancerEnabled = false)
+        public static void WriteConfig(bool loadBalancingEnabled = false)
         {
             var host = Environment.GetEnvironmentVariable("COGNITE_HOST");
             var project = Environment.GetEnvironmentVariable("COGNITE_PROJECT");
@@ -111,7 +111,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     name-prefix: {SeedData.TestIntegrationExternalId}
                     add-machine-name-suffix: false
                     data-set-id: {datasetId}
-                    simulation-run-load-balancer-enabled: {(loadBalancerEnabled ? "true" : "false")}
+                    simulation-run-load-balancing-enabled: {(loadBalancingEnabled ? "true" : "false")}
                     model-library:
                         library-update-interval: 1";
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-029 (2026-05-05)
+
+### Other changes
+
+- Renamed `connector.simulation-run-load-balancer-enabled` property to `connector.simulation-run-load-balancing-enabled`.
+
 ## Release v1.0.0-beta-028 (2026-04-30)
 
 ### Features

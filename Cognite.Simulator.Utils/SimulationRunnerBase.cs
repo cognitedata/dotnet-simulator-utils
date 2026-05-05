@@ -115,7 +115,7 @@ namespace Cognite.Simulator.Utils
                 Status = status,
                 StatusMessage = message,
                 SimulationTime = simulationTime,
-                SimulatorIntegrationExternalId = _connectorConfig.SimulationRunLoadBalancerEnabled ? _connectorConfig.GetConnectorName() : null
+                SimulatorIntegrationExternalId = _connectorConfig.SimulationRunLoadBalancingEnabled ? _connectorConfig.GetConnectorName() : null
             };
 
             var res = await _cdfSimulators.SimulationRunCallbackAsync(
@@ -145,7 +145,7 @@ namespace Cognite.Simulator.Utils
                 .ConfigureAwait(false);
 
             // When simulation run load balancer is enabled, for ready status fetch queued runs up to SimulationRunPollLimit
-            if (_connectorConfig.SimulationRunLoadBalancerEnabled && status == SimulationRunStatus.ready)
+            if (_connectorConfig.SimulationRunLoadBalancingEnabled && status == SimulationRunStatus.ready)
             {
                 var readyRuns = listResult.Items.ToList();
 
@@ -230,7 +230,7 @@ namespace Cognite.Simulator.Utils
                         {
                             runItem.ValidateReadinessForExecution(_connectorConfig.SimulationRunTolerance);
                             (modelState, routineRev) = await GetModelAndRoutine(runItem).ConfigureAwait(false);
-                            if (!_connectorConfig.SimulationRunLoadBalancerEnabled &&
+                            if (!_connectorConfig.SimulationRunLoadBalancingEnabled &&
                                 (routineRev == null || connectorExternalId != routineRev.SimulatorIntegrationExternalId))
                             {
                                 _logger.LogError("Skip simulation run that belongs to another connector: {Id} {Connector}",
@@ -303,7 +303,7 @@ namespace Cognite.Simulator.Utils
                 throw new SimulationException($"Could not find a routine revision for model: {modelRevExternalId} routineRevision: {simEv.Run.RoutineRevisionExternalId}");
             }
 
-            if (!_connectorConfig.SimulationRunLoadBalancerEnabled &&
+            if (!_connectorConfig.SimulationRunLoadBalancingEnabled &&
                 _connectorConfig.GetConnectorName() != routineRev.SimulatorIntegrationExternalId)
             {
                 return (model, null);
