@@ -47,11 +47,17 @@ namespace Cognite.Simulator.Tests.UtilsTests
         {
             var simulatorDefinition = SeedData.SimulatorCreate;
 
+            Action<DefaultConfig<AutomationConfig>> mergedConfigModifier = config =>
+            {
+                config.Connector.SimulationRunLoadBalancingEnabled = true;
+                configModifier?.Invoke(config);
+            };
+
             var (provider, mockedLogger) = BuildModelLibraryTestSetup(
                 endpointMockTemplates,
                 simulatorDefinition,
                 testCallerName,
-                configModifier,
+                mergedConfigModifier,
                 extractModelInfoOverride);
 
             stateConfig = provider.GetRequiredService<StateStoreConfig>();
@@ -160,7 +166,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 mocker.AssertCallCount();
             }
 
-            VerifyLog(mockedLogger, LogLevel.Warning, "Model parsing exceeded timeout", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Warning, "Model parsing timed out", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
         }
 

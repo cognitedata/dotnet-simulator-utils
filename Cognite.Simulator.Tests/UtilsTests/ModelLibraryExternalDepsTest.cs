@@ -111,7 +111,12 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 }
             };
 
-            var (provider, mockedLogger) = BuildModelLibraryTestSetup(endpointMockTemplates, simulatorDefinition, testCallerName);
+            Action<DefaultConfig<AutomationConfig>> configModifier = config =>
+            {
+                config.Connector.SimulationRunLoadBalancingEnabled = true;
+            };
+
+            var (provider, mockedLogger) = BuildModelLibraryTestSetup(endpointMockTemplates, simulatorDefinition, testCallerName, configModifier);
 
             stateConfig = provider.GetRequiredService<StateStoreConfig>();
             modelLibraryConfig = provider.GetRequiredService<DefaultConfig<AutomationConfig>>().Connector.ModelLibrary;

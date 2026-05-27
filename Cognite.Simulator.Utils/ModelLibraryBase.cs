@@ -68,6 +68,7 @@ namespace Cognite.Simulator.Utils
 
         // Other injected services
         private readonly ModelLibraryConfig _config;
+        private readonly ConnectorConfig _connectorConfig;
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
@@ -97,6 +98,7 @@ namespace Cognite.Simulator.Utils
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
         /// <param name="config">Library configuration</param>
+        /// <param name="connectorConfig">Connector configuration</param>
         /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
@@ -104,6 +106,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             ModelLibraryConfig config,
+            ConnectorConfig connectorConfig,
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger logger,
@@ -116,6 +119,7 @@ namespace Cognite.Simulator.Utils
             }
 
             _config = config;
+            _connectorConfig = connectorConfig ?? throw new ArgumentNullException(nameof(connectorConfig));
             _simulatorDefinition = simulatorDefinition;
             _cdfFiles = cdf.CogniteClient.Files;
             _cdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
@@ -406,44 +410,36 @@ namespace Cognite.Simulator.Utils
                     try
                     {
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
-
-                        // Set the status to "Parsing" and persist it to CDF
-                        modelState.ParsingInfo.SetParsing();
-                        await PersistModelParsingStatus(modelState, token).ConfigureAwait(false);
-
-                        // Create a timeout cancellation token
-                        using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ModelParsingTimeoutSeconds)))
-                        using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+                        if (_connectorConfig.SimulationRunLoadBalancingEnabled)
                         {
-                            try
+                            modelState.ParsingInfo.SetParsing();
+                            await PersistModelStatus(modelState, token).ConfigureAwait(false);
+
+                            using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ModelParsingTimeoutSeconds)))
+                            using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
                             {
-                                // Extract model information with timeout
-                                await ExtractModelInformation(modelState, linkedCts.Token).ConfigureAwait(false);
-                            }
-                            catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
-                            {
-                                // Timeout occurred
-                                HandleParsingTimeout(modelState);
-                                return;
-                            }
-                            catch (Exception e) when (e is not OperationCanceledException)
-                            {
-                                // Any unexpected exception during parsing should mark the revision as failed
-                                // so it is not left stuck in the intermediate "parsing" status.
-                                // The exception is not re-thrown so GetModelRevision returns the model state
-                                // with failure info rather than crashing the caller.
-                                _logger.LogError("Model parsing failed for {ModelExtid} v{Version}: {Message}",
-                                    modelState.ModelExternalId, modelState.Version, e.Message);
-                                modelState.ParsingInfo.SetFailure(e.Message);
+                                try
+                                {
+                                    await ExtractModelInformation(modelState, linkedCts.Token).ConfigureAwait(false);
+                                }
+                                catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
+                                {
+                                    // Timeout occurred
+                                    HandleParsingTimeout(modelState);
+                                    return;
+                                }
+                                catch (Exception e) when (e is not OperationCanceledException)
+                                {
+                                    _logger.LogError("Model parsing failed for {ModelExtid} v{Version}: {Message}",
+                                        modelState.ModelExternalId, modelState.Version, e.Message);
+                                    modelState.ParsingInfo.SetFailure(e.Message);
+                                }
                             }
                         }
-
-                        // Persist extracted information
                         await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                     finally
                     {
-                        // Persist the final status (success/failure)
                         await PersistModelStatus(modelState, token).ConfigureAwait(false);
                     }
                 }
@@ -465,40 +461,16 @@ namespace Cognite.Simulator.Utils
         }
 
         /// <summary>
-        /// Updates the model parsing status to "Parsing" and persists it to CDF.
-        /// </summary>
-        /// <param name="modelState">Model file state</param>
-        /// <param name="token">Cancellation token</param>
-        private async Task PersistModelParsingStatus(T modelState, CancellationToken token)
-        {
-            if (modelState.ParsingInfo != null && modelState.ParsingInfo.Status == SimulatorModelRevisionStatus.parsing)
-            {
-                try
-                {
-                    await _cdfSimulatorResources.UpdateSimulatorModelRevisionParsingStatus(
-                        long.Parse(modelState.Id),
-                        SimulatorModelRevisionStatus.parsing,
-                        modelState.ParsingInfo.StatusMessage,
-                        token).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning("Failed to persist parsing status to CDF: {Message}", e.Message);
-                }
-            }
-        }
-
-        /// <summary>
         /// Handles parsing timeout by setting the model status to "failure".
         /// The failure status will be persisted to CDF by the caller's finally block via <see cref="PersistModelStatus"/>.
         /// </summary>
         /// <param name="modelState">Model file state</param>
         private void HandleParsingTimeout(T modelState)
         {
-            _logger.LogWarning("Model parsing exceeded timeout for {ModelExtid} v{Version}. Setting status to failure",
+            _logger.LogWarning("Model parsing timed out for {ModelExtid} v{Version}. Setting status to failure",
                 modelState.ModelExternalId, modelState.Version);
 
-            modelState.ParsingInfo.SetParsingTimeout();
+            modelState.ParsingInfo.SetFailure("Model parsing timed out");
         }
 
         private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
