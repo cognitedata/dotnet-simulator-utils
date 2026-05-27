@@ -66,7 +66,10 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             services.AddSingleton(SeedData.SimulatorCreate);
-            services.AddDefaultConfig();
+            services.AddDefaultConfig(configModifier: config =>
+            {
+                config.Connector.SimulationRunLoadBalancingEnabled = true;
+            });
 
             using var provider = services.BuildServiceProvider();
 
