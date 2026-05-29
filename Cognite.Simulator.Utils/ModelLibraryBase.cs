@@ -297,6 +297,21 @@ namespace Cognite.Simulator.Utils
 
             if (downloaded && modelState.ShouldProcess())
             {
+                if (_connectorConfig.SimulationRunLoadBalancingEnabled
+                    && modelState.ParsingInfo?.Status == SimulatorModelRevisionStatus.parsing)
+                {
+                    var parsingAge = DateTimeOffset.UtcNow
+                        - DateTimeOffset.FromUnixTimeMilliseconds(modelRevision.LastUpdatedTime);
+
+                    if (parsingAge.TotalSeconds < _config.ModelParsingTimeoutSeconds)
+                    {
+                        _logger.LogDebug(
+                            "Skipping model revision {ModelRevisionExternalId} — already being parsed by another connector",
+                            modelRevisionExternalId);
+                        return modelState;
+                    }
+                }
+
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
             }
 
@@ -435,6 +450,10 @@ namespace Cognite.Simulator.Utils
                                     modelState.ParsingInfo.SetFailure(e.Message);
                                 }
                             }
+                        }
+                        else
+                        {
+                            await ExtractModelInformation(modelState, token).ConfigureAwait(false);
                         }
                         await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }

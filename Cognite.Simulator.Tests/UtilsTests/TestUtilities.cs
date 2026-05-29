@@ -335,6 +335,28 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockSimulatorModelRevParsingEndpoint()
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId-v1"",
+                ""name"": ""Test Model Revision"",
+                ""description"": ""Test model revision description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""TestModelExternalId"",
+                ""fileId"": 100,
+                ""createdByUserId"": ""n/a"",
+                ""status"": ""parsing"",
+                ""dataSetId"": 123,
+                ""versionNumber"": 1,
+                ""logId"": 1234567890,
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": {now}
+            }}";
+            return OkItemsResponse(item);
+        }
+
         public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
         {
             var item = $@"{{

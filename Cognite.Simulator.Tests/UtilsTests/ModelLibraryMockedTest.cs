@@ -80,7 +80,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => MockSimulatorModelRevEndpoint(), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2), // parsing status + success status
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -217,6 +217,138 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
             VerifyLog(mockedLogger, LogLevel.Error, "Model parsing failed for TestModelExternalId v1", Times.Exactly(1), true);
+            VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
+        }
+
+        /// <summary>
+        /// Verifies that when load balancing is disabled, ExtractModelInformation is still called
+        /// (old behaviour preserved) and no 'parsing' status is sent before extraction.
+        /// Only 1 update call is expected (success status).
+        /// </summary>
+        [Fact]
+        public async Task TestModelLibraryLoadBalancingDisabledCallsExtractModelInformation()
+        {
+            // Arrange
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 1), // success status only
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
+                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100))
+            };
+
+            var (lib, mockedLogger) = SetupRuntime(
+                endpointMockTemplates,
+                configModifier: config => config.Connector.SimulationRunLoadBalancingEnabled = false);
+
+            await lib.Init(CancellationToken.None);
+            Assert.Empty(lib._state);
+
+            // Act
+            var modelInState = await lib.GetModelRevision("TestModelExternalId-v1");
+
+            // Assert
+            Assert.NotNull(modelInState);
+            Assert.True(modelInState.ParsingInfo.Parsed);
+            Assert.False(modelInState.ParsingInfo.Error);
+            Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
+
+            foreach (var mocker in endpointMockTemplates)
+            {
+                mocker.AssertCallCount();
+            }
+
+            VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
+        }
+
+        /// <summary>
+        /// Verifies that when a model revision is already in 'parsing' status and the parsing started
+        /// recently (within the timeout), a second connector skips it.
+        /// </summary>
+        [Fact]
+        public async Task TestModelLibrarySkipsRevisionAlreadyBeingParsedByAnotherConnector()
+        {
+            // Arrange
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevParsingEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
+                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100))
+            };
+
+            var (lib, mockedLogger) = SetupRuntime(
+                endpointMockTemplates,
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeoutSeconds = 3600);
+
+            await lib.Init(CancellationToken.None);
+            Assert.Empty(lib._state);
+
+            // Act
+            var modelInState = await lib.GetModelRevision("TestModelExternalId-v1");
+
+            // Assert
+            Assert.NotNull(modelInState);
+            Assert.False(modelInState.ParsingInfo.Parsed);
+            Assert.Equal(SimulatorModelRevisionStatus.parsing, modelInState.ParsingInfo.Status);
+
+            foreach (var mocker in endpointMockTemplates)
+            {
+                mocker.AssertCallCount();
+            }
+
+            VerifyLog(mockedLogger, LogLevel.Debug, "Skipping model revision TestModelExternalId-v1", Times.Exactly(1), true);
+        }
+
+        /// <summary>
+        /// Verifies that when a model revision is stuck in 'parsing' status past the configured timeout
+        /// the connector re-parses it and sets the final status.
+        /// </summary>
+        [Fact]
+        public async Task TestModelLibraryReparsesStaleParsingRevisionAfterCrashRecovery()
+        {
+            // Arrange
+            var endpointMockTemplates = new List<SimpleRequestMocker>
+            {
+                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevParsingEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2), // parsing + success
+                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
+                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
+                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100))
+            };
+
+            var (lib, mockedLogger) = SetupRuntime(
+                endpointMockTemplates,
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeoutSeconds = 0);
+
+            await lib.Init(CancellationToken.None);
+            Assert.Empty(lib._state);
+
+            // Act
+            var modelInState = await lib.GetModelRevision("TestModelExternalId-v1");
+
+            // Assert
+            Assert.NotNull(modelInState);
+            Assert.True(modelInState.ParsingInfo.Parsed);
+            Assert.False(modelInState.ParsingInfo.Error);
+            Assert.Equal(SimulatorModelRevisionStatus.success, modelInState.ParsingInfo.Status);
+
+            foreach (var mocker in endpointMockTemplates)
+            {
+                mocker.AssertCallCount();
+            }
+
+            VerifyLog(mockedLogger, LogLevel.Warning, "has been in 'parsing' status", Times.Exactly(1), true);
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
         }
     }
