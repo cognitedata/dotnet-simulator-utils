@@ -529,10 +529,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                     LibraryTable = "Library",
                     LibraryUpdateInterval = 2, // Update every 2 seconds
                 },
-                new ConnectorConfig
-                {
-                    SimulationRunLoadBalancingEnabled = true,
-                },
+                new ConnectorConfig(),
                 simulatorDefinition,
                 cdf,
                 logger,

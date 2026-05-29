@@ -37,7 +37,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1), // Returns empty to simulate no revisions found on first call
             new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), MockSimulatorModelRevEndpoint, 5),
-            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 2), // parsing status + final status = 2
+            new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), MockSimulatorModelRevEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
             new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
@@ -66,10 +66,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             services.AddSingleton(SeedData.SimulatorCreate);
-            services.AddDefaultConfig(configModifier: config =>
-            {
-                config.Connector.SimulationRunLoadBalancingEnabled = true;
-            });
+            services.AddDefaultConfig();
 
             using var provider = services.BuildServiceProvider();
 

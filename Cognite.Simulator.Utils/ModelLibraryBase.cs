@@ -310,6 +310,10 @@ namespace Cognite.Simulator.Utils
                             modelRevisionExternalId);
                         return modelState;
                     }
+
+                    _logger.LogWarning(
+                        "Model revision {ModelRevisionExternalId} has been in 'parsing' status for {Age}s (timeout: {Timeout}s), re-parsing",
+                        modelRevisionExternalId, (int)parsingAge.TotalSeconds, _config.ModelParsingTimeoutSeconds);
                 }
 
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
@@ -439,8 +443,9 @@ namespace Cognite.Simulator.Utils
                                 }
                                 catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
                                 {
-                                    // Timeout occurred
-                                    HandleParsingTimeout(modelState);
+                                    _logger.LogWarning("Model parsing timed out for {ModelExtid} v{Version}. Setting status to failure",
+                                        modelState.ModelExternalId, modelState.Version);
+                                    modelState.ParsingInfo.SetFailure("Model parsing timed out");
                                     return;
                                 }
                                 catch (Exception e) when (e is not OperationCanceledException)
@@ -477,19 +482,6 @@ namespace Cognite.Simulator.Utils
                     modelState.ParsingInfo.StatusMessage,
                     token).ConfigureAwait(false);
             }
-        }
-
-        /// <summary>
-        /// Handles parsing timeout by setting the model status to "failure".
-        /// The failure status will be persisted to CDF by the caller's finally block via <see cref="PersistModelStatus"/>.
-        /// </summary>
-        /// <param name="modelState">Model file state</param>
-        private void HandleParsingTimeout(T modelState)
-        {
-            _logger.LogWarning("Model parsing timed out for {ModelExtid} v{Version}. Setting status to failure",
-                modelState.ModelExternalId, modelState.Version);
-
-            modelState.ParsingInfo.SetFailure("Model parsing timed out");
         }
 
         private void UpdateModelParsingInfo(T modelState, SimulatorModelRevision modelRevision)
