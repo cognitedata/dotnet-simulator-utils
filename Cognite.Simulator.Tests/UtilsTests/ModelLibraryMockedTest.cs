@@ -141,7 +141,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var (lib, mockedLogger) = SetupRuntime(
                 endpointMockTemplates,
-                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeoutSeconds = 1,
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeout = 1,
                 extractModelInfoOverride: async (state, token) =>
                 {
                     // Block indefinitely until the timeout cancellation token fires
@@ -286,7 +286,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var (lib, mockedLogger) = SetupRuntime(
                 endpointMockTemplates,
-                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeoutSeconds = 3600);
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeout = 3600);
 
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);
@@ -329,7 +329,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var (lib, mockedLogger) = SetupRuntime(
                 endpointMockTemplates,
-                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeoutSeconds = 0);
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeout = 0);
 
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);

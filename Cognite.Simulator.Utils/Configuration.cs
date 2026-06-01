@@ -142,7 +142,7 @@ namespace Cognite.Simulator.Utils
         /// Timeout for model parsing in seconds. If parsing takes longer than this,
         /// the status will be set to "failure". Default is 3600 (1 hour).
         /// </summary>
-        public int ModelParsingTimeoutSeconds { get; set; } = 3600;
+        public int ModelParsingTimeout { get; set; } = 3600;
     }
 
     /// <summary>

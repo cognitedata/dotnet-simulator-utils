@@ -303,7 +303,7 @@ namespace Cognite.Simulator.Utils
                     var parsingAge = DateTimeOffset.UtcNow
                         - DateTimeOffset.FromUnixTimeMilliseconds(modelRevision.LastUpdatedTime);
 
-                    if (parsingAge.TotalSeconds < _config.ModelParsingTimeoutSeconds)
+                    if (parsingAge.TotalSeconds < _config.ModelParsingTimeout)
                     {
                         _logger.LogDebug(
                             "Skipping model revision {ModelRevisionExternalId} — already being parsed by another connector",
@@ -313,7 +313,7 @@ namespace Cognite.Simulator.Utils
 
                     _logger.LogWarning(
                         "Model revision {ModelRevisionExternalId} has been in 'parsing' status for {Age}s (timeout: {Timeout}s), re-parsing",
-                        modelRevisionExternalId, (int)parsingAge.TotalSeconds, _config.ModelParsingTimeoutSeconds);
+                        modelRevisionExternalId, (int)parsingAge.TotalSeconds, _config.ModelParsingTimeout);
                 }
 
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
@@ -434,7 +434,7 @@ namespace Cognite.Simulator.Utils
                             modelState.ParsingInfo.SetParsing();
                             await PersistModelStatus(modelState, token).ConfigureAwait(false);
 
-                            using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ModelParsingTimeoutSeconds)))
+                            using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ModelParsingTimeout)))
                             using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
                             {
                                 try
