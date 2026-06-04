@@ -450,8 +450,8 @@ namespace Cognite.Simulator.Utils
                                 }
                                 catch (Exception e) when (e is not OperationCanceledException)
                                 {
-                                    _logger.LogError("Model parsing failed for {ModelExtid} v{Version}: {Message}",
-                                        modelState.ModelExternalId, modelState.Version, e.Message);
+                                    _logger.LogError(e, "Model parsing failed for {ModelExtid} v{Version}",
+                                        modelState.ModelExternalId, modelState.Version);
                                     modelState.ParsingInfo.SetFailure(e.Message);
                                 }
                             }
