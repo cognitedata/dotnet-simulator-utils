@@ -319,7 +319,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             {
                 new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), () => OkItemsResponse(""), 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevParsingEndpoint(), 1),
+                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/byids"), () => MockSimulatorModelRevParsingEndpoint(DateTimeOffset.UtcNow.AddHours(-2).ToUnixTimeMilliseconds()), 1),
                 new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2), // parsing + success
                 new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
                 new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
@@ -329,7 +329,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
 
             var (lib, mockedLogger) = SetupRuntime(
                 endpointMockTemplates,
-                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeout = 0);
+                configModifier: config => config.Connector.ModelLibrary.ModelParsingTimeout = 3600);
 
             await lib.Init(CancellationToken.None);
             Assert.Empty(lib._state);

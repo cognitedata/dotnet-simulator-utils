@@ -446,7 +446,6 @@ namespace Cognite.Simulator.Utils
                                     _logger.LogWarning("Model parsing timed out for {ModelExtid} v{Version}. Setting status to failure",
                                         modelState.ModelExternalId, modelState.Version);
                                     modelState.ParsingInfo.SetFailure("Model parsing timed out");
-                                    return;
                                 }
                                 catch (Exception e) when (e is not OperationCanceledException)
                                 {

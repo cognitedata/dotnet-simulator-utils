@@ -335,9 +335,9 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
-        public static HttpResponseMessage MockSimulatorModelRevParsingEndpoint()
+        public static HttpResponseMessage MockSimulatorModelRevParsingEndpoint(long? lastUpdatedTime = null)
         {
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var updatedTime = lastUpdatedTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var item = $@"{{
                 ""id"": 1234567890,
                 ""externalId"": ""TestModelExternalId-v1"",
@@ -352,7 +352,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
                 ""versionNumber"": 1,
                 ""logId"": 1234567890,
                 ""createdTime"": 1234567890000,
-                ""lastUpdatedTime"": {now}
+                ""lastUpdatedTime"": {updatedTime}
             }}";
             return OkItemsResponse(item);
         }
