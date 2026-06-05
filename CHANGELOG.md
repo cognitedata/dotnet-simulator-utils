@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-030 (2026-06-05)
+
+### Features
+
+- When `connector.simulation-run-load-balancing-enabled` is `true`, model revision status is set to `parsing` before extraction, acting as a distributed soft-lock across connector instances. Revisions stuck in `parsing` beyond `connector.model-library.model-parsing-timeout` are automatically re-parsed. Old behavior is fully preserved when the flag is off.
+- Added `connector.model-library.model-parsing-timeout` (default: 3600s) — hard deadline for `ExtractModelInformation` and staleness threshold for crash recovery.
+
 ## Release v1.0.0-beta-029 (2026-05-05)
 
 ### Other changes
