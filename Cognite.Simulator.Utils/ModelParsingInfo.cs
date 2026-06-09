@@ -62,6 +62,14 @@ namespace Cognite.Simulator.Utils
             this.SetStatus(SimulatorModelRevisionStatus.failure, true, true, statusMessage);
         }
 
+        /// <summary>
+        /// Update the model info status to parsing
+        /// </summary>
+        public void SetParsing()
+        {
+            this.SetStatus(SimulatorModelRevisionStatus.parsing, false, false, "Model parsing in progress");
+        }
+
         private void SetStatus(SimulatorModelRevisionStatus status, bool isParsed, bool isError, string statusMessage)
         {
             this.Status = status;

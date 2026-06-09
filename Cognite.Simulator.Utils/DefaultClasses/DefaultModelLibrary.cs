@@ -42,7 +42,8 @@ namespace Cognite.Simulator.Utils
             FileStorageClient client,
             IExtractionStateStore store = null) :
             base(
-                config?.Connector.ModelLibrary,
+                config?.Connector?.ModelLibrary,
+                config?.Connector,
                 simulatorDefinition,
                 cdf,
                 logger,

@@ -68,6 +68,7 @@ namespace Cognite.Simulator.Utils
 
         // Other injected services
         private readonly ModelLibraryConfig _config;
+        private readonly ConnectorConfig _connectorConfig;
         private readonly SimulatorCreate _simulatorDefinition;
         private readonly IExtractionStateStore _store;
         private readonly FileStorageClient _downloadClient;
@@ -97,6 +98,7 @@ namespace Cognite.Simulator.Utils
         /// Creates a new instance of the library using the provided parameters
         /// </summary>
         /// <param name="config">Library configuration</param>
+        /// <param name="connectorConfig">Connector configuration</param>
         /// <param name="simulatorDefinition">Simulator definition</param>
         /// <param name="cdf">CDF destination object</param>
         /// <param name="logger">Logger</param>
@@ -104,6 +106,7 @@ namespace Cognite.Simulator.Utils
         /// <param name="store">State store for models state</param>
         public ModelLibraryBase(
             ModelLibraryConfig config,
+            ConnectorConfig connectorConfig,
             SimulatorCreate simulatorDefinition,
             CogniteDestination cdf,
             ILogger logger,
@@ -116,6 +119,7 @@ namespace Cognite.Simulator.Utils
             }
 
             _config = config;
+            _connectorConfig = connectorConfig ?? throw new ArgumentNullException(nameof(connectorConfig));
             _simulatorDefinition = simulatorDefinition;
             _cdfFiles = cdf.CogniteClient.Files;
             _cdfSimulatorResources = cdf.CogniteClient.Alpha.Simulators;
@@ -293,6 +297,25 @@ namespace Cognite.Simulator.Utils
 
             if (downloaded && modelState.ShouldProcess())
             {
+                if (_connectorConfig.SimulationRunLoadBalancingEnabled
+                    && modelState.ParsingInfo?.Status == SimulatorModelRevisionStatus.parsing)
+                {
+                    var parsingAge = DateTimeOffset.UtcNow
+                        - DateTimeOffset.FromUnixTimeMilliseconds(modelRevision.LastUpdatedTime);
+
+                    if (parsingAge.TotalSeconds < _config.ModelParsingTimeout)
+                    {
+                        _logger.LogDebug(
+                            "Skipping model revision {ModelRevisionExternalId} — already being parsed by another connector",
+                            modelRevisionExternalId);
+                        return modelState;
+                    }
+
+                    _logger.LogWarning(
+                        "Model revision {ModelRevisionExternalId} has been in 'parsing' status for {Age}s (timeout: {Timeout}s), re-parsing",
+                        modelRevisionExternalId, (int)parsingAge.TotalSeconds, _config.ModelParsingTimeout);
+                }
+
                 await ExtractModelInformationAndPersist(modelState, token).ConfigureAwait(false);
             }
 
@@ -406,7 +429,36 @@ namespace Cognite.Simulator.Utils
                     try
                     {
                         _logger.LogInformation("Extracting model information for {ModelExtid} v{Version}", modelState.ModelExternalId, modelState.Version);
-                        await ExtractModelInformation(modelState, token).ConfigureAwait(false);
+                        if (_connectorConfig.SimulationRunLoadBalancingEnabled)
+                        {
+                            modelState.ParsingInfo.SetParsing();
+                            await PersistModelStatus(modelState, token).ConfigureAwait(false);
+
+                            using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ModelParsingTimeout)))
+                            using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+                            {
+                                try
+                                {
+                                    await ExtractModelInformation(modelState, linkedCts.Token).ConfigureAwait(false);
+                                }
+                                catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
+                                {
+                                    _logger.LogWarning("Model parsing timed out for {ModelExtid} v{Version}. Setting status to failure",
+                                        modelState.ModelExternalId, modelState.Version);
+                                    modelState.ParsingInfo.SetFailure("Model parsing timed out");
+                                }
+                                catch (Exception e) when (e is not OperationCanceledException)
+                                {
+                                    _logger.LogError(e, "Model parsing failed for {ModelExtid} v{Version}",
+                                        modelState.ModelExternalId, modelState.Version);
+                                    modelState.ParsingInfo.SetFailure(e.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            await ExtractModelInformation(modelState, token).ConfigureAwait(false);
+                        }
                         await PersistModelInformation(modelState, token).ConfigureAwait(false);
                     }
                     finally

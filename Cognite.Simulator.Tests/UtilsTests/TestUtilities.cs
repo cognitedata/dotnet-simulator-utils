@@ -59,12 +59,13 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton(mockFactory.Object);
         }
 
-        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null)
+        public static void AddDefaultConfig(this ServiceCollection services, [CallerMemberName] string? testCallerName = null, Action<DefaultConfig<AutomationConfig>>? configModifier = null)
         {
             var config = new DefaultConfig<AutomationConfig>();
             config.GenerateDefaults();
             var filesDirectory = testCallerName != null ? $"./files-{testCallerName}" : $"./files";
             config.Connector.ModelLibrary.FilesDirectory = filesDirectory;
+            configModifier?.Invoke(config);
             services.AddSingleton(config);
         }
 
@@ -334,6 +335,28 @@ namespace Cognite.Simulator.Tests.UtilsTests
             return OkItemsResponse(item);
         }
 
+        public static HttpResponseMessage MockSimulatorModelRevParsingEndpoint(long? lastUpdatedTime = null)
+        {
+            var updatedTime = lastUpdatedTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var item = $@"{{
+                ""id"": 1234567890,
+                ""externalId"": ""TestModelExternalId-v1"",
+                ""name"": ""Test Model Revision"",
+                ""description"": ""Test model revision description"",
+                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
+                ""modelExternalId"": ""TestModelExternalId"",
+                ""fileId"": 100,
+                ""createdByUserId"": ""n/a"",
+                ""status"": ""parsing"",
+                ""dataSetId"": 123,
+                ""versionNumber"": 1,
+                ""logId"": 1234567890,
+                ""createdTime"": 1234567890000,
+                ""lastUpdatedTime"": {updatedTime}
+            }}";
+            return OkItemsResponse(item);
+        }
+
         public static HttpResponseMessage MockFilesDownloadLinkEndpoint()
         {
             var item = $@"{{
@@ -399,13 +422,20 @@ namespace Cognite.Simulator.Tests.UtilsTests
         public static (
             IServiceProvider provider,
             Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>
-            ) BuildModelLibraryTestSetup(List<SimpleRequestMocker> endpointMockTemplates, SimulatorCreate simulatorDefinition, [CallerMemberName] string? testCallerName = null)
+            ) BuildModelLibraryTestSetup(
+                List<SimpleRequestMocker> endpointMockTemplates,
+                SimulatorCreate simulatorDefinition,
+                [CallerMemberName] string? testCallerName = null,
+                Action<DefaultConfig<AutomationConfig>>? configModifier = null,
+                Func<DefaultModelFilestate, CancellationToken, Task>? extractModelInfoOverride = null)
         {
             var mockedLogger = new Mock<ILogger<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>>();
             var mockedSimulatorClient = new Mock<ISimulatorClient<DefaultModelFilestate, SimulatorRoutineRevision>>();
             mockedSimulatorClient.Setup(client => client.ExtractModelInformation(It.IsAny<DefaultModelFilestate>(), It.IsAny<CancellationToken>()))
                 .Returns((DefaultModelFilestate state, CancellationToken token) =>
                 {
+                    if (extractModelInfoOverride != null)
+                        return extractModelInfoOverride(state, token);
                     state.ParsingInfo.SetSuccess();
                     return Task.CompletedTask;
                 });
@@ -418,7 +448,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             services.AddSingleton<FileStorageClient>();
             services.AddSingleton<DefaultModelLibrary<AutomationConfig, DefaultModelFilestate, DefaultModelFileStatePoco>>();
             services.AddSingleton(simulatorDefinition);
-            services.AddDefaultConfig();
+            services.AddDefaultConfig(testCallerName, configModifier);
 
             var provider = services.BuildServiceProvider();
 
