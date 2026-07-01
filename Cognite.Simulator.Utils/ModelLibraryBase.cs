@@ -634,12 +634,19 @@ namespace Cognite.Simulator.Utils
 
                 foreach (var revision in modelRevisionsRes)
                 {
-                    var state = await GetOrAddModelRevision(revision.ExternalId, cachedRevisions, token).ConfigureAwait(false);
-                    if (state != null && state.Downloaded)
+                    try
                     {
-                        _libState.UpdateDestinationRange(
-                            CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime),
-                            CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime));
+                        var state = await GetOrAddModelRevision(revision.ExternalId, cachedRevisions, token).ConfigureAwait(false);
+                        if (state != null && state.Downloaded)
+                        {
+                            _libState.UpdateDestinationRange(
+                                CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime),
+                                CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Failed to process model revision {ExternalId}: {Message}", revision.ExternalId, ex.Message);
                     }
                 }
                 // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently

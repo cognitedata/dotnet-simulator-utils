@@ -90,6 +90,10 @@ namespace Cognite.Simulator.Utils
             catch (IOException e)
             {
                 _logger.LogError("I/O error occurred while saving the file into {filePath}: {Message}", filePath, e.Message);
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
             }
             return false;
         }
