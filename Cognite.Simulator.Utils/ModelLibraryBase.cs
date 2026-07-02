@@ -646,7 +646,7 @@ namespace Cognite.Simulator.Utils
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError("Failed to process model revision {ExternalId}: {Message}", revision.ExternalId, ex.Message);
+                        _logger.LogError(ex, "Failed to process model revision {ExternalId}", revision.ExternalId);
                     }
                 }
                 // TODO: this logic has to reviewed, seems like we aren't doing this correctly/efficiently

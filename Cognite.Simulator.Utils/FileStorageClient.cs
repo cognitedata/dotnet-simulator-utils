@@ -90,9 +90,16 @@ namespace Cognite.Simulator.Utils
             catch (IOException e)
             {
                 _logger.LogError("I/O error occurred while saving the file into {filePath}: {Message}", filePath, e.Message);
-                if (File.Exists(filePath))
+                try
                 {
-                    File.Delete(filePath);
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete partial file {filePath} after I/O error", filePath);
                 }
             }
             return false;
