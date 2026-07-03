@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Bug fixes
 
 - Delete partially written file when an `IOException` occurs during download, preventing corrupt ZIPs from being retried indefinitely.
+- Isolate model revision processing failures so one bad revision does not block subsequent revisions from being processed.
 
 ## Release v1.0.0-beta-030 (2026-06-05)
 

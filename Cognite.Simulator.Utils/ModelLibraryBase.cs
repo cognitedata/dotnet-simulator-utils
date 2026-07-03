@@ -644,7 +644,7 @@ namespace Cognite.Simulator.Utils
                                 CogniteTime.FromUnixTimeMilliseconds(state.UpdatedTime));
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         _logger.LogError(ex, "Failed to process model revision {ExternalId}", revision.ExternalId);
                     }
