@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -266,104 +263,6 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
 
             VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Exactly(1), true);
-        }
-
-        /// <summary>
-        /// Verifies that a model revision failing extraction does not block other revisions
-        /// in the same batch from being processed by FindModelRevisions.
-        /// </summary>
-        [Fact]
-        public async Task TestModelLibraryOneFailingRevisionDoesNotBlockOthers()
-        {
-            // Arrange
-            const string failingRevisionId = "FailingModelExternalId-v1";
-            const string succeedingRevisionId = "TestModelExternalId-v1";
-
-            var endpointMockTemplates = new List<SimpleRequestMocker>
-            {
-                new SimpleRequestMocker(uri => uri.EndsWith("/token"), MockAzureAADTokenEndpoint),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/list"), MockTwoSimulatorModelRevisionsListEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/simulators/models/revisions/update"), () => MockSimulatorModelRevEndpoint(), 2),
-                new SimpleRequestMocker(uri => uri.Contains("/files/byids"), MockFilesByIdsEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/files/downloadlink"), MockFilesDownloadLinkEndpoint, 1),
-                new SimpleRequestMocker(uri => uri.Contains("/files/download"), () => MockFilesDownloadEndpoint(1), 1),
-                new SimpleRequestMocker(uri => true, GoneResponse).ShouldBeCalled(Times.AtMost(100))
-            };
-
-            var (lib, mockedLogger) = SetupRuntime(
-                endpointMockTemplates,
-                configModifier: config => config.Connector.SimulationRunLoadBalancingEnabled = false,
-                extractModelInfoOverride: (state, token) =>
-                {
-                    if (state.ExternalId == failingRevisionId)
-                    {
-                        state.ParsingInfo.SetFailure("Simulated extraction crash");
-                        throw new InvalidOperationException("Simulated extraction crash");
-                    }
-                    state.ParsingInfo.SetSuccess();
-                    return Task.CompletedTask;
-                });
-
-            // Act
-            await lib.Init(CancellationToken.None);
-
-            // Assert
-            Assert.Equal(2, lib._state.Count);
-
-            var succeeded = lib._state.Values.Single(s => s.ExternalId == succeedingRevisionId);
-            Assert.True(succeeded.ParsingInfo.Parsed);
-            Assert.False(succeeded.ParsingInfo.Error);
-            Assert.Equal(SimulatorModelRevisionStatus.success, succeeded.ParsingInfo.Status);
-
-            var failed = lib._state.Values.Single(s => s.ExternalId == failingRevisionId);
-            Assert.True(failed.ParsingInfo.Parsed);
-            Assert.True(failed.ParsingInfo.Error);
-            Assert.Equal(SimulatorModelRevisionStatus.failure, failed.ParsingInfo.Status);
-
-            foreach (var mocker in endpointMockTemplates)
-            {
-                mocker.AssertCallCount();
-            }
-
-            VerifyLog(mockedLogger, LogLevel.Error, $"Failed to process model revision {failingRevisionId}", Times.Once(), true);
-            VerifyLog(mockedLogger, LogLevel.Information, "Extracting model information for TestModelExternalId v1", Times.Once(), true);
-        }
-
-        private static HttpResponseMessage MockTwoSimulatorModelRevisionsListEndpoint()
-        {
-            var item1 = $@"{{
-                ""id"": 1111111111,
-                ""externalId"": ""FailingModelExternalId-v1"",
-                ""name"": ""Failing Model Revision"",
-                ""description"": ""Test model revision description"",
-                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""modelExternalId"": ""FailingModelExternalId"",
-                ""fileId"": 100,
-                ""createdByUserId"": ""n/a"",
-                ""status"": ""unknown"",
-                ""dataSetId"": 123,
-                ""versionNumber"": 1,
-                ""logId"": 1111111111,
-                ""createdTime"": 1234567890000,
-                ""lastUpdatedTime"": 1234567890000
-            }}";
-            var item2 = $@"{{
-                ""id"": 2222222222,
-                ""externalId"": ""TestModelExternalId-v1"",
-                ""name"": ""Test Model Revision"",
-                ""description"": ""Test model revision description"",
-                ""simulatorExternalId"": ""{SeedData.TestSimulatorExternalId}"",
-                ""modelExternalId"": ""TestModelExternalId"",
-                ""fileId"": 100,
-                ""createdByUserId"": ""n/a"",
-                ""status"": ""unknown"",
-                ""dataSetId"": 123,
-                ""versionNumber"": 1,
-                ""logId"": 2222222222,
-                ""createdTime"": 1234567891000,
-                ""lastUpdatedTime"": 1234567891000
-            }}";
-            return CreateResponse(HttpStatusCode.OK, $"{{\"items\":[{item1},{item2}]}}");
         }
 
         /// <summary>
