@@ -55,7 +55,7 @@ namespace Cognite.Simulator.Tests.UtilsTests
             }
             finally
             {
-                if (File.Exists(tempFilePath)) File.Delete(tempFilePath);
+                StateUtils.DeleteLocalFile(tempFilePath);
             }
         }
 
