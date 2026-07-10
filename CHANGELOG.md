@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-031 (2026-07-01)
+
+### Bug fixes
+
+- Delete partially written file when an `IOException` occurs during download, preventing corrupt ZIPs from being retried indefinitely.
+
 ## Release v1.0.0-beta-030 (2026-06-05)
 
 ### Features

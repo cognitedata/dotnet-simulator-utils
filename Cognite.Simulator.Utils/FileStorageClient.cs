@@ -64,10 +64,7 @@ namespace Cognite.Simulator.Utils
                     return false;
                 }
 
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
+                StateUtils.DeleteLocalFile(filePath);
 
                 using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: DefaultBufferSize, useAsync: true))
@@ -90,6 +87,14 @@ namespace Cognite.Simulator.Utils
             catch (IOException e)
             {
                 _logger.LogError("I/O error occurred while saving the file into {filePath}: {Message}", filePath, e.Message);
+                try
+                {
+                    StateUtils.DeleteLocalFile(filePath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete partial file {filePath} after I/O error", filePath);
+                }
             }
             return false;
         }
