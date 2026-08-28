@@ -120,7 +120,7 @@ jobs:
         continue-on-error: false
 
       - name: Create Release
-        uses: actions/create-release@main
+        uses: actions/create-release@4c11c9fe1dcd9636620a16455165783b20fc7ea0 # main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
