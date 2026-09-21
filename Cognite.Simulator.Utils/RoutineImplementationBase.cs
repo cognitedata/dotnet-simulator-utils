@@ -180,8 +180,7 @@ namespace Cognite.Simulator.Utils
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                 _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
                 var result = GetOutput(output, extraArgs, token);
-                if (result == null)
-                {
+                if (result == null) {
                     _logger.LogWarning("Output {Output} could not be computed and will be skipped", output.ReferenceId);
                     return;
                 }
