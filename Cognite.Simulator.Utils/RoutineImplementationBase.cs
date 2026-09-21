@@ -70,7 +70,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="outputConfig">Output time series configuration</param>
         /// <param name="arguments">Extra arguments</param>
         /// <param name="token">Cancellation token</param>
-        /// <returns></returns>
+        /// <returns>
+        /// The output value, or null if the value could not be computed (e.g. undefined
+        /// or non-finite result) and should be skipped rather than failing the whole run.
+        /// </returns>
         public abstract SimulatorValueItem GetOutput(
             SimulatorRoutineRevisionOutput outputConfig,
             Dictionary<string, string> arguments,
