@@ -1,44 +1,56 @@
 using System.Collections.Generic;
 using System.Threading;
 
-using CogniteSdk.Alpha;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Xunit;
-
 using Cognite.Simulator.Utils;
 
-namespace Cognite.Simulator.Tests.UtilsTests {
-    public class RoutineImplementationBaseTest {
-        private class TestRoutine : RoutineImplementationBase {
+using CogniteSdk.Alpha;
+
+using Microsoft.Extensions.Logging;
+
+using Moq;
+
+using Xunit;
+
+namespace Cognite.Simulator.Tests.UtilsTests
+{
+    public class RoutineImplementationBaseTest
+    {
+        private class TestRoutine : RoutineImplementationBase
+        {
             private readonly SimulatorValueItem? _output;
 
             public TestRoutine(SimulatorRoutineRevision config, SimulatorValueItem? output, ILogger logger)
-                : base(config, new Dictionary<string, SimulatorValueItem>(), logger) {
+                : base(config, new Dictionary<string, SimulatorValueItem>(), logger)
+            {
                 _output = output;
             }
 
             public override SimulatorValueItem? GetOutput(
                 SimulatorRoutineRevisionOutput outputConfig,
                 Dictionary<string, string> arguments,
-                CancellationToken token) {
+                CancellationToken token)
+            {
                 return _output;
             }
 
-            public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token) {
+            public override void RunCommand(Dictionary<string, string> arguments, CancellationToken token)
+            {
             }
 
             public override void SetInput(
                 SimulatorRoutineRevisionInput inputConfig,
                 SimulatorValueItem input,
                 Dictionary<string, string> arguments,
-                CancellationToken token) {
+                CancellationToken token)
+            {
             }
         }
 
-        private static SimulatorRoutineRevision BuildRoutineRevision() => new SimulatorRoutineRevision {
+        private static SimulatorRoutineRevision BuildRoutineRevision() => new SimulatorRoutineRevision
+        {
             ExternalId = "UnitTest-1",
-            Configuration = new SimulatorRoutineRevisionConfiguration() {
+            Configuration = new SimulatorRoutineRevisionConfiguration()
+            {
                 Outputs = new List<SimulatorRoutineRevisionOutput>() {
                     new SimulatorRoutineRevisionOutput() {
                         Name = "Output 1",
@@ -66,7 +78,8 @@ namespace Cognite.Simulator.Tests.UtilsTests {
         [Fact]
         // A connector implementation signals an undefined/unrepresentable output by returning null
         // from GetOutput. PerformSimulation must skip that output rather than including a null value.
-        public void PerformSimulationSkipsOutputWhenGetOutputReturnsNull() {
+        public void PerformSimulationSkipsOutputWhenGetOutputReturnsNull()
+        {
             var routine = new TestRoutine(BuildRoutineRevision(), null, new Mock<ILogger>().Object);
 
             var result = routine.PerformSimulation(CancellationToken.None);
@@ -75,8 +88,10 @@ namespace Cognite.Simulator.Tests.UtilsTests {
         }
 
         [Fact]
-        public void PerformSimulationKeepsOutputWhenGetOutputReturnsValue() {
-            var output = new SimulatorValueItem {
+        public void PerformSimulationKeepsOutputWhenGetOutputReturnsValue()
+        {
+            var output = new SimulatorValueItem
+            {
                 ReferenceId = "OC1",
                 ValueType = SimulatorValueType.DOUBLE,
                 Value = new SimulatorValue.Double(1.23),
