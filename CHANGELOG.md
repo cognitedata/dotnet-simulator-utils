@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release v1.0.0-beta-032 (2026-09-21)
+
+### Features
+
+- `RoutineImplementationBase.GetOutput()` implementations can now return `null` to signal that an output's value is undefined (e.g. NaN/Infinity) and should be skipped, instead of being passed through and later failing the whole run when the result is serialized.
+
 ## Release v1.0.0-beta-031 (2026-07-01)
 
 ### Bug fixes

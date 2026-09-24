@@ -70,7 +70,10 @@ namespace Cognite.Simulator.Utils
         /// <param name="outputConfig">Output time series configuration</param>
         /// <param name="arguments">Extra arguments</param>
         /// <param name="token">Cancellation token</param>
-        /// <returns></returns>
+        /// <returns>
+        /// The output value, or null if the value could not be computed (e.g. undefined
+        /// or non-finite result) and should be skipped rather than failing the whole run.
+        /// </returns>
         public abstract SimulatorValueItem GetOutput(
             SimulatorRoutineRevisionOutput outputConfig,
             Dictionary<string, string> arguments,
@@ -176,7 +179,13 @@ namespace Cognite.Simulator.Utils
                 var output = matchingOutputs.First();
                 string flattenedArguments = SimulatorLoggingUtils.FlattenDictionary(extraArgs);
                 _logger.LogDebug("Getting output for Reference Id: {Output}. Arguments: {Arguments}", output.ReferenceId, flattenedArguments);
-                _simulationResults[output.ReferenceId] = GetOutput(output, extraArgs, token);
+                var result = GetOutput(output, extraArgs, token);
+                if (result == null)
+                {
+                    _logger.LogWarning("Output {Output} could not be computed and will be skipped", output.ReferenceId);
+                    return;
+                }
+                _simulationResults[output.ReferenceId] = result;
             }
             else
             {
